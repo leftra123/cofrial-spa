@@ -140,9 +140,29 @@
 
 **Conclusión.** La pauta exige costo cero. Gemini y Groq ofrecen capas gratuitas con buena calidad en español; Groq queda como respaldo si se alcanza el límite. OpenAI no tiene capa gratuita permanente, por lo que incumple el requisito.
 
-## Síntesis de decisiones
+## Diagramas de arquitectura
 
 **Tabla 8**
+*Puntuación ponderada: herramienta para el diagrama de arquitectura cloud*
+
+| Criterio (peso) | draw.io | Lucidchart (plan gratuito) | Mermaid | archify (HTML interactivo) |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 4 | 2 | 4 |
+| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 5 | 4 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 4 | 4 |
+| C4 Costo cero (15 %) | 5 | 2 | 5 | 5 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 5 |
+| C6 Escalabilidad y evolución (10 %) | 4 | 3 | 3 | 3 |
+| **Puntaje ponderado** | **4,75** | **3,70** | **3,75** | **4,15** |
+| **Decisión** | Adoptada | Descartada | Descartada (eliminatorio) | Complementaria (defensa en vivo) |
+
+*Nota.* Elaboración propia. Borrador pendiente de validación del equipo. En C1 se evaluó si genera un diagrama de topología con los íconos oficiales de AWS, que pide la rúbrica H1-D3. En C5 todas puntúan 5 porque ninguna depende de los permisos del Learner Lab. El puntaje de archify en C1 es una estimación: no se verificó que incluya la librería oficial de íconos AWS.
+
+**Conclusión.** draw.io gana porque es gratuito, trae la librería oficial de íconos AWS y guarda el diagrama como archivo `.drawio` editable que se versiona en git, de modo que cualquiera del equipo lo corrige sin depender de Claude. Mermaid se descarta por no tener íconos oficiales de AWS, lo que lo deja bajo el mínimo de C1. Lucidchart pierde por el límite de su plan gratuito. archify queda como complemento para animar el flujo en la defensa del Hito 2.
+
+## Síntesis de decisiones
+
+**Tabla 9**
 *Resumen de las decisiones adoptadas y sus alternativas descartadas*
 
 | Componente | Adoptada | Alternativa más cercana | Por qué se prefiere |
@@ -155,5 +175,6 @@
 | IA | Gemini (free tier) | Groq (free tier) | Calidad en español; Groq queda de respaldo |
 | Gestión | Trello | GitHub Projects | Ya en uso; GitHub queda para issues del código |
 | Procesos | BPMN 2.0 (bpmn.io) | Flujograma | Carriles por responsable |
+| Diagrama de arquitectura | draw.io (diagrams.net) con íconos oficiales de AWS | archify (HTML interactivo) | Gratis, archivo `.drawio` editable y versionable en git, exporta PNG y SVG |
 
 *Nota.* Elaboración propia.

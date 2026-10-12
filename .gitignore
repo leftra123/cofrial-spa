@@ -1,0 +1,43 @@
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Material de referencia privado (videos/capturas de terceros, pesan >100 MB)
+app/
+*.mov
+*.mp4
+
+# Pauta original del profesor (su contenido está transcrito en informe/00-pauta-y-rubrica.md)
+*.pdf
+
+# Dependencias y builds
+node_modules/
+dist/
+.astro/
+.output/
+coverage/
+__pycache__/
+*.pyc
+.venv/
+
+# Variables de entorno y credenciales (AWS, BD, API de IA)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+.aws/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Locales de Claude
+.claude/settings.local.json

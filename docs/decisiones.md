@@ -16,6 +16,8 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por votar |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por votar |
 
+> El modelo de datos (25 tablas en 3FN) y su script SQL ya existen en `informe/modelo/` (ver `informe/04b-modelo-datos.md`); es independiente del framework y sirve tanto para SQL directo (D-03) como para generar modelos de Django.
+
 > Si D-01 pasa a Django, D-03 (acceso a datos) y D-04 (simulador IoT) deben revisarse: el ORM de Django reemplazaría al SQL directo, y Python pasaría a ser el lenguaje común con el simulador.
 
 ## Por qué esta combinación

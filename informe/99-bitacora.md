@@ -13,3 +13,6 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Se verifican las restricciones del Learner Lab con el documento de AWS (versión 2021).
 - D-01 (web) se reabre: Django con plantillas y React + Django REST Framework quedan en empate técnico (Tabla 4 de `08-herramientas.md`).
 - Diagrama de arquitectura v0.1 en draw.io (para el informe) y archify (para la defensa).
+- Se redacta el MER en 3FN con diccionario de datos (`04b-modelo-datos.md`): 25 tablas, verificación tabla por tabla, desnormalizaciones controladas y reglas de negocio no expresables en el esquema.
+- Se corrige una dependencia transitiva detectada al revisar: el cliente de una orden se obtiene por su dirección de entrega (vista `v_orden`), no se guarda en `orden`.
+- El esquema se valida en PostgreSQL 16: script, datos de prueba, consultas del dashboard y 13 rechazos de datos inválidos (`informe/modelo/`).

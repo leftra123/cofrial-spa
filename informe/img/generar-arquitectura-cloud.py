@@ -59,7 +59,7 @@ add("ext","Google Gemini API<br>(free tier; Groq de respaldo)",f"sketch=0;{PTS}o
 add("ext_t","<b>Internet (fuera de AWS)</b>","text;html=1;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;",2140,330,200,30)
 # leyenda
 leg=("<b>Security Groups (conexion encadenada)</b><br>"
-"<b>sg-web:</b> 80/443 desde 0.0.0.0/0; 22 y 3000 (Grafana) solo desde la IP del equipo.<br>"
+"<b>sg-web:</b> 80 desde 0.0.0.0/0 (443 solo si hay dominio y certificado); 22 y 3000 (Grafana) solo desde la IP del equipo.<br>"
 "<b>sg-iot:</b> sin entradas publicas; 22 solo desde la IP del equipo.<br>"
 "<b>sg-rds:</b> 5432 solo desde sg-web y sg-iot. Sin acceso a internet.<br><br>"
 "<b>Tablas de ruteo</b><br>"
@@ -69,7 +69,7 @@ add("legend",leg,"text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;round
 # aristas
 for i,(id,_) in enumerate(actors):
     edge("e_"+id,id,"igw","",ex=(1,0.5),en=(0,round(0.1+i*0.2,1)),straight=True)
-edge("e_igw_web","igw","ec2web","HTTPS",ex=(1,0.5),en=(0,0.5))
+edge("e_igw_web","igw","ec2web","HTTP",ex=(1,0.5),en=(0,0.5))
 edge("e_web_ia","ec2web","ext","API de IA",ex=(0.5,0),en=(0,0.5),dashed=True)
 edge("e_web_rds","ec2web","rds","SQL 5432",ex=(0.5,1),en=(0.5,0))
 edge("e_iot_rds","ec2iot","rds","INSERT telemetria",ex=(0.5,1),en=(1,0.5))

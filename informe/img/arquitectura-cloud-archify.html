@@ -5025,15 +5025,15 @@
         <!-- Boundaries (behind everything) -->
         <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="AWS us-east-1 | VPC 10.0.0.0/16" x="250" y="90" width="760" height="464" rx="12" class="c-region" stroke-width="1"/>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="1" data-composition-frame-label="sg-web 80/443 público" x="510" y="90" width="220" height="314" rx="8" class="c-security-group" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="1" data-composition-frame-label="sg-web 80 público" x="510" y="90" width="220" height="314" rx="8" class="c-security-group" stroke-width="1"/>
 
         <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="2" data-composition-frame-label="sg-rds 5432 solo sg-web y sg-iot" x="790" y="190" width="220" height="114" rx="8" class="c-security-group" stroke-width="1"/>
 
         <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="3" data-composition-frame-label="sg-iot sin entradas" x="790" y="440" width="220" height="114" rx="8" class="c-security-group" stroke-width="1"/>
 
         <!-- Connection paths (before components for correct z-order) -->
-        <path data-edge-from="clientes" data-edge-to="igw" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="clientes-igw" data-composition-points="250,150;265,150;265,243;280,243" d="M 250 150 L 257.5 150 Q 265 150 265 157.5 L 265 235.5 Q 265 243 272.5 243 L 280 243" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="equipo" data-edge-to="igw" data-edge-label="HTTPS" data-edge-key="1" data-edge-id="equipo-igw" data-composition-points="250,350;265,350;265,257;280,257" d="M 250 350 L 257.5 350 Q 265 350 265 342.5 L 265 264.5 Q 265 257 272.5 257 L 280 257" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="clientes" data-edge-to="igw" data-edge-label="HTTP" data-edge-key="0" data-edge-id="clientes-igw" data-composition-points="250,150;265,150;265,243;280,243" d="M 250 150 L 257.5 150 Q 265 150 265 157.5 L 265 235.5 Q 265 243 272.5 243 L 280 243" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="equipo" data-edge-to="igw" data-edge-label="HTTP" data-edge-key="1" data-edge-id="equipo-igw" data-composition-points="250,350;265,350;265,257;280,257" d="M 250 350 L 257.5 350 Q 265 350 265 342.5 L 265 264.5 Q 265 257 272.5 257 L 280 257" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="igw" data-edge-to="web" data-edge-key="2" data-edge-id="igw-web" data-composition-points="430,243;485,243;485,152;540,152" d="M 430 243 L 477 243 Q 485 243 485 235 L 485 160 Q 485 152 493 152 L 540 152" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="igw" data-edge-to="grafana" data-edge-key="3" data-edge-id="igw-grafana" data-composition-points="430,257;485,257;485,352;540,352" d="M 430 257 L 477 257 Q 485 257 485 265 L 485 344 Q 485 352 493 352 L 540 352" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="web" data-edge-to="rds" data-edge-label="SQL 5432" data-edge-key="4" data-edge-id="web-rds" data-composition-points="700,159;760,159;760,245;820,245" d="M 700 159 L 752 159 Q 760 159 760 167 L 760 237 Q 760 245 768 245 L 820 245" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
@@ -5077,8 +5077,8 @@
         <text data-detail="context" x="355" y="264" class="t-muted" font-size="9" text-anchor="middle">tabla de ruteo pública</text>
         </g>
 
-        <g id="node-web" data-node-id="web" data-node-label="EC2 web + backend" tabindex="0" role="button" aria-label="Focus EC2 web + backend, e-commerce, CRM y API, AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80/443 público" aria-pressed="false" data-node-kind="backend" data-node-sublabel="e-commerce, CRM y API" data-node-tag="10.0.1.0/24" data-node-context="AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80/443 público">
-          <title>EC2 web + backend · e-commerce, CRM y API · AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80/443 público · 10.0.1.0/24</title>
+        <g id="node-web" data-node-id="web" data-node-label="EC2 web + backend" tabindex="0" role="button" aria-label="Focus EC2 web + backend, e-commerce, CRM y API, AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80 público" aria-pressed="false" data-node-kind="backend" data-node-sublabel="e-commerce, CRM y API" data-node-tag="10.0.1.0/24" data-node-context="AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80 público">
+          <title>EC2 web + backend · e-commerce, CRM y API · AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80 público · 10.0.1.0/24</title>
           <rect x="540" y="120" width="160" height="64" rx="6" class="c-mask"/>
           <rect x="540" y="120" width="160" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(546 126) scale(0.6875)">
@@ -5089,8 +5089,8 @@
         <text data-detail="fine" x="620" y="176" class="t-backend" font-size="7" text-anchor="middle">10.0.1.0/24</text>
         </g>
 
-        <g id="node-grafana" data-node-id="grafana" data-node-label="Grafana (Docker)" tabindex="0" role="button" aria-label="Focus Grafana (Docker), BI en vivo, misma EC2, AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80/443 público" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="BI en vivo, misma EC2" data-node-tag=":3000" data-node-context="AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80/443 público">
-          <title>Grafana (Docker) · BI en vivo, misma EC2 · AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80/443 público · :3000</title>
+        <g id="node-grafana" data-node-id="grafana" data-node-label="Grafana (Docker)" tabindex="0" role="button" aria-label="Focus Grafana (Docker), BI en vivo, misma EC2, AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80 público" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="BI en vivo, misma EC2" data-node-tag=":3000" data-node-context="AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80 público">
+          <title>Grafana (Docker) · BI en vivo, misma EC2 · AWS us-east-1 | VPC 10.0.0.0/16 › sg-web 80 público · :3000</title>
           <rect x="540" y="320" width="160" height="64" rx="6" class="c-mask"/>
           <rect x="540" y="320" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(546 326) scale(0.6875)">
@@ -5152,13 +5152,13 @@
         </g>
 
         <!-- Connection labels -->
-        <g data-detail="context" data-edge-from="clientes" data-edge-to="igw" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="clientes-igw">
-          <rect x="248" y="176.5" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="265" y="186.5" class="t-backend" font-size="8" text-anchor="middle">HTTPS</text>
+        <g data-detail="context" data-edge-from="clientes" data-edge-to="igw" data-edge-label="HTTP" data-edge-key="0" data-edge-id="clientes-igw">
+          <rect x="250" y="176.5" width="30" height="14" rx="3" class="c-mask"/>
+          <text x="265" y="186.5" class="t-backend" font-size="8" text-anchor="middle">HTTP</text>
         </g>
-        <g data-detail="context" data-edge-from="equipo" data-edge-to="igw" data-edge-label="HTTPS" data-edge-key="1" data-edge-id="equipo-igw">
-          <rect x="248" y="283.5" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="265" y="293.5" class="t-muted" font-size="8" text-anchor="middle">HTTPS</text>
+        <g data-detail="context" data-edge-from="equipo" data-edge-to="igw" data-edge-label="HTTP" data-edge-key="1" data-edge-id="equipo-igw">
+          <rect x="250" y="283.5" width="30" height="14" rx="3" class="c-mask"/>
+          <text x="265" y="293.5" class="t-muted" font-size="8" text-anchor="middle">HTTP</text>
         </g>
 
 
@@ -5185,9 +5185,9 @@
           <text data-boundary-label="" x="258" y="113" class="t-cloud" font-size="9" font-weight="600">AWS us-east-1 | VPC 10.0.0.0/16</text>
         </g>
 
-        <g data-graph-role="structural-frame-label" data-composition-frame-id="1" data-composition-frame-kind="security-group" data-composition-frame-label="sg-web 80/443 público">
-          <rect data-graph-role="structural-frame-label-mask" x="514" y="100" width="123.39999999999999" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="518" y="113" class="t-security" font-size="9" font-weight="600">sg-web 80/443 público</text>
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="1" data-composition-frame-kind="security-group" data-composition-frame-label="sg-web 80 público">
+          <rect data-graph-role="structural-frame-label-mask" x="514" y="100" width="101.8" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="518" y="113" class="t-security" font-size="9" font-weight="600">sg-web 80 público</text>
         </g>
 
         <g data-graph-role="structural-frame-label" data-composition-frame-id="2" data-composition-frame-kind="security-group" data-composition-frame-label="sg-rds 5432 solo sg-web y sg-iot">

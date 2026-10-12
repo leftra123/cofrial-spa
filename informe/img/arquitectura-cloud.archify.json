@@ -140,7 +140,7 @@
     },
     {
       "kind": "security-group",
-      "label": "sg-web 80/443 público",
+      "label": "sg-web 80 público",
       "wraps": [
         "web",
         "grafana"
@@ -166,14 +166,14 @@
       "id": "clientes-igw",
       "from": "clientes",
       "to": "igw",
-      "label": "HTTPS",
+      "label": "HTTP",
       "variant": "emphasis"
     },
     {
       "id": "equipo-igw",
       "from": "equipo",
       "to": "igw",
-      "label": "HTTPS"
+      "label": "HTTP"
     },
     {
       "id": "igw-web",

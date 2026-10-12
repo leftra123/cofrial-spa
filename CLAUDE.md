@@ -2,7 +2,7 @@
 
 Proyecto académico INACAP Temuco — Transformación Digital (TIEL15), EVA2_3.
 Somos una "consultora" que moderniza a **Cofrial SpA** (frigorífico y distribución en cadena de frío, La Araucanía).
-Equipo: **Eric Aguayo** (GitHub `leftra123`) y **Sergio Vázquez Marimán**. Todo se escribe en español.
+Equipo: **Eric Aguayo Quintriqueo** (GitHub `leftra123`) y **Sergio Vásquez Marimán**. Todo se escribe en español.
 
 ## Entregas
 | Hito | Nota | Fecha | Qué se entrega |

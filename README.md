@@ -3,7 +3,7 @@
 Proyecto de arquitectura y prototipado de transformación digital para **Comercializadora y Frigoríficos Araucanía (Cofrial SpA)**.
 INACAP Temuco · Transformación Digital (TIEL15) · Evaluación sumativa EVA2_3.
 
-**Equipo consultor:** Eric Aguayo · Sergio Vázquez Marimán
+**Equipo consultor:** Eric Aguayo Quintriqueo · Sergio Vásquez Marimán
 **Tablero:** [Trello](https://trello.com/b/yrKII80H/cofrial-spa-transformaci%C3%B3n-digital)
 
 ## La solución en una línea

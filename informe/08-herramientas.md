@@ -1,0 +1,159 @@
+# Evaluación de herramientas (criterios ponderados)
+
+> Aporta a H1-D2. Sigue el método de TRAZO: criterios y pesos definidos antes de evaluar, alternativas puntuadas de 1 a 5 y puntaje ponderado.
+> Objetivo: dejar argumentado por qué se usan las herramientas que sugiere la pauta (AWS Academy, EC2, RDS, Docker, IA gratuita) frente a sus alternativas, aunque la pauta no exija esta comparación.
+> **Estado: borrador.** Los puntajes son una propuesta inicial que el equipo debe validar. Al cerrar una decisión en Trello se actualiza aquí y en `docs/decisiones.md`.
+
+## Criterios
+
+**Tabla 1**
+*Criterios de evaluación y ponderación aplicados a todas las decisiones*
+
+| Criterio | Qué mide | Peso |
+|---|---|---|
+| C1 Cumplimiento de la pauta | Si cumple lo que la pauta exige. Puntaje 2 o menos es eliminatorio: la alternativa se descarta aunque sume más. | 30 % |
+| C2 Viabilidad en el plazo | Si se puede construir y probar antes del 12 de noviembre. | 20 % |
+| C3 Facilidad de aprendizaje | Esfuerzo para un equipo de dos personas que aprende mientras construye. | 15 % |
+| C4 Costo cero | Que no genere gastos fuera de los créditos de AWS Academy. | 15 % |
+| C5 Compatibilidad con AWS Academy | Que funcione con los permisos y las restricciones del Learner Lab. | 10 % |
+| C6 Escalabilidad y evolución | Que el diseño sirva si Cofrial lo llevara a producción con 50 camiones reales. | 10 % |
+
+*Nota.* Elaboración propia. Cada alternativa se puntúa de 1 a 5 por criterio; el puntaje final es el promedio ponderado.
+
+## Cómputo del backend
+
+**Tabla 2**
+*Puntuación ponderada: cómputo del backend*
+
+| Criterio (peso) | Amazon EC2 | Elastic Beanstalk | AWS Lambda | Servidor local |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 3 | 2 | 1 |
+| C2 Viabilidad en el plazo (20 %) | 4 | 4 | 3 | 3 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 3 | 2 | 3 |
+| C4 Costo cero (15 %) | 5 | 5 | 5 | 2 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 3 | 3 | 1 |
+| C6 Escalabilidad y evolución (10 %) | 4 | 4 | 5 | 1 |
+| **Puntaje ponderado** | **4,55** | **3,60** | **3,05** | **1,85** |
+| **Decisión** | Adoptada | Descartada | Descartada | Descartada (eliminatorio) |
+
+*Nota.* Elaboración propia.
+
+**Conclusión.** La pauta exige EC2 con el backend persistente. Beanstalk crea EC2 por debajo, pero oculta la configuración que la rúbrica pide justificar (subredes y seguridad). Lambda no es un backend persistente. El servidor local es justamente el dolor que se busca eliminar.
+
+## Base de datos relacional
+
+**Tabla 3**
+*Puntuación ponderada: base de datos relacional*
+
+| Criterio (peso) | RDS PostgreSQL | RDS MySQL | PostgreSQL en EC2 | DynamoDB |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 2 | 1 |
+| C2 Viabilidad en el plazo (20 %) | 4 | 4 | 3 | 3 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 3 | 2 |
+| C4 Costo cero (15 %) | 5 | 5 | 5 | 5 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 4 | 4 |
+| C6 Escalabilidad y evolución (10 %) | 5 | 4 | 3 | 5 |
+| **Puntaje ponderado** | **4,65** | **4,55** | **3,10** | **2,85** |
+| **Decisión** | Adoptada | Complementaria (alternativa válida) | Descartada | Descartada (eliminatorio) |
+
+*Nota.* Elaboración propia.
+
+**Conclusión.** La pauta exige RDS relacional. PostgreSQL y MySQL quedan casi empatados; PostgreSQL gana por su manejo de datos geográficos y series de tiempo, útiles para la telemetría, y por su integración con Grafana. Instalar la BD en EC2 obliga a gestionar respaldos a mano, que es el dolor original. DynamoDB no es relacional.
+
+## Framework web (e-commerce, CRM y API)
+
+**Tabla 4**
+*Puntuación ponderada: framework web (e-commerce, crm y api)*
+
+| Criterio (peso) | Astro (modo servidor) | Next.js | Django | Laravel |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 5 | 5 |
+| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 4 | 3 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 3 | 3 | 3 |
+| C4 Costo cero (15 %) | 5 | 5 | 5 | 5 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 5 |
+| C6 Escalabilidad y evolución (10 %) | 4 | 5 | 4 | 4 |
+| **Puntaje ponderado** | **4,75** | **4,50** | **4,40** | **4,20** |
+| **Decisión** | Adoptada | Descartada | Descartada | Descartada |
+
+*Nota.* Elaboración propia.
+
+**Conclusión.** Los cuatro cumplen la pauta. Astro gana en plazo y facilidad: una sola aplicación entrega las páginas y la API, y es la elección previa de Eric para la capa de vista. Next.js escala mejor, pero su modelo de componentes de servidor exige más aprendizaje.
+
+## Simulación IoT
+
+**Tabla 5**
+*Puntuación ponderada: simulación iot*
+
+| Criterio (peso) | Docker + Node/TypeScript | Docker + Python | AWS IoT Core | Inserción manual o Excel |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 2 | 1 |
+| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 2 | 5 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 2 | 5 |
+| C4 Costo cero (15 %) | 5 | 5 | 4 | 5 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 2 | 5 |
+| C6 Escalabilidad y evolución (10 %) | 4 | 4 | 5 | 1 |
+| **Puntaje ponderado** | **4,75** | **4,55** | **2,60** | **3,40** |
+| **Decisión** | Adoptada | Complementaria (alternativa válida) | Descartada | Descartada (eliminatorio) |
+
+*Nota.* Elaboración propia.
+
+**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Node se prefiere a Python solo para mantener un lenguaje en todo el proyecto. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
+
+## Dashboard de BI
+
+**Tabla 6**
+*Puntuación ponderada: dashboard de bi*
+
+| Criterio (peso) | Grafana | Metabase | Gráficos propios (Chart.js) | Amazon QuickSight |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 4 | 4 | 3 |
+| C2 Viabilidad en el plazo (20 %) | 4 | 5 | 3 | 2 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 5 | 3 | 2 |
+| C4 Costo cero (15 %) | 5 | 5 | 5 | 1 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 1 |
+| C6 Escalabilidad y evolución (10 %) | 4 | 3 | 3 | 5 |
+| **Puntaje ponderado** | **4,55** | **4,50** | **3,80** | **2,35** |
+| **Decisión** | Adoptada | Complementaria | Complementaria (torre de control) | Descartada |
+
+*Nota.* Elaboración propia.
+
+**Conclusión.** Grafana y Metabase quedan casi empatados. Grafana gana en lo que pesa más, la rúbrica: refresco cada pocos segundos ("en vivo") y un panel de mapa para lat/long. Metabase es más simple de armar. Los gráficos propios se reservan para la torre de control. QuickSight es de pago y su disponibilidad en el Learner Lab no está garantizada.
+
+## Servicio de IA de costo cero
+
+**Tabla 7**
+*Puntuación ponderada: servicio de ia de costo cero*
+
+| Criterio (peso) | Google Gemini API (free tier) | Groq (free tier) | Hugging Face Inference | OpenAI API |
+|---|---|---|---|---|
+| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 4 | 1 |
+| C2 Viabilidad en el plazo (20 %) | 5 | 5 | 3 | 5 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 3 | 4 |
+| C4 Costo cero (15 %) | 5 | 5 | 5 | 1 |
+| C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 5 |
+| C6 Escalabilidad y evolución (10 %) | 4 | 3 | 3 | 5 |
+| **Puntaje ponderado** | **4,75** | **4,65** | **3,80** | **3,05** |
+| **Decisión** | Adoptada | Complementaria (respaldo) | Descartada | Descartada (eliminatorio) |
+
+*Nota.* Elaboración propia.
+
+**Conclusión.** La pauta exige costo cero. Gemini y Groq ofrecen capas gratuitas con buena calidad en español; Groq queda como respaldo si se alcanza el límite. OpenAI no tiene capa gratuita permanente, por lo que incumple el requisito.
+
+## Síntesis de decisiones
+
+**Tabla 8**
+*Resumen de las decisiones adoptadas y sus alternativas descartadas*
+
+| Componente | Adoptada | Alternativa más cercana | Por qué se prefiere |
+|---|---|---|---|
+| Cómputo | Amazon EC2 | Elastic Beanstalk | Lo exige la pauta y deja visible la configuración de red y seguridad |
+| Base de datos | RDS PostgreSQL | RDS MySQL | Datos geográficos, series de tiempo e integración con Grafana |
+| Web | Astro (modo servidor) | Next.js | Una sola aplicación y menor curva de aprendizaje |
+| IoT | Docker + Node/TypeScript | Docker + Python | Un solo lenguaje en todo el proyecto |
+| BI | Grafana | Metabase | Refresco en vivo y panel de mapa |
+| IA | Gemini (free tier) | Groq (free tier) | Calidad en español; Groq queda de respaldo |
+| Gestión | Trello | GitHub Projects | Ya en uso; GitHub queda para issues del código |
+| Procesos | BPMN 2.0 (bpmn.io) | Flujograma | Carriles por responsable |
+
+*Nota.* Elaboración propia.

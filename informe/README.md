@@ -1,16 +1,34 @@
-# Informe Hito 1 — fuentes por sección
+# Informe Hito 1: fuentes por sección
 
-Cada archivo es la **materia prima** de una sección del informe: datos del caso, qué pide la rúbrica para "Logrado" y lo que el equipo va decidiendo.
-La redacción final (APA 7) se arma a partir de estos archivos. **Se actualizan cada vez que cambia una decisión o el código.**
+Cada archivo es la materia prima de una sección del informe: datos del caso, qué exige la rúbrica para Logrado y las decisiones del equipo. La redacción final se hace con la skill `informe-apa7-tecnico` y sigue el formato del informe de título TRAZO (TIHI84). Estos archivos se actualizan cada vez que cambia una decisión o el código.
 
-| Archivo | Sección | Rúbrica | Responsable | Estado |
-|---|---|---|---|---|
-| `00-pauta-y-rubrica.md` | Pauta completa del profesor | — | — | ✅ transcrita |
-| `01-diagnostico.md` | Diagnóstico y análisis del dolor | H1-D1 | Eric | ⬜ |
-| `02-propuesta-valor.md` | Propuesta de valor y resolución de conflictos | H1-D1 | Eric | ⬜ |
-| `03-arquitectura-cloud.md` | Memoria de decisiones AWS (trade-offs) | H1-D2 | Sergio | ⬜ |
-| `04a-diagrama-arquitectura.md` | Diagrama de arquitectura cloud | H1-D3 | Sergio | ⬜ |
-| `04b-modelo-datos.md` | MER 3FN + diccionario | H1-D3 | Sergio | ⬜ |
-| `04c-canales-b2b-b2c.md` | Wireframes y user journeys | H1-D4 | Eric | ⬜ |
-| `04d-crm.md` | Arquitectura funcional y pipeline del CRM | H1-D4 | Eric | ⬜ |
-| `99-bitacora.md` | Registro de avances y acuerdos | — | ambos | en curso |
+## Convenciones de estilo (heredadas de TRAZO y de la skill)
+
+- Sin emojis, en ningún entregable ni en el repositorio.
+- Tablas APA 7: solo bordes horizontales, "Tabla N" en negrita, título en cursiva y debajo "Nota. Elaboración propia." en cursiva.
+- Toda decisión se resuelve con una matriz de criterios ponderados definidos antes de evaluar: alternativas puntuadas de 1 a 5 y puntaje ponderado. Si una alternativa no cumple la pauta (criterio eliminatorio), se descarta aunque sume puntaje.
+- Cada tabla de alternativas termina en una columna "Decisión": Adoptada, Descartada o Complementaria, con la razón.
+- Tercera persona: "el equipo consultor decide", nunca "nosotros".
+- Procesos en BPMN 2.0, AS-IS y TO-BE, con carriles por responsable.
+
+## Estructura propuesta del informe (rúbrica y archivo fuente)
+
+| N.º | Sección del informe | Rúbrica | Archivo fuente | Responsable | Estado |
+|---|---|---|---|---|---|
+| — | Portada, índices, resumen ejecutivo, glosario | — | se arma al final | Eric | Pendiente |
+| I | Introducción y contexto de Cofrial SpA | H1-D1 | `00-pauta-y-rubrica.md` | Eric | Transcrito |
+| II | Diagnóstico y análisis del dolor | H1-D1 | `01-diagnostico.md` | Eric | Pendiente |
+| III | Procesos AS-IS y TO-BE (BPMN 2.0) | H1-D1, H1-D4 | `05-procesos-bpmn.md` | Eric | Pendiente |
+| IV | Propuesta de valor y resolución de conflictos | H1-D1 | `02-propuesta-valor.md` | Eric | Pendiente |
+| V | Casos de uso del ecosistema | H1-D4 | `06-casos-de-uso.md` | Eric | Pendiente |
+| VI | Metodología, cronograma, Trello, equipo y riesgos | Apoyo | `07-metodologia-cronograma.md` | Ambos | Borrador |
+| VII | Evaluación de herramientas (criterios ponderados) | H1-D2 | `08-herramientas.md` | Sergio | Borrador |
+| VIII | Memoria de arquitectura cloud (trade-offs) | H1-D2 | `03-arquitectura-cloud.md` | Sergio | Pendiente |
+| IX | Diagrama de arquitectura cloud | H1-D3 | `04a-diagrama-arquitectura.md` | Sergio | Pendiente |
+| X | Modelo de datos: MER 3FN y diccionario | H1-D3 | `04b-modelo-datos.md` | Sergio | Pendiente |
+| XI | Canales digitales: wireframes y user journeys B2B/B2C | H1-D4 | `04c-canales-b2b-b2c.md` | Eric | Pendiente |
+| XII | Arquitectura funcional del CRM y pipeline | H1-D4 | `04d-crm.md` | Eric | Pendiente |
+| XIII | Conclusiones | — | se arma al final | Ambos | Pendiente |
+| XIV | Referencias (APA 7, lista única) | — | `99-bitacora.md` registra las fuentes | Ambos | Pendiente |
+
+`99-bitacora.md` registra avances, acuerdos y fuentes consultadas.

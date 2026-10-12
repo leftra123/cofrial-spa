@@ -7,7 +7,7 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 
 | # | Tema | Propuesta recomendada | Alternativas | Estado |
 |---|---|---|---|---|
-| D-01 | Web (e-commerce + CRM + API) | **Astro en modo servidor** (`@astrojs/node`): páginas y API en un solo proyecto TypeScript | Astro (front) + Express (API aparte) | Por votar |
+| D-01 | Web (e-commerce + CRM + API) | **Django + plantillas (HTMX y Tailwind)**: ORM con migraciones, autenticación, grupos B2B/B2C y panel de administración como CRM base | React + Django REST Framework (empate técnico) / Next.js / Astro | Por votar (reabierta 12-oct: ver Tabla 4 de `informe/08-herramientas.md`) |
 | D-02 | Motor de BD en RDS | **PostgreSQL** | MySQL | Por votar |
 | D-03 | Acceso a datos | **SQL directo** (archivos `.sql` = el MER del informe) con la librería `postgres` | ORM Drizzle / Prisma | Por votar |
 | D-04 | Simulador IoT | **Node/TypeScript en Docker**, `docker compose` con varios contenedores (camiones) | Python en Docker | Por votar |
@@ -15,6 +15,8 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Por votar |
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por votar |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por votar |
+
+> Si D-01 pasa a Django, D-03 (acceso a datos) y D-04 (simulador IoT) deben revisarse: el ORM de Django reemplazaría al SQL directo, y Python pasaría a ser el lenguaje común con el simulador.
 
 ## Por qué esta combinación
 - **Un solo lenguaje (TypeScript)** para web, API e IoT: lo que aprende uno le sirve al otro.

@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Cofrial SpA: arquitectura cloud del prototipo",
+    "output": "arquitectura-cloud-archify.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "clientes",
+      "type": "external",
+      "label": "Clientes B2B y B2C",
+      "sublabel": "Portal web",
+      "pos": [
+        40,
+        120
+      ],
+      "size": [
+        210,
+        60
+      ]
+    },
+    {
+      "id": "equipo",
+      "type": "external",
+      "label": "Vendedor, despacho, gerencia",
+      "sublabel": "CRM y dashboard",
+      "pos": [
+        40,
+        320
+      ],
+      "size": [
+        210,
+        60
+      ]
+    },
+    {
+      "id": "igw",
+      "type": "cloud",
+      "label": "Internet Gateway",
+      "sublabel": "tabla de ruteo pública",
+      "pos": [
+        280,
+        220
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "web",
+      "type": "backend",
+      "label": "EC2 web + backend",
+      "sublabel": "e-commerce, CRM y API",
+      "pos": [
+        540,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "10.0.1.0/24"
+    },
+    {
+      "id": "grafana",
+      "type": "frontend",
+      "label": "Grafana (Docker)",
+      "sublabel": "BI en vivo, misma EC2",
+      "pos": [
+        540,
+        320
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": ":3000"
+    },
+    {
+      "id": "rds",
+      "type": "database",
+      "label": "RDS PostgreSQL",
+      "sublabel": "subred privada, Single-AZ",
+      "pos": [
+        820,
+        220
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "10.0.11.0/24",
+      "brand": "postgresql"
+    },
+    {
+      "id": "iot",
+      "type": "backend",
+      "label": "EC2 nodo IoT",
+      "sublabel": "Docker: 50 camiones simulados",
+      "pos": [
+        820,
+        470
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "10.0.2.0/24"
+    },
+    {
+      "id": "ia",
+      "type": "external",
+      "label": "Google Gemini API",
+      "sublabel": "free tier; Groq de respaldo",
+      "pos": [
+        1120,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "brand": "google-gemini"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "AWS us-east-1 | VPC 10.0.0.0/16",
+      "wraps": [
+        "igw",
+        "web",
+        "grafana",
+        "rds",
+        "iot"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "sg-web 80/443 público",
+      "wraps": [
+        "web",
+        "grafana"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "sg-rds 5432 solo sg-web y sg-iot",
+      "wraps": [
+        "rds"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "sg-iot sin entradas",
+      "wraps": [
+        "iot"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "clientes-igw",
+      "from": "clientes",
+      "to": "igw",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "equipo-igw",
+      "from": "equipo",
+      "to": "igw",
+      "label": "HTTPS"
+    },
+    {
+      "id": "igw-web",
+      "from": "igw",
+      "to": "web"
+    },
+    {
+      "id": "igw-grafana",
+      "from": "igw",
+      "to": "grafana"
+    },
+    {
+      "id": "web-rds",
+      "from": "web",
+      "to": "rds",
+      "label": "SQL 5432"
+    },
+    {
+      "id": "grafana-rds",
+      "from": "grafana",
+      "to": "rds",
+      "label": "lectura SQL"
+    },
+    {
+      "id": "iot-rds",
+      "from": "iot",
+      "to": "rds",
+      "label": "INSERT telemetría",
+      "variant": "emphasis",
+      "labelDy": -40
+    },
+    {
+      "id": "web-ia",
+      "from": "web",
+      "to": "ia",
+      "label": "API de IA",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Red",
+      "items": [
+        "VPC 10.0.0.0/16 en us-east-1a",
+        "Públicas: web 10.0.1.0/24 e IoT 10.0.2.0/24",
+        "Privada: RDS 10.0.11.0/24; reserva 10.0.12.0/24 en us-east-1b"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seguridad",
+      "items": [
+        "RDS solo acepta 5432 desde sg-web y sg-iot",
+        "SSH y Grafana solo desde la IP del equipo"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Rutas",
+      "items": [
+        "Pública: 0.0.0.0/0 al Internet Gateway",
+        "Privada: solo tráfico local de la VPC"
+      ]
+    }
+  ]
+}

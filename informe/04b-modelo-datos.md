@@ -9,35 +9,43 @@ CLIENTE ──┬─→ DIRECCION (1:N)
           ├─→ ORDEN (1:N)
           └─→ OPORTUNIDAD (1:N)
 
-PRODUCTO ──→ CATEGORIA (N:1)
-          ├─→ LISTA_PRECIO (1:N)
-          └─→ORDEN_ITEM (1:N)
+PRODUCTO ──┬─→ CATEGORIA (N:1)
+           ├─→ LISTA_PRECIO (1:N)
+           └─→ ORDEN_ITEM (1:N)
+
+CATEGORIA ←── PRODUCTO (N:1)
 
 LISTA_PRECIO ──→ PRECIO_PRODUCTO (1:N) ──→ ORDEN_ITEM
 
-ORDEN ──→ CLIENTE (N:1)
-       ├─→ ORDEN_ITEM (1:N)
-       └─→ ESTADO_ORDEN (N:1)
+PRECIO_PRODUCTO ──→ PRODUCTO (N:1)
 
-ORDEN_ITEM ──→ PRODUCTO (N:1)
-            ├─→ LISTA_PRECIO (N:1)
-            └─→ ORDEN (N:1)
+ORDEN ──┬─→ CLIENTE (N:1)
+        ├─→ ORDEN_ITEM (1:N)
+        ├─→ ESTADO_ORDEN (N:1)
+        └─→ CAMION (N:1) [asignado cuando sale a ruta]
 
-VENDEDOR ──→ OPORTUNIDAD (1:N)
-          └─→ INTERACCION (1:N)
+ORDEN_ITEM ──┬─→ PRODUCTO (N:1)
+             ├─→ LISTA_PRECIO (N:1)
+             └─→ ORDEN (N:1)
 
-OPORTUNIDAD ──→ CLIENTE (N:1)
-             ├─→ VENDEDOR (N:1)
-             ├─→ ETAPA_PIPELINE (N:1)
-             └─→ INTERACCION (1:N)
+ESTADO_ORDEN ←── ORDEN (N:1)
 
-INTERACCION ──→ OPORTUNIDAD (N:1)
-             └─→ VENDEDOR (N:1)
+VENDEDOR ──┬─→ OPORTUNIDAD (1:N)
+           └─→ INTERACCION (1:N)
 
-CAMION ──→ TELEMETRIA (1:N)
+OPORTUNIDAD ──┬─→ CLIENTE (N:1)
+              ├─→ VENDEDOR (N:1)
+              ├─→ ETAPA_PIPELINE (N:1)
+              └─→ INTERACCION (1:N)
+
+INTERACCION ──┬─→ OPORTUNIDAD (N:1)
+              └─→ VENDEDOR (N:1)
+
+CAMION ──┬─→ TELEMETRIA (1:N)
+         └─→ ORDEN (1:N) [entregas]
 
 TELEMETRIA ──→ CAMION (N:1)
-            └─→ ALERTA_RUPTURA_FRIO (genérica, derivada)
+            └─→ alerta_ruptura_frio: boolean (derivada: temp_camara > rango)
 ```
 
 ---
@@ -109,9 +117,11 @@ TELEMETRIA ──→ CAMION (N:1)
 |---|---|---|---|---|---|
 | orden_id | INT | SÍ | — | No | Identificador único |
 | cliente_id | INT | — | SÍ (CLIENTE) | No | Quién compra |
+| camion_id | VARCHAR(20) | — | SÍ (CAMION) | Sí | Qué vehículo entrega (asignado cuando sale) |
 | estado_orden_id | INT | — | SÍ (ESTADO_ORDEN) | No | Estado actual (Nueva, Preparando, En tránsito, Entregada) |
 | fecha_creacion | TIMESTAMP | — | — | No | Cuándo se generó la orden |
 | fecha_entrega_requerida | DATE | — | — | No | Cuándo lo necesita el cliente |
+| tiempo_salida | TIMESTAMP | — | — | Sí | Cuándo salió del almacén (NULL si pendiente) |
 | fecha_entrega_real | DATE | — | — | Sí | Cuándo se entregó (NULL si pendiente) |
 | notas | TEXT | — | — | Sí | Observaciones especiales |
 
@@ -149,6 +159,32 @@ TELEMETRIA ──→ CAMION (N:1)
 |---|---|---|---|---|---|
 | etapa_pipeline_id | INT | SÍ | — | No | Identificador único |
 | nombre | VARCHAR(50) | — | — | No | "Prospecto", "Contactado", "Propuesta", "Negociación", "Ganada", "Perdida" |
+| secuencia | INT | — | — | No | Orden en el flujo (1, 2, 3, ...) |
+
+### CATEGORIA
+| Campo | Tipo | PK | FK | Nulo | Descripción |
+|---|---|---|---|---|---|
+| categoria_id | INT | SÍ | — | No | Identificador único |
+| nombre | VARCHAR(100) | — | — | No | Ej. "Carnes rojas", "Aves", "Productos procesados" |
+| descripcion | TEXT | — | — | Sí | Detalles de la categoría |
+
+### DIRECCION
+| Campo | Tipo | PK | FK | Nulo | Descripción |
+|---|---|---|---|---|---|
+| direccion_id | INT | SÍ | — | No | Identificador único |
+| cliente_id | INT | — | SÍ (CLIENTE) | No | A quién pertenece |
+| calle | VARCHAR(150) | — | — | No | Dirección completa o domicilio |
+| numero | VARCHAR(10) | — | — | Sí | Número de calle |
+| ciudad | VARCHAR(100) | — | — | No | Localidad (Temuco, Villarrica, etc.) |
+| region | VARCHAR(100) | — | — | No | Región administrativa |
+| codigo_postal | VARCHAR(10) | — | — | Sí | Código postal |
+| es_principal | BOOLEAN | — | — | No | Dirección de entrega por defecto (default: false) |
+
+### ESTADO_ORDEN
+| Campo | Tipo | PK | FK | Nulo | Descripción |
+|---|---|---|---|---|---|
+| estado_orden_id | INT | SÍ | — | No | Identificador único |
+| nombre | VARCHAR(50) | — | — | No | "Nueva", "Preparando", "En tránsito", "Entregada", "Cancelada" |
 | secuencia | INT | — | — | No | Orden en el flujo (1, 2, 3, ...) |
 
 ### CAMION

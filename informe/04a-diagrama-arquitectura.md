@@ -178,14 +178,8 @@ Nota. Learner Lab suele otorgar $100 USD por 36 horas. Suficiente para desarroll
 
 ---
 
-## Diagrama visual (genera en draw.io o bpmn.io)
+## Diagrama visual profesional
 
-**Pasos para crear el diagrama en draw.io:**
-1. New → Blank Diagram
-2. Insert → AWS Architecture Icons → VPC, EC2, RDS, Security Groups
-3. Dibujar como se muestra arriba
-4. Exportar a PNG y guardar en `informe/img/arquitectura-aws.png`
+![Arquitectura AWS VPC - Cofrial SPA](img/arquitectura-aws-vpc.svg)
 
-**Link recomendado:** https://app.diagrams.net (gratis, sin registro)
-
-Nota. Aquí va la imagen del diagrama profesional. Elaboración propia.
+Nota. Diagrama profesional de la topología VPC: subredes públicas y privadas, EC2 segregadas (web e IoT), RDS PostgreSQL en subred privada, Security Groups por capas. Elaboración propia.

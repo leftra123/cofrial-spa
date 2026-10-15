@@ -51,6 +51,10 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 **Mejora:** cero papeles, cero diferencias de inventario, trazabilidad completa.
 
+### Diagrama BPMN Proceso 1 (B2B Order: AS-IS vs TO-BE)
+
+![BPMN 1: B2B Order - Problema y Solución](img/bpmn-01-b2b-order.svg)
+
 ---
 
 ## Proceso 2: Despacho con cadena de frío
@@ -88,6 +92,10 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 **Mejora:** detección inmediata, actuación antes del daño, registro completo.
 
+### Diagrama BPMN Proceso 2 (Cold-Chain: AS-IS vs TO-BE)
+
+![BPMN 2: Cold-Chain Dispatch - Problema y Solución](img/bpmn-02-coldchain.svg)
+
 ---
 
 ## Proceso 3: Gestión comercial de prospectos
@@ -115,6 +123,10 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 6. Gerencia **ve el pipeline en tiempo real:** cuántos prospectos, en qué etapa, cuál va lento.
 
 **Mejora:** información centralizada, métricas reales, formación del equipo sin pérdida de conocimiento.
+
+### Diagrama BPMN Proceso 3 (Prospect Management: AS-IS vs TO-BE)
+
+![BPMN 3: Prospect Management - Problema y Solución](img/bpmn-03-prospects.svg)
 
 ---
 

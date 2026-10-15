@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <style>
+      .title { font-size: 20px; font-weight: bold; fill: #000; }
+      .label { font-size: 12px; fill: #333; }
+      .sublabel { font-size: 10px; fill: #666; }
+      .box { fill: #e8f4f8; stroke: #0073b1; stroke-width: 2; }
+      .subnet { fill: #f0f8ff; stroke: #1e90ff; stroke-width: 2; stroke-dasharray: 5,5; }
+      .sg { fill: none; stroke: #ff6b6b; stroke-width: 2; stroke-dasharray: 3,3; }
+      .arrow { stroke: #333; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .connection { stroke: #0073b1; stroke-width: 1.5; fill: none; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Título -->
+  <text x="600" y="30" text-anchor="middle" class="title">Arquitectura AWS - Cofrial SpA (Topología VPC)</text>
+
+  <!-- VPC Container -->
+  <rect x="50" y="60" width="1100" height="800" fill="none" stroke="#000" stroke-width="3"/>
+  <text x="70" y="85" class="label" font-weight="bold">AWS Academy Learner Lab · VPC 10.0.0.0/16</text>
+
+  <!-- INTERNET -->
+  <circle cx="150" cy="110" r="20" fill="#ff9800" stroke="#333" stroke-width="2"/>
+  <text x="150" y="135" text-anchor="middle" class="sublabel">INTERNET</text>
+  <path class="arrow" d="M 170 120 L 250 180"/>
+
+  <!-- SUBRED PÚBLICA -->
+  <rect x="250" y="150" width="200" height="250" class="subnet"/>
+  <text x="350" text-anchor="middle" y="175" class="label" font-weight="bold">Subred Pública</text>
+  <text x="350" text-anchor="middle" y="190" class="sublabel">10.0.1.0/24</text>
+
+  <!-- IGW -->
+  <rect x="280" y="200" width="140" height="50" class="box"/>
+  <text x="350" text-anchor="middle" y="225" class="label">Internet Gateway</text>
+  <text x="350" text-anchor="middle" y="240" class="sublabel">(IGW)</text>
+
+  <!-- EC2 Web -->
+  <rect x="280" y="270" width="140" height="80" class="box"/>
+  <text x="350" text-anchor="middle" y="295" class="label">EC2 Web</text>
+  <text x="350" text-anchor="middle" y="310" class="sublabel">t3.medium</text>
+  <text x="350" text-anchor="middle" y="325" class="sublabel">Astro+Node</text>
+  <text x="350" text-anchor="middle" y="340" class="sublabel">CRM+E-comm</text>
+
+  <!-- SG Web -->
+  <path class="sg" d="M 265 265 L 435 265 L 435 365 L 265 365 Z"/>
+  <text x="268" y="280" class="sublabel" fill="#ff6b6b">SG Web (80,443)</text>
+
+  <!-- SUBRED PRIVADA 1 (RDS) -->
+  <rect x="500" y="150" width="200" height="250" class="subnet"/>
+  <text x="600" text-anchor="middle" y="175" class="label" font-weight="bold">Subred Privada-1</text>
+  <text x="600" text-anchor="middle" y="190" class="sublabel">10.0.2.0/24</text>
+
+  <!-- RDS PostgreSQL -->
+  <rect x="530" y="220" width="140" height="90" class="box"/>
+  <text x="600" text-anchor="middle" y="245" class="label">RDS</text>
+  <text x="600" text-anchor="middle" y="260" class="sublabel">PostgreSQL</text>
+  <text x="600" text-anchor="middle" y="275" class="sublabel">db.t3.micro</text>
+  <text x="600" text-anchor="middle" y="290" class="sublabel">Managed</text>
+
+  <!-- SG RDS -->
+  <path class="sg" d="M 515 215 L 685 215 L 685 325 L 515 325 Z"/>
+  <text x="518" y="230" class="sublabel" fill="#ff6b6b">SG RDS (5432)</text>
+
+  <!-- Conexión EC2 → RDS -->
+  <path class="connection" d="M 420 310 L 530 270" stroke="#0073b1" stroke-width="2"/>
+  <text x="470" y="295" class="sublabel" fill="#0073b1">TCP 5432</text>
+
+  <!-- SUBRED PRIVADA 2 (IoT) -->
+  <rect x="750" y="150" width="200" height="250" class="subnet"/>
+  <text x="850" text-anchor="middle" y="175" class="label" font-weight="bold">Subred Privada-2</text>
+  <text x="850" text-anchor="middle" y="190" class="sublabel">10.0.3.0/24</text>
+
+  <!-- EC2 IoT -->
+  <rect x="780" y="220" width="140" height="100" class="box"/>
+  <text x="850" text-anchor="middle" y="245" class="label">EC2 IoT</text>
+  <text x="850" text-anchor="middle" y="260" class="sublabel">t3.medium</text>
+  <text x="850" text-anchor="middle" y="275" class="sublabel">Docker × 5</text>
+  <text x="850" text-anchor="middle" y="290" class="sublabel">Camiones 1-50</text>
+  <text x="850" text-anchor="middle" y="305" class="sublabel">Telemetría 30s</text>
+
+  <!-- SG IoT -->
+  <path class="sg" d="M 765 215 L 935 215 L 935 335 L 765 335 Z"/>
+  <text x="768" y="230" class="sublabel" fill="#ff6b6b">SG IoT (5432)</text>
+
+  <!-- Conexión IoT → RDS -->
+  <path class="connection" d="M 780 270 L 670 270" stroke="#0073b1" stroke-width="2"/>
+  <text x="720" y="255" class="sublabel" fill="#0073b1">TCP 5432</text>
+  <text x="720" y="270" class="sublabel" fill="#0073b1">inyecta datos</text>
+
+  <!-- SUBRED PRIVADA 3 (Grafana) -->
+  <rect x="250" y="450" width="700" height="200" class="subnet"/>
+  <text x="600" text-anchor="middle" y="475" class="label" font-weight="bold">Subred Privada-3 · 10.0.4.0/24</text>
+
+  <!-- Grafana Docker -->
+  <rect x="480" y="510" width="140" height="90" class="box"/>
+  <text x="550" text-anchor="middle" y="535" class="label">Grafana</text>
+  <text x="550" text-anchor="middle" y="550" class="sublabel">(Docker)</text>
+  <text x="550" text-anchor="middle" y="565" class="sublabel">Dashboard BI</text>
+  <text x="550" text-anchor="middle" y="580" class="sublabel">Puerto 3000</text>
+
+  <!-- SG Grafana -->
+  <path class="sg" d="M 465 505 L 635 505 L 635 615 L 465 615 Z"/>
+  <text x="468" y="520" class="sublabel" fill="#ff6b6b">SG Grafana</text>
+
+  <!-- Conexión Grafana ← RDS -->
+  <path class="connection" d="M 600 320 L 550 510" stroke="#0073b1" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="520" y="415" class="sublabel" fill="#0073b1">Lectura en vivo</text>
+
+  <!-- Route Tables -->
+  <rect x="250" y="700" width="700" height="120" fill="#fff9e6" stroke="#ff9800" stroke-width="2"/>
+  <text x="270" y="725" class="label" font-weight="bold">Route Tables</text>
+  <text x="290" y="750" class="sublabel">• Subred Pública: 0.0.0.0/0 → IGW (acceso a internet)</text>
+  <text x="290" y="770" class="sublabel">• Subredes Privadas: sin ruta a internet (máxima seguridad, RDS/IoT/Grafana aislados)</text>
+  <text x="290" y="790" class="sublabel">• Comunicación interna: entre SGs por TCP 5432 (PostgreSQL)</text>
+
+  <!-- Legend -->
+  <text x="1000" y="725" class="label" font-weight="bold">Leyenda</text>
+  <rect x="990" y="735" width="15" height="15" class="box"/>
+  <text x="1015" y="747" class="sublabel">EC2/RDS</text>
+
+  <rect x="990" y="760" width="15" height="15" class="subnet"/>
+  <text x="1015" y="772" class="sublabel">Subred</text>
+
+  <path class="sg" d="M 990 785 L 1005 785"/>
+  <text x="1015" y="792" class="sublabel">Security Group</text>
+</svg>

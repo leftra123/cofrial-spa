@@ -48,6 +48,10 @@ TELEMETRIA ──→ CAMION (N:1)
             └─→ alerta_ruptura_frio: boolean (derivada: temp_camara > rango)
 ```
 
+### Diagrama ER profesional (14 entidades)
+
+![Modelo ER en 3FN - 14 entidades](img/modelo-er-3fn.svg)
+
 ---
 
 ## Normalización a 3FN: verificación

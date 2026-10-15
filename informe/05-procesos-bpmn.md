@@ -53,7 +53,15 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### Diagrama BPMN Proceso 1 (B2B Order: AS-IS vs TO-BE)
 
-![BPMN 1: B2B Order - Problema y Solución](img/bpmn-01-b2b-order.svg)
+**[GENERA AQUÍ CON BPMN.IO O DRAW.IO + TU SKILL]**
+
+Flujo a dibujar (ver descripción AS-IS/TO-BE arriba):
+- Carril AS-IS: Vendedor recibe → anota en celular → transcribe Excel → fin
+- Carril TO-BE: Cliente B2B → e-commerce → selecciona precio instit. → arma carrito → orden en BD
+- Problema: 15 órdenes/día × 2h = 30h/sem = $450k/año
+- Solución: reduce a 0.5h/sem, ahorro $432k/año
+
+Exportar a: `informe/img/bpmn-01-b2b-order.png`
 
 ---
 
@@ -94,7 +102,15 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### Diagrama BPMN Proceso 2 (Cold-Chain: AS-IS vs TO-BE)
 
-![BPMN 2: Cold-Chain Dispatch - Problema y Solución](img/bpmn-02-coldchain.svg)
+**[GENERA AQUÍ CON BPMN.IO O DRAW.IO + TU SKILL]**
+
+Flujo a dibujar (ver descripción AS-IS/TO-BE arriba):
+- Carril AS-IS: Despachador → camión sale (SIN GPS) → ruta ciega 4-6h → fin
+- Carril TO-BE: IoT + GPS → cada 30s telemetría → ¿temp ok? → SÍ: monitoreo / NO: alerta inmediata
+- Problema: 50 camiones × 5% daño = $12M/año
+- Solución: reduce a 1% daño, ahorro $10.4M/año + trazabilidad
+
+Exportar a: `informe/img/bpmn-02-coldchain.png`
 
 ---
 
@@ -126,7 +142,15 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### Diagrama BPMN Proceso 3 (Prospect Management: AS-IS vs TO-BE)
 
-![BPMN 3: Prospect Management - Problema y Solución](img/bpmn-03-prospects.svg)
+**[GENERA AQUÍ CON BPMN.IO O DRAW.IO + TU SKILL]**
+
+Flujo a dibujar (ver descripción AS-IS/TO-BE arriba):
+- Carril AS-IS: Vendedor → prospectos en celular → WhatsApp → Excel → venta (o pérdida)
+- Carril TO-BE: CRM → tablero visual pipeline → IA clasifica → gerencia ve en vivo → enrutamiento automático
+- Problema: 35% oportunidades perdidas = $2M/año en ventas perdidas
+- Solución: reduce a 10%, ganancia $1.8M/año + 20% mejora en conversión
+
+Exportar a: `informe/img/bpmn-03-prospects.png`
 
 ---
 

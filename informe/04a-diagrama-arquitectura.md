@@ -180,6 +180,17 @@ Nota. Learner Lab suele otorgar $100 USD por 36 horas. Suficiente para desarroll
 
 ## Diagrama visual profesional
 
-![Arquitectura AWS VPC - Cofrial SPA](img/arquitectura-aws-vpc.svg)
+**[GENERA AQUÍ CON DRAW.IO + TU SKILL DE INFORME]**
+
+Topología a dibujar:
+- VPC 10.0.0.0/16 (contenedor principal)
+- Subred Pública 10.0.1.0/24: IGW, EC2 web (Astro+Node+CRM)
+- Subred Privada-1 10.0.2.0/24: RDS PostgreSQL
+- Subred Privada-2 10.0.3.0/24: EC2 IoT (Docker × 5 camiones)
+- Subred Privada-3 10.0.4.0/24: Grafana (Puerto 3000)
+- Security Groups: web (80,443), RDS (5432), IoT (5432 salida)
+- Conexiones: EC2 web → RDS (5432), EC2 IoT → RDS (5432), Grafana ← RDS (lectura)
+
+Exportar a: `informe/img/arquitectura-aws-vpc.png`
 
 Nota. Diagrama profesional de la topología VPC: subredes públicas y privadas, EC2 segregadas (web e IoT), RDS PostgreSQL en subred privada, Security Groups por capas. Elaboración propia.

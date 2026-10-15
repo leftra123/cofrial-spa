@@ -50,7 +50,18 @@ TELEMETRIA ──→ CAMION (N:1)
 
 ### Diagrama ER profesional (14 entidades)
 
-![Modelo ER en 3FN - 14 entidades](img/modelo-er-3fn.svg)
+**[GENERA AQUÍ CON DRAW.IO + TU SKILL DE INFORME]**
+
+Entidades a dibujar (relaciones en el ASCII arriba):
+- CLIENTE (central) ↔ DIRECCION, ORDEN, OPORTUNIDAD
+- PRODUCTO ↔ CATEGORIA, LISTA_PRECIO, ORDEN_ITEM
+- ORDEN ↔ CLIENTE, ORDEN_ITEM, ESTADO_ORDEN, CAMION (NEW)
+- VENDEDOR ↔ OPORTUNIDAD, INTERACCION
+- OPORTUNIDAD ↔ CLIENTE, VENDEDOR, ETAPA_PIPELINE, INTERACCION
+- CAMION ↔ TELEMETRIA, ORDEN
+- Todas las claves foráneas (FK) explícitas
+
+Exportar a: `informe/img/modelo-er-3fn.png`
 
 ---
 

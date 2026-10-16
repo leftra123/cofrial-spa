@@ -1,7 +1,7 @@
 # 4b. Modelo de datos (MER en 3FN + diccionario)
 
 > Rúbrica H1-D3 (Logrado): MER **rigurosamente normalizado** que soporte transacciones (E-commerce/CRM) **y** telemetría IoT.
-> **Estado: borrador de redacción**, pendiente de validación del equipo. El modelo no depende del framework web (D-01 sigue abierta): si se elige Django, los modelos se generan desde este diseño y la tabla `usuario` la reemplaza el sistema de autenticación del framework.
+> **Estado: borrador de redacción**, pendiente de validación del equipo. El modelo no depende del framework web. La web se hará con Django (decisión D-01): los modelos se generan desde este diseño, la tabla `usuario` la reemplaza el sistema de autenticación del framework y las tres tablas de clave compuesta usan `CompositePrimaryKey` (Django 5.2 o superior) o una clave autogenerada con restricción de unicidad, que mantiene la 3FN.
 > La fuente del modelo es `informe/modelo/modelo.py`. De ahí se generan el script SQL (`informe/modelo/esquema.sql`), el diagrama y el diccionario de este documento, así que los tres no pueden contradecirse. Para regenerar: `python3 informe/modelo/modelo.py --png`.
 
 ## Alcance y supuestos
@@ -689,6 +689,6 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 - [ ] Confirmar los supuestos de la sección de alcance (un despacho con varias órdenes, un precio por lista, pago fuera de alcance).
 - [ ] Decidir si se agrega historial de estados de la orden y movimientos de inventario (hoy fuera del alcance; mejoran el seguimiento y la auditoría).
 - [ ] Revisar los rangos de temperatura reales de Cofrial (los ejemplos, 0 a 4 y -25 a -18 grados, son supuestos).
-- [ ] Si D-01 pasa a Django, regenerar los modelos desde este diseño y reemplazar `usuario` por el sistema de autenticación.
+- [ ] Al crear el proyecto Django, generar los modelos desde este diseño y reemplazar `usuario` por el sistema de autenticación.
 
 ## Notas del equipo

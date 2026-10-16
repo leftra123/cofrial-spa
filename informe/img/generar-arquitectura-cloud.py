@@ -51,7 +51,7 @@ add("note_db2","Sin instancia: el DB subnet group de RDS exige subredes en 2 zon
     "text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#232F3E;",1650,1000,300,80,"sn_db2")
 # servicios
 shape("igw","Internet Gateway","internet_gateway","#8C4FFF",331,450)
-svc("ec2web","<b>EC2 web + backend</b><br>e-commerce, CRM y API (framework por decidir)<br>Grafana en Docker (BI)<br>IP elastica, t3.small","ec2","#ED7100",900,450,"sn_web")
+svc("ec2web","<b>EC2 web + backend</b><br>e-commerce, CRM y API (Django)<br>Grafana en Docker (BI)<br>IP elastica, t3.small","ec2","#ED7100",900,450,"sn_web")
 svc("ec2iot","<b>EC2 nodo IoT</b><br>Docker Compose: un contenedor<br>por camion (50 simulados)<br>t3.small","ec2","#ED7100",1100,720,"sn_iot")
 svc("rds","<b>RDS PostgreSQL</b><br>db.t3.micro, Single-AZ<br>respaldos automaticos","rds","#C925D1",900,1010,"sn_db1",label="bottom")
 # externo

@@ -74,7 +74,7 @@
 | C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 5 |
 | C6 Escalabilidad y evolución (10 %) | 4 | 5 | 5 | 4 |
 | **Puntaje ponderado** | **4,75** | **4,65** | **4,30** | **4,35** |
-| **Decisión** | Propuesta (por votar) | Alternativa válida (empate técnico) | Descartada | Descartada |
+| **Decisión** | Adoptada | Complementaria (empate técnico) | Descartada | Descartada |
 
 *Nota.* Elaboración propia. Borrador pendiente de validación del equipo. En C2 se mide también cuánto código hay que escribir: Django trae ORM con migraciones, autenticación, grupos de permisos y un panel de administración; Next.js y Astro obligan a elegir y armar cada una de esas piezas. En C3 se asume que Eric ya trabajó con React y Django REST Framework; la experiencia de Sergio está por confirmar y puede mover este criterio.
 
@@ -88,17 +88,17 @@
 | Criterio (peso) | Docker + Node/TypeScript | Docker + Python | AWS IoT Core | Inserción manual o Excel |
 |---|---|---|---|---|
 | C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 2 | 1 |
-| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 2 | 5 |
-| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 2 | 5 |
+| C2 Viabilidad en el plazo (20 %) | 4 | 5 | 2 | 5 |
+| C3 Facilidad de aprendizaje (15 %) | 3 | 5 | 2 | 5 |
 | C4 Costo cero (15 %) | 5 | 5 | 4 | 5 |
 | C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 2 | 5 |
 | C6 Escalabilidad y evolución (10 %) | 4 | 4 | 5 | 1 |
-| **Puntaje ponderado** | **4,75** | **4,55** | **2,60** | **3,40** |
-| **Decisión** | Adoptada | Complementaria (alternativa válida) | Descartada | Descartada (eliminatorio) |
+| **Puntaje ponderado** | **4,40** | **4,90** | **2,60** | **3,40** |
+| **Decisión** | Complementaria (alternativa válida) | Adoptada | Descartada | Descartada (eliminatorio) |
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Node se prefiere a Python solo para mantener un lenguaje en todo el proyecto. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
+**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Con Django adoptado para la web (Tabla 4), Python gana porque web e IoT comparten lenguaje: el equipo aprende una sola herramienta, el simulador usa una imagen ligera de Python y se ahorra mantener una segunda cadena de dependencias. Antes de elegir Django, Node/TypeScript puntuaba más (4,75 contra 4,55) solo por esa misma razón. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
 
 ## Dashboard de BI
 
@@ -169,12 +169,12 @@
 |---|---|---|---|
 | Cómputo | Amazon EC2 | Elastic Beanstalk | Lo exige la pauta y deja visible la configuración de red y seguridad |
 | Base de datos | RDS PostgreSQL | RDS MySQL | Datos geográficos, series de tiempo e integración con Grafana |
-| Web | Django + plantillas (propuesta, por votar) | React + Django REST Framework | ORM, autenticación y panel de administración incluidos; Python para cálculos e IoT |
-| IoT | Docker + Node/TypeScript | Docker + Python | Un solo lenguaje en todo el proyecto |
+| Web | Django + plantillas (HTMX y Tailwind) | React + Django REST Framework | ORM, autenticación y panel de administración incluidos; Python para cálculos e IoT |
+| IoT | Docker + Python | Docker + Node/TypeScript | Mismo lenguaje que la web (Django) y menos dependencias que mantener |
 | BI | Grafana | Metabase | Refresco en vivo y panel de mapa |
 | IA | Gemini (free tier) | Groq (free tier) | Calidad en español; Groq queda de respaldo |
 | Gestión | Trello | GitHub Projects | Ya en uso; GitHub queda para issues del código |
-| Procesos | BPMN 2.0 (bpmn.io) | Flujograma | Carriles por responsable |
+| Procesos | BPMN 2.0 dibujado en draw.io | Flujograma | Carriles por responsable; mismo programa que el diagrama de arquitectura |
 | Diagrama de arquitectura | draw.io (diagrams.net) con íconos oficiales de AWS | archify (HTML interactivo) | Gratis, archivo `.drawio` editable y versionable en git, exporta PNG y SVG |
 
 *Nota.* Elaboración propia.

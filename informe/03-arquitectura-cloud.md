@@ -18,7 +18,7 @@
 |---|---|---|---|
 | Red | VPC propia con subredes públicas (web e IoT) y privadas (datos) | Todo en subred pública o VPC por defecto | Más pasos de configuración a cambio de que la base de datos no tenga ruta desde internet |
 | Seguridad | Security Groups encadenados por referencia | Abrir el puerto 5432 a internet o a un rango de IP | Más grupos que mantener a cambio de admitir solo a las instancias exactas, aunque se reemplacen |
-| Cómputo | EC2 con Docker Compose | Lambda o Elastic Beanstalk | Administrar el sistema operativo nosotros a cambio de control visible y proceso persistente |
+| Cómputo | EC2 con Docker Compose | Lambda o Elastic Beanstalk | Administrar el sistema operativo por cuenta del equipo a cambio de control visible y proceso persistente |
 | Base de datos | RDS PostgreSQL | PostgreSQL instalado en EC2 | Menos control del servidor a cambio de respaldos y parches gestionados |
 | IoT | EC2 dedicada con Docker | Simulador en la misma EC2 del backend | Una instancia más de créditos a cambio de aislar la carga de telemetría de la web |
 | Disponibilidad | Single-AZ en el prototipo, Multi-AZ en producción | Multi-AZ desde el inicio | Riesgo de caída por zona a cambio de costo cero y compatibilidad con el Learner Lab |
@@ -56,7 +56,7 @@
 
 ### 3. Cómputo: EC2 con Docker Compose
 
-**Decisión.** Una EC2 `t3.small` para la web y el backend, y Grafana en un contenedor de la misma instancia, orquestados con Docker Compose y reinicio automático.
+**Decisión.** Una EC2 `t3.small` para la web y el backend (una aplicación Django servida con gunicorn detrás de nginx) y Grafana en un contenedor de la misma instancia, todo orquestado con Docker Compose y reinicio automático.
 
 **Alternativas.** Lambda no ofrece un backend persistente y obliga a rediseñar la aplicación en funciones. Elastic Beanstalk crea EC2 por debajo, pero oculta justamente la red y la seguridad que la rúbrica pide justificar, y en el Learner Lab hay que ajustar a mano el rol de servicio y el perfil de instancia para que funcione.
 
@@ -124,7 +124,7 @@
 
 ## Restricciones de AWS Academy (Learner Lab) a mencionar
 
-> Fuente: documento de AWS "AWS Academy Learner Lab – Foundation Services" (copia alojada por una universidad, © 2021; el propio documento advierte que las restricciones pueden cambiar). Los puntos marcados como pendientes se verifican en nuestro laboratorio y en la guía del estudiante del curso antes de citarlos en la entrega.
+> Fuente: documento de AWS "AWS Academy Learner Lab – Foundation Services" (copia alojada por una universidad, © 2021; el propio documento advierte que las restricciones pueden cambiar). Los puntos marcados como pendientes se verifican en el laboratorio del equipo y en la guía del estudiante del curso antes de citarlos en la entrega.
 
 - [x] **Regiones:** solo us-east-1 y us-west-2. El prototipo usa us-east-1.
 - [x] **EC2:** tamaños nano a large, solo instancias On-Demand, máximo 9 instancias y 32 vCPU en ejecución por región, AMIs de Linux o Windows entregadas por Amazon, discos EBS de hasta 100 GB. El prototipo usa `t3.small` (2 GB): alcanza para el backend con Grafana y Docker; una `t3.micro` (1 GB) quedaría justa.

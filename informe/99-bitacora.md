@@ -16,3 +16,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Se redacta el MER en 3FN con diccionario de datos (`04b-modelo-datos.md`): 25 tablas, verificación tabla por tabla, desnormalizaciones controladas y reglas de negocio no expresables en el esquema.
 - Se corrige una dependencia transitiva detectada al revisar: el cliente de una orden se obtiene por su dirección de entrega (vista `v_orden`), no se guarda en `orden`.
 - El esquema se valida en PostgreSQL 16: script, datos de prueba, consultas del dashboard y 13 rechazos de datos inválidos (`informe/modelo/`).
+
+## 2026-10-15
+- Se adopta la web en Django con plantillas (D-01), ORM de Django (D-03) y simulador IoT en Python (D-04); se actualizan decisiones, Tablas 4, 5 y 9 de `08-herramientas.md`, README, cronograma y diagramas. Eric delegó la elección a Claude; Sergio debe confirmarla.
+- Se redactan los borradores de la dimensión H1-D1: diagnóstico con árbol de problemas, cinco porqués y modelo de impacto (`01`), propuesta de valor con mecanismos y hoja de ruta de adopción (`02`) y seis procesos BPMN AS-IS y TO-BE (`05`).
+- Las figuras de D1 se generan con `informe/img/generar-figuras-d1.py`.

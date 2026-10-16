@@ -32,7 +32,7 @@ Un ecosistema en AWS que une el **Front-Office comercial** (e-commerce B2B/B2C +
 | 1. Diagnóstico del dolor | Eric | H1-D1 |
 | 2. Propuesta de valor (matriz dolor → solución → indicador) | Eric | H1-D1 |
 | Borrador del MER | Sergio | H1-D3 |
-| Esqueleto del proyecto web (Astro) | Eric | adelanta H2-D2 |
+| Esqueleto del proyecto web (Django) | Eric | adelanta H2-D2 |
 
 ### Semana 3 · 26 oct–1 nov · Informe: ingeniería
 | Tarea | Responsable | Dimensión |
@@ -73,7 +73,7 @@ Para no gastar tokens de más:
 | Tarea | Modelo |
 |---|---|
 | Mover tarjetas en Trello, renombrar, preguntas rápidas, cambios de una línea | **Haiku 4.5** |
-| Programar en el día a día (páginas Astro, SQL, Docker), redactar `.md` | **Sonnet 5** |
+| Programar en el día a día (vistas Django, SQL, Docker), redactar `.md` | **Sonnet 5** |
 | Decisiones de arquitectura, diseño del MER 3FN, errores difíciles en AWS, revisión final contra la rúbrica | **Opus 5.5** |
 
 Se cambia con `/model` en Claude Code.

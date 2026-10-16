@@ -10,8 +10,8 @@ Revisado el 12-oct-2026. Es material de terceros; solo se usa como referencia.
 
 **Límites**
 - No tiene mapas, telemetría ni componentes de IoT.
-- Los componentes son React; en Astro entran como islas de React y suman una dependencia al stack (se explicaría en la defensa). Preferir copiar componentes sueltos o rehacerlos en Astro.
+- Los componentes son React y la web irá en Django con plantillas (HTMX y Tailwind), así que no se pueden usar tal cual. Sirven como inspiración visual: se rehace el diseño con las clases de Tailwind en las plantillas.
 - La licencia la define cada autor: revisarla antes de copiar. magic-mcp es ISC; el SDK y agent-elements son MIT.
-- No instalar Magic MCP: genera código que luego hay que explicar.
+- No instalar Magic MCP: genera componentes React que no encajan con el stack y que luego habría que explicar.
 
 **Descartado:** jev-demo.com (directorio de demos de IA con publicidad; sin e-commerce, CRM, telemetría, código ni API).

@@ -45,7 +45,7 @@ Nota. Elaboración propia.
 | Diagnóstico y BPMN AS-IS | Eric | 16-oct | 20-oct | S1-S2 |
 | Propuesta de valor y BPMN TO-BE | Eric | 20-oct | 22-oct | S2 |
 | Borrador del MER | Sergio | 19-oct | 23-oct | S2 |
-| Esqueleto del proyecto Astro | Eric | 21-oct | 25-oct | S2 |
+| Esqueleto del proyecto Django | Eric | 21-oct | 25-oct | S2 |
 | Evaluación de herramientas y memoria AWS | Sergio | 23-oct | 26-oct | S2-S3 |
 | Diagrama de arquitectura | Sergio | 24-oct | 26-oct | S3 |
 | MER 3FN final y diccionario | Sergio | 26-oct | 27-oct | S3 |

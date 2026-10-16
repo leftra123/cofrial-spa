@@ -53,7 +53,7 @@
       "id": "web",
       "type": "backend",
       "label": "EC2 web + backend",
-      "sublabel": "e-commerce, CRM y API",
+      "sublabel": "Django: e-commerce, CRM y API",
       "pos": [
         540,
         120

@@ -84,7 +84,7 @@ CICLO = """flowchart TB
 """
 
 
-def render_mermaid(codigo, destino, escala=2):
+def render_mermaid(codigo, destino, escala=2, elk=False):
     """Dibuja un diagrama Mermaid y lo captura con Chrome, ajustando la ventana al tamaño real."""
     if not CHROME.exists():
         raise SystemExit("No se encontró Google Chrome para renderizar Mermaid")
@@ -93,17 +93,27 @@ def render_mermaid(codigo, destino, escala=2):
         f'<pre class="mermaid">{html.escape(codigo)}</pre>'
         '<script type="module">'
         'import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";'
-        'mermaid.initialize({startOnLoad:false,theme:"neutral",flowchart:{useMaxWidth:false,htmlLabels:true,curve:"basis"}});'
-        'await mermaid.run();const b=document.querySelector("svg").getBoundingClientRect();'
-        'document.title=Math.ceil(b.width)+"x"+Math.ceil(b.height);</script></body>'
+        + ('import elk from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elk);' if elk else '') +
+        'mermaid.initialize({startOnLoad:false,theme:"neutral",' + ('layout:"elk",' if elk else '') + 'flowchart:{useMaxWidth:false,htmlLabels:true,curve:"basis"}});'
+        'try{await mermaid.run();const b=document.querySelector("svg").getBoundingClientRect();'
+        'document.title=Math.ceil(b.width)+"x"+Math.ceil(b.height);}catch(e){document.title="ERROR "+(e.message||e).toString().slice(0,200).replace(/</g,"");}</script></body>'
     )
     with tempfile.TemporaryDirectory() as tmp:
         f = Path(tmp) / "m.html"
         f.write_text(pagina, encoding="utf-8")
         base = [str(CHROME), "--headless=new", "--disable-gpu", "--virtual-time-budget=30000"]
-        medida = subprocess.run(base + ["--dump-dom", f"file://{f}"], capture_output=True, text=True).stdout
-        m = re.search(r"<title>(\d+)x(\d+)</title>", medida)
-        ancho, alto = (int(m.group(1)) + 60, int(m.group(2)) + 60) if m else (2400, 1600)
+        m = None
+        for intento in range(3):  # la librería se descarga de internet; se reintenta si no cargó
+            medida = subprocess.run(base + ["--dump-dom", f"file://{f}"], capture_output=True, text=True).stdout
+            err = re.search(r"<title>(ERROR[^<]*)</title>", medida)
+            if err:
+                raise SystemExit(f"Mermaid no pudo dibujar {destino.name}: {err.group(1)}")
+            m = re.search(r"<title>(\d+)x(\d+)</title>", medida)
+            if m:
+                break
+        if not m:
+            raise SystemExit(f"Mermaid no cargó para {destino.name}; revise la conexión a internet")
+        ancho, alto = int(m.group(1)) + 60, int(m.group(2)) + 60
         subprocess.run(base + ["--hide-scrollbars", f"--window-size={ancho},{alto}",
                                f"--force-device-scale-factor={escala}", f"--screenshot={destino}", f"file://{f}"],
                        check=True, capture_output=True)

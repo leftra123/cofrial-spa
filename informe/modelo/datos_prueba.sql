@@ -45,5 +45,8 @@ INSERT INTO prospecto (vendedor_id, etapa_id, nombre_contacto, empresa, email, o
   (1, 3, 'Carlos Muñoz', 'Supermercado El Sur', 'cmunoz@elsur.test', 'web', 2500000);
 INSERT INTO interaccion (vendedor_id, prospecto_id, tipo, detalle) VALUES (1, 1, 'llamada', 'Se envía propuesta de precios');
 INSERT INTO categoria_requerimiento (nombre) VALUES ('Reclamo'), ('Cotización'), ('Despacho'), ('Calidad o frío'), ('Otro');
-INSERT INTO requerimiento (cliente_id, orden_id, asunto, descripcion, categoria_requerimiento_id, confianza_ia, estado) VALUES
-  (1, 1, 'Llegó tibia la carga', 'El pedido llegó con la cadena de frío cortada.', 4, 0.91, 'clasificado');
+INSERT INTO requerimiento (cliente_id, orden_id, asunto, descripcion, categoria_requerimiento_id, confianza_ia, estado, creado_en, respondido_en) VALUES
+  (1, 1, 'Llegó tibia la carga', 'El pedido llegó con la cadena de frío cortada.', 4, 0.91, 'clasificado', now() - interval '50 minutes', now() - interval '20 minutes');
+INSERT INTO prospecto (vendedor_id, etapa_id, nombre_contacto, empresa, telefono, origen, monto_estimado_clp, cerrado_en, motivo_perdida) VALUES
+  (1, 6, 'Rosa Díaz', 'Almacén La Esquina', '+56911112222', 'llamada', 300000, now() - interval '2 days', 'Eligió otro proveedor por precio'),
+  (1, 5, 'Hugo Salas', 'Hostal Villarrica', '+56933334444', 'feria', 700000, now() - interval '1 day', NULL);

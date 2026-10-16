@@ -236,10 +236,10 @@ erDiagram
 | `orden_item` | (`orden_id`, `producto_id`) | clave completa → `cantidad`, `precio_unitario_clp` | 3FN |
 | `telemetria` | `telemetria_id` | → todas las lecturas; (`camion_id`, `registrado_en`) es clave candidata | 3FN, ver D1 |
 | `etapa_pipeline` | `etapa_id` | → `nombre`, `orden_etapa`, `es_final`, `es_ganada` | 3FN |
-| `prospecto` | `prospecto_id` | → `vendedor_id`, `etapa_id`, `cliente_id`, datos de contacto, `origen`, `monto_estimado_clp` | 3FN |
+| `prospecto` | `prospecto_id` | → `vendedor_id`, `etapa_id`, `cliente_id`, datos de contacto, `origen`, `monto_estimado_clp`, `cerrado_en`, `motivo_perdida` | 3FN |
 | `interaccion` | `interaccion_id` | → `vendedor_id`, `prospecto_id`, `cliente_id`, `tipo`, `detalle` | 3FN |
 | `categoria_requerimiento` | `categoria_requerimiento_id` | → `nombre` | 3FN |
-| `requerimiento` | `requerimiento_id` | → `cliente_id`, `orden_id`, `asunto`, `descripcion`, categoría, `confianza_ia`, `estado` | 3FN, ver reglas de negocio |
+| `requerimiento` | `requerimiento_id` | → `cliente_id`, `orden_id`, `asunto`, `descripcion`, categoría, `confianza_ia`, `estado`, `creado_en`, `respondido_en` | 3FN, ver reglas de negocio |
 
 *Nota.* Elaboración propia.
 
@@ -269,6 +269,7 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 - Una orden solo puede asignarse a un despacho cuyo camión tenga un rango de temperatura compatible con la categoría de sus productos.
 - En un requerimiento, si `orden_id` está presente, la orden debe ser del mismo `cliente_id`. Es una dependencia condicional (solo aplica cuando la orden no es nula), por eso no se trata como dependencia funcional.
 - Al ganar un prospecto se crea el cliente, se completa `prospecto.cliente_id` y la etapa pasa a "Cliente ganado".
+- Al perder un prospecto, la etapa «Perdido» exige `motivo_perdida` y `cerrado_en`; la base solo impide un motivo sin fecha de cierre, por lo que la exigencia completa se valida en la aplicación (RN-11 de `04d-crm.md`).
 - La clasificación de un requerimiento no es obligatoria: si la IA no responde, queda `sin_clasificar` (caso de uso CU-09).
 
 ## Cómo responde el modelo a la rúbrica y a los casos de uso
@@ -298,7 +299,7 @@ El esquema se probó en PostgreSQL 16 (contenedor temporal):
 - El script `esquema.sql` crea sin errores las 25 tablas y 2 vistas.
 - `datos_prueba.sql` carga datos ficticios coherentes (hospital B2B, cliente B2C, camiones, órdenes, lecturas con una alerta, pipeline y un requerimiento).
 - `consultas_bi.sql` entrega ventas por día y canal, alertas por día, el cruce de ambas y las órdenes afectadas por una ruptura de frío. Los montos coinciden con el cálculo manual (por ejemplo, 10 × 38 990 + 5 × 29 990 = 539 850 pesos para la orden B2B).
-- 13 inserciones inválidas fueron rechazadas por la base de datos: orden sin dirección o con dirección inexistente, combustible fuera de 0 a 100, latitud imposible, camión inexistente, lectura duplicada, precio negativo, interacción sin destinatario, etapa ganada que no cierra, segundo carrito abierto, producto repetido en una orden, despacho que llega sin haber salido y dos direcciones principales.
+- 15 inserciones inválidas fueron rechazadas por la base de datos: orden sin dirección o con dirección inexistente, combustible fuera de 0 a 100, latitud imposible, camión inexistente, lectura duplicada, precio negativo, interacción sin destinatario, etapa ganada que no cierra, segundo carrito abierto, producto repetido en una orden, despacho que llega sin haber salido, dos direcciones principales, un motivo de pérdida en un prospecto sin cerrar y una respuesta anterior a la creación del requerimiento.
 
 Archivos: `informe/modelo/esquema.sql`, `informe/modelo/datos_prueba.sql` y `informe/modelo/consultas_bi.sql`.
 
@@ -580,8 +581,10 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `origen` | varchar(20) | No | — | Cómo llegó el prospecto. | web |
 | `monto_estimado_clp` | integer | Sí | — | Venta mensual estimada en pesos. | 2500000 |
 | `creado_en` | timestamptz | No | — | Fecha de ingreso. | 2026-10-12 11:00:00-03 |
+| `cerrado_en` | timestamptz | Sí | — | Fecha de cierre (ganado o perdido); vacío mientras siga abierto. | 2026-10-20 16:00:00-03 |
+| `motivo_perdida` | varchar(200) | Sí | — | Por qué se perdió la venta; solo si el prospecto se cerró como perdido. | Eligió otro proveedor por precio |
 
-*Restricciones adicionales:* `CHECK (email IS NOT NULL OR telefono IS NOT NULL)`; `origen IN ('web','referido','llamada','feria','otro')`; `monto_estimado_clp >= 0`.
+*Restricciones adicionales:* `CHECK (email IS NOT NULL OR telefono IS NOT NULL)`; `CHECK (cerrado_en IS NOT NULL OR motivo_perdida IS NULL)`; `origen IN ('web','referido','llamada','feria','otro')`; `monto_estimado_clp >= 0`.
 
 *Nota.* Elaboración propia.
 
@@ -626,8 +629,9 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `confianza_ia` | numeric(3,2) | Sí | — | Seguridad de la clasificación, entre 0 y 1. | 0.91 |
 | `estado` | varchar(14) | No | — | Estado del requerimiento. | clasificado |
 | `creado_en` | timestamptz | No | — | Fecha y hora de ingreso. | 2026-10-13 12:00:00-03 |
+| `respondido_en` | timestamptz | Sí | — | Fecha y hora de la primera respuesta al cliente (vacío si aún no se responde). | 2026-10-13 12:40:00-03 |
 
-*Restricciones adicionales:* `confianza_ia BETWEEN 0 AND 1`; `estado IN ('sin_clasificar','clasificado','resuelto')`.
+*Restricciones adicionales:* `CHECK (respondido_en IS NULL OR respondido_en >= creado_en)`; `confianza_ia BETWEEN 0 AND 1`; `estado IN ('sin_clasificar','clasificado','resuelto')`.
 
 *Nota.* Elaboración propia.
 

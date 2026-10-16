@@ -42,3 +42,29 @@ FROM telemetria t
 JOIN camion ca ON ca.camion_id = t.camion_id
 JOIN rango_temperatura r ON r.rango_temperatura_id = ca.rango_temperatura_id
 WHERE t.alerta_ruptura_frio <> (t.temp_camara < r.temp_min_c OR t.temp_camara > r.temp_max_c);
+
+-- 6. Conversión del mes: prospectos ganados sobre cerrados (ganados + perdidos).
+SELECT date_trunc('month', p.cerrado_en) AS mes,
+       count(*) FILTER (WHERE e.es_ganada) AS ganados,
+       count(*) FILTER (WHERE NOT e.es_ganada) AS perdidos,
+       round(100.0 * count(*) FILTER (WHERE e.es_ganada) / count(*), 1) AS conversion_pct
+FROM prospecto p JOIN etapa_pipeline e ON e.etapa_id = p.etapa_id
+WHERE p.cerrado_en IS NOT NULL
+GROUP BY 1 ORDER BY 1;
+
+-- 7. Valor del embudo abierto por etapa.
+SELECT e.nombre AS etapa, count(*) AS prospectos, coalesce(sum(p.monto_estimado_clp), 0) AS valor_clp
+FROM prospecto p JOIN etapa_pipeline e ON e.etapa_id = p.etapa_id
+WHERE NOT e.es_final GROUP BY e.nombre, e.orden_etapa ORDER BY e.orden_etapa;
+
+-- 8. Prospectos abiertos sin actividad en los últimos 7 días.
+SELECT p.prospecto_id, p.empresa, max(i.registrada_en) AS ultima_interaccion
+FROM prospecto p
+JOIN etapa_pipeline e ON e.etapa_id = p.etapa_id AND NOT e.es_final
+LEFT JOIN interaccion i ON i.prospecto_id = p.prospecto_id
+GROUP BY p.prospecto_id, p.empresa
+HAVING max(i.registrada_en) IS NULL OR max(i.registrada_en) < now() - interval '7 days';
+
+-- 9. Tiempo medio de primera respuesta a requerimientos, en minutos.
+SELECT round(avg(extract(epoch FROM (respondido_en - creado_en)) / 60)::numeric, 1) AS minutos_primera_respuesta
+FROM requerimiento WHERE respondido_en IS NOT NULL;

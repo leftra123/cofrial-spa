@@ -196,7 +196,9 @@ tabla("prospecto", "CRM", "Posibles clientes que sigue un vendedor a lo largo de
     c("origen", "varchar(20)", "Cómo llegó el prospecto.", "web", check="origen IN ('web','referido','llamada','feria','otro')"),
     c("monto_estimado_clp", "integer", "Venta mensual estimada en pesos.", "2500000", nulo=True, check="monto_estimado_clp >= 0"),
     c("creado_en", "timestamptz", "Fecha de ingreso.", "2026-10-12 11:00:00-03", default="now()"),
-], extra=["CHECK (email IS NOT NULL OR telefono IS NOT NULL)"])
+    c("cerrado_en", "timestamptz", "Fecha de cierre (ganado o perdido); vacío mientras siga abierto.", "2026-10-20 16:00:00-03", nulo=True),
+    c("motivo_perdida", "varchar(200)", "Por qué se perdió la venta; solo si el prospecto se cerró como perdido.", "Eligió otro proveedor por precio", nulo=True),
+], extra=["CHECK (email IS NOT NULL OR telefono IS NOT NULL)", "CHECK (cerrado_en IS NOT NULL OR motivo_perdida IS NULL)"])
 tabla("interaccion", "CRM", "Llamadas, correos, reuniones y notas registradas en la ficha de un prospecto o cliente.", [
     pk("interaccion_id", "Identificador de la interacción.", "300"),
     c("vendedor_id", "integer", "Vendedor que la registra.", "1", fk="vendedor"),
@@ -220,7 +222,8 @@ tabla("requerimiento", "CRM", "Consultas y reclamos de clientes, clasificados po
     c("confianza_ia", "numeric(3,2)", "Seguridad de la clasificación, entre 0 y 1.", "0.91", nulo=True, check="confianza_ia BETWEEN 0 AND 1"),
     c("estado", "varchar(14)", "Estado del requerimiento.", "clasificado", check="estado IN ('sin_clasificar','clasificado','resuelto')", default="'sin_clasificar'"),
     c("creado_en", "timestamptz", "Fecha y hora de ingreso.", "2026-10-13 12:00:00-03", default="now()"),
-])
+    c("respondido_en", "timestamptz", "Fecha y hora de la primera respuesta al cliente (vacío si aún no se responde).", "2026-10-13 12:40:00-03", nulo=True),
+], extra=["CHECK (respondido_en IS NULL OR respondido_en >= creado_en)"])
 
 # ---------------------------------------------------------------- Relaciones para el diagrama
 REL = [

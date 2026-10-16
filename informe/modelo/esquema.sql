@@ -207,7 +207,10 @@ CREATE TABLE prospecto (
   origen varchar(20) NOT NULL CHECK (origen IN ('web','referido','llamada','feria','otro')),
   monto_estimado_clp integer CHECK (monto_estimado_clp >= 0),
   creado_en timestamptz NOT NULL DEFAULT now(),
-  CHECK (email IS NOT NULL OR telefono IS NOT NULL)
+  cerrado_en timestamptz,
+  motivo_perdida varchar(200),
+  CHECK (email IS NOT NULL OR telefono IS NOT NULL),
+  CHECK (cerrado_en IS NOT NULL OR motivo_perdida IS NULL)
 );
 
 -- Llamadas, correos, reuniones y notas registradas en la ficha de un prospecto o cliente.
@@ -238,7 +241,9 @@ CREATE TABLE requerimiento (
   categoria_requerimiento_id integer REFERENCES categoria_requerimiento (categoria_requerimiento_id),
   confianza_ia numeric(3,2) CHECK (confianza_ia BETWEEN 0 AND 1),
   estado varchar(14) NOT NULL DEFAULT 'sin_clasificar' CHECK (estado IN ('sin_clasificar','clasificado','resuelto')),
-  creado_en timestamptz NOT NULL DEFAULT now()
+  creado_en timestamptz NOT NULL DEFAULT now(),
+  respondido_en timestamptz,
+  CHECK (respondido_en IS NULL OR respondido_en >= creado_en)
 );
 
 -- Índices pensados para las consultas del dashboard y de la torre de control.

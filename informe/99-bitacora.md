@@ -21,3 +21,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Se adopta la web en Django con plantillas (D-01), ORM de Django (D-03) y simulador IoT en Python (D-04); se actualizan decisiones, Tablas 4, 5 y 9 de `08-herramientas.md`, README, cronograma y diagramas. Eric delegó la elección a Claude; Sergio debe confirmarla.
 - Se redactan los borradores de la dimensión H1-D1: diagnóstico con árbol de problemas, cinco porqués y modelo de impacto (`01`), propuesta de valor con mecanismos y hoja de ruta de adopción (`02`) y seis procesos BPMN AS-IS y TO-BE (`05`).
 - Las figuras de D1 se generan con `informe/img/generar-figuras-d1.py`.
+
+## 2026-10-16
+- Al diseñar el pipeline del CRM se agregan tres campos al modelo: `prospecto.cerrado_en`, `prospecto.motivo_perdida` y `requerimiento.respondido_en`, sin los cuales no se podía exigir el motivo de pérdida, medir la conversión del mes ni el tiempo de primera respuesta. Se agregan cuatro consultas al dashboard y se revalida el esquema en PostgreSQL.
+- Se redactan los borradores de D4: canales (`04c`), CRM (`04d`) y casos de uso (`06`) con wireframes, user journeys, arquitectura funcional, pipeline y especificaciones.
+- Se verifica el repositorio contra el PDF original de la pauta (`09-verificacion-pauta.md`): las cuatro dimensiones del Hito 1 tienen contenido que responde al criterio; la brecha principal es armar el informe único.

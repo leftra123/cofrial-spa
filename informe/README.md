@@ -20,15 +20,15 @@ Cada archivo es la materia prima de una sección del informe: datos del caso, qu
 | II | Diagnóstico y análisis del dolor | H1-D1 | `01-diagnostico.md` | Eric | Borrador |
 | III | Procesos AS-IS y TO-BE (BPMN 2.0) | H1-D1, H1-D4 | `05-procesos-bpmn.md` | Eric | Borrador |
 | IV | Propuesta de valor y resolución de conflictos | H1-D1 | `02-propuesta-valor.md` | Eric | Borrador |
-| V | Casos de uso del ecosistema | H1-D4 | `06-casos-de-uso.md` | Eric | Pendiente |
+| V | Casos de uso del ecosistema | H1-D4 | `06-casos-de-uso.md` | Eric | Borrador |
 | VI | Metodología, cronograma, Trello, equipo y riesgos | Apoyo | `07-metodologia-cronograma.md` | Ambos | Borrador |
 | VII | Evaluación de herramientas (criterios ponderados) | H1-D2 | `08-herramientas.md` | Sergio | Borrador |
 | VIII | Memoria de arquitectura cloud (trade-offs) | H1-D2 | `03-arquitectura-cloud.md` | Sergio | Borrador (Sergio debe revisarlo) |
 | IX | Diagrama de arquitectura cloud | H1-D3 | `04a-diagrama-arquitectura.md` | Sergio | Borrador (Sergio debe revisarlo) |
 | X | Modelo de datos: MER 3FN y diccionario | H1-D3 | `04b-modelo-datos.md` | Sergio | Borrador (Sergio debe revisarlo) |
-| XI | Canales digitales: wireframes y user journeys B2B/B2C | H1-D4 | `04c-canales-b2b-b2c.md` | Eric | Pendiente |
-| XII | Arquitectura funcional del CRM y pipeline | H1-D4 | `04d-crm.md` | Eric | Pendiente |
+| XI | Canales digitales: wireframes y user journeys B2B/B2C | H1-D4 | `04c-canales-b2b-b2c.md` | Eric | Borrador |
+| XII | Arquitectura funcional del CRM y pipeline | H1-D4 | `04d-crm.md` | Eric | Borrador |
 | XIII | Conclusiones | — | se arma al final | Ambos | Pendiente |
 | XIV | Referencias (APA 7, lista única) | — | `99-bitacora.md` registra las fuentes | Ambos | Pendiente |
 
-`99-bitacora.md` registra avances, acuerdos y fuentes consultadas.
+`09-verificacion-pauta.md` contrasta el repositorio con el PDF del curso y lista las brechas para llegar a «Logrado». `99-bitacora.md` registra avances, acuerdos y fuentes consultadas.

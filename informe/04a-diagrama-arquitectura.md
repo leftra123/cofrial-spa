@@ -26,7 +26,7 @@ INTERNET (Clientes B2B/B2C)
 │  │ │ │ EC2 web    │ │          │ │ RDS          │ │       │ │
 │  │ │ │ t3.medium  │─┼──────────┤─│ PostgreSQL   │ │       │ │
 │  │ │ │            │ │ TCP 5432 │ │ (managed)    │ │       │ │
-│  │ │ │ Astro SSR  │ │          │ │              │ │       │ │
+│  │ │ │ Django     │ │          │ │              │ │       │ │
 │  │ │ │ CRM        │ │          │ │ Respaldos:   │ │       │ │
 │  │ │ │ E-commerce │ │          │ │ Snapshots 7d │ │       │ │
 │  │ │ │ API REST   │ │          │ │              │ │       │ │
@@ -94,7 +94,7 @@ EC2 web → Solicita clasificación de requerimientos
 ```
 Cliente (navegador)
     ↓ HTTPS
-EC2 web (Astro)
+EC2 web (Django + gunicorn)
     ↓ TCP 5432
 RDS PostgreSQL ← Inserta ORDEN + ORDEN_ITEM
     ↓
@@ -167,7 +167,7 @@ Salida:
 
 | Recurso | Especificación | Justificación | Costo Lab |
 |---|---|---|---|
-| EC2 web | t3.medium (2 vCPU, 4 GB RAM) | Astro + Node + APIs | ~$0.04/h |
+| EC2 web | t3.medium (2 vCPU, 4 GB RAM) | Django (gunicorn) + APIs | ~$0.04/h |
 | EC2 IoT | t3.medium (2 vCPU, 4 GB RAM) | Docker × 5 contenedores | ~$0.04/h |
 | RDS PostgreSQL | db.t3.micro (1 vCPU, 1 GB RAM) | Prototipo, suficiente | ~$0.025/h |
 | Snapshots RDS | 7 días de retención | Respaldos automáticos | ~$0.10/GB/mes |

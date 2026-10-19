@@ -27,7 +27,7 @@ Rúbrica H1-D2 (Logrado): justificar **con trade-offs** VPC, subredes, seguridad
 | Tema | Opción elegida | Alternativa descartada | Trade-off |
 |---|---|---|---|
 | Servicio de cómputo | Amazon EC2 (IaaS) | AWS Lambda (serverless), Elastic Beanstalk (PaaS) | EC2 obliga a gestionar la instancia, pero deja visible la configuración de red y seguridad que la pauta exige justificar. Lambda no es un "backend persistente". |
-| Tipo de instancia | t3.medium (2 vCPU, 4 GB RAM) | t3.small o t3.large | t3.medium es suficiente para un prototipo con Node/Astro + Grafana. Es la "sweet spot" en el Learner Lab. |
+| Tipo de instancia | t3.medium (2 vCPU, 4 GB RAM) | t3.small o t3.large | t3.medium es suficiente para un prototipo con Django (gunicorn) + Grafana. Es la "sweet spot" en el Learner Lab. |
 | Persistencia | Servicio de respaldo automático (EBS snapshots) | Datos solo en volumen raíz | Snapshots permiten recuperarse de fallos de hardware. Responde al dolor del servidor sin respaldo. |
 | Número de instancias | Dos EC2: una para web/API/CRM, otra para IoT/Docker | Una sola para todo | Segregar IoT permite escalar el simulador sin afectar la web. Docker en una máquina dedicada es más limpio. |
 
@@ -73,7 +73,7 @@ La pauta implícitamente usa AWS Academy. El Lab tiene:
 - **IPs públicas:** si usas una IP pública directa, se reasigna al reiniciar. **Solución:** usar Elastic IP (costo mínimo) o actualizar la URL en `.env`.
 
 **Implicaciones:**
-1. **Backend persistente:** los servicios (Node, Grafana) deben arrancar automáticamente al reiniciar. Usar `systemd` o Docker `restart: always`.
+1. **Backend persistente:** los servicios (Django con gunicorn, Grafana) deben arrancar automáticamente al reiniciar. Usar `systemd` o Docker `restart: always`.
 2. **Datos persistentes:** RDS existe en una BD independiente de la instancia. Los datos persisten.
 3. **Plan B para la defensa:** guardar un script que levante todo en < 10 minutos por si el Lab se reinicia durante la demo.
 
@@ -91,7 +91,7 @@ Internet
  Web(80)  HTTPS(443)
    |
    +-- EC2 web (t3.medium)
-       | Backend Astro
+       | Backend Django (gunicorn)
        | CRM + E-commerce
        | API REST
        |

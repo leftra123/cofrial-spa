@@ -65,20 +65,20 @@
 **Tabla 4**
 *Puntuación ponderada: framework web (e-commerce, crm y api)*
 
-| Criterio (peso) | Astro (modo servidor) | Next.js | Django | Laravel |
+| Criterio (peso) | Django + plantillas (HTMX y Tailwind) | React + Django REST Framework | Next.js (React y Tailwind) | Astro (modo servidor) |
 |---|---|---|---|---|
 | C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 5 | 5 |
-| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 4 | 3 |
-| C3 Facilidad de aprendizaje (15 %) | 4 | 3 | 3 | 3 |
+| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 3 | 3 |
+| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 3 | 4 |
 | C4 Costo cero (15 %) | 5 | 5 | 5 | 5 |
 | C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 5 |
-| C6 Escalabilidad y evolución (10 %) | 4 | 5 | 4 | 4 |
-| **Puntaje ponderado** | **4,75** | **4,50** | **4,40** | **4,20** |
-| **Decisión** | Adoptada | Descartada | Descartada | Descartada |
+| C6 Escalabilidad y evolución (10 %) | 4 | 5 | 5 | 4 |
+| **Puntaje ponderado** | **4,75** | **4,65** | **4,30** | **4,35** |
+| **Decisión** | Adoptada | Complementaria (empate técnico) | Descartada | Descartada |
 
-*Nota.* Elaboración propia.
+*Nota.* Elaboración propia. Borrador pendiente de validación del equipo. En C2 se mide también cuánto código hay que escribir: Django trae ORM con migraciones, autenticación, grupos de permisos y un panel de administración; Next.js y Astro obligan a elegir y armar cada una de esas piezas. En C3 se asume que Eric ya trabajó con React y Django REST Framework; la experiencia de Sergio está por confirmar y puede mover este criterio.
 
-**Conclusión.** Los cuatro cumplen la pauta. Astro gana en plazo y facilidad: una sola aplicación entrega las páginas y la API, y es la elección previa de Eric para la capa de vista. Next.js escala mejor, pero su modelo de componentes de servidor exige más aprendizaje.
+**Conclusión.** Django con plantillas (4,75) y React con Django REST Framework (4,65) quedan en un empate técnico. Con Django, el MER en 3FN se convierte directo en modelos y migraciones, y el panel de administración da el CRM base (clientes, prospectos, pedidos) sin escribir interfaz. Python además sirve para los cálculos (listas de precios, mermas, umbrales de cadena de frío) y para el simulador IoT, con un solo lenguaje. React con Django REST Framework conserva esas ventajas del backend (el panel de administración sigue disponible como CRM base) y suma el ecosistema de React; su costo es mantener y desplegar dos aplicaciones, con CORS, autenticación por token y validaciones duplicadas. Si los dos integrantes ya dominan React, esa opción es defendible; si no, Django con plantillas ahorra tiempo. Next.js y Astro quedan atrás porque no traen autenticación, ORM ni panel de administración. El puntaje previo de Astro (4,75) se corrigió: puntuaba alto en plazo y facilidad por ser una elección previa, sin considerar el código que faltaba escribir.
 
 ## Simulación IoT
 
@@ -88,17 +88,17 @@
 | Criterio (peso) | Docker + Node/TypeScript | Docker + Python | AWS IoT Core | Inserción manual o Excel |
 |---|---|---|---|---|
 | C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 2 | 1 |
-| C2 Viabilidad en el plazo (20 %) | 5 | 4 | 2 | 5 |
-| C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 2 | 5 |
+| C2 Viabilidad en el plazo (20 %) | 4 | 5 | 2 | 5 |
+| C3 Facilidad de aprendizaje (15 %) | 3 | 5 | 2 | 5 |
 | C4 Costo cero (15 %) | 5 | 5 | 4 | 5 |
 | C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 2 | 5 |
 | C6 Escalabilidad y evolución (10 %) | 4 | 4 | 5 | 1 |
-| **Puntaje ponderado** | **4,75** | **4,55** | **2,60** | **3,40** |
-| **Decisión** | Adoptada | Complementaria (alternativa válida) | Descartada | Descartada (eliminatorio) |
+| **Puntaje ponderado** | **4,40** | **4,90** | **2,60** | **3,40** |
+| **Decisión** | Complementaria (alternativa válida) | Adoptada | Descartada | Descartada (eliminatorio) |
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Node se prefiere a Python solo para mantener un lenguaje en todo el proyecto. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
+**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Con Django adoptado para la web (Tabla 4), Python gana porque web e IoT comparten lenguaje: el equipo aprende una sola herramienta, el simulador usa una imagen ligera de Python y se ahorra mantener una segunda cadena de dependencias. Antes de elegir Django, Node/TypeScript puntuaba más (4,75 contra 4,55) solo por esa misma razón. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
 
 ## Dashboard de BI
 
@@ -149,8 +149,8 @@
 |---|---|---|---|
 | Cómputo | Amazon EC2 | Elastic Beanstalk | Lo exige la pauta y deja visible la configuración de red y seguridad |
 | Base de datos | RDS PostgreSQL | RDS MySQL | Datos geográficos, series de tiempo e integración con Grafana |
-| Web | Astro (modo servidor) | Next.js | Una sola aplicación y menor curva de aprendizaje |
-| IoT | Docker + Node/TypeScript | Docker + Python | Un solo lenguaje en todo el proyecto |
+| Web | Django + plantillas (HTMX y Tailwind) | React + Django REST Framework | ORM, autenticación y panel de administración incluidos; Python para cálculos e IoT |
+| IoT | Docker + Python | Docker + Node/TypeScript | Mismo lenguaje que la web (Django) y menos dependencias que mantener |
 | BI | Grafana | Metabase | Refresco en vivo y panel de mapa |
 | IA | Gemini (free tier) | Groq (free tier) | Calidad en español; Groq queda de respaldo |
 | Gestión | Trello | GitHub Projects | Ya en uso; GitHub queda para issues del código |

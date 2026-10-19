@@ -27,13 +27,13 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 
 ## Registro de decisiones cerradas
 
-**D-01 Web: Django con plantillas (15-oct-2026).** Frente a React + Django REST Framework (empate técnico), Astro y Next.js. Trade-off: se renuncia al ecosistema de React y a una interfaz más rica a cambio de una sola aplicación, menos piezas que desplegar y un panel de administración listo como CRM base. Si más adelante se necesita una interfaz más dinámica, HTMX cubre la mayoría de los casos y la API se puede exponer con Django REST Framework sin rehacer el modelo.
+**D-01 Web: Django con plantillas (15-oct-2026).** Puntaje 4,75 frente a React + Django REST Framework (4,65, empate técnico), Astro (4,35) y Next.js (4,30); ver Tabla 4 de `informe/08-herramientas.md`. Trade-off: se renuncia al ecosistema de React y a una interfaz más rica a cambio de una sola aplicación, menos piezas que desplegar y un panel de administración listo como CRM base. Si más adelante se necesita una interfaz más dinámica, HTMX cubre la mayoría de los casos y la API se puede exponer con Django REST Framework sin rehacer el modelo.
 
 **D-03 Acceso a datos: ORM de Django (15-oct-2026).** Consecuencia de D-01. Las tablas de clave compuesta (`precio_producto`, `carrito_item`, `orden_item`) se implementan con `CompositePrimaryKey` (Django 5.2 o superior) o, si la versión no lo permite, con clave autogenerada más restricción de unicidad sobre el par; ambas mantienen la 3FN. La tabla `usuario` se reemplaza por la autenticación de Django.
 
-**D-04 Simulador IoT: Python en Docker (15-oct-2026).** Consecuencia de D-01: Python es el lenguaje común y los contenedores usan una imagen ligera.
+**D-04 Simulador IoT: Python en Docker (15-oct-2026).** Consecuencia de D-01: Python es el lenguaje común y los contenedores usan una imagen ligera. Puntaje 4,90 frente a 4,40 de Node/TypeScript; ver Tabla 5 de `informe/08-herramientas.md`.
 
 ## Estado de la implementación
 El scaffold está en `backend/` (Django 5.2, `psycopg` 3 y `python-dotenv`; configuración por variables de entorno, ver `.env.example`). Aún no hay modelos: el esquema vive en `informe/modelo/esquema.sql`.
 
-> **Pendiente de sincronizar:** `informe/08-herramientas.md` (Tablas 4 y 5) y `informe/03-arquitectura-cloud.md` todavía describen Astro y Node/TypeScript, y sus puntajes no se actualizaron a esta decisión. Los puntajes que citaba la rama `pruebas-herramientas` (4,75 y 4,90) se quitaron de este registro hasta recalcularlos en la Tabla 4 y la Tabla 5.
+> Sincronizado con `informe/03-arquitectura-cloud.md` y `informe/08-herramientas.md` (Tablas 4 y 5: Django 4,75; Python 4,90). Los puntajes son un borrador que Sergio debe validar, sobre todo C3 (facilidad de aprendizaje).

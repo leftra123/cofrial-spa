@@ -1,0 +1,12 @@
+{% extends "core/base.html" %}
+{% block titulo %}Orden {{ orden.orden_id }} | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h2>Orden N.º {{ orden.orden_id }}</h2>
+<p>Estado: <strong>{{ orden.estado_orden.nombre }}</strong> · Entrega en {{ orden.direccion.calle_numero }}, {{ orden.direccion.comuna.nombre }}{% if orden.numero_oc %} · OC {{ orden.numero_oc }}{% endif %}</p>
+<table>
+  <tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Subtotal</th></tr>
+  {% for l in lineas %}<tr><td>{{ l.producto.nombre }}</td><td class="n">{{ l.cantidad }}</td><td class="n">${{ l.precio|floatformat:"0g" }}</td><td class="n">${{ l.subtotal|floatformat:"0g" }}</td></tr>{% endfor %}
+  <tr><th colspan="3" class="n">Total</th><th class="n">${{ total|floatformat:"0g" }}</th></tr>
+</table>
+<p><a href="{% url 'catalogo' %}">Seguir comprando</a></p>
+{% endblock %}

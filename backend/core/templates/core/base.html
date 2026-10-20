@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Cofrial SpA{% endblock %}</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f4f6f8; color: #1d2733; }
+  header { background: #12355b; color: #fff; padding: .8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+  header h1 { margin: 0; font-size: 1.2rem; }
+  header a { color: #fff; }
+  header nav, header form { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  select, input, button { font: inherit; padding: .35rem .6rem; border-radius: .4rem; border: 1px solid #99a; }
+  button { background: #12355b; color: #fff; border: 0; cursor: pointer; }
+  button:disabled { background: #aab; cursor: not-allowed; }
+  button.sec { background: #fff; color: #12355b; border: 1px solid #12355b; }
+  main { max-width: 64rem; margin: 1.5rem auto; padding: 0 1rem; }
+  .msg { padding: .6rem .9rem; border-radius: .4rem; margin-bottom: .5rem; }
+  .msg.error { background: #fde7e5; color: #8c1d18; }
+  .msg.success { background: #e3f4e6; color: #17562a; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .5rem; overflow: hidden; }
+  th, td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid #e3e7eb; }
+  td.n, th.n { text-align: right; }
+  .sin { color: #b3261e; }
+</style>
+{% block estilos %}{% endblock %}
+</head>
+<body>
+<header>
+  <h1>Cofrial SpA</h1>
+  <nav>
+    <a href="{% url 'catalogo' %}">Catálogo</a>
+    <a href="{% url 'carrito' %}">Carrito</a>
+    <form method="post" action="{% url 'elegir_cliente' %}">{% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <select name="cliente_id" aria-label="Comprar como" onchange="this.form.submit()">
+        <option value="">Comprar como… (demo)</option>
+        {% for c in clientes_demo %}<option value="{{ c.cliente_id }}" {% if c.cliente_id == cliente_sesion.cliente_id %}selected{% endif %}>{{ c.nombre }} ({{ c.tipo_cliente.codigo }})</option>{% endfor %}
+      </select>
+    </form>
+  </nav>
+</header>
+<main>
+  {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+  {% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

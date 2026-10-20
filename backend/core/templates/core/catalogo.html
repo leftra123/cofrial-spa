@@ -1,16 +1,6 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catálogo | Cofrial SpA</title>
-<style>
-  body { font-family: system-ui, sans-serif; margin: 0; background: #f4f6f8; color: #1d2733; }
-  header { background: #12355b; color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
-  header h1 { margin: 0; font-size: 1.25rem; }
-  nav a { color: #fff; padding: .35rem .8rem; border-radius: 999px; text-decoration: none; border: 1px solid #ffffff80; margin-left: .4rem; }
-  nav a.activo { background: #fff; color: #12355b; }
-  main { max-width: 64rem; margin: 1.5rem auto; padding: 0 1rem; }
+{% extends "core/base.html" %}
+{% block titulo %}Catálogo | Cofrial SpA{% endblock %}
+{% block estilos %}<style>
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
   .card { background: #fff; border-radius: .6rem; padding: 1rem; box-shadow: 0 1px 3px #0002; display: flex; flex-direction: column; gap: .35rem; }
   .card h2 { font-size: 1rem; margin: 0; }
@@ -18,34 +8,33 @@
   .frio { align-self: flex-start; font-size: .75rem; background: #dff0ff; color: #0b4a7a; padding: .15rem .5rem; border-radius: 999px; }
   .precio { font-size: 1.4rem; font-weight: 700; margin-top: auto; }
   .stock { font-size: .8rem; }
-  .sin { color: #b3261e; }
-</style>
-</head>
-<body>
-<header>
-  <h1>Cofrial SpA · Catálogo de refrigerados</h1>
-  <nav>
-    <a href="?perfil=b2c" class="{% if perfil == 'b2c' %}activo{% endif %}">Público (B2C)</a>
-    <a href="?perfil=b2b" class="{% if perfil == 'b2b' %}activo{% endif %}">Institucional (B2B)</a>
-  </nav>
-</header>
-<main>
-  <p>Lista de precios: <strong>{{ lista }}</strong></p>
-  <div class="grid">
-  {% for it in items %}
-    <article class="card">
-      <span class="cat">{{ it.p.categoria.nombre }} · {{ it.p.sku }}</span>
-      <h2>{{ it.p.nombre }}</h2>
-      <span class="frio">{{ it.rango.nombre }}: {{ it.rango.temp_min_c }} a {{ it.rango.temp_max_c }} °C</span>
-      <span class="precio">{% if it.precio %}${{ it.precio|floatformat:"0g" }}{% else %}Sin precio{% endif %}</span>
-      <span class="stock {% if not it.p.stock_disponible %}sin{% endif %}">
-        {% if it.p.stock_disponible %}Stock: {{ it.p.stock_disponible }} {{ it.p.unidad_medida }}{% else %}Sin stock{% endif %}
-      </span>
-    </article>
-  {% empty %}
-    <p>No hay productos activos.</p>
-  {% endfor %}
-  </div>
-</main>
-</body>
-</html>
+  .add { display: flex; gap: .4rem; margin-top: .4rem; }
+  .add input { width: 4rem; }
+</style>{% endblock %}
+{% block contenido %}
+<h2>Catálogo de refrigerados</h2>
+<p>Lista de precios: <strong>{{ lista }}</strong>
+{% if not cliente_sesion %} · Mirando como <a href="?perfil=b2c">Público (B2C)</a> / <a href="?perfil=b2b">Institucional (B2B)</a>. Elige un cliente arriba para comprar.{% endif %}</p>
+<div class="grid">
+{% for it in items %}
+  <article class="card">
+    <span class="cat">{{ it.p.categoria.nombre }} · {{ it.p.sku }}</span>
+    <h3 style="margin:0;font-size:1rem">{{ it.p.nombre }}</h3>
+    <span class="frio">{{ it.rango.nombre }}: {{ it.rango.temp_min_c }} a {{ it.rango.temp_max_c }} °C</span>
+    <span class="precio">{% if it.precio %}${{ it.precio|floatformat:"0g" }}{% else %}Sin precio{% endif %}</span>
+    <span class="stock {% if not it.p.stock_disponible %}sin{% endif %}">
+      {% if it.p.stock_disponible %}Stock: {{ it.p.stock_disponible }} {{ it.p.unidad_medida }}{% else %}Sin stock{% endif %}
+    </span>
+    {% if cliente_sesion %}
+    <form class="add" method="post" action="{% url 'agregar' %}">{% csrf_token %}
+      <input type="hidden" name="producto_id" value="{{ it.p.producto_id }}">
+      <input type="number" name="cantidad" value="1" min="1" max="{{ it.p.stock_disponible }}" {% if not it.p.stock_disponible or not it.precio %}disabled{% endif %}>
+      <button {% if not it.p.stock_disponible or not it.precio %}disabled{% endif %}>Agregar</button>
+    </form>
+    {% endif %}
+  </article>
+{% empty %}
+  <p>No hay productos activos.</p>
+{% endfor %}
+</div>
+{% endblock %}

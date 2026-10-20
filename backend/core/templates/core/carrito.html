@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block titulo %}Carrito | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h2>Tu carrito</h2>
+{% if lineas %}
+<table>
+  <tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Subtotal</th><th></th></tr>
+  {% for l in lineas %}
+  <tr>
+    <td>{{ l.producto.nombre }}{% if l.sin_stock %}<br><span class="sin">Stock insuficiente (quedan {{ l.producto.stock_disponible }})</span>{% endif %}</td>
+    <td class="n">{{ l.cantidad }}</td>
+    <td class="n">${{ l.precio|floatformat:"0g" }}</td>
+    <td class="n">${{ l.subtotal|floatformat:"0g" }}</td>
+    <td class="n"><form method="post" action="{% url 'quitar' %}">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ l.producto.producto_id }}"><button class="sec">Quitar</button></form></td>
+  </tr>
+  {% endfor %}
+  <tr><th colspan="3" class="n">Total</th><th class="n">${{ total|floatformat:"0g" }}</th><th></th></tr>
+</table>
+<form method="post" action="{% url 'confirmar' %}" style="margin-top:1rem;display:grid;gap:.6rem;max-width:26rem">{% csrf_token %}
+  <label>Dirección de entrega
+    <select name="direccion_id" required style="width:100%">
+      {% for d in direcciones %}<option value="{{ d.direccion_id }}">{{ d.calle_numero }}, {{ d.comuna.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if es_b2b %}<label>N.º de orden de compra <input name="numero_oc" required style="width:100%"></label>{% endif %}
+  <button {% if hay_sin_stock %}disabled{% endif %}>Confirmar pedido</button>
+</form>
+{% else %}
+<p>Tu carrito está vacío. <a href="{% url 'catalogo' %}">Ir al catálogo</a></p>
+{% endif %}
+{% endblock %}

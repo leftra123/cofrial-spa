@@ -141,6 +141,7 @@ class CarritoItem(models.Model):
 class EstadoOrden(models.Model):
     estado_orden_id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=30)
+    orden_flujo = models.SmallIntegerField()
 
     class Meta:
         managed = False

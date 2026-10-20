@@ -136,7 +136,7 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 
 - [ ] Validar con una persona de Cofrial los supuestos de la Tabla 1 (orden de compra obligatoria, forma de pago, quién puede cancelar).
 - [ ] Contrastar las emociones de los journeys con entrevistas breves a un cliente institucional y a uno particular.
-- [ ] Decidir si se agrega una pantalla de «Mis pedidos» (listado) y de inicio de sesión; hoy se resuelven con W6 y W1.
+- [x] Se agregaron «Mis pedidos» (listado) e inicio de sesión con registro B2C; los B2B los crea Cofrial (ver `backend/README.md`).
 - [ ] Renumerar figuras y tablas al integrar el informe completo.
 
 ## Notas del equipo

@@ -10,6 +10,13 @@ Rúbrica H1-D1 (Logrado): analizar **en profundidad** (no repetir el caso) y arg
 | Última milla a ciegas | 50 camiones sin GPS ni registros automáticos de temperatura; coordinación por llamadas y WhatsApp | Falta de trazabilidad digital y automatización de monitoreo | Entregas fallidas; mermas millonarias semanales por ruptura de frío no detectada |
 | Sin canales digitales ni CRM | Pedidos por teléfono/correo; cartera en celulares de vendedores | Ausencia de un sistema único de gestión comercial | Pedidos perdidos; sin embudo de ventas; la cartera se va con el vendedor; sin métricas |
 
+**Figura 1**
+*Árbol de problemas: causas y efectos de los tres focos críticos*
+
+![Árbol de problemas de Cofrial SpA](img/d1-arbol-problemas.png)
+
+Nota. Elaboración propia.
+
 ## Análisis profundo por foco
 
 ### 1. Infraestructura on-premises: punto único de fallo y silos de información
@@ -63,6 +70,13 @@ Hoy, un cliente institucional (hospital, supermercado) hace un pedido por teléf
 1. El servidor on-premises impide que bodega vea órdenes en tiempo real → responde tardíamente → mermas en tránsito porque el cliente pierde la confianza.
 2. La última milla sin trazabilidad no produce datos → no hay histórico de qué camiones/ rutas / horarios generan mermas → se repite el error.
 3. El CRM inexistente permite que un vendedor pierda un cliente sin que la empresa lo sepa → se pierde la oportunidad de optimizar esa ruta o renegociar términos.
+
+**Figura 2**
+*Ciclo de refuerzo entre los tres dolores*
+
+![Ciclo de refuerzo entre infraestructura, última milla y ausencia de CRM](img/d1-ciclo-refuerzo.png)
+
+Nota. Elaboración propia.
 
 ## Conclusión del diagnóstico
 

@@ -16,6 +16,13 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### AS-IS (problema: registro manual, doble digitación, stock descuadrado)
 
+**Figura 5**
+*Proceso 1 AS-IS: pedido de cliente institucional (B2B)*
+
+![Proceso 1 AS-IS: pedido de cliente institucional (B2B)](img/bpmn-p1-asis.drawio.png)
+
+Nota. Elaboración propia.
+
 **Carriles:** Cliente institucional | Vendedor | Bodega | Contabilidad
 
 1. Cliente llama o envía correo al vendedor.
@@ -35,6 +42,13 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 - Compuerta de decisión: "Stock según planilla" (información desactualizada).
 
 ### TO-BE (solución: orden digital, RDS único, sin papeles)
+
+**Figura 6**
+*Proceso 1 TO-BE: pedido B2B en la plataforma*
+
+![Proceso 1 TO-BE: pedido B2B en la plataforma](img/bpmn-p1-tobe.drawio.png)
+
+Nota. Elaboración propia.
 
 **Carriles:** Cliente B2B | E-commerce | CRM | Bodega | RDS (base de datos)
 
@@ -57,6 +71,13 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### AS-IS (problema: temperatura desconocida, ruptura silenciosa)
 
+**Figura 7**
+*Proceso 2 AS-IS: despacho con cadena de frío*
+
+![Proceso 2 AS-IS: despacho con cadena de frío](img/bpmn-p2-asis.drawio.png)
+
+Nota. Elaboración propia.
+
 **Carriles:** Despachador | Conductor | Cliente | Plataforma (inexistente)
 
 1. Despachador asigna ruta **por teléfono o WhatsApp**.
@@ -72,6 +93,13 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 **Puntos de pérdida:** paso 3 completo es un agujero negro. Nadie sabe si la temperatura subió o no.
 
 ### TO-BE (solución: IoT, alertas en tiempo real)
+
+**Figura 8**
+*Proceso 2 TO-BE: despacho con IoT y alertas en tiempo real*
+
+![Proceso 2 TO-BE: despacho con IoT y alertas en tiempo real](img/bpmn-p2-tobe.drawio.png)
+
+Nota. Elaboración propia.
 
 **Carriles:** Camión (IoT) | Plataforma | Despachador | Cliente | Torre de control
 
@@ -94,6 +122,13 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### AS-IS (problema: cartera dispersa)
 
+**Figura 9**
+*Proceso 3 AS-IS: gestión comercial de prospectos*
+
+![Proceso 3 AS-IS: gestión comercial de prospectos](img/bpmn-p3-asis.drawio.png)
+
+Nota. Elaboración propia.
+
 **Carriles:** Vendedor | Prospecto/Cliente | Vendedor (celular personal)
 
 1. Vendedor contacta a un prospecto (hospital, supermercado).
@@ -103,6 +138,13 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 5. No hay métricas: ¿cuántos prospectos hay? ¿cuántos se cierran? ¿en cuánto tiempo?
 
 ### TO-BE (solución: CRM centralizado)
+
+**Figura 10**
+*Proceso 3 TO-BE: gestión comercial en el CRM*
+
+![Proceso 3 TO-BE: gestión comercial en el CRM](img/bpmn-p3-tobe.drawio.png)
+
+Nota. Elaboración propia.
 
 **Carriles:** Vendedor | CRM | Prospecto/Cliente | IA (clasificación)
 

@@ -127,46 +127,11 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 
 ---
 
-## Diagrama de casos de uso (a generar en draw.io o UML tool)
+## Diagrama de casos de uso
 
-```
-        +-------------------+
-        |   Cliente B2B/B2C  |
-        +--------+----------+
-                 |
-         +-------+-------+
-         |               |
-    CU-01 CU-02 CU-03   CU-04    ←─ Genera orden
-         |               |       
-    +----+----+----+-----+-----+
-    |                          |
- +--+--+          +---+---+
- |     |          |       |
- CU-05 CU-06   CU-07 CU-08  CU-09 ←─ Usa IA
- |              |              |
- |          +---+---+          |
- |          |       |          |
- +----------+CRM----+----------+
-            |
-            | Lee
-            |
-        +---+-----+
-        |   RDS  |
-        +----+----+
-             |
-         +---+---+
-         |       |
-      CU-10  CU-11    ←─ IoT
-      IoT    Alerta
-         |       |
-         +---+---+
-             |
-         +---+----+
-         |        |
-      CU-12   CU-13    ←─ Monitoreo
-     Torre    Dashboard
-```
+**Figura 11**
+*Casos de uso del ecosistema Cofrial*
 
-Nota. Simplificado. El diagrama UML completo se genera en bpmn.io o draw.io.
+![Diagrama de casos de uso de Cofrial SpA](img/casos-de-uso.png)
 
 Nota. Elaboración propia.

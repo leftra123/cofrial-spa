@@ -93,6 +93,15 @@ Tasa: 14 %       Tasa: 36 %        Tasa: 50 %        Tasa: 85 %
 
 ---
 
+**Figura 4**
+*Etapas del pipeline comercial y sus transiciones*
+
+![Pipeline comercial del CRM: de prospecto a cliente ganado o perdido](img/crm-pipeline.png)
+
+Nota. Elaboración propia.
+
+---
+
 ### 4. Historial de interacciones
 
 **Tabla INTERACCION:**

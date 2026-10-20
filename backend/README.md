@@ -5,6 +5,14 @@ Proyecto `config` + app `core`: `/health/` (app y conexión a la BD) y `/catalog
 **Compra:** elige un cliente en «Comprar como… (demo)» (sustituto temporal del login), agrega productos y confirma. La orden se genera con estado «Recibida» y el stock se descuenta en la misma transacción, con los productos bloqueados (`core/servicios.py`, reglas RN-01 a RN-06 de `informe/04c`). Si una línea no tiene stock suficiente no se guarda nada. B2B debe indicar su n.º de orden de compra.
 
 ## Correr en local
+
+**Opción rápida con Docker** (sin instalar PostgreSQL ni Python; no se probó en esta sesión porque el contenedor de desarrollo no tiene el servicio de Docker):
+```bash
+docker compose up --build       # desde la raíz del repo; abre http://localhost:8000/catalogo/
+docker compose down -v          # para borrar la BD y recargar los datos de prueba
+```
+
+**Opción manual:**
 ```bash
 cp .env.example .env            # en la raíz del repo; completar credenciales
 createdb cofrial                # PostgreSQL local

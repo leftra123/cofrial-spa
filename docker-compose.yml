@@ -1,0 +1,34 @@
+# Levanta PostgreSQL (con el esquema y los datos de prueba) y la web Django:
+#   docker compose up --build        -> http://localhost:8000/catalogo/
+#   docker compose down -v           -> borra la BD para volver a cargar los datos de prueba
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cofrial
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev
+    volumes:
+      - ./informe/modelo/esquema.sql:/docker-entrypoint-initdb.d/01-esquema.sql:ro
+      - ./informe/modelo/datos_prueba.sql:/docker-entrypoint-initdb.d/02-datos.sql:ro
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cofrial"]
+      interval: 3s
+      retries: 20
+  web:
+    build: ./backend
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DJANGO_DEBUG: "True"
+      DB_NAME: cofrial
+      DB_USER: postgres
+      DB_PASSWORD: dev
+      DB_HOST: db
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  dbdata:

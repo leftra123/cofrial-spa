@@ -1,12 +1,46 @@
 {% extends "core/base.html" %}
 {% block titulo %}Orden {{ orden.orden_id }} | Cofrial SpA{% endblock %}
+{% block estilos %}<style>
+  .ok { display: flex; gap: 1rem; align-items: center; background: var(--ok-bg); border: 1px solid #b9e4cf; border-radius: 1rem; padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
+  .ok .tic { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--ok); color: #fff; display: grid; place-items: center; font-size: 1.4rem; flex: none; }
+  .ok h1 { margin: 0; font-size: 1.3rem; color: #0f5c3c; }
+  .ok p { margin: .1rem 0 0; color: #2c6b4d; }
+  .tiempo { display: flex; padding: 1.3rem; gap: 0; margin-bottom: 1.2rem; overflow-x: auto; }
+  .paso { flex: 1; min-width: 6.5rem; text-align: center; position: relative; font-size: .85rem; color: var(--muted); }
+  .paso::before { content: ""; position: absolute; top: .8rem; left: -50%; width: 100%; height: 3px; background: var(--line); }
+  .paso:first-child::before { display: none; }
+  .paso i { position: relative; display: block; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: #fff; border: 3px solid var(--line); margin: 0 auto .45rem; }
+  .paso.hecho, .paso.ahora { color: var(--ink); font-weight: 600; }
+  .paso.hecho::before, .paso.ahora::before { background: var(--brand); }
+  .paso.hecho i { background: var(--brand); border-color: var(--brand); }
+  .paso.ahora i { border-color: var(--brand); box-shadow: 0 0 0 5px #1572b62e; }
+  .datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; padding: 1.2rem 1.3rem; margin-bottom: 1.2rem; }
+  .datos small { display: block; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: .85rem 1.2rem; text-align: left; border-bottom: 1px solid var(--line); }
+  th { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .n { text-align: right; }
+  tfoot td { border: 0; font-size: 1.15rem; font-weight: 800; }
+</style>{% endblock %}
 {% block contenido %}
-<h2>Orden N.º {{ orden.orden_id }}</h2>
-<p>Estado: <strong>{{ orden.estado_orden.nombre }}</strong> · Entrega en {{ orden.direccion.calle_numero }}, {{ orden.direccion.comuna.nombre }}{% if orden.numero_oc %} · OC {{ orden.numero_oc }}{% endif %}</p>
+<div class="ok">
+  <div class="tic">✓</div>
+  <div><h1>¡Pedido recibido! Orden N.º {{ orden.orden_id }}</h1><p>Te avisaremos cuando avance. Puedes seguirlo aquí.</p></div>
+</div>
+<div class="panel tiempo">
+  {% for e in estados %}<div class="paso {% if e.orden_flujo < actual %}hecho{% elif e.orden_flujo == actual %}ahora{% endif %}"><i></i>{{ e.nombre }}</div>{% endfor %}
+</div>
+<div class="panel datos">
+  <div><small>Estado</small><b>{{ orden.estado_orden.nombre }}</b></div>
+  <div><small>Entrega en</small>{{ orden.direccion.calle_numero }}, {{ orden.direccion.comuna.nombre }}</div>
+  {% if orden.numero_oc %}<div><small>Orden de compra</small>{{ orden.numero_oc }}</div>{% endif %}
+</div>
+<div class="panel" style="overflow:hidden">
 <table>
-  <tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Subtotal</th></tr>
-  {% for l in lineas %}<tr><td>{{ l.producto.nombre }}</td><td class="n">{{ l.cantidad }}</td><td class="n">${{ l.precio|floatformat:"0g" }}</td><td class="n">${{ l.subtotal|floatformat:"0g" }}</td></tr>{% endfor %}
-  <tr><th colspan="3" class="n">Total</th><th class="n">${{ total|floatformat:"0g" }}</th></tr>
+  <thead><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Subtotal</th></tr></thead>
+  <tbody>{% for l in lineas %}<tr><td>{{ l.producto.nombre }}</td><td class="n">{{ l.cantidad }}</td><td class="n money">${{ l.precio|floatformat:"0g" }}</td><td class="n money">${{ l.subtotal|floatformat:"0g" }}</td></tr>{% endfor %}</tbody>
+  <tfoot><tr><td colspan="3" class="n">Total</td><td class="n money">${{ total|floatformat:"0g" }}</td></tr></tfoot>
 </table>
-<p><a href="{% url 'catalogo' %}">Seguir comprando</a></p>
+</div>
+<p style="margin-top:1.2rem"><a class="btn" href="{% url 'catalogo' %}">Seguir comprando</a></p>
 {% endblock %}

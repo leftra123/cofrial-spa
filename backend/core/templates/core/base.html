@@ -5,40 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0; background: #f4f6f8; color: #1d2733; }
-  header { background: #12355b; color: #fff; padding: .8rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
-  header h1 { margin: 0; font-size: 1.2rem; }
-  header a { color: #fff; }
-  header nav, header form { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
-  select, input, button { font: inherit; padding: .35rem .6rem; border-radius: .4rem; border: 1px solid #99a; }
-  button { background: #12355b; color: #fff; border: 0; cursor: pointer; }
-  button:disabled { background: #aab; cursor: not-allowed; }
-  button.sec { background: #fff; color: #12355b; border: 1px solid #12355b; }
-  main { max-width: 64rem; margin: 1.5rem auto; padding: 0 1rem; }
-  .msg { padding: .6rem .9rem; border-radius: .4rem; margin-bottom: .5rem; }
-  .msg.error { background: #fde7e5; color: #8c1d18; }
-  .msg.success { background: #e3f4e6; color: #17562a; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .5rem; overflow: hidden; }
-  th, td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid #e3e7eb; }
-  td.n, th.n { text-align: right; }
-  .sin { color: #b3261e; }
+  :root {
+    --ink: #10243a; --muted: #5b6b7b; --line: #dde6ee; --bg: #f2f6fa; --card: #fff;
+    --navy: #0c2d4d; --brand: #1572b6; --brand-dark: #0f5c95; --ice: #e6f2fb;
+    --ok: #1c8a5f; --ok-bg: #e2f5ec; --warn: #a96a00; --warn-bg: #fdf0d5; --bad: #c0362c; --bad-bg: #fbe7e5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.45; }
+  a { color: var(--brand); }
+  header { background: var(--navy); color: #fff; position: sticky; top: 0; z-index: 5; }
+  .bar { max-width: 72rem; margin: 0 auto; padding: .75rem 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: .55rem; font-weight: 800; letter-spacing: .12em; color: #fff; text-decoration: none; font-size: 1.05rem; }
+  .logo svg { width: 1.6rem; height: 1.6rem; }
+  .logo small { font-weight: 500; letter-spacing: 0; opacity: .7; font-size: .75rem; display: block; margin-top: -.15rem; }
+  nav { display: flex; align-items: center; gap: .4rem; margin-left: auto; flex-wrap: wrap; }
+  nav > a { color: #dbe9f6; text-decoration: none; padding: .45rem .9rem; border-radius: 999px; font-weight: 600; font-size: .92rem; }
+  nav > a:hover, nav > a.on { background: #ffffff1f; color: #fff; }
+  .badge { background: #3fb6f0; color: #06223a; border-radius: 999px; padding: 0 .45rem; margin-left: .3rem; font-size: .75rem; font-weight: 800; }
+  .quien select { background: #ffffff1f; color: #fff; border: 1px solid #ffffff40; border-radius: 999px; padding: .45rem .9rem; font: inherit; font-size: .88rem; max-width: 15rem; }
+  .quien select option { color: var(--ink); }
+  main { max-width: 72rem; margin: 0 auto; padding: 1.6rem 1.25rem 3rem; }
+  h1.pagina { font-size: 1.6rem; margin: 0 0 .25rem; }
+  .sub { color: var(--muted); margin: 0 0 1.4rem; }
+  .msg { padding: .75rem 1rem; border-radius: .7rem; margin-bottom: .6rem; font-weight: 500; border: 1px solid transparent; }
+  .msg.error { background: var(--bad-bg); color: var(--bad); border-color: #f2c2bd; }
+  .msg.success { background: var(--ok-bg); color: var(--ok); border-color: #b9e4cf; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; background: var(--brand); color: #fff; border: 0; border-radius: .6rem; padding: .65rem 1.1rem; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
+  .btn:hover { background: var(--brand-dark); }
+  .btn:disabled { background: #b7c4d0; cursor: not-allowed; }
+  .btn.sec { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 600; padding: .4rem .75rem; }
+  .btn.sec:hover { color: var(--bad); border-color: var(--bad); background: transparent; }
+  .btn.block { width: 100%; padding: .85rem; font-size: 1rem; }
+  input, select { font: inherit; border: 1px solid var(--line); border-radius: .55rem; padding: .6rem .75rem; background: #fff; color: var(--ink); width: 100%; }
+  input:focus, select:focus { outline: 2px solid #9fd0f1; border-color: var(--brand); }
+  label { display: block; font-weight: 600; font-size: .88rem; margin-bottom: .75rem; }
+  label > * { margin-top: .3rem; font-weight: 400; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 1px 2px #0b2a4a0d; }
+  .money { font-variant-numeric: tabular-nums; }
 </style>
 {% block estilos %}{% endblock %}
 </head>
 <body>
 <header>
-  <h1>Cofrial SpA</h1>
-  <nav>
-    <a href="{% url 'catalogo' %}">Catálogo</a>
-    <a href="{% url 'carrito' %}">Carrito</a>
-    <form method="post" action="{% url 'elegir_cliente' %}">{% csrf_token %}
-      <input type="hidden" name="next" value="{{ request.path }}">
-      <select name="cliente_id" aria-label="Comprar como" onchange="this.form.submit()">
-        <option value="">Comprar como… (demo)</option>
-        {% for c in clientes_demo %}<option value="{{ c.cliente_id }}" {% if c.cliente_id == cliente_sesion.cliente_id %}selected{% endif %}>{{ c.nombre }} ({{ c.tipo_cliente.codigo }})</option>{% endfor %}
-      </select>
-    </form>
-  </nav>
+  <div class="bar">
+    <a class="logo" href="{% url 'catalogo' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7fd0ff" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M3.5 7l17 10M20.5 7l-17 10M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5"/></svg>
+      <span>COFRIAL<small>Cadena de frío · La Araucanía</small></span>
+    </a>
+    <nav>
+      <a href="{% url 'catalogo' %}" class="{% if request.resolver_match.url_name == 'catalogo' %}on{% endif %}">Catálogo</a>
+      <a href="{% url 'carrito' %}" class="{% if request.resolver_match.url_name == 'carrito' %}on{% endif %}">Carrito{% if en_carrito %}<span class="badge">{{ en_carrito }}</span>{% endif %}</a>
+      <form class="quien" method="post" action="{% url 'elegir_cliente' %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <select name="cliente_id" aria-label="Comprar como" onchange="this.form.submit()">
+          <option value="">Comprar como… (demo)</option>
+          {% for c in clientes_demo %}<option value="{{ c.cliente_id }}" {% if c.cliente_id == cliente_sesion.cliente_id %}selected{% endif %}>{{ c.nombre }} · {{ c.tipo_cliente.codigo }}</option>{% endfor %}
+        </select>
+      </form>
+    </nav>
+  </div>
 </header>
 <main>
   {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}

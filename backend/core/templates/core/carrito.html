@@ -1,31 +1,54 @@
 {% extends "core/base.html" %}
 {% block titulo %}Carrito | Cofrial SpA{% endblock %}
+{% block estilos %}<style>
+  .dos { display: grid; grid-template-columns: 1fr 22rem; gap: 1.2rem; align-items: start; }
+  @media (max-width: 52rem) { .dos { grid-template-columns: 1fr; } }
+  .linea { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center; padding: 1rem 1.2rem; border-bottom: 1px solid var(--line); }
+  .linea:last-child { border-bottom: 0; }
+  .linea h3 { margin: 0; font-size: 1rem; }
+  .linea .det { color: var(--muted); font-size: .85rem; }
+  .linea .sub { font-weight: 800; font-size: 1.05rem; margin: 0; text-align: right; }
+  .alerta { color: var(--bad); font-weight: 600; font-size: .85rem; }
+  .resumen { padding: 1.3rem; position: sticky; top: 5rem; }
+  .resumen h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+  .total { display: flex; justify-content: space-between; align-items: baseline; font-size: 1.1rem; padding: .9rem 0 1.1rem; margin-bottom: .9rem; border-bottom: 1px solid var(--line); }
+  .total b { font-size: 1.7rem; letter-spacing: -.02em; }
+  .vacio { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+</style>{% endblock %}
 {% block contenido %}
-<h2>Tu carrito</h2>
+<h1 class="pagina">Tu carrito</h1>
 {% if lineas %}
-<table>
-  <tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Subtotal</th><th></th></tr>
-  {% for l in lineas %}
-  <tr>
-    <td>{{ l.producto.nombre }}{% if l.sin_stock %}<br><span class="sin">Stock insuficiente (quedan {{ l.producto.stock_disponible }})</span>{% endif %}</td>
-    <td class="n">{{ l.cantidad }}</td>
-    <td class="n">${{ l.precio|floatformat:"0g" }}</td>
-    <td class="n">${{ l.subtotal|floatformat:"0g" }}</td>
-    <td class="n"><form method="post" action="{% url 'quitar' %}">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ l.producto.producto_id }}"><button class="sec">Quitar</button></form></td>
-  </tr>
-  {% endfor %}
-  <tr><th colspan="3" class="n">Total</th><th class="n">${{ total|floatformat:"0g" }}</th><th></th></tr>
-</table>
-<form method="post" action="{% url 'confirmar' %}" style="margin-top:1rem;display:grid;gap:.6rem;max-width:26rem">{% csrf_token %}
-  <label>Dirección de entrega
-    <select name="direccion_id" required style="width:100%">
-      {% for d in direcciones %}<option value="{{ d.direccion_id }}">{{ d.calle_numero }}, {{ d.comuna.nombre }}</option>{% endfor %}
-    </select>
-  </label>
-  {% if es_b2b %}<label>N.º de orden de compra <input name="numero_oc" required style="width:100%"></label>{% endif %}
-  <button {% if hay_sin_stock %}disabled{% endif %}>Confirmar pedido</button>
-</form>
+<p class="sub">Revisa tu pedido y confirma. El stock se descuenta al confirmar.</p>
+<div class="dos">
+  <div class="panel">
+    {% for l in lineas %}
+    <div class="linea">
+      <div>
+        <h3>{{ l.producto.nombre }}</h3>
+        <div class="det money">{{ l.cantidad }} × ${{ l.precio|floatformat:"0g" }}</div>
+        {% if l.sin_stock %}<div class="alerta">Stock insuficiente: quedan {{ l.producto.stock_disponible }}</div>{% endif %}
+      </div>
+      <p class="sub money">${{ l.subtotal|floatformat:"0g" }}</p>
+      <form method="post" action="{% url 'quitar' %}">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ l.producto.producto_id }}"><button class="btn sec">Quitar</button></form>
+    </div>
+    {% endfor %}
+  </div>
+  <form class="panel resumen" method="post" action="{% url 'confirmar' %}">{% csrf_token %}
+    <h2>Resumen</h2>
+    <div class="total"><span>Total</span><b class="money">${{ total|floatformat:"0g" }}</b></div>
+    <label>Dirección de entrega
+      <select name="direccion_id" required>
+        {% for d in direcciones %}<option value="{{ d.direccion_id }}">{{ d.calle_numero }}, {{ d.comuna.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if es_b2b %}<label>N.º de orden de compra<input name="numero_oc" placeholder="OC-2026-0001" required></label>{% endif %}
+    <button class="btn block" {% if hay_sin_stock %}disabled{% endif %}>Confirmar pedido</button>
+  </form>
+</div>
 {% else %}
-<p>Tu carrito está vacío. <a href="{% url 'catalogo' %}">Ir al catálogo</a></p>
+<div class="panel vacio">
+  <p style="font-size:1.1rem;margin:0 0 1rem">Tu carrito está vacío.</p>
+  <a class="btn" href="{% url 'catalogo' %}">Ir al catálogo</a>
+</div>
 {% endif %}
 {% endblock %}

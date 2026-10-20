@@ -1,37 +1,65 @@
 {% extends "core/base.html" %}
 {% block titulo %}Catálogo | Cofrial SpA{% endblock %}
 {% block estilos %}<style>
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
-  .card { background: #fff; border-radius: .6rem; padding: 1rem; box-shadow: 0 1px 3px #0002; display: flex; flex-direction: column; gap: .35rem; }
-  .card h2 { font-size: 1rem; margin: 0; }
-  .cat { font-size: .8rem; color: #566; }
-  .frio { align-self: flex-start; font-size: .75rem; background: #dff0ff; color: #0b4a7a; padding: .15rem .5rem; border-radius: 999px; }
-  .precio { font-size: 1.4rem; font-weight: 700; margin-top: auto; }
-  .stock { font-size: .8rem; }
-  .add { display: flex; gap: .4rem; margin-top: .4rem; }
-  .add input { width: 4rem; }
+  .barra { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.2rem; }
+  .perfil { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: .2rem; }
+  .perfil a { padding: .4rem 1rem; border-radius: 999px; text-decoration: none; color: var(--muted); font-weight: 600; font-size: .9rem; }
+  .perfil a.on { background: var(--navy); color: #fff; }
+  .tag { display: inline-block; background: var(--ice); color: var(--brand-dark); padding: .2rem .7rem; border-radius: 999px; font-weight: 700; font-size: .82rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr)); gap: 1.1rem; }
+  .prod { display: flex; flex-direction: column; overflow: hidden; transition: transform .12s, box-shadow .12s; }
+  .prod:hover { transform: translateY(-2px); box-shadow: 0 8px 20px #0b2a4a1a; }
+  .top { padding: 1rem 1.1rem; color: #fff; display: flex; justify-content: space-between; align-items: center; min-height: 4.6rem; }
+  .top.ref { background: linear-gradient(135deg, #1572b6, #38a8dc); }
+  .top.con { background: linear-gradient(135deg, #2b3a8c, #5b6fd6); }
+  .top b { font-size: 1.5rem; letter-spacing: -.02em; }
+  .top span { font-size: .78rem; opacity: .9; text-align: right; }
+  .cuerpo { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+  .cat { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .prod h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+  .precio { font-size: 1.65rem; font-weight: 800; letter-spacing: -.02em; margin-top: auto; padding-top: .4rem; }
+  .precio small { font-size: .78rem; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+  .stock { align-self: flex-start; font-size: .78rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; }
+  .stock.ok { background: var(--ok-bg); color: var(--ok); }
+  .stock.bajo { background: var(--warn-bg); color: var(--warn); }
+  .stock.cero { background: var(--bad-bg); color: var(--bad); }
+  .add { display: grid; grid-template-columns: 5rem 1fr; gap: .5rem; margin-top: .4rem; }
+  .add input { text-align: center; }
+  .aviso { background: var(--ice); border: 1px dashed #9fcbe9; color: var(--brand-dark); border-radius: .8rem; padding: .7rem 1rem; margin-bottom: 1.2rem; font-size: .92rem; }
 </style>{% endblock %}
 {% block contenido %}
-<h2>Catálogo de refrigerados</h2>
-<p>Lista de precios: <strong>{{ lista }}</strong>
-{% if not cliente_sesion %} · Mirando como <a href="?perfil=b2c">Público (B2C)</a> / <a href="?perfil=b2b">Institucional (B2B)</a>. Elige un cliente arriba para comprar.{% endif %}</p>
+<div class="barra">
+  <div>
+    <h1 class="pagina">Catálogo de refrigerados y congelados</h1>
+    <p class="sub" style="margin:0">Precios según tu lista: <span class="tag">{{ lista }}</span></p>
+  </div>
+  {% if not cliente_sesion %}
+  <div class="perfil"><a href="?perfil=b2c" class="{% if perfil == 'b2c' %}on{% endif %}">Público</a><a href="?perfil=b2b" class="{% if perfil == 'b2b' %}on{% endif %}">Institucional</a></div>
+  {% endif %}
+</div>
+{% if not cliente_sesion %}<div class="aviso">Estás mirando el catálogo. Para comprar, elige un cliente en <b>«Comprar como… (demo)»</b>, arriba a la derecha.</div>{% endif %}
 <div class="grid">
 {% for it in items %}
-  <article class="card">
-    <span class="cat">{{ it.p.categoria.nombre }} · {{ it.p.sku }}</span>
-    <h3 style="margin:0;font-size:1rem">{{ it.p.nombre }}</h3>
-    <span class="frio">{{ it.rango.nombre }}: {{ it.rango.temp_min_c }} a {{ it.rango.temp_max_c }} °C</span>
-    <span class="precio">{% if it.precio %}${{ it.precio|floatformat:"0g" }}{% else %}Sin precio{% endif %}</span>
-    <span class="stock {% if not it.p.stock_disponible %}sin{% endif %}">
-      {% if it.p.stock_disponible %}Stock: {{ it.p.stock_disponible }} {{ it.p.unidad_medida }}{% else %}Sin stock{% endif %}
-    </span>
-    {% if cliente_sesion %}
-    <form class="add" method="post" action="{% url 'agregar' %}">{% csrf_token %}
-      <input type="hidden" name="producto_id" value="{{ it.p.producto_id }}">
-      <input type="number" name="cantidad" value="1" min="1" max="{{ it.p.stock_disponible }}" {% if not it.p.stock_disponible or not it.precio %}disabled{% endif %}>
-      <button {% if not it.p.stock_disponible or not it.precio %}disabled{% endif %}>Agregar</button>
-    </form>
-    {% endif %}
+  <article class="panel prod">
+    <div class="top {% if it.rango.temp_max_c < 0 %}con{% else %}ref{% endif %}">
+      <b>{{ it.rango.temp_min_c|floatformat:"-1" }} a {{ it.rango.temp_max_c|floatformat:"-1" }} °C</b>
+      <span>{{ it.rango.nombre }}</span>
+    </div>
+    <div class="cuerpo">
+      <span class="cat">{{ it.p.categoria.nombre }} · {{ it.p.sku }}</span>
+      <h2>{{ it.p.nombre }}</h2>
+      <span class="stock {% if not it.p.stock_disponible %}cero{% elif it.p.stock_disponible < 20 %}bajo{% else %}ok{% endif %}">
+        {% if it.p.stock_disponible %}Stock: {{ it.p.stock_disponible }} {{ it.p.unidad_medida }}{% else %}Sin stock{% endif %}
+      </span>
+      <div class="precio money">{% if it.precio %}${{ it.precio|floatformat:"0g" }} <small>/ {{ it.p.unidad_medida }}</small>{% else %}Sin precio{% endif %}</div>
+      {% if cliente_sesion %}
+      <form class="add" method="post" action="{% url 'agregar' %}">{% csrf_token %}
+        <input type="hidden" name="producto_id" value="{{ it.p.producto_id }}">
+        <input type="number" name="cantidad" value="1" min="1" max="{{ it.p.stock_disponible }}" aria-label="Cantidad" {% if not it.p.stock_disponible or not it.precio %}disabled{% endif %}>
+        <button class="btn" {% if not it.p.stock_disponible or not it.precio %}disabled{% endif %}>Agregar al carrito</button>
+      </form>
+      {% endif %}
+    </div>
   </article>
 {% empty %}
   <p>No hay productos activos.</p>

@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from . import servicios
-from .models import Cliente, Direccion, OrdenItem, Orden, PrecioProducto, Producto
+from .models import Cliente, Direccion, EstadoOrden, OrdenItem, Orden, PrecioProducto, Producto
 
 # Perfil de compra -> lista de precios (tabla lista_precio)
 PERFILES = {"b2b": "Institucional B2B", "b2c": "Público B2C"}
@@ -128,4 +128,9 @@ def orden(request, orden_id):
         raise Http404("Orden no encontrada")
     lineas = [{"producto": i.producto, "cantidad": i.cantidad, "precio": i.precio_unitario_clp, "subtotal": i.cantidad * i.precio_unitario_clp}
               for i in OrdenItem.objects.filter(orden=o).select_related("producto").order_by("producto__nombre")]
-    return render(request, "core/orden.html", {"orden": o, "lineas": lineas, "total": sum(l["subtotal"] for l in lineas)})
+    estados = [e for e in EstadoOrden.objects.order_by("orden_flujo") if e.nombre != "Cancelada"]
+    return render(request, "core/orden.html", {
+        "orden": o, "lineas": lineas, "total": sum(l["subtotal"] for l in lineas),
+        "estados": estados, "cancelada": o.estado_orden.nombre == "Cancelada",
+        "actual": o.estado_orden.orden_flujo,
+    })

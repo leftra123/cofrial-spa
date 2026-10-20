@@ -79,8 +79,21 @@ class TipoCliente(models.Model):
         db_table = "tipo_cliente"
 
 
+class Usuario(models.Model):
+    usuario_id = models.AutoField(primary_key=True)
+    email = models.CharField(max_length=120)
+    password_hash = models.CharField(max_length=255)
+    rol = models.CharField(max_length=20)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        managed = False
+        db_table = "usuario"
+
+
 class Cliente(models.Model):
     cliente_id = models.AutoField(primary_key=True)
+    usuario_id = models.IntegerField(null=True)
     tipo_cliente = models.ForeignKey(TipoCliente, models.DO_NOTHING)
     rut = models.CharField(max_length=12)
     nombre = models.CharField(max_length=120)

@@ -96,7 +96,7 @@ Cliente (navegador)
     ↓ HTTPS
 EC2 web (Django + gunicorn)
     ↓ TCP 5432
-RDS PostgreSQL ← Inserta ORDEN + ORDEN_ITEM
+RDS PostgreSQL ← Inserta orden + orden_item
     ↓
 CRM actualizado (lectura desde RDS)
 Vendedor asignado notificado
@@ -105,12 +105,12 @@ Vendedor asignado notificado
 ### 2. Camión en ruta → telemetría → alerta
 ```
 Contenedor Docker (camión simulado)
-    ↓ TCP 5432 cada 30 seg
+    ↓ TCP 5432 cada 5 seg
 RDS (tabla telemetria)
     ↓ Select en tiempo real
 Grafana Dashboard
     ↓
-¿temp_camara > 4.5°C?
+¿temp_camara fuera del rango del camión?
     ├─ SÍ → Alerta (roja) → Despachador ve
     └─ NO → Normal (verde)
 ```
@@ -121,9 +121,9 @@ Cliente ingresa en e-commerce: "¿Puedo devolver si está fuera de temp?"
     ↓ HTTPS
 EC2 web → API Gemini (clasificación)
     ↓
-Clasificado como: CALIDAD + RECLAMO
+Clasificado como: CALIDAD O FRÍO
     ↓ TCP 5432
-CRM: crea REQUERIMIENTO + notifica responsable
+CRM: crea requerimiento + notifica responsable
     ↓
 Gerencia de operaciones lo ve al instante
 ```

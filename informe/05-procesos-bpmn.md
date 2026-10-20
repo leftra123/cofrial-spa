@@ -55,11 +55,11 @@ Nota. Elaboración propia.
 1. Cliente inicia sesión en el e-commerce con perfil B2B.
 2. Ve su **lista de precios institucional** (descuento, volumen mínimo, crédito límite).
 3. Busca productos, agrega al carrito.
-4. **La orden se genera automáticamente** en RDS y aparece en CRM con estado "Nueva".
-5. Sistema revisa **stock en RDS en tiempo real** (única fuente de verdad).
-6. **Compuerta:** ¿stock disponible?
-   - Si NO: orden entra en estado "Pendiente stock" y se notifica al cliente.
-   - Si SÍ: bodega ve la orden, la prepara, actualiza stock en RDS.
+4. Al confirmar el carrito, el sistema revisa el **stock en RDS en tiempo real** (única fuente de verdad).
+5. **Compuerta:** ¿stock disponible para todas las líneas?
+   - Si NO: la orden **no se genera**; se informa al cliente y se ofrece una alternativa.
+   - Si SÍ: en una misma transacción se genera la orden con estado "Recibida" y se descuenta el stock; aparece en el CRM.
+6. Bodega ve la orden y la prepara; el estado avanza hasta "Despachada" y "Entregada".
 7. Contabilidad **ve la orden en RDS automáticamente**, factura desde el sistema.
 8. El vendedor asignado recibe una **notificación en el CRM** (no por WhatsApp).
 
@@ -105,7 +105,7 @@ Nota. Elaboración propia.
 
 1. Camión se prepara con los equipos IoT calibrados.
 2. Conductor confirma salida; la plataforma registra `camion_id`, `tiempo_salida`, `temp_inicial`.
-3. **Cada N segundos (ej. 30 seg):**
+3. **Cada 5 segundos:**
    - IoT envia: `camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct`.
    - Sistema inserta en RDS.
    - Dashboard actualiza en vivo.

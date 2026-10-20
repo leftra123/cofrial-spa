@@ -57,17 +57,16 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 1. Cliente revisa el carrito (producto, cantidad, precio).
 2. Ingresa datos de despacho (dirección, fecha deseada, contacto).
 3. Selecciona método de pago (crédito empresa / tarjeta / transferencia).
-4. Sistema **genera la orden** en RDS con estado "Nueva".
-5. Sistema **descuenta stock** en RDS.
+4. Sistema **valida el stock** de todas las líneas en RDS.
+5. En una misma transacción, **genera la orden** con estado "Recibida" y **descuenta el stock**.
 6. Sistema **crea un registro en CRM** vinculado al cliente.
 7. Sistema **envía confirmación** por correo y dentro del e-commerce.
 8. **Postcondición:** orden visible en CRM, inventario actualizado.
 
 **Flujo alternativo 1 (sin stock):**
-- Paso 5 falla: stock < cantidad solicitada.
-- Sistema pone la orden en estado "Pendiente stock".
-- Notifica al cliente: "Stock disponible en 3 días; ¿desea esperar?"
-- Si cliente confirma, orden queda en espera.
+- Paso 4 falla: stock < cantidad solicitada en alguna línea.
+- Sistema **no genera la orden** ni descuenta stock.
+- Informa al cliente qué líneas no alcanzan y ofrece ajustar la cantidad o elegir otro producto.
 
 **Reglas de negocio:**
 - Precio B2B: según lista institucional del cliente.
@@ -84,12 +83,12 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 **Flujo normal:**
 1. Cliente o vendedor ingresa texto: "El último pedido llegó con temperatura elevada".
 2. Sistema envía al API de Gemini (o alternativa): `{texto, cliente_id}`.
-3. IA **clasifica** en una de: RECLAMO | COTIZACIÓN | DESPACHO | CALIDAD | OTRO.
+3. IA **clasifica** en una de: RECLAMO | COTIZACIÓN | DESPACHO | CALIDAD O FRÍO | OTRO.
 4. Sistema **enruta** al área responsable:
    - RECLAMO → Atención al cliente.
    - COTIZACIÓN → Vendedor asignado.
    - DESPACHO → Despachador.
-   - CALIDAD → Gerencia operativa.
+   - CALIDAD O FRÍO → Gerencia operativa.
 5. Área recibe **notificación en el CRM** con contexto.
 6. **Postcondición:** requerimiento clasificado, responsable asignado, tiempo registrado.
 
@@ -105,13 +104,13 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 ### CU-11: Detectar ruptura de cadena de frío
 
 **Actor:** Sistema IoT y plataforma.
-**Precondición:** camión en ruta, telemetría llegando cada 30 segundos.
+**Precondición:** camión en ruta, telemetría llegando cada 5 segundos.
 
 **Flujo normal:**
 1. IoT envía: `{camion_id: "TR-2205", temp_camara: 4.2, lat: -38.74, long: -72.59, ...}`.
 2. Sistema inserta en RDS tabla `telemetria`.
-3. Sistema **verifica rango crítico:** para cárnicos, 0 °C a 4 °C.
-4. **Compuerta:** ¿temp_camara > 4.5 °C?
+3. Sistema **verifica el rango del camión** (`rango_temperatura`): para refrigerados, 0 °C a 4 °C.
+4. **Compuerta:** ¿`temp_camara` sale de ese rango?
    - Si SÍ: `alerta_ruptura_frio = true` en la BD.
    - Si NO: continúa normal.
 5. Si alerta: sistema **notifica inmediatamente:**

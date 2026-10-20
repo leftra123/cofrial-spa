@@ -120,7 +120,7 @@ EC2 IoT (t3.medium) ← Docker compose (5 contenedores simulando 50 camiones)
 |---|---|---|
 | Servidor único sin respaldo | RDS con snapshots automáticos | BD intacta aunque EC2 falle |
 | Silos de datos (Excel + contabilidad) | Una sola BD RDS | Todas las apps leen de RDS |
-| Sin trazabilidad de camiones | EC2 IoT envia telemetría a RDS cada 30s | Dashboard actualizado en vivo |
+| Sin trazabilidad de camiones | EC2 IoT envia telemetría a RDS cada 5 s | Dashboard actualizado en vivo |
 | Pedidos por WhatsApp | E-commerce web + CRM vinculados a RDS | Orden automática, visible en CRM |
 | Cascada de fallos | SGs segregan, RDS privada | No hay acceso directo a la BD desde internet |
 

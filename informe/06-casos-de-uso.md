@@ -115,7 +115,6 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
    - Si NO: continúa normal.
 5. Si alerta: sistema **notifica inmediatamente:**
    - Despachador en la torre de control (resalta en rojo).
-   - Gerencia logística (correo + SMS).
 6. Despachador puede:
    - Desviar a parada refrigerada (actualiza ruta).
    - Contactar al cliente (cambiar hora entrega).

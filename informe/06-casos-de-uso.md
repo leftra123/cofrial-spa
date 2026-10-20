@@ -119,8 +119,7 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 6. Despachador puede:
    - Desviar a parada refrigerada (actualiza ruta).
    - Contactar al cliente (cambiar hora entrega).
-   - Registrar una "Nota de operación" (por qué subió temp).
-7. **Postcondición:** alerta documentada, acción registrada, merma evitada o mitigada.
+7. **Postcondición:** alerta documentada en `telemetria`, merma evitada o mitigada.
 
 **Regla:** alerta debe llegar en < 2 minutos de ocurrir el evento.
 

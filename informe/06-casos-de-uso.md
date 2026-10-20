@@ -129,7 +129,7 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 
 ## Diagrama de casos de uso
 
-**Figura 11**
+**Figura 1**
 *Casos de uso del ecosistema Cofrial*
 
 ![Diagrama de casos de uso de Cofrial SpA](img/casos-de-uso.png)

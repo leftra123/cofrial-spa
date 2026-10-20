@@ -16,7 +16,7 @@ Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
 
 ### AS-IS (problema: registro manual, doble digitación, stock descuadrado)
 
-**Figura 5**
+**Figura 1**
 *Proceso 1 AS-IS: pedido de cliente institucional (B2B)*
 
 ![Proceso 1 AS-IS: pedido de cliente institucional (B2B)](img/bpmn-p1-asis.drawio.png)
@@ -43,7 +43,7 @@ Nota. Elaboración propia.
 
 ### TO-BE (solución: orden digital, RDS único, sin papeles)
 
-**Figura 6**
+**Figura 2**
 *Proceso 1 TO-BE: pedido B2B en la plataforma*
 
 ![Proceso 1 TO-BE: pedido B2B en la plataforma](img/bpmn-p1-tobe.drawio.png)
@@ -71,7 +71,7 @@ Nota. Elaboración propia.
 
 ### AS-IS (problema: temperatura desconocida, ruptura silenciosa)
 
-**Figura 7**
+**Figura 3**
 *Proceso 2 AS-IS: despacho con cadena de frío*
 
 ![Proceso 2 AS-IS: despacho con cadena de frío](img/bpmn-p2-asis.drawio.png)
@@ -94,7 +94,7 @@ Nota. Elaboración propia.
 
 ### TO-BE (solución: IoT, alertas en tiempo real)
 
-**Figura 8**
+**Figura 4**
 *Proceso 2 TO-BE: despacho con IoT y alertas en tiempo real*
 
 ![Proceso 2 TO-BE: despacho con IoT y alertas en tiempo real](img/bpmn-p2-tobe.drawio.png)
@@ -122,7 +122,7 @@ Nota. Elaboración propia.
 
 ### AS-IS (problema: cartera dispersa)
 
-**Figura 9**
+**Figura 5**
 *Proceso 3 AS-IS: gestión comercial de prospectos*
 
 ![Proceso 3 AS-IS: gestión comercial de prospectos](img/bpmn-p3-asis.drawio.png)
@@ -139,7 +139,7 @@ Nota. Elaboración propia.
 
 ### TO-BE (solución: CRM centralizado)
 
-**Figura 10**
+**Figura 6**
 *Proceso 3 TO-BE: gestión comercial en el CRM*
 
 ![Proceso 3 TO-BE: gestión comercial en el CRM](img/bpmn-p3-tobe.drawio.png)

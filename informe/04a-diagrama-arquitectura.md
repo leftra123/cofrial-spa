@@ -180,7 +180,7 @@ Nota. Learner Lab suele otorgar $100 USD por 36 horas. Suficiente para desarroll
 
 ## Diagrama visual
 
-**Figura 3**
+**Figura 1**
 *Arquitectura cloud de Cofrial SpA en AWS Academy*
 
 ![Arquitectura cloud de Cofrial SpA: VPC con EC2 web, EC2 IoT y RDS PostgreSQL en subred privada](img/arquitectura-cloud.drawio.png)

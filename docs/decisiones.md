@@ -15,9 +15,9 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Por confirmar |
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por confirmar |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por confirmar |
+| D-09 | Cuentas de clientes | Inicio de sesión propio sobre la tabla `usuario` (PBKDF2 de Django, límite de intentos, sesión renovada al entrar); registro público solo B2C | `django.contrib.auth` (`auth_user`) | **Adoptada** el 20-oct (prototipo). Mantiene las 25 tablas del MER; si se quiere el panel de administración de Django como CRM, habrá que migrar a `auth_user` |
 
 > El modelo de datos (25 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
-| D-09 | Cuentas de clientes | Inicio de sesión propio sobre la tabla `usuario` (PBKDF2 de Django, límite de intentos, sesión renovada al entrar); registro público solo B2C | `django.contrib.auth` (`auth_user`) | **Adoptada** el 20-oct (prototipo). Mantiene las 25 tablas del MER; si se quiere el panel de administración de Django como CRM, habrá que migrar a `auth_user` |
 
 ## Por qué esta combinación
 - **Un solo lenguaje (Python)** para web, API, cálculos e IoT: lo que aprende uno le sirve al otro y el simulador comparte herramientas con la aplicación.

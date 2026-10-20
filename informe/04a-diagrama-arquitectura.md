@@ -178,14 +178,11 @@ Nota. Learner Lab suele otorgar $100 USD por 36 horas. Suficiente para desarroll
 
 ---
 
-## Diagrama visual (genera en draw.io o bpmn.io)
+## Diagrama visual
 
-**Pasos para crear el diagrama en draw.io:**
-1. New → Blank Diagram
-2. Insert → AWS Architecture Icons → VPC, EC2, RDS, Security Groups
-3. Dibujar como se muestra arriba
-4. Exportar a PNG y guardar en `informe/img/arquitectura-cloud.drawio.png` (fuente editable: `informe/img/arquitectura-cloud.drawio`)
+**Figura 1**
+*Arquitectura cloud de Cofrial SpA en AWS Academy*
 
-**Link recomendado:** https://app.diagrams.net (gratis, sin registro)
+![Arquitectura cloud de Cofrial SpA: VPC con EC2 web, EC2 IoT y RDS PostgreSQL en subred privada](img/arquitectura-cloud.drawio.png)
 
-Nota. Aquí va la imagen del diagrama profesional. Elaboración propia.
+Nota. Fuente editable en `informe/img/arquitectura-cloud.drawio` (abrir en https://app.diagrams.net). Elaboración propia.

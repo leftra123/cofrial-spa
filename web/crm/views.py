@@ -2,7 +2,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -25,7 +25,7 @@ def con_rol(*roles):
                 return redirect(f"/cuenta/entrar/?next={request.path}")
             mi_rol = s.rol(request.user)
             if mi_rol not in roles:
-                return HttpResponseForbidden("Tu cuenta no tiene acceso a esta sección del CRM.")
+                return render(request, "403.html", {"detalle": "Tu cuenta no tiene acceso a esta sección del CRM."}, status=403)
             request.rol = mi_rol
             return vista(request, *args, **kwargs)
         return envoltura

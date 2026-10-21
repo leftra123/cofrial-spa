@@ -247,3 +247,7 @@ td select { padding: 6px 8px; max-width: 220px; }
 @media print { .lateral, .barra-movil, .acciones { display: none; } .contenido { padding: 0; } }
 
 [hidden] { display: none !important; }
+
+/* acciones dentro de una celda (cantidad + botón) siempre en una sola línea */
+td .en-linea { flex-wrap: nowrap; }
+td:last-child { white-space: nowrap; }

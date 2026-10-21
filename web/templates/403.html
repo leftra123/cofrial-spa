@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block titulo %}Sin acceso | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="tarjeta-ui" style="max-width:520px;margin:8vh auto 0;text-align:center">
+  <span class="chip alerta" style="margin-bottom:14px">403 · Sin acceso</span>
+  <h1 style="font-size:1.4rem;margin-bottom:8px">No puedes ver esta sección</h1>
+  <p class="muted">{{ detalle|default:"Tu cuenta no tiene permiso para esta página." }}</p>
+  <a class="btn" href="/">Volver al inicio</a>
+</div>
+{% endblock %}

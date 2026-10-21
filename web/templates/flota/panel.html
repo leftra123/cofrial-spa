@@ -3,21 +3,21 @@
 {% block cabecera %}
 <div class="pagina-cab">
   <div><h1>Flota</h1><p class="sub">Estado de cada camión según su última lectura de telemetría.</p></div>
-  <div class="acciones"><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a></div>
+  <div class="acciones"><span class="muted" id="en-vivo" hidden>En vivo · cada 5 s</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a></div>
 </div>
 {% endblock %}
 {% block contenido %}
 <div class="rejilla">
-  <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
-  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor">{{ resumen.en_ruta }}</div><div class="detalle">con despacho en curso</div></div>
-  <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
-  <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
+  <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor" data-resumen="activos">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
+  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor" data-resumen="en_ruta">{{ resumen.en_ruta }}</div><div class="detalle">con despacho en curso</div></div>
+  <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor" data-resumen="con_alerta">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
+  <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
 </div>
 
 <div class="seccion"><h2>Vehículos</h2></div>
 <div class="rejilla vehiculos">
 {% for x in tarjetas %}
-  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}">
+  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}" data-camion="{{ x.camion.camion_id }}">
     <div class="vehiculo-cab">
       <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
         <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}</div></div></div>
@@ -28,12 +28,12 @@
     </div>
     {% if x.lectura %}
     <div class="mini">
-      <div><span>Cámara</span><b class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
-      <div><span>Combustible</span><b class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
+      <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
+      <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
       <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|floatformat:"0g" }} kg</b></div>
     </div>
-    <div class="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
-    <div class="frio">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
+    <div class="barra" data-campo="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
+    <div class="frio" data-campo="lectura">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
     {% else %}
     <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|floatformat:"0g" }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
     {% endif %}
@@ -64,4 +64,34 @@
 {% endfor %}
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+<script>
+  /* Refresco en vivo: consulta /api/flota/ cada 5 s (el simulador inserta una lectura por camión en ese intervalo)
+     y actualiza solo los números. Si la API falla, la página sigue mostrando los últimos datos. */
+  (function () {
+    if (!window.axios) return;
+    var marca = document.getElementById("en-vivo");
+    function pon(el, txt, malo) { if (el) { el.textContent = txt; if (malo !== undefined) el.classList.toggle("mal", malo); } }
+    function pintar(d) {
+      Object.keys(d.resumen).forEach(function (k) { pon(document.querySelector('[data-resumen="' + k + '"]'), d.resumen[k]); });
+      d.camiones.forEach(function (c) {
+        var t = document.querySelector('[data-camion="' + c.camion_id + '"]'), l = c.ultima_lectura;
+        if (!t || !l) return;
+        t.classList.toggle("en-alerta", c.alerta);
+        pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
+        pon(t.querySelector('[data-campo="comb"]'), l.combustible_pct + " %", c.combustible_bajo);
+        var b = t.querySelector('[data-campo="barra"] i');
+        if (b) { b.style.width = l.combustible_pct + "%"; b.classList.toggle("bajo", c.combustible_bajo); }
+        pon(t.querySelector('[data-campo="lectura"]'), "Última lectura " + new Date(l.registrado_en).toLocaleString("es-CL"));
+      });
+      if (marca) marca.hidden = false;
+    }
+    function actualizar() {
+      axios.get("/api/flota/", {headers: {"Accept": "application/json"}}).then(function (r) { pintar(r.data); }).catch(function () { if (marca) marca.hidden = true; });
+    }
+    setInterval(actualizar, 5000);
+  })();
+</script>
 {% endblock %}

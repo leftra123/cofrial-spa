@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block titulo %}Mis pedidos | Cofrial{% endblock %}
+{% block estilos %}<style>
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: .8rem 1rem; text-align: left; border-bottom: 1px solid var(--linea); }
+  th { font-weight: 600; color: var(--suave); font-size: .9rem; }
+  tr:last-child td { border-bottom: 0; }
+  .n { text-align: right; }
+  .estado { font-weight: 650; }
+  .estado.fin { color: var(--ok); }
+  .estado.cancelada { color: var(--mal); }
+  .vacio { padding: 2rem 1.2rem; }
+</style>{% endblock %}
+{% block contenido %}
+<h1>Mis pedidos</h1>
+<p class="sub">Tus compras, de la más reciente a la más antigua.</p>
+{% if filas %}
+<div class="caja" style="overflow-x:auto">
+<table>
+  <thead><tr><th>Pedido</th><th>Fecha</th><th>Entrega en</th><th>Estado</th><th class="n">Unidades</th><th class="n">Total</th></tr></thead>
+  <tbody>
+  {% for f in filas %}
+    <tr>
+      <td><a href="{% url 'orden' f.o.orden_id %}">N.º {{ f.o.orden_id }}</a>{% if f.o.numero_oc %}<br><small>Orden de compra {{ f.o.numero_oc }}</small>{% endif %}</td>
+      <td class="num">{{ f.o.creada_en|date:"d-m-Y H:i" }}</td>
+      <td>{{ f.o.direccion.calle_numero }}, {{ f.o.direccion.comuna.nombre }}</td>
+      <td class="estado {% if f.o.estado_orden.nombre == 'Entregada' %}fin{% elif f.o.estado_orden.nombre == 'Cancelada' %}cancelada{% endif %}">{{ f.o.estado_orden.nombre }}</td>
+      <td class="n num">{{ f.unidades }}</td>
+      <td class="n num">${{ f.total|floatformat:"0g" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="caja vacio"><p style="margin:0 0 1rem">Aún no has hecho pedidos.</p><a class="btn" href="{% url 'catalogo' %}">Ver el catálogo</a></div>
+{% endif %}
+{% endblock %}

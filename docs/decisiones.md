@@ -15,6 +15,7 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Por confirmar |
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por confirmar |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por confirmar |
+| D-09 | Cuentas de clientes | Inicio de sesión propio sobre la tabla `usuario` (PBKDF2 de Django, límite de intentos, sesión renovada al entrar); registro público solo B2C | `django.contrib.auth` (`auth_user`) | **Adoptada** el 20-oct (prototipo). Mantiene las 25 tablas del MER; si se quiere el panel de administración de Django como CRM, habrá que migrar a `auth_user` |
 
 > El modelo de datos (25 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
 
@@ -33,6 +34,10 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 
 **D-04 Simulador IoT: Python en Docker (15-oct-2026).** Consecuencia de D-01: Python es el lenguaje común y los contenedores usan una imagen ligera. Puntaje 4,90 frente a 4,40 de Node/TypeScript; ver Tabla 5 de `informe/08-herramientas.md`.
 
+## Estado de la implementación
+El scaffold está en `backend/` (Django 5.2, `psycopg` 3 y `python-dotenv`; configuración por variables de entorno, ver `.env.example`). Aún no hay modelos: el esquema vive en `informe/modelo/esquema.sql`.
+
+> Sincronizado con `informe/03-arquitectura-cloud.md` y `informe/08-herramientas.md` (Tablas 4 y 5: Django 4,75; Python 4,90). Los puntajes son un borrador que Sergio debe validar, sobre todo C3 (facilidad de aprendizaje).
 
 ## Capa visual del prototipo (rediseño "Fleet Dispatch")
 - **Qué cambió:** solo presentación. CSS propio en `web/static/css/cofrial.css` (sin frameworks ni `node_modules`), layout con barra lateral en `templates/base.html` y componentes reutilizables en `templates/componentes/`. Tipografía Inter por CDN de Google Fonts, con respaldo a la fuente del sistema.

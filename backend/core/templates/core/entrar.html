@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+{% block titulo %}Ingresar | Cofrial{% endblock %}
+{% block estilos %}<style>.form { max-width: 24rem; padding: 1.5rem; }</style>{% endblock %}
+{% block contenido %}
+<h1>Ingresar</h1>
+<p class="sub">Con tu cuenta ves los precios de tu lista y sigues tus pedidos.</p>
+<form class="caja form" method="post" action="{% url 'entrar' %}">{% csrf_token %}
+  <input type="hidden" name="next" value="{{ siguiente }}">
+  <label>Correo<input type="email" name="email" value="{{ email }}" autocomplete="username" required autofocus></label>
+  <label>Contraseña<input type="password" name="password" autocomplete="current-password" required></label>
+  <button class="btn ancho">Ingresar</button>
+</form>
+<p>¿Eres cliente particular y no tienes cuenta? <a href="{% url 'registro' %}">Créala en un minuto</a>. Las cuentas institucionales las crea Cofrial con el RUT de la empresa.</p>
+{% endblock %}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Cofrial{% endblock %}</title>
+<style>
+  :root {
+    --escarcha: #eef3f5; --papel: #fff; --tinta: #172430; --suave: #5a6b78; --linea: #d5e0e6;
+    --fiordo: #0e5a7a; --fiordo-os: #0a4660; --refrigerado: #1b86a8; --congelado: #3d4ab5;
+    --ok: #1c7a52; --ok-bg: #e1f2ea; --aviso: #8a5a00; --aviso-bg: #fbefd2; --mal: #b3302a; --mal-bg: #fae6e4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--escarcha); color: var(--tinta); line-height: 1.5; }
+  a { color: var(--fiordo); }
+  :focus-visible { outline: 3px solid #7fb9d4; outline-offset: 2px; }
+  header { background: var(--papel); border-bottom: 1px solid var(--linea); }
+  .barra { max-width: 70rem; margin: 0 auto; padding: .7rem 1.25rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+  .marca { text-decoration: none; color: var(--tinta); font-weight: 800; font-size: 1.35rem; letter-spacing: -.02em; line-height: 1.1; }
+  .marca span { display: block; font-weight: 400; font-size: .8rem; letter-spacing: 0; color: var(--suave); }
+  nav { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; flex: 1; }
+  nav a { color: var(--tinta); text-decoration: none; font-weight: 600; padding: .3rem 0; border-bottom: 2px solid transparent; }
+  nav a:hover, nav a[aria-current] { border-color: var(--fiordo); }
+  nav .cuenta { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+  nav .cuenta form { margin: 0; }
+  .contador { display: inline-block; min-width: 1.4rem; text-align: center; background: var(--fiordo); color: #fff; border-radius: 4px; padding: 0 .35rem; margin-left: .25rem; font-size: .8rem; }
+  main { max-width: 70rem; margin: 0 auto; padding: 1.8rem 1.25rem 3.5rem; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 .3rem; letter-spacing: -.02em; }
+  h2 { font-size: 1.2rem; margin: 0; }
+  .sub { color: var(--suave); margin: 0 0 1.5rem; max-width: 60ch; }
+  .msg { padding: .7rem 1rem; border-radius: 4px; margin-bottom: .6rem; border-left: 4px solid; max-width: 60rem; }
+  .msg.error { background: var(--mal-bg); color: var(--mal); border-color: var(--mal); }
+  .msg.success { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+  .btn { display: inline-block; background: var(--fiordo); color: #fff; border: 0; border-radius: 4px; padding: .6rem 1.1rem; font: inherit; font-weight: 650; cursor: pointer; text-decoration: none; text-align: center; }
+  nav .btn { white-space: nowrap; }
+  .btn:hover { background: var(--fiordo-os); }
+  .btn:disabled { background: #b4c3cc; cursor: not-allowed; }
+  .btn.suave { background: transparent; color: var(--suave); border: 1px solid var(--linea); font-weight: 600; padding: .35rem .7rem; }
+  .btn.suave:hover { color: var(--mal); border-color: var(--mal); }
+  .btn.ancho { width: 100%; padding: .8rem; font-size: 1.02rem; }
+  input, select { font: inherit; border: 1px solid #aebdc6; border-radius: 4px; padding: .55rem .7rem; background: #fff; color: var(--tinta); width: 100%; }
+  label { display: block; font-weight: 600; margin-bottom: .9rem; }
+  label small { display: block; font-weight: 400; color: var(--suave); }
+  label input, label select { margin-top: .3rem; font-weight: 400; }
+  .num { font-variant-numeric: tabular-nums; }
+  .caja { background: var(--papel); border: 1px solid var(--linea); border-radius: 6px; }
+  @media (prefers-reduced-motion: no-preference) { .btn { transition: background-color .12s; } }
+</style>
+{% block estilos %}{% endblock %}
+</head>
+<body>
+<header>
+  <div class="barra">
+    <a class="marca" href="{% url 'catalogo' %}">Cofrial<span>Frío que llega a tiempo</span></a>
+    <nav>
+      <a href="{% url 'catalogo' %}" {% if request.resolver_match.url_name == 'catalogo' %}aria-current="page"{% endif %}>Catálogo</a>
+      {% if cliente_sesion %}<a href="{% url 'pedidos' %}" {% if request.resolver_match.url_name == 'pedidos' %}aria-current="page"{% endif %}>Mis pedidos</a>{% endif %}
+      <a href="{% url 'carrito' %}" {% if request.resolver_match.url_name == 'carrito' %}aria-current="page"{% endif %}>Carrito{% if en_carrito %}<span class="contador num">{{ en_carrito }}</span>{% endif %}</a>
+      <div class="cuenta">
+        {% if cliente_sesion %}
+          <span>{{ cliente_sesion.nombre }}</span>
+          <form method="post" action="{% url 'salir' %}">{% csrf_token %}<button class="btn suave">Cerrar sesión</button></form>
+        {% else %}
+          <a href="{% url 'entrar' %}">Ingresar</a>
+          <a class="btn" href="{% url 'registro' %}">Crear cuenta</a>
+        {% endif %}
+      </div>
+    </nav>
+  </div>
+</header>
+<main>
+  {% for m in messages %}<div class="msg {{ m.tags }}" role="{% if m.tags == 'error' %}alert{% else %}status{% endif %}">{{ m }}</div>{% endfor %}
+  {% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

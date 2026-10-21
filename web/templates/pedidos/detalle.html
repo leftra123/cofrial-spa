@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Orden {{ orden.orden_id }} | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h1>Orden N.º {{ orden.orden_id }}</h1>
+<p><strong>Estado:</strong> {{ orden.estado_orden }} · <strong>Entrega en:</strong> {{ orden.direccion }}{% if orden.numero_oc %} · <strong>OC:</strong> {{ orden.numero_oc }}{% endif %}
+{% if orden.despacho %}<br><strong>Camión:</strong> {{ orden.despacho.camion }}{% endif %}</p>
+<table>
+  <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+  <tbody>
+  {% for i in items %}<tr><td>{{ i.producto.nombre }}</td><td>{{ i.cantidad }}</td><td>${{ i.precio_unitario_clp|floatformat:0 }}</td><td>${% widthratio i.cantidad 1 i.precio_unitario_clp %}</td></tr>{% endfor %}
+  <tr><th colspan="3">Total</th><th>${{ total|floatformat:0 }}</th></tr>
+  </tbody>
+</table>
+{% if puede_cancelar %}<form method="post" action="/pedidos/{{ orden.orden_id }}/cancelar/">{% csrf_token %}<p><button>Cancelar orden</button></p></form>{% endif %}
+<p><a href="/pedidos/">Volver a mis pedidos</a></p>
+{% endblock %}

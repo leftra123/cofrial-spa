@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block titulo %}Entrar | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h1>Entrar</h1>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <input type="hidden" name="next" value="{{ next }}">
+  <button>Entrar</button>
+</form>
+{% endblock %}

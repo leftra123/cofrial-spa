@@ -1,0 +1,173 @@
+"""Reglas de negocio del carrito y las órdenes (RN-01 a RN-08 del informe, sección de canales).
+
+Toda la lógica vive aquí y no en las vistas, para que el portal, el CRM y las pruebas usen las mismas reglas.
+"""
+from django.db import transaction
+from django.db.models import F
+
+from catalogo.models import PrecioProducto, Producto
+from clientes.models import Cliente, Direccion
+
+from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
+
+
+class ErrorDeNegocio(Exception):
+    """Una regla de negocio impide la operación; el mensaje se muestra tal cual al usuario."""
+
+    def __init__(self, *mensajes):
+        super().__init__(" ".join(mensajes))
+        self.mensajes = list(mensajes)
+
+
+def cliente_de(usuario):
+    if not usuario.is_authenticated:
+        return None
+    return Cliente.objects.select_related("tipo_cliente__lista_precio").filter(usuario=usuario).first()
+
+
+def precio_de(cliente, producto_id):
+    """RN-01: el precio sale de la lista del tipo de cliente; no hay precio sin lista."""
+    return (PrecioProducto.objects.filter(lista_precio=cliente.tipo_cliente.lista_precio_id, producto_id=producto_id)
+            .values_list("precio_clp", flat=True).first())
+
+
+# ------------------------------------------------------------------------------------ carrito
+def carrito_abierto(cliente):
+    """RN-03: un solo carrito abierto por cliente."""
+    carrito, _ = Carrito.objects.get_or_create(cliente=cliente, estado="abierto")
+    return carrito
+
+
+def agregar(cliente, producto_id, cantidad):
+    if cantidad < 1:
+        raise ErrorDeNegocio("La cantidad debe ser al menos 1.")
+    try:
+        producto = Producto.objects.get(pk=producto_id, activo=True)
+    except Producto.DoesNotExist:
+        raise ErrorDeNegocio("El producto no existe o ya no está disponible.")
+    if precio_de(cliente, producto.pk) is None:
+        raise ErrorDeNegocio(f"{producto.nombre} no tiene precio en tu lista.")
+    carrito = carrito_abierto(cliente)
+    item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
+    if not creado:
+        item.cantidad += cantidad
+        item.save(update_fields=["cantidad"])
+    return item
+
+
+def fijar_cantidad(cliente, producto_id, cantidad):
+    carrito = carrito_abierto(cliente)
+    if cantidad < 1:
+        CarritoItem.objects.filter(carrito=carrito, producto_id=producto_id).delete()
+    else:
+        CarritoItem.objects.filter(carrito=carrito, producto_id=producto_id).update(cantidad=cantidad)
+
+
+def lineas(cliente):
+    """Líneas del carrito con precio, subtotal y si hay stock; el precio se calcula, no se guarda (modelo en 3FN)."""
+    filas = []
+    for item in CarritoItem.objects.filter(carrito=carrito_abierto(cliente)).select_related("producto").order_by("producto__nombre"):
+        precio = precio_de(cliente, item.producto_id) or 0
+        filas.append({"producto": item.producto, "cantidad": item.cantidad, "precio": precio,
+                      "subtotal": precio * item.cantidad, "hay_stock": item.cantidad <= item.producto.stock_disponible})
+    return filas
+
+
+def total(filas):
+    return sum(f["subtotal"] for f in filas)
+
+
+# ------------------------------------------------------------------------------------ órdenes
+@transaction.atomic
+def generar_orden(cliente, direccion_id, numero_oc=""):
+    """Convierte el carrito en una orden. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción."""
+    numero_oc = (numero_oc or "").strip()
+    if cliente.tipo_cliente.codigo == "B2B" and not numero_oc:      # RN-05
+        raise ErrorDeNegocio("Los clientes institucionales deben indicar su número de orden de compra.")
+    direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()    # RN-04
+    if direccion is None:
+        raise ErrorDeNegocio("Elige una dirección de entrega que pertenezca a tu cuenta.")
+    carrito = Carrito.objects.select_for_update().filter(cliente=cliente, estado="abierto").first()
+    items = list(CarritoItem.objects.filter(carrito=carrito)) if carrito else []
+    if not items:
+        raise ErrorDeNegocio("Tu carrito está vacío.")
+
+    # RN-02: se bloquean los productos (en orden de id, para no provocar bloqueos cruzados) antes de validar el stock
+    productos = {p.pk: p for p in Producto.objects.select_for_update().filter(pk__in=[i.producto_id for i in items]).order_by("pk")}
+    faltantes = [f"{productos[i.producto_id].nombre}: pides {i.cantidad} y quedan {productos[i.producto_id].stock_disponible}."
+                 for i in items if i.cantidad > productos[i.producto_id].stock_disponible]
+    if faltantes:
+        raise ErrorDeNegocio("No hay stock suficiente para generar la orden.", *faltantes)
+
+    precios = {i.producto_id: precio_de(cliente, i.producto_id) for i in items}
+    sin_precio = [productos[pid].nombre for pid, pr in precios.items() if pr is None]
+    if sin_precio:
+        raise ErrorDeNegocio("Productos sin precio en tu lista: " + ", ".join(sin_precio) + ".")
+
+    orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc,
+                                 estado_orden=EstadoOrden.objects.get(orden_flujo=1))
+    for i in items:
+        OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
+                                 precio_unitario_clp=precios[i.producto_id])        # RN-06: precio congelado
+        Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
+    carrito.estado = "convertido"                                                  # RN-03
+    carrito.save(update_fields=["estado"])
+    return orden
+
+
+def ordenes_de(cliente):
+    return (Orden.objects.filter(direccion__cliente=cliente).select_related("estado_orden", "direccion__comuna", "despacho")
+            .order_by("-creada_en"))
+
+
+def total_orden(orden):
+    return sum(i.cantidad * i.precio_unitario_clp for i in orden.ordenitem_set.all())
+
+
+@transaction.atomic
+def cancelar(orden, como="cliente"):
+    """RN-07: el cliente cancela solo en «Recibida»; el vendedor hasta «En preparación». Cancelar repone el stock."""
+    orden = Orden.objects.select_for_update().select_related("estado_orden").get(pk=orden.pk)
+    limite = 1 if como == "cliente" else 3
+    if orden.estado_orden.es_final or orden.estado_orden.orden_flujo > limite:
+        quien = "el cliente" if como == "cliente" else "el vendedor"
+        raise ErrorDeNegocio(f"La orden está «{orden.estado_orden.nombre}» y {quien} ya no puede cancelarla.")
+    for item in orden.ordenitem_set.all():
+        Producto.objects.filter(pk=item.producto_id).update(stock_disponible=F("stock_disponible") + item.cantidad)
+    orden.estado_orden = EstadoOrden.objects.get(nombre="Cancelada")
+    orden.save(update_fields=["estado_orden"])
+    return orden
+
+
+@transaction.atomic
+def avanzar(orden):
+    """Pasa la orden al siguiente estado del flujo (Figura de estados). «Despachada» exige un despacho asignado."""
+    orden = Orden.objects.select_for_update().select_related("estado_orden").get(pk=orden.pk)
+    if orden.estado_orden.es_final:
+        raise ErrorDeNegocio(f"La orden ya está «{orden.estado_orden.nombre}».")
+    siguiente = EstadoOrden.objects.filter(orden_flujo__gt=orden.estado_orden.orden_flujo, es_final=False).first() \
+        or EstadoOrden.objects.get(nombre="Entregada")
+    if siguiente.nombre == "Despachada" and orden.despacho_id is None:
+        raise ErrorDeNegocio("Asigna un despacho antes de marcar la orden como despachada.")
+    orden.estado_orden = siguiente
+    orden.save(update_fields=["estado_orden"])
+    return orden
+
+
+@transaction.atomic
+def repetir_ultimo_pedido(cliente):
+    """RN-08: copia al carrito las líneas de la última orden no cancelada, ajustadas al stock; devuelve los avisos."""
+    ultima = ordenes_de(cliente).exclude(estado_orden__nombre="Cancelada").first()
+    if ultima is None:
+        raise ErrorDeNegocio("Aún no tienes pedidos que repetir.")
+    avisos = []
+    for item in ultima.ordenitem_set.select_related("producto"):
+        p = item.producto
+        if not p.activo or p.stock_disponible < 1 or precio_de(cliente, p.pk) is None:
+            avisos.append(f"{p.nombre} no está disponible y no se agregó.")
+            continue
+        cantidad = min(item.cantidad, p.stock_disponible)
+        if cantidad < item.cantidad:
+            avisos.append(f"{p.nombre}: se ajustó de {item.cantidad} a {cantidad} por stock.")
+        agregar(cliente, p.pk, cantidad)
+    return avisos

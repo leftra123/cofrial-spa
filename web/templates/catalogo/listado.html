@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titulo %}Catálogo | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h1>Catálogo de refrigerados y congelados</h1>
+{% if perfil %}<p>Lista de precios: {{ perfil.lista_precio.nombre }}</p>{% endif %}
+<table>
+  <thead><tr><th>Producto</th><th>Categoría</th><th>Conservación</th><th>Precio (CLP)</th><th></th></tr></thead>
+  <tbody>
+  {% for p, precio in filas %}
+    <tr>
+      <td>{{ p.nombre }}<br><span class="frio">{{ p.sku }} · {{ p.get_unidad_medida_display }}</span></td>
+      <td>{{ p.categoria.nombre }}</td>
+      <td class="frio">{{ p.categoria.rango_temperatura }}</td>
+      <td>{% if precio %}${{ precio|floatformat:0 }}{% else %}Sin precio{% endif %}</td>
+      <td>{% if precio and p.stock_disponible > 0 %}<form method="post" action="/carrito/agregar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ p.producto_id }}"><input type="number" name="cantidad" value="1" min="1" max="{{ p.stock_disponible }}"> <button>Agregar</button></form>{% elif precio %}<span class="frio">Sin stock</span>{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">No hay productos cargados.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

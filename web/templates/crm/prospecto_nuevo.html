@@ -1,0 +1,15 @@
+{% extends "crm/base.html" %}
+{% block crm %}
+<h1>Nuevo prospecto</h1>
+<form method="post">{% csrf_token %}
+  {% if es_admin %}<label>Vendedor responsable</label><select name="vendedor">{% for v in vendedores %}<option value="{{ v.pk }}">{{ v }}</option>{% endfor %}</select>{% endif %}
+  <label>Nombre del contacto</label><input name="nombre_contacto" required>
+  <label>Empresa</label><input name="empresa">
+  <label>Correo</label><input name="email" type="email">
+  <label>Teléfono</label><input name="telefono">
+  <label>Origen</label><select name="origen">{% for v, t in origenes %}<option value="{{ v }}">{{ t }}</option>{% endfor %}</select>
+  <label>Monto estimado (CLP)</label><input name="monto" type="number" min="0">
+  <p class="frio">Se necesita al menos un correo o un teléfono.</p>
+  <button>Crear prospecto</button>
+</form>
+{% endblock %}

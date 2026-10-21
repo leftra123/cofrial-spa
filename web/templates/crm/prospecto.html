@@ -1,0 +1,18 @@
+{% extends "crm/base.html" %}
+{% block crm %}
+<h1>{{ p.empresa|default:p.nombre_contacto }}</h1>
+<p><strong>Etapa:</strong> {{ p.etapa }} · <strong>Responsable:</strong> {{ p.vendedor }} · <strong>Origen:</strong> {{ p.origen }}{% if p.monto_estimado_clp %} · <strong>Monto:</strong> ${{ p.monto_estimado_clp|floatformat:0 }}{% endif %}<br>
+Contacto: {{ p.nombre_contacto }} {{ p.email }} {{ p.telefono }}{% if p.motivo_perdida %}<br><strong>Motivo de pérdida:</strong> {{ p.motivo_perdida }}{% endif %}
+{% if p.cliente %}<br><a href="/crm/clientes/{{ p.cliente_id }}/">Ver cliente creado</a>{% endif %}</p>
+{% if puede_editar and destinos %}
+<h2>Mover de etapa</h2>
+{% for d in destinos %}
+<form method="post" action="/crm/prospectos/{{ p.prospecto_id }}/mover/" style="margin-bottom:8px">{% csrf_token %}<input type="hidden" name="etapa" value="{{ d.pk }}">
+  {% if d.es_ganada %}<input name="rut" placeholder="RUT de la empresa" required> {% elif d.es_final %}<input name="motivo" placeholder="Motivo de la pérdida" required> {% endif %}
+  <button>Pasar a «{{ d.nombre }}»</button></form>
+{% endfor %}{% endif %}
+<h2>Interacciones</h2>
+{% if puede_editar %}<form method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/">{% csrf_token %}
+  <select name="tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required> <button>Registrar</button></form>{% endif %}
+<table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td>{{ i.tipo }}</td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}<tr><td>Sin interacciones registradas.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

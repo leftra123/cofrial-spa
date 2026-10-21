@@ -1,0 +1,8 @@
+{% extends "crm/base.html" %}
+{% block crm %}
+<h1>Pedidos afectados por una ruptura de frío</h1>
+<table><thead><tr><th>Orden</th><th>Cliente</th><th>Camión</th><th>Estado</th><th>Lecturas con alerta</th></tr></thead><tbody>
+{% for o in ordenes %}<tr><td>N.º {{ o.orden_id }}</td><td>{{ o.direccion.cliente.nombre }}</td><td>{{ o.despacho.camion }}</td><td>{{ o.estado_orden }}</td><td><span class="alerta">{{ o.alertas_frio }}</span></td></tr>
+{% empty %}<tr><td colspan="5">Ningún pedido tiene alertas de frío durante su viaje.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

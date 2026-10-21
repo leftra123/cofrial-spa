@@ -1,0 +1,7 @@
+{% extends "crm/base.html" %}
+{% block crm %}
+<h1>Clientes</h1>
+<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Vendedor</th><th>Correo</th></tr></thead><tbody>
+{% for c in clientes %}<tr><td><a href="/crm/clientes/{{ c.cliente_id }}/">{{ c.nombre }}</a></td><td>{{ c.tipo_cliente.codigo }}</td><td>{{ c.vendedor|default:"–" }}</td><td>{{ c.email }}</td></tr>{% empty %}<tr><td colspan="4">No hay clientes en tu cartera.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}Carrito | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h1>Tu carrito</h1>
+<p>Lista de precios: {{ cliente.tipo_cliente.lista_precio.nombre }}</p>
+{% if filas %}
+<table>
+  <thead><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th></tr></thead>
+  <tbody>
+  {% for f in filas %}
+    <tr>
+      <td>{{ f.producto.nombre }}{% if not f.hay_stock %}<br><span class="frio" style="color:#c8102e">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</td>
+      <td>${{ f.precio|floatformat:0 }}</td>
+      <td><form method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}"><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0"> <button>Actualizar</button></form></td>
+      <td>${{ f.subtotal|floatformat:0 }}</td>
+    </tr>
+  {% endfor %}
+    <tr><th colspan="3">Total</th><th>${{ total|floatformat:0 }}</th></tr>
+  </tbody>
+</table>
+<h2>Entrega</h2>
+<form method="post" action="/carrito/confirmar/">{% csrf_token %}
+  <label for="direccion">Dirección de entrega</label>
+  <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+  {% if pide_oc %}<label for="numero_oc">Número de orden de compra (obligatorio)</label><input name="numero_oc" id="numero_oc" required>{% endif %}
+  <p><button>Generar orden</button></p>
+</form>
+{% else %}<p>Tu carrito está vacío. <a href="/catalogo/">Ver catálogo</a></p>{% endif %}
+<form method="post" action="/carrito/repetir/">{% csrf_token %}<button>Repetir mi último pedido</button></form>
+{% endblock %}

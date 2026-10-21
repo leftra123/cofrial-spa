@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; margin: 0; color: #222; }
+    header { background: #c8102e; color: #fff; padding: 12px 24px; display: flex; gap: 24px; align-items: baseline; }
+    header a { color: #fff; text-decoration: none; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 24px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+    .avisos { max-width: 960px; margin: 12px auto 0; padding: 0 24px; }
+    .aviso { padding: 8px 12px; margin: 4px 0; border-left: 4px solid #888; background: #f4f4f4; }
+    .aviso.success { border-color: #2e7d32; } .aviso.error { border-color: #c8102e; } .aviso.warning { border-color: #ed8b00; }
+    button { font: inherit; padding: 6px 12px; cursor: pointer; } button.enlace { background: none; border: 0; color: #fff; text-decoration: underline; padding: 0; }
+    input[type=number] { width: 70px; } label { display: block; margin: 8px 0 2px; }
+    .subnav { display: flex; gap: 16px; padding-bottom: 8px; border-bottom: 2px solid #c8102e; margin-bottom: 16px; } .subnav a { color: #c8102e; text-decoration: none; font-weight: bold; }
+    .col { display: inline-block; vertical-align: top; width: 31%; min-width: 200px; margin: 0 1% 12px 0; background: #f7f7f7; padding: 8px; } .tarjeta { background: #fff; border: 1px solid #ddd; padding: 6px 8px; margin: 6px 0; }
+    .alerta { background: #fdecea; color: #c8102e; font-weight: bold; padding: 1px 6px; } .kpi { display: inline-block; margin: 0 24px 12px 0; } .kpi b { font-size: 1.6em; display: block; }
+    .frio { font-size: 0.85em; color: #555; }
+  </style>
+</head>
+<body>
+  <header><strong>Cofrial SpA</strong><a href="/">Inicio</a><a href="/catalogo/">Catálogo</a><a href="/carrito/">Carrito</a><a href="/pedidos/">Mis pedidos</a><a href="/crm/">CRM</a><a href="/admin/">Administración</a>
+    <span style="margin-left:auto">{% if user.is_authenticated %}{{ user.username }} · <form method="post" action="/cuenta/salir/" style="display:inline">{% csrf_token %}<button class="enlace">Salir</button></form>{% else %}<a href="/cuenta/entrar/">Entrar</a>{% endif %}</span></header>
+  {% if messages %}<div class="avisos">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+  <main>{% block contenido %}{% endblock %}</main>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block contenido %}
+<nav class="subnav">
+  {% if rol != "despachador" %}<a href="/crm/">Panel</a><a href="/crm/embudo/">Embudo</a><a href="/crm/clientes/">Clientes</a><a href="/crm/requerimientos/">Requerimientos</a>{% endif %}
+  <a href="/crm/alertas/">Alertas de frío</a><span class="frio" style="margin-left:auto">Rol: {{ rol }}</span>
+</nav>
+{% block crm %}{% endblock %}
+{% endblock %}

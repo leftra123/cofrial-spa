@@ -41,3 +41,7 @@ pnpm-debug.log*
 
 # Locales de Claude
 .claude/settings.local.json
+__pycache__/
+*.pyc
+web/staticfiles/
+web/db.sqlite3

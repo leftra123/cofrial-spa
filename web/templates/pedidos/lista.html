@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Mis pedidos | Cofrial SpA{% endblock %}
+{% block contenido %}
+<h1>Mis pedidos</h1>
+<table>
+  <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th>Total</th></tr></thead>
+  <tbody>
+  {% for o in ordenes %}<tr><td><a href="/pedidos/{{ o.orden_id }}/">N.º {{ o.orden_id }}</a></td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{{ o.estado_orden }}</td><td>${{ o.total|floatformat:0 }}</td></tr>
+  {% empty %}<tr><td colspan="4">Aún no tienes pedidos.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

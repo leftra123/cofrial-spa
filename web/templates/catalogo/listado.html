@@ -1,22 +1,28 @@
 {% extends "base.html" %}
 {% block titulo %}Catálogo | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Catálogo de refrigerados y congelados</h1>{% if perfil %}<p class="sub">Lista de precios: {{ perfil.lista_precio.nombre }}</p>{% endif %}</div>
+  <div class="acciones"><a class="btn" href="/carrito/">Ver carrito</a></div>
+</div>
+{% endblock %}
 {% block contenido %}
-<h1>Catálogo de refrigerados y congelados</h1>
-{% if perfil %}<p>Lista de precios: {{ perfil.lista_precio.nombre }}</p>{% endif %}
+<div class="tabla-caja">
 <table>
-  <thead><tr><th>Producto</th><th>Categoría</th><th>Conservación</th><th>Precio (CLP)</th><th></th></tr></thead>
+  <thead><tr><th>Producto</th><th>Categoría</th><th>Conservación</th><th class="num">Precio (CLP)</th><th></th></tr></thead>
   <tbody>
   {% for p, precio in filas %}
     <tr>
-      <td>{{ p.nombre }}<br><span class="frio">{{ p.sku }} · {{ p.get_unidad_medida_display }}</span></td>
+      <td><b>{{ p.nombre }}</b><br><span class="frio">{{ p.sku }} · {{ p.get_unidad_medida_display }}</span></td>
       <td>{{ p.categoria.nombre }}</td>
-      <td class="frio">{{ p.categoria.rango_temperatura }}</td>
-      <td>{% if precio %}${{ precio|floatformat:0 }}{% else %}Sin precio{% endif %}</td>
-      <td>{% if precio and p.stock_disponible > 0 %}<form method="post" action="/carrito/agregar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ p.producto_id }}"><input type="number" name="cantidad" value="1" min="1" max="{{ p.stock_disponible }}"> <button>Agregar</button></form>{% elif precio %}<span class="frio">Sin stock</span>{% endif %}</td>
+      <td><span class="chip transito">{{ p.categoria.rango_temperatura }}</span></td>
+      <td class="num">{% if precio %}<b>${{ precio|floatformat:"0g" }}</b>{% else %}<span class="frio">Sin precio</span>{% endif %}</td>
+      <td class="num">{% if precio and p.stock_disponible > 0 %}<form class="en-linea" method="post" action="/carrito/agregar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ p.producto_id }}"><input type="number" name="cantidad" value="1" min="1" max="{{ p.stock_disponible }}" aria-label="Cantidad"> <button>Agregar</button></form>{% elif precio %}<span class="chip cancelado">Sin stock</span>{% endif %}</td>
     </tr>
   {% empty %}
-    <tr><td colspan="5">No hay productos cargados.</td></tr>
+    <tr><td colspan="5" class="vacio">No hay productos cargados.</td></tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

@@ -1,18 +1,29 @@
 {% extends "crm/base.html" %}
 {% block crm %}
-<h1>{{ p.empresa|default:p.nombre_contacto }}</h1>
-<p><strong>Etapa:</strong> {{ p.etapa }} · <strong>Responsable:</strong> {{ p.vendedor }} · <strong>Origen:</strong> {{ p.origen }}{% if p.monto_estimado_clp %} · <strong>Monto:</strong> ${{ p.monto_estimado_clp|floatformat:0 }}{% endif %}<br>
-Contacto: {{ p.nombre_contacto }} {{ p.email }} {{ p.telefono }}{% if p.motivo_perdida %}<br><strong>Motivo de pérdida:</strong> {{ p.motivo_perdida }}{% endif %}
-{% if p.cliente %}<br><a href="/crm/clientes/{{ p.cliente_id }}/">Ver cliente creado</a>{% endif %}</p>
+<div class="pagina-cab">
+  <div><h1>{{ p.empresa|default:p.nombre_contacto }}</h1><p class="sub">Prospecto del embudo comercial</p></div>
+  <div class="acciones"><span class="chip asignado">{{ p.etapa }}</span><a class="btn btn-sec" href="/crm/embudo/">Volver al embudo</a></div>
+</div>
+<div class="tarjeta-ui">
+  <dl class="datos">
+    <div><dt>Responsable</dt><dd>{{ p.vendedor }}</dd></div>
+    <div><dt>Origen</dt><dd>{{ p.origen }}</dd></div>
+    {% if p.monto_estimado_clp %}<div><dt>Monto estimado</dt><dd>${{ p.monto_estimado_clp|floatformat:"0g" }}</dd></div>{% endif %}
+    <div><dt>Contacto</dt><dd>{{ p.nombre_contacto }}<br><span class="frio">{{ p.email }} {{ p.telefono }}</span></dd></div>
+    {% if p.motivo_perdida %}<div><dt>Motivo de pérdida</dt><dd>{{ p.motivo_perdida }}</dd></div>{% endif %}
+    {% if p.cliente %}<div><dt>Cliente</dt><dd><a href="/crm/clientes/{{ p.cliente_id }}/">Ver cliente creado</a></dd></div>{% endif %}
+  </dl>
+</div>
 {% if puede_editar and destinos %}
+<div class="tarjeta-ui">
 <h2>Mover de etapa</h2>
 {% for d in destinos %}
-<form method="post" action="/crm/prospectos/{{ p.prospecto_id }}/mover/" style="margin-bottom:8px">{% csrf_token %}<input type="hidden" name="etapa" value="{{ d.pk }}">
+<form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/mover/" style="margin-bottom:10px;display:flex">{% csrf_token %}<input type="hidden" name="etapa" value="{{ d.pk }}">
   {% if d.es_ganada %}<input name="rut" placeholder="RUT de la empresa" required> {% elif d.es_final %}<input name="motivo" placeholder="Motivo de la pérdida" required> {% endif %}
-  <button>Pasar a «{{ d.nombre }}»</button></form>
-{% endfor %}{% endif %}
-<h2>Interacciones</h2>
-{% if puede_editar %}<form method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/">{% csrf_token %}
-  <select name="tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required> <button>Registrar</button></form>{% endif %}
-<table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td>{{ i.tipo }}</td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}<tr><td>Sin interacciones registradas.</td></tr>{% endfor %}</tbody></table>
+  <button class="{% if d.es_final and not d.es_ganada %}btn-peligro{% endif %}">Pasar a «{{ d.nombre }}»</button></form>
+{% endfor %}</div>{% endif %}
+<div class="seccion"><h2>Interacciones</h2></div>
+{% if puede_editar %}<div class="tarjeta-ui" style="margin-bottom:16px"><form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/">{% csrf_token %}
+  <select name="tipo" aria-label="Tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button>Registrar</button></form></div>{% endif %}
+<div class="tabla-caja"><table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td><span class="chip asignado">{{ i.tipo }}</span></td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}<tr><td class="vacio">Sin interacciones registradas.</td></tr>{% endfor %}</tbody></table></div>
 {% endblock %}

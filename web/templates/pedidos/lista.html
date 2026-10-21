@@ -1,12 +1,52 @@
 {% extends "base.html" %}
 {% block titulo %}Mis pedidos | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Mis pedidos</h1><p class="sub">Sigue el estado de tus órdenes, desde la recepción hasta la entrega.</p></div>
+  <div class="acciones"><a class="btn" href="/catalogo/">Nuevo pedido</a></div>
+</div>
+{% endblock %}
 {% block contenido %}
-<h1>Mis pedidos</h1>
+<div class="tabs" role="tablist" id="filtros" hidden>
+  <button type="button" class="tab activo" data-filtro="todos">Todos <span class="n" data-cuenta="todos">{{ ordenes|length }}</span></button>
+  <button type="button" class="tab" data-filtro="pendiente">Pendientes <span class="n" data-cuenta="pendiente">0</span></button>
+  <button type="button" class="tab" data-filtro="asignado">Asignados <span class="n" data-cuenta="asignado">0</span></button>
+  <button type="button" class="tab" data-filtro="transito">En tránsito <span class="n" data-cuenta="transito">0</span></button>
+  <button type="button" class="tab" data-filtro="entregado">Entregados <span class="n" data-cuenta="entregado">0</span></button>
+</div>
+<div class="tabla-caja">
 <table>
-  <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th>Total</th></tr></thead>
-  <tbody>
-  {% for o in ordenes %}<tr><td><a href="/pedidos/{{ o.orden_id }}/">N.º {{ o.orden_id }}</a></td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{{ o.estado_orden }}</td><td>${{ o.total|floatformat:0 }}</td></tr>
-  {% empty %}<tr><td colspan="4">Aún no tienes pedidos.</td></tr>{% endfor %}
+  <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th class="num">Total</th><th></th></tr></thead>
+  <tbody id="filas-pedidos">
+  {% for o in ordenes %}<tr data-estado="{% if o.estado_orden.nombre == 'Recibida' or o.estado_orden.nombre == 'Confirmada' %}pendiente{% elif o.estado_orden.nombre == 'En preparación' %}asignado{% elif o.estado_orden.nombre == 'Despachada' %}transito{% elif o.estado_orden.nombre == 'Entregada' %}entregado{% else %}otro{% endif %}">
+    <td><a class="id-orden" href="/pedidos/{{ o.orden_id }}/">N.º {{ o.orden_id }}</a></td>
+    <td>{{ o.creada_en|date:"d/m/Y H:i" }}</td>
+    <td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td>
+    <td class="num">${{ o.total|floatformat:"0g" }}</td>
+    <td class="num"><a href="/pedidos/{{ o.orden_id }}/">Ver detalle →</a></td></tr>
+  {% empty %}<tr><td colspan="5" class="vacio">Aún no tienes pedidos. <a href="/catalogo/">Explora el catálogo</a>.</td></tr>{% endfor %}
+  <tr id="sin-resultados" hidden><td colspan="5" class="vacio">No hay pedidos en este estado.</td></tr>
   </tbody>
 </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  /* Filtro por pestañas en el navegador: sin recargar y sin tocar las vistas. Si JS falla, la tabla completa sigue visible. */
+  (function () {
+    var barra = document.getElementById("filtros"), filas = document.querySelectorAll("#filas-pedidos tr[data-estado]");
+    if (!barra || !filas.length) return;
+    barra.hidden = false;
+    var cuentas = {todos: filas.length, pendiente: 0, asignado: 0, transito: 0, entregado: 0};
+    filas.forEach(function (f) { if (cuentas[f.dataset.estado] !== undefined) cuentas[f.dataset.estado]++; });
+    Object.keys(cuentas).forEach(function (k) { barra.querySelector('[data-cuenta="' + k + '"]').textContent = cuentas[k]; });
+    barra.addEventListener("click", function (e) {
+      var t = e.target.closest(".tab"); if (!t) return;
+      barra.querySelectorAll(".tab").forEach(function (x) { x.classList.toggle("activo", x === t); });
+      var visibles = 0;
+      filas.forEach(function (f) { var ok = t.dataset.filtro === "todos" || f.dataset.estado === t.dataset.filtro; f.hidden = !ok; if (ok) visibles++; });
+      document.getElementById("sin-resultados").hidden = visibles > 0;
+    });
+  })();
+</script>
 {% endblock %}

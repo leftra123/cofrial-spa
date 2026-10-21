@@ -1,30 +1,42 @@
 {% extends "base.html" %}
 {% block titulo %}Carrito | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Tu carrito</h1><p class="sub">Lista de precios: {{ cliente.tipo_cliente.lista_precio.nombre }}</p></div>
+  <div class="acciones">
+    <form method="post" action="/carrito/repetir/">{% csrf_token %}<button class="btn-sec">Repetir mi último pedido</button></form>
+    <a class="btn btn-sec" href="/catalogo/">Seguir comprando</a>
+  </div>
+</div>
+{% endblock %}
 {% block contenido %}
-<h1>Tu carrito</h1>
-<p>Lista de precios: {{ cliente.tipo_cliente.lista_precio.nombre }}</p>
 {% if filas %}
+<div class="tabla-caja">
 <table>
-  <thead><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th></tr></thead>
+  <thead><tr><th>Producto</th><th class="num">Precio</th><th>Cantidad</th><th class="num">Subtotal</th></tr></thead>
   <tbody>
   {% for f in filas %}
     <tr>
-      <td>{{ f.producto.nombre }}{% if not f.hay_stock %}<br><span class="frio" style="color:#c8102e">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</td>
-      <td>${{ f.precio|floatformat:0 }}</td>
-      <td><form method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}"><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0"> <button>Actualizar</button></form></td>
-      <td>${{ f.subtotal|floatformat:0 }}</td>
+      <td>{{ f.producto.nombre }}{% if not f.hay_stock %}<br><span class="alerta">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</td>
+      <td class="num">${{ f.precio|floatformat:"0g" }}</td>
+      <td><form class="en-linea" method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}"><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0" aria-label="Cantidad de {{ f.producto.nombre }}"> <button class="btn-sec">Actualizar</button></form></td>
+      <td class="num">${{ f.subtotal|floatformat:"0g" }}</td>
     </tr>
   {% endfor %}
-    <tr><th colspan="3">Total</th><th>${{ total|floatformat:0 }}</th></tr>
+    <tr class="fila-total"><th colspan="3" class="num">Total</th><th class="num">${{ total|floatformat:"0g" }}</th></tr>
   </tbody>
 </table>
-<h2>Entrega</h2>
-<form method="post" action="/carrito/confirmar/">{% csrf_token %}
-  <label for="direccion">Dirección de entrega</label>
-  <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
-  {% if pide_oc %}<label for="numero_oc">Número de orden de compra (obligatorio)</label><input name="numero_oc" id="numero_oc" required>{% endif %}
-  <p><button>Generar orden</button></p>
-</form>
-{% else %}<p>Tu carrito está vacío. <a href="/catalogo/">Ver catálogo</a></p>{% endif %}
-<form method="post" action="/carrito/repetir/">{% csrf_token %}<button>Repetir mi último pedido</button></form>
+</div>
+<div class="tarjeta-ui">
+  <h2>Entrega</h2>
+  <form method="post" action="/carrito/confirmar/">{% csrf_token %}
+    <label for="direccion">Dirección de entrega</label>
+    <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+    {% if pide_oc %}<label for="numero_oc">Número de orden de compra (obligatorio)</label><input name="numero_oc" id="numero_oc" required>{% endif %}
+    <p style="margin-top:18px"><button>Generar orden</button></p>
+  </form>
+</div>
+{% else %}
+<div class="tarjeta-ui"><p class="vacio" style="text-align:center;color:var(--texto-3);padding:24px 0;margin:0">Tu carrito está vacío. <a href="/catalogo/">Ver catálogo</a></p></div>
+{% endif %}
 {% endblock %}

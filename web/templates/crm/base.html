@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% block contenido %}
-<nav class="subnav">
-  {% if rol != "despachador" %}<a href="/crm/">Panel</a><a href="/crm/embudo/">Embudo</a><a href="/crm/clientes/">Clientes</a><a href="/crm/requerimientos/">Requerimientos</a>{% endif %}
-  <a href="/crm/alertas/">Alertas de frío</a><span class="frio" style="margin-left:auto">Rol: {{ rol }}</span>
+{% with ruta=request.path %}
+<nav class="subnav" aria-label="Secciones del CRM">
+  {% if rol != "despachador" %}<a href="/crm/" {% if ruta == "/crm/" %}class="activo"{% endif %}>Panel</a><a href="/crm/embudo/" {% if "/crm/embudo" in ruta or "/crm/prospectos" in ruta %}class="activo"{% endif %}>Embudo</a><a href="/crm/clientes/" {% if "/crm/clientes" in ruta %}class="activo"{% endif %}>Clientes</a><a href="/crm/requerimientos/" {% if "/crm/requerimientos" in ruta %}class="activo"{% endif %}>Requerimientos</a>{% endif %}
+  <a href="/crm/alertas/" {% if "/crm/alertas" in ruta %}class="activo"{% endif %}>Alertas de frío</a><span class="chip cancelado rol">Rol: {{ rol }}</span>
 </nav>
+{% endwith %}
 {% block crm %}{% endblock %}
 {% endblock %}

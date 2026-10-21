@@ -33,3 +33,10 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 
 **D-04 Simulador IoT: Python en Docker (15-oct-2026).** Consecuencia de D-01: Python es el lenguaje común y los contenedores usan una imagen ligera. Puntaje 4,90 frente a 4,40 de Node/TypeScript; ver Tabla 5 de `informe/08-herramientas.md`.
 
+
+## Capa visual del prototipo (rediseño "Fleet Dispatch")
+- **Qué cambió:** solo presentación. CSS propio en `web/static/css/cofrial.css` (sin frameworks ni `node_modules`), layout con barra lateral en `templates/base.html` y componentes reutilizables en `templates/componentes/`. Tipografía Inter por CDN de Google Fonts, con respaldo a la fuente del sistema.
+- **Acento único azul `#1D4ED8`** (variable `--acento`); verde, ámbar y rojo solo para estados. Se reemplazó el rojo corporativo anterior porque chocaba con el rojo de las alertas de frío.
+- **Estados de orden:** los seis estados reales se agrupan en cuatro chips: Recibida y Confirmada (ámbar, "pendiente"), En preparación (azul, "asignado"), Despachada (celeste, "en tránsito"), Entregada (verde) y Cancelada (gris). Los filtros de `Mis pedidos` con contador se calculan en el navegador, sin tocar las vistas.
+- **Flota:** no existía pantalla. Se agregó `/flota/` (solo lectura, roles admin, gerencia y despachador) con KPIs, tarjetas por camión con su última lectura de telemetría y viajes activos. No hay modelo de conductor, así que la tarjeta de viaje muestra al cliente con avatar.
+- **Sin cambios** en modelos, servicios ni reglas de negocio. Capturas antes/después en `docs/capturas-visual/`.

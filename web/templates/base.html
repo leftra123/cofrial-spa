@@ -1,31 +1,57 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
-  <style>
-    body { font-family: Tahoma, sans-serif; margin: 0; color: #222; }
-    header { background: #c8102e; color: #fff; padding: 12px 24px; display: flex; gap: 24px; align-items: baseline; }
-    header a { color: #fff; text-decoration: none; }
-    main { max-width: 960px; margin: 24px auto; padding: 0 24px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
-    .avisos { max-width: 960px; margin: 12px auto 0; padding: 0 24px; }
-    .aviso { padding: 8px 12px; margin: 4px 0; border-left: 4px solid #888; background: #f4f4f4; }
-    .aviso.success { border-color: #2e7d32; } .aviso.error { border-color: #c8102e; } .aviso.warning { border-color: #ed8b00; }
-    button { font: inherit; padding: 6px 12px; cursor: pointer; } button.enlace { background: none; border: 0; color: #fff; text-decoration: underline; padding: 0; }
-    input[type=number] { width: 70px; } label { display: block; margin: 8px 0 2px; }
-    .subnav { display: flex; gap: 16px; padding-bottom: 8px; border-bottom: 2px solid #c8102e; margin-bottom: 16px; } .subnav a { color: #c8102e; text-decoration: none; font-weight: bold; }
-    .col { display: inline-block; vertical-align: top; width: 31%; min-width: 200px; margin: 0 1% 12px 0; background: #f7f7f7; padding: 8px; } .tarjeta { background: #fff; border: 1px solid #ddd; padding: 6px 8px; margin: 6px 0; }
-    .alerta { background: #fdecea; color: #c8102e; font-weight: bold; padding: 1px 6px; } .kpi { display: inline-block; margin: 0 24px 12px 0; } .kpi b { font-size: 1.6em; display: block; }
-    .frio { font-size: 0.85em; color: #555; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
 </head>
 <body>
-  <header><strong>Cofrial SpA</strong><a href="/">Inicio</a><a href="/catalogo/">Catálogo</a><a href="/carrito/">Carrito</a><a href="/pedidos/">Mis pedidos</a><a href="/crm/">CRM</a><a href="/admin/">Administración</a>
-    <span style="margin-left:auto">{% if user.is_authenticated %}{{ user.username }} · <form method="post" action="/cuenta/salir/" style="display:inline">{% csrf_token %}<button class="enlace">Salir</button></form>{% else %}<a href="/cuenta/entrar/">Entrar</a>{% endif %}</span></header>
-  {% if messages %}<div class="avisos">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
-  <main>{% block contenido %}{% endblock %}</main>
+{% with ruta=request.path %}
+<div class="barra-movil">
+  <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>Cofrial</a>
+  <button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú</button>
+</div>
+<div class="app">
+  <aside class="lateral" id="lateral">
+    <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span><span>Cofrial SpA<small>Cadena de frío</small></span></a>
+    <nav class="nav" aria-label="Principal">
+      <a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio</a>
+      <div class="nav-etiqueta">Tienda</div>
+      <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Catálogo</a>
+      <a href="/carrito/" {% if "/carrito/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito</a>
+      <a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Mis pedidos</a>
+      <div class="nav-etiqueta">Operación</div>
+      <a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% include "componentes/ico_camion.html" %}Flota</a>
+      <a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>CRM</a>
+      <a href="/admin/"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Administración</a>
+    </nav>
+    <div class="usuario">
+      {% if user.is_authenticated %}
+        <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
+        <div class="usuario-datos"><b>{{ user.username }}</b>
+          <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Cerrar sesión</button></form></div>
+      {% else %}
+        <div class="usuario-datos"><a class="btn" href="/cuenta/entrar/">Entrar</a></div>
+      {% endif %}
+    </div>
+  </aside>
+  <main class="contenido">
+    {% if messages %}<div class="avisos" role="status">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+    {% block cabecera %}{% endblock %}
+    {% block contenido %}{% endblock %}
+  </main>
+</div>
+{% endwith %}
+<script>
+  (function () {
+    var b = document.getElementById("menu-btn"), l = document.getElementById("lateral");
+    b.addEventListener("click", function () { var a = l.classList.toggle("abierto"); b.setAttribute("aria-expanded", a); });
+  })();
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

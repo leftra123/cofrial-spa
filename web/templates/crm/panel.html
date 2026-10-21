@@ -1,21 +1,29 @@
 {% extends "crm/base.html" %}
 {% block titulo %}Panel del CRM | Cofrial SpA{% endblock %}
 {% block crm %}
-<h1>Panel del CRM</h1>
-<p class="frio">{% if rol == "vendedor" %}Indicadores de tu cartera.{% else %}Indicadores de toda la cartera.{% endif %}</p>
-<div>
-  <span class="kpi"><b>{{ ind.abiertos }}</b>oportunidades abiertas</span>
-  <span class="kpi"><b>${{ ind.valor_embudo|floatformat:0 }}</b>valor del embudo</span>
-  <span class="kpi"><b>{% if ind.conversion is None %}–{% else %}{{ ind.conversion }} %{% endif %}</b>conversión ({{ ind.ganados }} ganados, {{ ind.perdidos }} perdidos)</span>
-  <span class="kpi"><b>{{ ind.pedidos_afectados }}</b>pedidos con alerta de frío</span>
-  <span class="kpi"><b>{{ ind.requerimientos_pendientes }}</b>requerimientos por clasificar</span>
+<div class="pagina-cab">
+  <div><h1>Panel del CRM</h1><p class="sub">{% if rol == "vendedor" %}Indicadores de tu cartera.{% else %}Indicadores de toda la cartera.{% endif %}</p></div>
+  {% if puede_editar %}<div class="acciones"><a class="btn" href="/crm/prospectos/nuevo/">+ Nuevo prospecto</a></div>{% endif %}
 </div>
-<h2>Ventas por canal</h2>
-<table><thead><tr><th>Canal</th><th>Ventas (CLP)</th></tr></thead><tbody>
-{% for canal, monto in ind.ventas_por_canal %}<tr><td>{{ canal }}</td><td>${{ monto|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="2">Sin ventas todavía.</td></tr>{% endfor %}
-</tbody></table>
-<h2>Embudo por etapa</h2>
-<table><thead><tr><th>Etapa</th><th>Prospectos</th><th>Monto estimado</th></tr></thead><tbody>
-{% for e in ind.por_etapa %}<tr><td>{{ e.etapa__nombre }}</td><td>{{ e.n }}</td><td>${{ e.monto|default:0|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="3">Sin prospectos abiertos.</td></tr>{% endfor %}
-</tbody></table>
+<div class="rejilla">
+  <div class="kpi-card acento"><div class="etiqueta">oportunidades abiertas</div><div class="valor">{{ ind.abiertos }}</div><div class="detalle">en el embudo</div></div>
+  <div class="kpi-card"><div class="etiqueta">Valor del embudo</div><div class="valor">${{ ind.valor_embudo|floatformat:"0g" }}</div><div class="detalle">monto estimado, CLP</div></div>
+  <div class="kpi-card"><div class="etiqueta">Conversión</div><div class="valor">{% if ind.conversion is None %}–{% else %}{{ ind.conversion }} %{% endif %}</div><div class="detalle">{{ ind.ganados }} ganados · {{ ind.perdidos }} perdidos</div></div>
+  <div class="kpi-card critico"><div class="etiqueta">Pedidos con alerta de frío</div><div class="valor">{{ ind.pedidos_afectados }}</div><div class="detalle">ruptura durante el viaje</div></div>
+  <div class="kpi-card"><div class="etiqueta">Requerimientos por clasificar</div><div class="valor">{{ ind.requerimientos_pendientes }}</div><div class="detalle">pendientes de revisión</div></div>
+</div>
+<div class="rejilla dos" style="margin-top:20px">
+  <div>
+    <div class="seccion" style="margin-top:8px"><h2>Ventas por canal</h2></div>
+    <div class="tabla-caja"><table><thead><tr><th>Canal</th><th class="num">Ventas (CLP)</th></tr></thead><tbody>
+    {% for canal, monto in ind.ventas_por_canal %}<tr><td>{{ canal }}</td><td class="num">${{ monto|floatformat:"0g" }}</td></tr>{% empty %}<tr><td colspan="2" class="vacio">Sin ventas todavía.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div>
+    <div class="seccion" style="margin-top:8px"><h2>Embudo por etapa</h2></div>
+    <div class="tabla-caja"><table><thead><tr><th>Etapa</th><th class="num">Prospectos</th><th class="num">Monto estimado</th></tr></thead><tbody>
+    {% for e in ind.por_etapa %}<tr><td>{{ e.etapa__nombre }}</td><td class="num">{{ e.n }}</td><td class="num">${{ e.monto|default:0|floatformat:"0g" }}</td></tr>{% empty %}<tr><td colspan="3" class="vacio">Sin prospectos abiertos.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
 {% endblock %}

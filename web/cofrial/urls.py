@@ -17,6 +17,7 @@ urlpatterns = [
     path("", TemplateView.as_view(template_name="inicio.html"), name="inicio"),
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),
+    path("flota/", include("flota.urls")),
     path("", include("pedidos.urls")),
     path("cuenta/entrar/", auth_views.LoginView.as_view(template_name="cuenta/entrar.html"), name="entrar"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),

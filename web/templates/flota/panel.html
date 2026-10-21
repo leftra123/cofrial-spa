@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titulo %}Flota | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Flota</h1><p class="sub">Estado de cada camión según su última lectura de telemetría.</p></div>
+  <div class="acciones"><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a></div>
+</div>
+{% endblock %}
+{% block contenido %}
+<div class="rejilla">
+  <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
+  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor">{{ resumen.en_ruta }}</div><div class="detalle">con despacho en curso</div></div>
+  <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
+  <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
+</div>
+
+<div class="seccion"><h2>Vehículos</h2></div>
+<div class="rejilla vehiculos">
+{% for x in tarjetas %}
+  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}">
+    <div class="vehiculo-cab">
+      <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
+        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}</div></div></div>
+      {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
+      {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
+      {% elif x.viaje %}<span class="chip transito">En ruta</span>
+      {% else %}<span class="chip entregado">Disponible</span>{% endif %}
+    </div>
+    {% if x.lectura %}
+    <div class="mini">
+      <div><span>Cámara</span><b class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
+      <div><span>Combustible</span><b class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
+      <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|floatformat:"0g" }} kg</b></div>
+    </div>
+    <div class="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
+    <div class="frio">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
+    {% else %}
+    <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|floatformat:"0g" }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
+    {% endif %}
+  </article>
+{% empty %}
+  <div class="tarjeta-ui">No hay camiones registrados.</div>
+{% endfor %}
+</div>
+
+{% if viajes %}
+<div class="seccion"><h2>Viajes activos</h2></div>
+<div class="rejilla dos">
+{% for x in viajes %}
+  <article class="tarjeta-ui viaje">
+    <div class="vehiculo-cab"><div><div class="patente" style="font-weight:700">{{ x.camion.patente }}</div><div class="frio">Despacho N.º {{ x.viaje.despacho_id }}</div></div>
+      {% if x.alerta %}<span class="chip alerta">Ruptura de frío</span>{% else %}<span class="chip transito">En tránsito</span>{% endif %}</div>
+    <div class="ruta">
+      <span class="punto"></span><div><b>Frigorífico central</b><div class="frio">Temuco · salida {{ x.viaje.salida_en|date:"d/m H:i" }}</div></div>
+      <span class="linea"></span><span></span>
+      <span class="punto fin"></span><div>{% if x.destino %}<b>{{ x.destino.calle_numero }}</b><div class="frio">{{ x.destino.comuna.nombre }}</div>{% else %}<b>Sin destino asignado</b>{% endif %}</div>
+    </div>
+    {% for o in x.pedidos %}
+    <div class="conductor"><span class="avatar">{{ o.direccion.cliente.nombre|slice:":1"|upper }}</span>
+      <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Orden N.º {{ o.orden_id }}</div></div>
+      <span style="margin-left:auto">{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</span></div>
+    {% endfor %}
+  </article>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

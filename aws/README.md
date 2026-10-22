@@ -62,7 +62,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 
 ## Reglas del Learner Lab que importan
 
-- Al cerrar la sesión (4 horas) AWS **detiene** las EC2 y la base, y **al iniciar una sesión nueva siguen detenidas**: se encienden con `bash aws/provision.sh encender` (primero RDS, luego las EC2, y espera a que la aplicación responda). La IP elástica no cambia y `restart: unless-stopped` hace que los contenedores vuelvan solos una vez encendida la EC2. `bash aws/provision.sh estado` muestra cómo están.
+- Al cerrar la sesión (4 horas) AWS detiene las EC2 y la base. En la primera prueba real (22-oct) la base y las EC2 estaban de nuevo encendidas al iniciar la sesión siguiente, pero no hay garantía documentada; `bash aws/provision.sh estado` lo muestra y `bash aws/provision.sh encender` arranca lo que esté apagado (primero RDS, luego las EC2, y espera a que la aplicación responda). La IP elástica no cambia y `restart: unless-stopped` hace que los contenedores vuelvan solos una vez encendida la EC2. `bash aws/provision.sh estado` muestra cómo están.
 - Si la EC2 web cambia de IP, actualiza `DJANGO_CSRF_ORIGINS` en su `.env` y ejecuta `docker compose ... up -d`; sin eso los formularios responden 403.
 - `DB_SSLMODE=require` es obligatorio contra RDS. Grafana solo admite `require`, `verify-ca`, `verify-full` o `disable` (no `prefer`).
 - Imágenes desde un Mac con chip Apple: construir en la EC2 (como indica el paso 6) evita el problema de arquitectura.

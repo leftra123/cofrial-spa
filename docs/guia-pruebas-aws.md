@@ -19,7 +19,6 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 | Usuario | Rol | Sirve para probar |
 |---|---|---|
 | `abastecimiento@hospital.test` | Cliente institucional (B2B), Hospital Regional de Temuco | Lista de precios institucional, orden de compra obligatoria, pedidos |
-| `compras@supersur.test` | Cliente institucional (B2B), Supermercados del Sur | Segundo cliente B2B con otro vendedor |
 | `ana@correo.test` | Cliente público (B2C), Ana Pérez | Precio público, Soporte con IA |
 | `vendedora@cofrial.test` | Vendedora (cartera: Hospital) | CRM, embudo, ficha de cliente; no ve la cartera ajena |
 | `vendedor2@cofrial.test` | Vendedor (cartera: Supermercados del Sur) | Permisos entre vendedores |
@@ -29,12 +28,14 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 
 ## Paso 0: encender y verificar (siempre, antes de probar a mano)
 
-1. **Iniciar el laboratorio.** AWS Academy, Learner Lab, **Start Lab**; esperar el círculo verde. Al terminar cada sesión (4 horas) AWS **detiene** las instancias y la base de datos, y **al iniciar una sesión nueva siguen detenidas**: no se encienden solas.
+1. **Iniciar el laboratorio.** AWS Academy, Learner Lab, **Start Lab**; esperar el círculo verde. Al terminar cada sesión (4 horas) AWS detiene las instancias y la base de datos. **El 22-oct, al iniciar una sesión nueva, la base y las dos EC2 se encontraron encendidas y la aplicación respondía sin hacer nada más**; aun así, si algo quedó apagado, el paso 3 lo enciende.
 2. **Credenciales nuevas.** AWS Details, AWS CLI, Show: copiar el bloque que empieza con `[default]` y, en la terminal: `pbpaste > ~/.aws/credentials` (caducan con la sesión).
-3. **Encender todo:** `bash aws/provision.sh encender` (primero la base, luego las dos EC2; espera hasta que la aplicación responda; unos 3 a 6 minutos). Para solo mirar cómo están: `bash aws/provision.sh estado`.
+3. **Comprobar y, si hace falta, encender:** `bash aws/provision.sh estado` (si todo dice `available` y `running`, seguir) o `bash aws/provision.sh encender` (primero la base, luego las dos EC2; espera hasta que la aplicación responda; unos 3 a 6 minutos). Para solo mirar cómo están: `bash aws/provision.sh estado`.
 4. **Verificar automáticamente:** `python3 aws/verificar.py` (lee, no crea datos) o `python3 aws/verificar.py --ia` (además envía un reclamo de prueba por Soporte). Revisa en un minuto: acceso con las 8 cuentas, precios B2B y B2C distintos, permisos por rol, telemetría fresca con los 6 campos, las consultas del tablero, ventas en ambos canales y que quede un requerimiento sin clasificar para la demostración. Si todo sale con ✓, seguir con las pruebas manuales; si algo falla, el mensaje dice qué revisar.
 
 Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la dirección (`python3 aws/verificar.py http://IP`) y la clave de demostración (variable `DEMO_PASSWORD`).
+
+**Supermercados del Sur** es un cliente del CRM **sin cuenta de acceso** (solo tiene correo de contacto): se ve desde el CRM con `vendedor2@` o `admin`; su pedido va en el camión CAM-02 y es el cliente del requerimiento de demostración.
 
 ## Pruebas, en este orden
 

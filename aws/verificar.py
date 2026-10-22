@@ -125,7 +125,7 @@ def consulta_grafana(sql):
         return json.loads(e.read())["results"]["A"]
 
 
-USUARIOS = {"hospital": "abastecimiento@hospital.test", "sur": "compras@supersur.test", "ana": "ana@correo.test",
+USUARIOS = {"hospital": "abastecimiento@hospital.test", "ana": "ana@correo.test",
             "vendedora": "vendedora@cofrial.test", "vendedor2": "vendedor2@cofrial.test", "gerente": "gerente@cofrial.test",
             "despachador": "despachador@cofrial.test", "admin": "admin"}
 

@@ -57,7 +57,7 @@ fi
 # La IP elástica y los datos se conservan; los contenedores vuelven solos porque tienen reinicio automático.
 if [ "${1:-}" = "estado" ] || [ "${1:-}" = "encender" ]; then
   # Con el laboratorio terminado las credenciales aún "existen" pero AWS rechaza todo: se avisa en vez de decir que nada existe.
-  if ! aws ec2 describe-addresses --max-items 1 >/dev/null 2>&1; then
+  if ! aws ec2 describe-addresses --query 'Addresses[0].PublicIp' --output text >/dev/null 2>&1; then
     echo "AWS rechaza las consultas: la sesión del laboratorio terminó o no está iniciada."
     echo "  1) En AWS Academy abre el Learner Lab y pulsa Start Lab; espera el círculo verde."
     echo "  2) AWS Details > AWS CLI > Show: copia el bloque [default] y guárdalo con:  pbpaste > ~/.aws/credentials"

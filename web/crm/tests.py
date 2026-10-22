@@ -258,3 +258,71 @@ class ClasificacionIA(TestCase):
         with patch("crm.ia._llamar", return_value='{"categoria": "Otro", "confianza": 0.3}'):
             r = self.client.post(f"/crm/requerimientos/{self._req().pk}/ia/", follow=True)
         self.assertContains(r, "no estuvo lo bastante segura")
+
+
+class ClienteGemini(TestCase):
+    """Interactions API de Gemini: forma de la respuesta, cambio de modelo ante fallas y presupuesto de tiempo (todo simulado)."""
+
+    RESPUESTA = {"status": "completed", "steps": [{"type": "thought", "signature": "x"},
+                 {"type": "model_output", "content": [{"type": "text", "text": '{"categoria": "Otro", "confianza": 0.9}'}]}]}
+
+    def test_extrae_el_texto_del_paso_model_output(self):
+        from crm import ia
+        self.assertIn("Otro", ia._texto_de_interaccion(self.RESPUESTA))
+        with self.assertRaises(ia.ErrorIA):
+            ia._texto_de_interaccion({"steps": [{"type": "thought"}]})
+
+    def test_si_el_primer_modelo_esta_saturado_usa_el_siguiente(self):
+        from unittest.mock import patch
+        from crm import ia
+        llamados = []
+
+        def falso(url, cuerpo, cabeceras, plazo):
+            llamados.append(cuerpo["model"])
+            if len(llamados) == 1:
+                raise ia.ErrorIA("HTTP 503")
+            return self.RESPUESTA
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "k", "GEMINI_MODELS": "a-lite, b-flash"}, clear=True), patch("crm.ia._post", side_effect=falso):
+            texto = ia._gemini("prompt", 12)
+        self.assertEqual(llamados, ["a-lite", "b-flash"])
+        self.assertEqual(ia.ultimo_modelo, "b-flash")
+        self.assertIn("Otro", texto)
+
+    def test_envia_clave_en_cabecera_y_razonamiento_bajo_y_nunca_en_la_url(self):
+        from unittest.mock import patch
+        from crm import ia
+        capturado = {}
+
+        def falso(url, cuerpo, cabeceras, plazo):
+            capturado.update(url=url, cuerpo=cuerpo, cabeceras=cabeceras)
+            return self.RESPUESTA
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "SECRETA"}, clear=True), patch("crm.ia._post", side_effect=falso):
+            ia._gemini("p", 12)
+        self.assertEqual(capturado["cabeceras"], {"x-goog-api-key": "SECRETA"})
+        self.assertNotIn("SECRETA", capturado["url"])
+        self.assertTrue(capturado["url"].endswith("/v1beta/interactions"))
+        self.assertEqual(capturado["cuerpo"]["generation_config"]["thinking_level"], "low")
+
+    def test_modelos_por_defecto_y_override(self):
+        from unittest.mock import patch
+        from crm import ia
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(ia._modelos()[0], "gemini-3.5-flash-lite")
+        with patch.dict("os.environ", {"GEMINI_MODEL": "solo-uno"}, clear=True):
+            self.assertEqual(ia._modelos(), ["solo-uno"])
+
+    def test_los_errores_no_incluyen_el_cuerpo_ni_la_clave(self):
+        from unittest.mock import patch
+        import urllib.error
+        from crm import ia
+        err = urllib.error.HTTPError("https://x", 503, "busy", {}, None)
+        with patch("urllib.request.urlopen", side_effect=err), self.assertRaises(ia.ErrorIA) as cm:
+            ia._post("https://x", {}, {"x-goog-api-key": "SECRETA"}, 5)
+        self.assertEqual(str(cm.exception), "HTTP 503")
+
+    def test_sin_tiempo_restante_no_llama_a_la_api(self):
+        from unittest.mock import patch
+        from crm import ia
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "k"}, clear=True), patch("crm.ia._post") as p, self.assertRaises(ia.ErrorIA):
+            ia._gemini("p", 0.2)
+        p.assert_not_called()

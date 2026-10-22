@@ -150,7 +150,7 @@ GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
 INTERVALO_SEG=5
 PROB_RUPTURA=0.01
 GEMINI_API_KEY=${GEMINI_API_KEY:-}
-GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+GEMINI_MODELS=${GEMINI_MODELS:-}
 E
 chmod 600 .env
 docker compose -f aws/docker-compose.$1.yml --env-file .env up -d --build

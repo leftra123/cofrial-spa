@@ -12,6 +12,7 @@
 #                     # si corres el script en la terminal del Learner Lab, sin esto se abriría el SSH solo a la IP del laboratorio
 #   bash aws/provision.sh            # crea todo
 #   bash aws/provision.sh destruir   # borra todo lo creado (RDS tarda unos minutos)
+#   bash aws/provision.sh recrear-web  # rota claves de IA: edita aws/.estado/secretos.env y recrea solo la EC2 web
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-east-1}"; export AWS_DEFAULT_REGION="$REGION"
@@ -48,6 +49,16 @@ if [ "${1:-}" = "destruir" ]; then
   log "Listo. Los archivos de $ESTADO se conservan (puedes borrarlos a mano)."; exit 0
 fi
 
+# ---------------------------------------------------------------- recrear-web
+# Termina la EC2 web y deja que el resto del script cree una nueva con las claves ACTUALES de aws/.estado/secretos.env
+# (GEMINI_API_KEY y GROQ_API_KEY). Sirve para rotar claves sin entrar por SSH. RDS, la red, la IP elástica y la EC2 del IoT
+# se conservan; la web queda sin servicio unos 8 minutos.
+if [ "${1:-}" = "recrear-web" ]; then
+  log "Terminando la EC2 web para recrearla con las claves actuales"
+  IDS=$(q ec2 describe-instances --filters "Name=tag:Name,Values=${P}-ec2-web" "Name=instance-state-name,Values=pending,running,stopped,stopping" --query 'Reservations[].Instances[].InstanceId')
+  if [ -n "$IDS" ] && [ "$IDS" != "None" ]; then aws ec2 terminate-instances --instance-ids $IDS >/dev/null; aws ec2 wait instance-terminated --instance-ids $IDS; fi
+fi
+
 # ---------------------------------------------------------------- secretos generados (se guardan solo en aws/.estado)
 gen() { openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 20; }
 [ -f "$ESTADO/secretos.env" ] || cat > "$ESTADO/secretos.env" <<S
@@ -58,6 +69,7 @@ GRAFANA_DB_PASSWORD=$(gen)
 GRAFANA_PASSWORD=$(gen)
 S
 chmod 600 "$ESTADO/secretos.env"; . "$ESTADO/secretos.env"
+echo "Claves de IA en secretos.env: Gemini=$([ -n "${GEMINI_API_KEY:-}" ] && echo sí || echo NO), Groq=$([ -n "${GROQ_API_KEY:-}" ] && echo sí || echo NO)"
 MI_IP="${MI_IP:-$(curl -s https://checkip.amazonaws.com | tr -d '\n')}"; [ -n "$MI_IP" ] || { echo "No pude detectar tu IP pública"; exit 1; }
 
 etiqueta() { aws ec2 create-tags --resources "$1" --tags "Key=Name,Value=$2"; }
@@ -151,6 +163,7 @@ INTERVALO_SEG=5
 PROB_RUPTURA=0.01
 GEMINI_API_KEY=${GEMINI_API_KEY:-}
 GEMINI_MODELS=${GEMINI_MODELS:-}
+GROQ_API_KEY=${GROQ_API_KEY:-}
 E
 chmod 600 .env
 docker compose -f aws/docker-compose.$1.yml --env-file .env up -d --build

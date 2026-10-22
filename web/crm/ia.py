@@ -157,9 +157,8 @@ def _llamar(prompt):
     raise ErrorIA("; ".join(errores))
 
 
-def clasificar(asunto, descripcion, categorias):
-    """Devuelve (nombre_de_categoria, confianza). Lanza ErrorIA si no hay una respuesta utilizable."""
-    texto = _llamar(_prompt(asunto, descripcion, categorias))
+def _interpretar(texto, categorias):
+    """Del texto del modelo saca (categoría, confianza). Lanza ErrorIA si no se puede interpretar."""
     m = re.search(r"\{.*\}", texto, re.S)                        # tolera texto o ``` alrededor del JSON
     try:
         datos = json.loads(m.group(0))
@@ -171,3 +170,36 @@ def clasificar(asunto, descripcion, categorias):
         if c.lower() == nombre:
             return c, confianza
     raise ErrorIA(f"Categoría desconocida: {nombre!r}")
+
+
+def clasificar(asunto, descripcion, categorias):
+    """Devuelve (nombre_de_categoria, confianza). Lanza ErrorIA si no hay una respuesta utilizable."""
+    return _interpretar(_llamar(_prompt(asunto, descripcion, categorias)), categorias)
+
+
+def estado():
+    """Configuración visible de la IA para el panel del CRM. Nunca incluye las claves, solo si existen."""
+    return {"gemini": bool(os.environ.get("GEMINI_API_KEY")), "groq": bool(os.environ.get("GROQ_API_KEY")),
+            "orden": [getattr(f, "__name__", "?").lstrip("_").capitalize() for f in _proveedores()],
+            "modelos_gemini": _modelos(), "modelos_groq": _modelos_groq(),
+            "presupuesto": _presupuesto(), "parte_con_respaldo": int(PARTE_MAXIMA_CON_RESPALDO * 100)}
+
+
+def comparar(asunto, descripcion, categorias):
+    """Prueba cada proveedor POR SEPARADO con el mismo mensaje, para ver qué recibe y qué responde cada uno.
+    Devuelve (prompt, filas); cada fila lleva proveedor, modelo, resultado o error y los segundos que tardó."""
+    global ultimo_modelo
+    prompt = _prompt(asunto, descripcion, categorias)
+    filas = []
+    for nombre, proveedor in (("Gemini", _gemini), ("Groq", _groq)):
+        fila, ultimo_modelo, inicio = {"proveedor": nombre, "ok": False}, None, time.monotonic()
+        try:
+            texto = proveedor(prompt, _presupuesto())
+            fila["modelo"], fila["respuesta"] = (ultimo_modelo or "").split(" ", 1)[-1], texto.strip()[:300]
+            fila["categoria"], fila["confianza"] = _interpretar(texto, categorias)
+            fila["ok"] = True
+        except ErrorIA as e:
+            fila["error"] = str(e)[:300]
+        fila["segundos"] = round(time.monotonic() - inicio, 1)
+        filas.append(fila)
+    return prompt, filas

@@ -73,6 +73,8 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 21. Entrar como `vendedora@cofrial.test` y abrir `/crm/requerimientos/`: el requerimiento aparece **clasificado**, con la categoría y el distintivo "IA 0,9x" o "IA 1,00".
 22. **No tocar** el requerimiento "Mi pedido llegó tibio" (cliente Supermercados del Sur): está **sin clasificar a propósito**, para clasificarlo en vivo con **"Clasificar con IA"** durante la defensa. Si ya se clasificó por error, enviar uno parecido desde Soporte con otro cliente.
 
+22b. **Panel de IA (para entender y mostrar la IA).** Como `vendedora@cofrial.test`, abrir la pestaña **IA** del CRM (`/crm/ia/`). Debe verse: el flujo en 4 pasos; el estado con **Gemini** y **Groq** como «Clave configurada» (las claves nunca se muestran); y el resumen de lo que clasificó la IA, las personas y lo que quedó dudoso. En **Probar la IA ahora**, pulsar «Probar con la IA»: aparecen **dos filas** (Gemini y Groq) con la categoría, la confianza, el modelo y los segundos que tardó cada uno. Probar también con un mensaje ambiguo (por ejemplo «Hola, necesito hablar con alguien») y ver cómo baja la confianza. «Ver exactamente lo que se le envía a la IA» muestra el texto enviado. La prueba **no crea** requerimientos. En `/admin/`, Requerimientos: elegir uno y usar la acción «Clasificar con IA los requerimientos seleccionados»; la columna «Clasificado por» dice IA, Manual, IA dudó o Nadie aún.
+
 **G. Permisos y errores (23 a 24)**
 23. Como cliente (`ana@`), abrir `/crm/` y `/flota/`: pantalla de "No puedes ver esta sección" con el menú del sitio (403), no una página en blanco. El menú del cliente no muestra CRM, Flota ni Administración.
 24. Abrir `/pedidos/99999/`: pantalla "No encontramos esa página" (404).

@@ -259,3 +259,7 @@ td.celda-acciones form:last-child { margin-bottom: 0; }
 td.celda-asunto { min-width: 260px; }
 td.celda-acciones form { flex-wrap: wrap; }
 td.celda-acciones select { max-width: 100%; }
+
+/* tablas de texto corrido (por ejemplo el estado de la IA): las celdas sí parten línea */
+.tabla-caja.texto td, .tabla-caja.texto th { white-space: normal; vertical-align: top; }
+.tabla-caja.texto th { width: 34%; }

@@ -234,6 +234,9 @@ def main():
             marca("ok", f"Hay {sin} requerimiento(s) sin clasificar con el botón «Clasificar con IA» (listo para la demo en vivo)")
         else:
             marca("aviso", "No queda ningún requerimiento sin clasificar: la demostración en vivo de la IA necesita uno")
+    if sesiones["vendedora"]:
+        st, html, _ = sesiones["vendedora"].pedir("/crm/ia/")
+        chk(st == 200 and "Panel de IA" in html and "Probar la IA ahora" in html, "El CRM tiene el panel de IA (estado y prueba en vivo)", f"HTTP {st}")
     if "--ia" in sys.argv and sesiones["ana"]:
         t = sesiones["ana"].token("/soporte/")
         t1 = time.time()

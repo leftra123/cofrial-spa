@@ -10,7 +10,7 @@ from catalogo.models import Producto
 from clientes.models import Vendedor
 from pedidos import servicios as pedidos
 
-from . import servicios as s
+from . import ia, servicios as s
 from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto, Requerimiento
 
 ERRORES = (pedidos.ErrorDeNegocio, ValueError)
@@ -207,6 +207,29 @@ def requerimiento_ia(request, pk):
     except (ObjectDoesNotExist, *ERRORES):
         messages.error(request, "No se pudo clasificar el requerimiento.")
     return redirect("crm_requerimientos")
+
+
+@con_rol(*COMERCIAL)
+def ia_panel(request):
+    """Explica la IA y permite probarla en vivo: estado de los proveedores, una prueba lado a lado y un resumen de lo que ha hecho."""
+    categorias = list(CategoriaRequerimiento.objects.values_list("nombre", flat=True))
+    asunto = request.POST.get("asunto", "Camión con carga caliente")
+    texto = request.POST.get("descripcion", "El camión llegó con la carga tibia, la temperatura estaba muy alta y rechazamos tres cajas.")
+    prompt = filas = None
+    if request.method == "POST":
+        if not texto.strip():
+            messages.error(request, "Escribe un mensaje de cliente para probar la IA.")
+        else:
+            prompt, filas = ia.comparar(asunto[:150], texto[:1000], categorias)
+    todos = Requerimiento.objects.all()
+    resumen = {"total": todos.count(),
+               "por_ia": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=False).count(),
+               "ia_dudo": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=True).count(),
+               "manual": todos.filter(confianza_ia__isnull=True, categoria_requerimiento__isnull=False).count(),
+               "sin_clasificar": todos.filter(estado="sin_clasificar").count()}
+    ultimos = list(todos.select_related("cliente", "categoria_requerimiento").order_by("-creado_en")[:12])
+    return render(request, "crm/ia.html", _contexto(request, ia=ia.estado(), categorias=categorias, asunto=asunto, texto=texto, prompt=prompt,
+                                                    filas=filas, resumen=resumen, ultimos=ultimos, umbral=s.UMBRAL_CONFIANZA))
 
 
 @con_rol(*TODOS)

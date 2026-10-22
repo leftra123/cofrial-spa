@@ -1,9 +1,12 @@
 {% extends "crm/base.html" %}
 {% block crm %}
-<div class="pagina-cab"><div><h1>Requerimientos</h1><p class="sub">Consultas y reclamos de clientes, con su clasificación.</p></div></div>
+<div class="pagina-cab"><div><h1>Requerimientos</h1><p class="sub">Consultas y reclamos de clientes, con su clasificación.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/ia/">¿Cómo funciona la IA?</a></div></div>
 <div class="tabla-caja"><table><thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Estado</th><th></th></tr></thead><tbody>
 {% for r in reqs %}<tr><td class="celda-asunto"><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:90 }}</span></td><td>{{ r.cliente|default:"–" }}</td>
-  <td>{{ r.categoria_requerimiento|default:"–" }}{% if r.confianza_ia %} <span class="chip asignado" title="Confianza de la IA">IA {{ r.confianza_ia }}</span>{% endif %}</td>
+  <td>{{ r.categoria_requerimiento|default:"–" }}
+    {% if r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado" title="Clasificado por la IA con esta confianza">IA {{ r.confianza_ia }}</span>
+    {% elif r.categoria_requerimiento %}<span class="chip cancelado" title="Clasificado por una persona">Manual</span>
+    {% elif r.confianza_ia is not None %}<span class="chip pendiente" title="La IA no estuvo lo bastante segura">IA dudó {{ r.confianza_ia }}</span>{% endif %}</td>
   <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% else %}entregado{% endif %}">{{ r.get_estado_display }}</span></td>
   <td class="celda-acciones">{% if puede_editar and r.estado == "sin_clasificar" %}<form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/ia/">{% csrf_token %}<button class="btn-sec">Clasificar con IA</button></form><form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/clasificar/">{% csrf_token %}<select name="categoria" aria-label="Categoría">{% for c in categorias %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}</select> <button>Clasificar</button></form>{% endif %}</td></tr>
 {% empty %}<tr><td colspan="5" class="vacio">No hay requerimientos.</td></tr>{% endfor %}

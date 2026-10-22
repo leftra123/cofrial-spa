@@ -412,3 +412,83 @@ class ClienteGroq(TestCase):
             ia._llamar("p")
         self.assertLessEqual(plazos["gemini"], 12 * ia.PARTE_MAXIMA_CON_RESPALDO + 0.01)
         self.assertGreaterEqual(plazos["groq"], 3)               # a Groq le basta ~1 s; aquí le quedan más de 3
+
+
+class PanelIA(TestCase):
+    """Panel de IA del CRM y acción de /admin/: hacen visible lo que la IA recibe, responde y decide."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def entrar(self, usuario):
+        self.client.logout()
+        self.assertTrue(self.client.login(username=usuario, password=CLAVE))
+
+    def test_acceso_por_rol(self):
+        for usuario, esperado in (("vendedora@cofrial.test", 200), ("gerente@cofrial.test", 200), ("admin", 200),
+                                  ("despachador@cofrial.test", 403), ("ana@correo.test", 403)):
+            self.entrar(usuario)
+            self.assertEqual(self.client.get("/crm/ia/").status_code, esperado, usuario)
+        self.client.logout()
+        self.assertEqual(self.client.get("/crm/ia/").status_code, 302)
+
+    def test_muestra_el_estado_pero_nunca_las_claves(self):
+        from unittest.mock import patch
+        self.entrar("vendedora@cofrial.test")
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "SECRETA-GEMINI-123", "GROQ_API_KEY": "SECRETA-GROQ-456"}):
+            r = self.client.get("/crm/ia/")
+        self.assertContains(r, "Clave configurada")
+        self.assertContains(r, "Umbral de confianza")
+        self.assertNotContains(r, "SECRETA-GEMINI-123")
+        self.assertNotContains(r, "SECRETA-GROQ-456")
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertContains(self.client.get("/crm/ia/"), "Sin clave")
+
+    def test_la_prueba_en_vivo_compara_proveedores_y_no_crea_requerimientos(self):
+        from unittest.mock import patch
+        from crm import ia
+        from crm.models import Requerimiento
+        self.entrar("vendedora@cofrial.test")
+        antes = Requerimiento.objects.count()
+        with patch("crm.ia._gemini", return_value='{"categoria": "Facturación", "confianza": 0.91}'), \
+                patch("crm.ia._groq", side_effect=ia.ErrorIA("HTTP 503")):
+            r = self.client.post("/crm/ia/", {"asunto": "Cobro doble", "descripcion": "Me cobraron dos veces la misma orden"})
+        self.assertContains(r, "Gemini")
+        self.assertContains(r, "Groq")
+        self.assertContains(r, "Facturación")
+        self.assertContains(r, "0,91")
+        self.assertContains(r, "HTTP 503")
+        self.assertContains(r, "Sin respuesta")
+        self.assertContains(r, "Me cobraron dos veces")                # el mensaje enviado y el prompt se pueden ver
+        self.assertEqual(Requerimiento.objects.count(), antes)
+
+    def test_mensaje_vacio_avisa(self):
+        self.entrar("vendedora@cofrial.test")
+        self.assertContains(self.client.post("/crm/ia/", {"asunto": "x", "descripcion": "  "}), "Escribe un mensaje")
+
+    def test_el_resumen_distingue_ia_manual_y_duda(self):
+        from crm.models import CategoriaRequerimiento, Requerimiento
+        cat = CategoriaRequerimiento.objects.first()
+        Requerimiento.objects.all().delete()
+        Requerimiento.objects.create(asunto="a", descripcion="d", categoria_requerimiento=cat, confianza_ia=0.9, estado="clasificado")
+        Requerimiento.objects.create(asunto="b", descripcion="d", categoria_requerimiento=cat, estado="clasificado")
+        Requerimiento.objects.create(asunto="c", descripcion="d", confianza_ia=0.4)
+        Requerimiento.objects.create(asunto="d", descripcion="d")
+        self.entrar("vendedora@cofrial.test")
+        resumen = self.client.get("/crm/ia/").context["resumen"]
+        self.assertEqual(resumen, {"total": 4, "por_ia": 1, "ia_dudo": 1, "manual": 1, "sin_clasificar": 2})
+        lista = self.client.get("/crm/requerimientos/")
+        self.assertContains(lista, "Manual")
+        self.assertContains(lista, "IA dudó")
+
+    def test_accion_de_admin_clasifica_con_ia(self):
+        from unittest.mock import patch
+        from crm.models import Requerimiento
+        r = Requerimiento.objects.create(asunto="Pedido tibio", descripcion="La carga llegó tibia")
+        self.entrar("admin")
+        with patch("crm.ia._llamar", return_value='{"categoria": "Reclamo por temperatura", "confianza": 0.95}'):
+            resp = self.client.post("/admin/crm/requerimiento/", {"action": "clasificar_con_ia", "_selected_action": [r.pk]}, follow=True)
+        self.assertContains(resp, "1 clasificado")
+        r.refresh_from_db()
+        self.assertEqual((r.estado, str(r.categoria_requerimiento)), ("clasificado", "Reclamo por temperatura"))

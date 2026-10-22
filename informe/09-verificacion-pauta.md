@@ -89,10 +89,10 @@ El Hito 1 debe dejar un diseño que el Hito 2 pueda construir sin rehacerlo. Se 
 | CRM: clientes, prospectos y seguimiento de pedidos web | `web/crm`; embudo, interacciones, pedido a nombre del cliente y alertas, probados sobre AWS | Cubierto |
 | IoT con Docker, con los 6 campos exactos | `iot/simulador.py`; contenedores en la EC2 dedicada insertando en RDS; tipos correctos y alerta coherente con el rango | Cubierto |
 | Dashboard en vivo que cruza ventas con alertas de frío | `grafana/`; 12 consultas con datos reales; ventas por canal B2B y B2C; capturas en `docs/capturas-visual/` | Cubierto |
-| IA gratuita integrada, con falla controlada | `web/crm/ia.py`; Gemini con la API real y respaldo Groq; acierto medido de 90 % (18 de 20); detalle en CU-09 | Cubierto, con margen estrecho |
+| IA gratuita integrada, con falla controlada | `web/crm/ia.py`; Gemini con la API real y respaldo Groq; acierto medido de 100 % (20 de 20) con respaldo de Groq; detalle en CU-09 | Cubierto |
 
 *Nota.* Elaboración propia. La nota la decide el docente; «Cubierto» indica que la evidencia responde al criterio.
 
-**Pendientes del Hito 2:** configurar Groq como respaldo de la IA (aumentaría la disponibilidad), preparar el guion de la defensa y ensayar el apagado y encendido del laboratorio.
+**Pendientes del Hito 2:** preparar el guion de la defensa y ensayar el apagado y encendido del laboratorio.
 
 **Pendientes del Hito 1** (siguen vigentes, ver sección 5): armar el informe único, la revisión de Sergio sobre 03, 04a, 04b y 08, votar las decisiones D-05 a D-08 y quitar las marcas de borrador del diagrama. Además, `04a-diagrama-arquitectura.md` describe el diseño; las diferencias con lo desplegado están en la Tabla 3 de `03-arquitectura-cloud.md` y deberían reflejarse en el diagrama final.

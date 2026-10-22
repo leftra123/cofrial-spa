@@ -164,6 +164,8 @@ PROB_RUPTURA=0.01
 GEMINI_API_KEY=${GEMINI_API_KEY:-}
 GEMINI_MODELS=${GEMINI_MODELS:-}
 GROQ_API_KEY=${GROQ_API_KEY:-}
+GROQ_MODELS=${GROQ_MODELS:-}
+IA_PROVEEDORES=${IA_PROVEEDORES:-}
 E
 chmod 600 .env
 docker compose -f aws/docker-compose.$1.yml --env-file .env up -d --build

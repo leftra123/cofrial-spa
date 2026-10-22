@@ -79,3 +79,13 @@ class CuentasTests(TestCase):
         with patch.dict("os.environ", {}, clear=True):
             call_command("cambiar_clave_demo", "--si-hay-clave")      # sin variable no hace nada ni falla
         self.assertTrue(self.entra("ana@correo.test", clave="otra-clave-larga-9"))
+
+    def test_clave_debil_se_rechaza_salvo_que_se_pida_expresamente(self):
+        with patch.dict("os.environ", {"DEMO_PASSWORD": "123456"}):
+            with self.assertRaisesMessage(CommandError, "permitir-clave-debil"):
+                call_command("cambiar_clave_demo")
+            self.assertTrue(self.entra("ana@correo.test", clave="demo-cofrial-2026"))      # no cambió nada al rechazarla
+            call_command("cambiar_clave_demo", "--permitir-clave-debil")
+        for u in ("admin", "ana@correo.test", "abastecimiento@hospital.test", "vendedora@cofrial.test", "vendedor2@cofrial.test",
+                  "gerente@cofrial.test", "despachador@cofrial.test"):
+            self.assertTrue(self.entra(u, clave="123456"), u)

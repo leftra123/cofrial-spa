@@ -24,12 +24,13 @@ services:
 
   web:
     build: ./web
-    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py cambiar_clave_demo --si-hay-clave && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py cambiar_clave_demo --si-hay-clave $${DEMO_CLAVE_DEBIL:+--permitir-clave-debil} && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2"
     environment:
       <<: *bd
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-clave-solo-para-desarrollo}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo-cofrial-2026}
+      DEMO_CLAVE_DEBIL: ${DEMO_CLAVE_DEBIL:-}
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?define GRAFANA_DB_PASSWORD en .env}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODELS: ${GEMINI_MODELS:-}

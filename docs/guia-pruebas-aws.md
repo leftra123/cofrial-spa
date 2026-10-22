@@ -10,7 +10,7 @@ Para quien reciba el traspaso (Sergio) y para ensayar la defensa. Cada paso dice
 | Estado de salud | http://34.204.121.79/salud/ (debe responder `{"estado": "ok"}`) |
 | Tablero de BI (Grafana) | http://34.204.121.79:3000 (se ve sin cuenta; para editar: usuario `admin` y la clave de Grafana) |
 
-La IP es elástica: no cambia al reiniciar el laboratorio. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric pulse "Start Lab" y espere unos minutos.
+La IP es elástica: no cambia al reiniciar el laboratorio. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
 
 ## Usuarios de prueba
 
@@ -26,6 +26,15 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 | `gerente@cofrial.test` | Gerencia | Lee todo, no modifica |
 | `despachador@cofrial.test` | Despachador | Solo alertas de frío y flota |
 | `admin` | Administrador | Todo, incluida la flota y `/admin/` |
+
+## Paso 0: encender y verificar (siempre, antes de probar a mano)
+
+1. **Iniciar el laboratorio.** AWS Academy, Learner Lab, **Start Lab**; esperar el círculo verde. Al terminar cada sesión (4 horas) AWS **detiene** las instancias y la base de datos, y **al iniciar una sesión nueva siguen detenidas**: no se encienden solas.
+2. **Credenciales nuevas.** AWS Details, AWS CLI, Show: copiar el bloque que empieza con `[default]` y, en la terminal: `pbpaste > ~/.aws/credentials` (caducan con la sesión).
+3. **Encender todo:** `bash aws/provision.sh encender` (primero la base, luego las dos EC2; espera hasta que la aplicación responda; unos 3 a 6 minutos). Para solo mirar cómo están: `bash aws/provision.sh estado`.
+4. **Verificar automáticamente:** `python3 aws/verificar.py` (lee, no crea datos) o `python3 aws/verificar.py --ia` (además envía un reclamo de prueba por Soporte). Revisa en un minuto: acceso con las 8 cuentas, precios B2B y B2C distintos, permisos por rol, telemetría fresca con los 6 campos, las consultas del tablero, ventas en ambos canales y que quede un requerimiento sin clasificar para la demostración. Si todo sale con ✓, seguir con las pruebas manuales; si algo falla, el mensaje dice qué revisar.
+
+Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la dirección (`python3 aws/verificar.py http://IP`) y la clave de demostración (variable `DEMO_PASSWORD`).
 
 ## Pruebas, en este orden
 
@@ -69,7 +78,7 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 
 **H. Resiliencia (25 a 26)** *(D1: estable y persistente)*
 25. **IA apagada** (solo se puede hacer en local, no en AWS sin acceso a la instancia): con `GEMINI_API_KEY` vacía, enviar un requerimiento: se guarda "sin clasificar" y el portal responde normal. Las pruebas automáticas lo cubren (`python manage.py test crm`).
-26. **Apagado y encendido del laboratorio** (lo hace Eric): al terminar la sesión del laboratorio y volver a iniciarla, la aplicación, el IoT y Grafana deben volver solos en unos minutos y la IP debe ser la misma.
+26. **Apagado y encendido del laboratorio** (lo hace Eric): al terminar la sesión, AWS detiene las instancias y la base; al iniciar una sesión nueva hay que ejecutar el Paso 0 (`bash aws/provision.sh encender`). Comprobar que, sin tocar nada más, vuelven la aplicación, el IoT y Grafana, que la **IP es la misma** y que los datos siguen (órdenes, requerimientos y telemetría anterior). Medir cuánto tarda y anotarlo para el plan B de la defensa.
 
 ## Pruebas automáticas (sin AWS)
 

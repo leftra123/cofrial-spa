@@ -12,6 +12,8 @@
 #                     # si corres el script en la terminal del Learner Lab, sin esto se abriría el SSH solo a la IP del laboratorio
 #   bash aws/provision.sh            # crea todo
 #   bash aws/provision.sh destruir   # borra todo lo creado (RDS tarda unos minutos)
+#   bash aws/provision.sh estado     # muestra si RDS y las EC2 están encendidas
+#   bash aws/provision.sh encender   # tras iniciar una sesión nueva del laboratorio: arranca RDS y las EC2
 #   bash aws/provision.sh recrear-web  # rota claves de IA: edita aws/.estado/secretos.env y recrea solo la EC2 web
 set -euo pipefail
 
@@ -47,6 +49,42 @@ if [ "${1:-}" = "destruir" ]; then
   fi
   aws ec2 delete-key-pair --key-name "${P}-key" 2>/dev/null || true
   log "Listo. Los archivos de $ESTADO se conservan (puedes borrarlos a mano)."; exit 0
+fi
+
+# ---------------------------------------------------------------- estado y encender
+# Al terminar la sesión del Learner Lab, AWS detiene las EC2 y RDS. Al iniciar una sesión nueva siguen detenidas: hay que
+# encenderlas. `estado` solo muestra cómo están; `encender` arranca RDS y las dos EC2 y espera a que la aplicación responda.
+# La IP elástica y los datos se conservan; los contenedores vuelven solos porque tienen reinicio automático.
+if [ "${1:-}" = "estado" ] || [ "${1:-}" = "encender" ]; then
+  # Con el laboratorio terminado las credenciales aún "existen" pero AWS rechaza todo: se avisa en vez de decir que nada existe.
+  if ! aws ec2 describe-addresses --max-items 1 >/dev/null 2>&1; then
+    echo "AWS rechaza las consultas: la sesión del laboratorio terminó o no está iniciada."
+    echo "  1) En AWS Academy abre el Learner Lab y pulsa Start Lab; espera el círculo verde."
+    echo "  2) AWS Details > AWS CLI > Show: copia el bloque [default] y guárdalo con:  pbpaste > ~/.aws/credentials"
+    echo "  3) Vuelve a ejecutar: bash aws/provision.sh encender"
+    exit 1
+  fi
+  estado_rds() { aws rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].DBInstanceStatus' --output text 2>/dev/null || echo "no existe"; }
+  estado_ec2() { q ec2 describe-instances --filters "Name=tag:Name,Values=$1" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query 'Reservations[0].Instances[0].State.Name' 2>/dev/null || echo "no existe"; }
+  id_ec2() { q ec2 describe-instances --filters "Name=tag:Name,Values=$1" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query 'Reservations[0].Instances[0].InstanceId'; }
+  IP_WEB=$(q ec2 describe-addresses --filters "Name=tag:Name,Values=${P}-eip" --query 'Addresses[0].PublicIp' 2>/dev/null || echo "")
+  log "Estado actual"
+  echo "  RDS ${P}-db ........ $(estado_rds)"; echo "  EC2 web ............ $(estado_ec2 ${P}-ec2-web)"; echo "  EC2 IoT ............ $(estado_ec2 ${P}-ec2-iot)"; echo "  IP de la aplicación . ${IP_WEB:-desconocida}"
+  if [ "$1" = "encender" ]; then
+    log "Encendiendo RDS (la base primero)"
+    for i in $(seq 1 40); do ST=$(estado_rds); case "$ST" in stopped) aws rds start-db-instance --db-instance-identifier "${P}-db" >/dev/null && break;; available|starting|backing-up|configuring-enhanced-monitoring) break;; "no existe") echo "RDS no existe: ejecuta bash aws/provision.sh"; exit 1;; *) sleep 15;; esac; done
+    aws rds wait db-instance-available --db-instance-identifier "${P}-db"
+    log "Encendiendo las EC2"
+    for n in "${P}-ec2-web" "${P}-ec2-iot"; do
+      for i in $(seq 1 30); do ST=$(estado_ec2 $n); case "$ST" in stopped) aws ec2 start-instances --instance-ids "$(id_ec2 $n)" >/dev/null; break;; running|pending) break;; "no existe"|None) echo "$n no existe: ejecuta bash aws/provision.sh"; exit 1;; *) sleep 10;; esac; done
+    done
+    aws ec2 wait instance-running --instance-ids "$(id_ec2 ${P}-ec2-web)" "$(id_ec2 ${P}-ec2-iot)"
+    echo "$IP_WEB" > "$ESTADO/ip.txt"
+    log "Esperando a que la aplicación responda en http://$IP_WEB (hasta 10 minutos)"
+    for i in $(seq 1 40); do curl -s -m 5 "http://$IP_WEB/salud/" | grep -q ok && { echo "  La aplicación responde. Verifica todo con: python3 aws/verificar.py"; exit 0; }; sleep 15; done
+    echo "  La aplicación aún no responde; espera unos minutos y repite: bash aws/provision.sh estado"
+  fi
+  exit 0
 fi
 
 # ---------------------------------------------------------------- recrear-web
@@ -185,6 +223,7 @@ IOT_ID=$(lanzar "${P}-ec2-iot" t3.micro "$PUB" "$SG_IOT" iot)
 aws ec2 wait instance-running --instance-ids "$WEB_ID" "$IOT_ID"
 aws ec2 associate-address --instance-id "$WEB_ID" --allocation-id "$EIP_ID" >/dev/null
 
+echo "$EIP" > "$ESTADO/ip.txt"
 cat <<R
 
 ==> LISTO (los contenedores tardan ~5-8 minutos en construirse la primera vez)

@@ -62,7 +62,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 
 ## Reglas del Learner Lab que importan
 
-- Al cerrar la sesión las instancias se **detienen** y al reiniciar cambia la IP pública: por eso la IP elástica y `restart: unless-stopped` (los contenedores vuelven solos al encender la EC2).
+- Al cerrar la sesión (4 horas) AWS **detiene** las EC2 y la base, y **al iniciar una sesión nueva siguen detenidas**: se encienden con `bash aws/provision.sh encender` (primero RDS, luego las EC2, y espera a que la aplicación responda). La IP elástica no cambia y `restart: unless-stopped` hace que los contenedores vuelvan solos una vez encendida la EC2. `bash aws/provision.sh estado` muestra cómo están.
 - Si la EC2 web cambia de IP, actualiza `DJANGO_CSRF_ORIGINS` en su `.env` y ejecuta `docker compose ... up -d`; sin eso los formularios responden 403.
 - `DB_SSLMODE=require` es obligatorio contra RDS. Grafana solo admite `require`, `verify-ca`, `verify-full` o `disable` (no `prefer`).
 - Imágenes desde un Mac con chip Apple: construir en la EC2 (como indica el paso 6) evita el problema de arquitectura.
@@ -77,3 +77,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 - [ ] IA: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` responde «IA operativa». Enviar una consulta desde **Soporte** y verla clasificada en `/crm/requerimientos/`.
 - [ ] IA: `... exec web python manage.py evaluar_ia` da más de 85 % (meta del informe).
 - [ ] Plan B: probar también la demo con `GEMINI_API_KEY` vacía; el sistema sigue funcionando y deja el requerimiento «sin clasificar».
+
+## Verificación automática
+
+`python3 aws/verificar.py` recorre la instalación y dice qué falla (cuentas, precios B2B y B2C, permisos por rol, telemetría fresca con los seis campos, consultas del tablero, ventas en ambos canales y requerimiento sin clasificar para la demostración); con `--ia` envía además un reclamo de prueba. Solo usa la biblioteca estándar de Python y no crea datos salvo con `--ia`. Se ejecuta tras cada `provision.sh`, `recrear-web` o `encender`, y antes de la defensa.

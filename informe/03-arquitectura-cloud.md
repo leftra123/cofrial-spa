@@ -139,3 +139,29 @@ Si Cofrial escalara (más camiones, más clientes), esta arquitectura permite:
 Ahora no es necesario, pero el diseño lo permite.
 
 Nota. Elaboración propia.
+
+## Despliegue realizado en AWS Academy (22 de octubre de 2026)
+
+El diseño anterior se construyó en el Learner Lab con el script `aws/provision.sh`, que crea la red, la base de datos y las dos instancias de forma repetible. La **Tabla 10** contrasta lo diseñado con lo desplegado: el prototipo cumple lo que exige la pauta, pero se apartó del diseño en los puntos que se indican, todos limitaciones declaradas y no omisiones.
+
+**Tabla 10**
+*Diseño frente a lo desplegado en AWS Academy*
+
+| Aspecto | Diseño (sección 4a) | Desplegado | Motivo o consecuencia |
+|---|---|---|---|
+| VPC | 10.0.0.0/16 con subredes pública y privadas | Igual: una subred pública y dos privadas, Internet Gateway y una tabla de ruteo | RDS exige un grupo de subredes con dos zonas de disponibilidad |
+| Subredes privadas | Tres, una de ellas para Grafana | Dos, solo para RDS | Grafana corre en la instancia web para simplificar el despliegue |
+| Instancia web | EC2 con IP elástica | `t3.small`, IP elástica, Docker Compose con la aplicación (puerto 80) y Grafana (3000) | Igual, con Grafana expuesto en la misma instancia |
+| Instancia IoT | EC2 dedicada con contenedores | `t3.micro`, tres contenedores de camiones, reinicio automático | Cumple la exigencia de nodo dedicado; está en la subred pública |
+| Base de datos | RDS PostgreSQL en subred privada | PostgreSQL 16, `db.t3.micro`, Single-AZ, sin acceso público | Igual; sin alta disponibilidad por las restricciones del laboratorio |
+| Cifrado hacia la base | No especificado | `sslmode=require` desde la aplicación y el simulador | RDS moderno exige conexiones cifradas |
+| Security Groups | Encadenados; RDS solo desde web e IoT | Igual; el puerto 22 se abre solo a la IP del equipo | Se cumple el principio de mínimo privilegio |
+| HTTPS | Puerto 443 abierto | Solo HTTP en el puerto 80 | El laboratorio no incluye dominio ni certificado; los formularios no cifran el tráfico |
+| Tablero de BI | Subred privada | Puerto 3000 público con visor anónimo de solo lectura | Permite mostrar el tablero sin cuenta; editar exige la clave de administrador |
+| Respaldos de RDS | Automáticos | Retención de un día | Mínimo para el laboratorio |
+
+*Nota.* Elaboración propia. Verificado el 22-oct-2026 con una prueba de punta a punta sobre la instalación en AWS: compra B2B y B2C, CRM, flota con telemetría real, tablero y clasificación con IA.
+
+**Verificación del despliegue.** Sobre la instalación en AWS se comprobó que: (a) una compra como cliente institucional y otra como cliente público generan órdenes en RDS y aparecen en el CRM; (b) los contenedores de la instancia dedicada insertan telemetría con los seis campos exigidos y la pantalla de flota se actualiza cada cinco segundos; (c) las doce consultas del tablero responden con datos reales y cruzan ventas por canal con alertas de frío; y (d) la clasificación con IA funciona con la API real. La primera ejecución del script no presentó errores; en el proceso se detectó que el rol del terminal del laboratorio no puede crear recursos y que debe usarse el rol del laboratorio (`voclabs`), y que algunos parámetros públicos de SSM están bloqueados, por lo que el script obtiene la imagen de Ubuntu desde el catálogo del propietario.
+
+**Limitaciones que persisten.** Las instancias se detienen al cerrar la sesión del laboratorio y las claves de acceso caducan; los contenedores y la IP elástica sobreviven a ese reinicio. La instancia web no es redundante y la base de datos es Single-AZ, por lo que una falla de zona dejaría el servicio caído.

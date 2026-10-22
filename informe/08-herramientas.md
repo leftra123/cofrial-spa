@@ -140,6 +140,8 @@
 
 **Conclusión.** La pauta exige costo cero. Gemini y Groq ofrecen capas gratuitas con buena calidad en español; Groq queda como respaldo si se alcanza el límite. OpenAI no tiene capa gratuita permanente, por lo que incumple el requisito.
 
+**Resultado de la implementación.** Se implementó Gemini como proveedor principal y Groq como respaldo. Al probarlo con la API real se aprendió que la oferta gratuita cambia con rapidez: el modelo elegido inicialmente (`gemini-2.5-flash`) ya no estaba disponible para cuentas nuevas y los modelos vigentes se consumen con otra interfaz (Interactions API), por lo que el nombre del modelo no se fija en el código sino que se configura y se prueba en cascada. Este riesgo de disponibilidad es el principal costo de usar una capa gratuita y justifica mantener un segundo proveedor. La medición de acierto y las latencias están en `06-casos-de-uso.md` (CU-09).
+
 ## Diagramas de arquitectura
 
 **Tabla 8**

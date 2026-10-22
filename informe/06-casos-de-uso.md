@@ -99,6 +99,16 @@ Nota. Elaboración propia. "Obligatorio" refiere a lo exigido en la pauta del Hi
 
 **Regla:** la clasificación automática debe lograr > 85 % de acierto en la demo.
 
+**Implementación en el prototipo (22-oct-2026).** Lo construido cubre el núcleo del caso de uso y se aparta del diseño en tres puntos:
+
+- **Qué se hace:** el cliente registra su consulta en la sección Soporte del portal; el sistema la guarda siempre y la envía a Gemini, que devuelve una categoría y una confianza. Si la confianza es de 0,60 o más, el requerimiento queda clasificado y aparece en el CRM con su categoría y la confianza de la IA; si es menor o la API falla, queda «sin clasificar» y el vendedor lo clasifica a mano o pulsa «Clasificar con IA» para reintentar.
+- **Categorías:** el prototipo usa cinco (Consulta de producto, Reclamo por temperatura, Atraso en entrega, Facturación y Otro), más cercanas a las consultas reales que las del diseño original.
+- **Lo que no se implementó:** el enrutamiento automático por área (paso 4) y la notificación al supervisor cuando la IA falla. Hoy existe una bandeja única de requerimientos en el CRM, que ve el vendedor, y el contador de «requerimientos por clasificar» del panel.
+- **Tiempo máximo:** el diseño fijaba 5 segundos. La latencia medida de Gemini es de 4 a 7 segundos por consulta, por lo que con ese plazo casi todas las consultas habrían quedado sin clasificar. El prototipo concede **12 segundos en total**, repartidos entre los modelos de respaldo.
+- **Proveedor:** Gemini con la clave gratuita y, de respaldo, Groq si se configura su clave. Si un modelo de Gemini está saturado se prueba el siguiente de una lista configurable.
+- **Medición de la regla del 85 %:** con 20 mensajes etiquetados y la API real se obtuvo **90 % (18 de 20)**. Las 18 respuestas recibidas fueron correctas; las otras 2 no tuvieron respuesta de Google (una por demora y otra por saturación), por lo que el sistema las habría dejado sin clasificar. El margen sobre la meta es estrecho y depende de la disponibilidad del proveedor gratuito.
+- **Cómo repetir la medición:** `python manage.py probar_ia` verifica la clave y `python manage.py evaluar_ia` calcula el acierto sobre el conjunto de ejemplos.
+
 ---
 
 ### CU-11: Detectar ruptura de cadena de frío

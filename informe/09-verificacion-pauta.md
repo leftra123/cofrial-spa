@@ -77,18 +77,22 @@ El Hito 1 debe dejar un diseño que el Hito 2 pueda construir sin rehacerlo. Se 
 ## Notas del equipo
 
 
-## Estado de implementación del Hito 2 (verificado el 22-oct-2026)
+## Estado de implementación del Hito 2 (verificado el 22-oct-2026 sobre AWS)
 
 **Tabla 4**
-*Exigencias del Hito 2 frente a lo construido y verificado en `web/`, `iot/`, `grafana/` y `aws/`*
+*Exigencias del Hito 2 frente a lo construido y verificado sobre la instalación en AWS Academy*
 
 | Exigencia | Evidencia | Estado |
 |---|---|---|
-| E-commerce conectado a la base: catálogo, B2B/B2C, carrito y órdenes | `web/catalogo`, `web/pedidos`; 50 pruebas automáticas; compra completa probada en navegador | Cubierto |
-| CRM: clientes, prospectos y seguimiento de pedidos web | `web/crm`; embudo, interacciones, pedido a nombre del cliente y alertas | Cubierto |
-| IoT con Docker, con los 6 campos exactos | `iot/simulador.py`; probado en contenedores contra una base limpia: tipos correctos y alerta coherente con el rango del camión | Cubierto en local; falta correrlo en la EC2 dedicada |
-| Dashboard en vivo que cruza ventas con alertas de frío | `grafana/`; las 12 consultas responden con datos reales; captura en `docs/capturas-visual/grafana-bi.png` | Cubierto en local |
-| IA gratuita integrada, con falla controlada | `web/crm/ia.py` (Gemini y respaldo Groq), formulario de Soporte, botón en el CRM, 11 pruebas con la API simulada | Implementada; **falta la clave** `GEMINI_API_KEY` y probarla en vivo con `probar_ia` y `evaluar_ia` |
-| EC2 y RDS funcionales y estables | `aws/` (compose por nodo, variables y guía); probado en local en modo producción | **Falta ejecutarlo en el Learner Lab** (requiere las credenciales de cada integrante) |
+| EC2 y RDS funcionales y estables | `aws/`; instalación creada con `provision.sh`: EC2 web, EC2 IoT y RDS PostgreSQL 16 respondiendo; ver Tabla 10 de `03-arquitectura-cloud.md` | Cubierto |
+| E-commerce conectado a la base: catálogo, B2B/B2C, carrito y órdenes | `web/catalogo`, `web/pedidos`; compra B2B y B2C probada sobre AWS; 57 pruebas automáticas | Cubierto |
+| CRM: clientes, prospectos y seguimiento de pedidos web | `web/crm`; embudo, interacciones, pedido a nombre del cliente y alertas, probados sobre AWS | Cubierto |
+| IoT con Docker, con los 6 campos exactos | `iot/simulador.py`; contenedores en la EC2 dedicada insertando en RDS; tipos correctos y alerta coherente con el rango | Cubierto |
+| Dashboard en vivo que cruza ventas con alertas de frío | `grafana/`; 12 consultas con datos reales; ventas por canal B2B y B2C; capturas en `docs/capturas-visual/` | Cubierto |
+| IA gratuita integrada, con falla controlada | `web/crm/ia.py`; Gemini con la API real y respaldo Groq; acierto medido de 90 % (18 de 20); detalle en CU-09 | Cubierto, con margen estrecho |
 
-*Nota.* Elaboración propia. «Cubierto en local» significa verificado sin AWS; la dimensión 1 del Hito 2 solo se logra al desplegar.
+*Nota.* Elaboración propia. La nota la decide el docente; «Cubierto» indica que la evidencia responde al criterio.
+
+**Pendientes del Hito 2:** configurar Groq como respaldo de la IA (aumentaría la disponibilidad), preparar el guion de la defensa y ensayar el apagado y encendido del laboratorio.
+
+**Pendientes del Hito 1** (siguen vigentes, ver sección 5): armar el informe único, la revisión de Sergio sobre 03, 04a, 04b y 08, votar las decisiones D-05 a D-08 y quitar las marcas de borrador del diagrama. Además, `04a-diagrama-arquitectura.md` describe el diseño; las diferencias con lo desplegado están en la Tabla 10 de `03-arquitectura-cloud.md` y deberían reflejarse en el diagrama final.

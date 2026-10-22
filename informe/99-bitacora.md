@@ -26,3 +26,11 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Al diseñar el pipeline del CRM se agregan tres campos al modelo: `prospecto.cerrado_en`, `prospecto.motivo_perdida` y `requerimiento.respondido_en`, sin los cuales no se podía exigir el motivo de pérdida, medir la conversión del mes ni el tiempo de primera respuesta. Se agregan cuatro consultas al dashboard y se revalida el esquema en PostgreSQL.
 - Se redactan los borradores de D4: canales (`04c`), CRM (`04d`) y casos de uso (`06`) con wireframes, user journeys, arquitectura funcional, pipeline y especificaciones.
 - Se verifica el repositorio contra el PDF original de la pauta (`09-verificacion-pauta.md`): las cuatro dimensiones del Hito 1 tienen contenido que responde al criterio; la brecha principal es armar el informe único.
+
+## 2026-10-20 a 2026-10-22
+- Rediseño visual de la aplicación (`web/`): barra lateral, tarjetas, chips de estado, filtros con contador en Mis pedidos y CRM unificado. Pantalla de flota con tarjetas por camión, viajes activos y actualización en vivo (API con Django REST Framework y axios). Auditoría con siete roles: se corrigió el menú por rol, las páginas 403 y 404 y el favicon.
+- La aplicación convive en el repositorio con `backend/` (portal de otras sesiones); queda por decidir cuál es la oficial. Ante conflictos del informe se tomó la versión de `main`.
+- IA: clasificación de requerimientos con Gemini (RN-14, CU-09), formulario de Soporte en el portal y botón en el CRM. Medición con la API real: 90 % de acierto. Se corrigió el modelo por defecto, que estaba retirado, y se amplió el tiempo máximo de 5 a 12 segundos.
+- Despliegue en AWS Academy con `aws/provision.sh`: VPC, RDS PostgreSQL, EC2 web con IP elástica y EC2 IoT dedicada. Verificación de punta a punta sobre AWS (compras, CRM, flota, tablero de BI e IA). Desviaciones del diseño en la Tabla 10 de `03-arquitectura-cloud.md`.
+- Hallazgos del proceso: el terminal del laboratorio usa un rol sin permisos para crear recursos; los parámetros públicos de SSM están bloqueados; Grafana no admite `sslmode=prefer`; un archivo de ejemplo de variables quedaba oculto por el `.gitignore`.
+- Decisiones registradas en `docs/decisiones.md` (capa visual, API, IA y despliegue).

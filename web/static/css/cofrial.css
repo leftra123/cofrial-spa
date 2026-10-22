@@ -251,3 +251,11 @@ td select { padding: 6px 8px; max-width: 220px; }
 /* acciones dentro de una celda (cantidad + botón) siempre en una sola línea */
 td .en-linea { flex-wrap: nowrap; }
 td:last-child { white-space: nowrap; }
+
+/* requerimientos: acciones apiladas y columna de asunto legible */
+td.celda-acciones { white-space: normal; min-width: 230px; }
+td.celda-acciones form { display: flex; margin-bottom: 8px; }
+td.celda-acciones form:last-child { margin-bottom: 0; }
+td.celda-asunto { min-width: 260px; }
+td.celda-acciones form { flex-wrap: wrap; }
+td.celda-acciones select { max-width: 100%; }

@@ -285,7 +285,7 @@ class ClienteGemini(TestCase):
         with patch.dict("os.environ", {"GEMINI_API_KEY": "k", "GEMINI_MODELS": "a-lite, b-flash"}, clear=True), patch("crm.ia._post", side_effect=falso):
             texto = ia._gemini("prompt", 12)
         self.assertEqual(llamados, ["a-lite", "b-flash"])
-        self.assertEqual(ia.ultimo_modelo, "b-flash")
+        self.assertEqual(ia.ultimo_modelo, "Gemini b-flash")
         self.assertIn("Otro", texto)
 
     def test_envia_clave_en_cabecera_y_razonamiento_bajo_y_nunca_en_la_url(self):
@@ -326,3 +326,89 @@ class ClienteGemini(TestCase):
         with patch.dict("os.environ", {"GEMINI_API_KEY": "k"}, clear=True), patch("crm.ia._post") as p, self.assertRaises(ia.ErrorIA):
             ia._gemini("p", 0.2)
         p.assert_not_called()
+
+
+class ClienteGroq(TestCase):
+    """Respaldo con Groq: cascada de modelos, identificador propio y orden de proveedores (todo simulado)."""
+
+    OK = {"choices": [{"message": {"content": '{"categoria": "Otro", "confianza": 0.8}'}}]}
+
+    def test_cascada_de_modelos_y_razonamiento_bajo(self):
+        from unittest.mock import patch
+        from crm import ia
+        vistos = []
+
+        def falso(url, cuerpo, cabeceras, plazo):
+            vistos.append(cuerpo)
+            if len(vistos) == 1:
+                raise ia.ErrorIA("HTTP 503")
+            return self.OK
+        with patch.dict("os.environ", {"GROQ_API_KEY": "k", "GROQ_MODELS": "openai/gpt-oss-20b,otro/modelo"}, clear=True), patch("crm.ia._post", side_effect=falso):
+            texto = ia._groq("p", 12)
+        self.assertEqual([c["model"] for c in vistos], ["openai/gpt-oss-20b", "otro/modelo"])
+        self.assertEqual(vistos[0].get("reasoning_effort"), "low")
+        self.assertNotIn("reasoning_effort", vistos[1])
+        self.assertEqual(ia.ultimo_modelo, "Groq otro/modelo")
+        self.assertIn("Otro", texto)
+
+    def test_la_clave_va_en_cabecera_y_hay_modelos_por_defecto(self):
+        from unittest.mock import patch
+        from crm import ia
+        visto = {}
+
+        def falso(url, cuerpo, cabeceras, plazo):
+            visto.update(cab=cabeceras, url=url)
+            return self.OK
+        with patch.dict("os.environ", {"GROQ_API_KEY": "SECRETA"}, clear=True), patch("crm.ia._post", side_effect=falso):
+            ia._groq("p", 12)
+        self.assertEqual(visto["cab"], {"Authorization": "Bearer SECRETA"})
+        self.assertNotIn("SECRETA", visto["url"])
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(ia._modelos_groq()[0], "openai/gpt-oss-20b")
+
+    def test_todas_las_llamadas_llevan_identificador_propio(self):
+        from unittest.mock import patch, MagicMock
+        from crm import ia
+        capturado = {}
+
+        def abrir(pedido, timeout):
+            capturado["ua"] = pedido.get_header("User-agent")
+            r = MagicMock(); r.read.return_value = b"{}"; r.__enter__.return_value = r
+            return r
+        with patch("urllib.request.urlopen", side_effect=abrir):
+            ia._post("https://x", {}, {}, 5)
+        self.assertEqual(capturado["ua"], "cofrial-crm/1.0")          # el de urllib lo bloquea Cloudflare (error 1010)
+
+    def test_orden_de_proveedores_configurable(self):
+        from unittest.mock import patch
+        from crm import ia
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual([f.__name__ for f in ia._proveedores()], ["_gemini", "_groq"])
+        with patch.dict("os.environ", {"IA_PROVEEDORES": "groq, gemini"}, clear=True):
+            self.assertEqual([f.__name__ for f in ia._proveedores()], ["_groq", "_gemini"])
+        with patch.dict("os.environ", {"IA_PROVEEDORES": "inventado"}, clear=True):
+            self.assertEqual([f.__name__ for f in ia._proveedores()], ["_gemini", "_groq"])
+
+    def test_si_gemini_falla_responde_groq(self):
+        from unittest.mock import patch
+        from crm import ia
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "g", "GROQ_API_KEY": "q"}, clear=True), \
+                patch("crm.ia._gemini", side_effect=ia.ErrorIA("HTTP 503")), patch("crm.ia._groq", return_value='{"categoria": "Otro", "confianza": 0.7}'):
+            self.assertEqual(ia.clasificar("a", "b", ["Otro", "Facturación"]), ("Otro", 0.7))
+
+    def test_un_proveedor_lento_no_deja_sin_tiempo_al_respaldo(self):
+        from unittest.mock import patch
+        from crm import ia
+        plazos = {}
+
+        def lento(prompt, plazo):
+            plazos["gemini"] = plazo
+            raise ia.ErrorIA("TimeoutError")
+
+        def respaldo(prompt, plazo):
+            plazos["groq"] = plazo
+            return '{"categoria": "Otro", "confianza": 0.9}'
+        with patch.dict("os.environ", {"IA_TIMEOUT_SEG": "12"}, clear=True), patch("crm.ia._gemini", side_effect=lento), patch("crm.ia._groq", side_effect=respaldo):
+            ia._llamar("p")
+        self.assertLessEqual(plazos["gemini"], 12 * ia.PARTE_MAXIMA_CON_RESPALDO + 0.01)
+        self.assertGreaterEqual(plazos["groq"], 3)               # a Groq le basta ~1 s; aquí le quedan más de 3

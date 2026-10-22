@@ -37,7 +37,7 @@ def _prompt(asunto, descripcion, categorias):
 
 
 def _post(url, cuerpo, cabeceras, plazo):
-    pedido = urllib.request.Request(url, data=json.dumps(cuerpo).encode(), headers={"Content-Type": "application/json", **cabeceras})
+    pedido = urllib.request.Request(url, data=json.dumps(cuerpo).encode(), headers={"Content-Type": "application/json", "User-Agent": "cofrial-crm/1.0", **cabeceras})
     try:
         with urllib.request.urlopen(pedido, timeout=max(1.0, plazo)) as r:
             return json.loads(r.read().decode())
@@ -83,39 +83,77 @@ def _gemini(prompt, plazo_total):
                           {"model": modelo, "input": prompt, "generation_config": {"thinking_level": "low", "temperature": 0}},
                           {"x-goog-api-key": clave}, restante)
             texto = _texto_de_interaccion(datos)
-            ultimo_modelo = modelo
+            ultimo_modelo = "Gemini " + modelo
             return texto
         except ErrorIA as e:
             errores.append(f"{modelo}: {e}")
     raise ErrorIA("; ".join(errores))
 
 
+# Modelos de Groq en orden de preferencia; configurables con GROQ_MODELS (lista separada por coma) o GROQ_MODEL (uno solo).
+GROQ_MODELOS_POR_DEFECTO = "openai/gpt-oss-20b,openai/gpt-oss-120b,qwen/qwen3.8-27b"
+
+
+def _modelos_groq():
+    lista = os.environ.get("GROQ_MODELS") or os.environ.get("GROQ_MODEL") or GROQ_MODELOS_POR_DEFECTO
+    return [m.strip() for m in lista.split(",") if m.strip()]
+
+
 def _groq(prompt, plazo_total):
+    global ultimo_modelo
     clave = os.environ.get("GROQ_API_KEY")
     if not clave:
         raise ErrorIA("GROQ_API_KEY no está definida")
-    datos = _post("https://api.groq.com/openai/v1/chat/completions",
-                  {"model": os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"), "temperature": 0,
-                   "response_format": {"type": "json_object"}, "messages": [{"role": "user", "content": prompt}]},
-                  {"Authorization": f"Bearer {clave}"}, plazo_total)
-    try:
-        return datos["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
-        raise ErrorIA("Groq respondió sin texto")
+    inicio, errores = time.monotonic(), []
+    for modelo in _modelos_groq():
+        restante = plazo_total - (time.monotonic() - inicio)
+        if restante < 1:
+            errores.append("sin tiempo")
+            break
+        cuerpo = {"model": modelo, "temperature": 0, "response_format": {"type": "json_object"},
+                  "messages": [{"role": "user", "content": prompt}]}
+        if "gpt-oss" in modelo or "qwen" in modelo:
+            cuerpo["reasoning_effort"] = "low"                   # menos demora: la tarea es clasificar, no razonar
+        try:
+            datos = _post("https://api.groq.com/openai/v1/chat/completions", cuerpo, {"Authorization": f"Bearer {clave}"}, restante)
+            texto = datos["choices"][0]["message"]["content"]
+            if not texto or not texto.strip():
+                raise ErrorIA("Groq respondió sin texto")
+            ultimo_modelo = "Groq " + modelo
+            return texto
+        except (KeyError, IndexError, TypeError):
+            errores.append(f"{modelo}: respuesta sin texto")
+        except ErrorIA as e:
+            errores.append(f"{modelo}: {e}")
+    raise ErrorIA("; ".join(errores))
+
+
+def _proveedores():
+    """Orden de los proveedores: IA_PROVEEDORES=groq,gemini lo invierte (Groq responde en ~1 s; Gemini tarda 4 a 7 s)."""
+    disponibles = {"gemini": _gemini, "groq": _groq}
+    orden = [n.strip().lower() for n in (os.environ.get("IA_PROVEEDORES") or "gemini,groq").split(",")]
+    return [disponibles[n] for n in orden if n in disponibles] or [_gemini, _groq]
+
+
+# Parte del tiempo restante que puede gastar un proveedor que tiene un respaldo detrás. Sin este tope, un proveedor lento
+# (Gemini tarda de 4 a 7 s y a veces se cuelga) agotaba los 12 s y el respaldo nunca llegaba a intentarse.
+PARTE_MAXIMA_CON_RESPALDO = 0.65
 
 
 def _llamar(prompt):
-    """Gemini primero; si falla, Groq. El presupuesto de tiempo es uno solo para todos los intentos."""
+    """Prueba los proveedores en orden. Hay un solo presupuesto de tiempo y se reserva una parte para el respaldo."""
     inicio, errores = time.monotonic(), []
-    for proveedor in (_gemini, _groq):
+    proveedores = _proveedores()
+    for i, proveedor in enumerate(proveedores):
         restante = _presupuesto() - (time.monotonic() - inicio)
         if restante < 1:
             errores.append("sin tiempo")
             break
+        tope = restante if i == len(proveedores) - 1 else restante * PARTE_MAXIMA_CON_RESPALDO
         try:
-            return proveedor(prompt, restante)
+            return proveedor(prompt, tope)
         except ErrorIA as e:
-            errores.append(f"{proveedor.__name__}: {e}")
+            errores.append(f"{getattr(proveedor, '__name__', 'proveedor')}: {e}")
     raise ErrorIA("; ".join(errores))
 
 

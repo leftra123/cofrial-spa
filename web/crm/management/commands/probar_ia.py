@@ -18,4 +18,4 @@ class Command(BaseCommand):
         except ia.ErrorIA as e:
             self.stdout.write(self.style.ERROR(f"La IA no respondió: {e}"))
             raise SystemExit(1)
-        self.stdout.write(self.style.SUCCESS(f"IA operativa: «{categoria}» con confianza {confianza:.2f} (modelo: {ia.ultimo_modelo or 'Groq'})"))
+        self.stdout.write(self.style.SUCCESS(f"IA operativa: «{categoria}» con confianza {confianza:.2f} (modelo: {ia.ultimo_modelo})"))

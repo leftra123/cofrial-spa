@@ -8,6 +8,8 @@
 # Requisitos: AWS CLI v2 con las credenciales del Learner Lab (AWS Details > AWS CLI), openssl y curl.
 #   export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=...     # las del laboratorio; caducan al cerrarlo
 #   export GEMINI_API_KEY=...    # opcional: la clave de la IA (Google AI Studio). Sin ella la IA queda desactivada
+#   export MI_IP=...  # opcional: tu IP pública (curl https://checkip.amazonaws.com desde TU computador) para permitir SSH desde ahí;
+#                     # si corres el script en la terminal del Learner Lab, sin esto se abriría el SSH solo a la IP del laboratorio
 #   bash aws/provision.sh            # crea todo
 #   bash aws/provision.sh destruir   # borra todo lo creado (RDS tarda unos minutos)
 set -euo pipefail
@@ -54,7 +56,7 @@ GRAFANA_DB_PASSWORD=$(gen)
 GRAFANA_PASSWORD=$(gen)
 S
 chmod 600 "$ESTADO/secretos.env"; . "$ESTADO/secretos.env"
-MI_IP="$(curl -s https://checkip.amazonaws.com | tr -d '\n')"; [ -n "$MI_IP" ] || { echo "No pude detectar tu IP pública"; exit 1; }
+MI_IP="${MI_IP:-$(curl -s https://checkip.amazonaws.com | tr -d '\n')}"; [ -n "$MI_IP" ] || { echo "No pude detectar tu IP pública"; exit 1; }
 
 etiqueta() { aws ec2 create-tags --resources "$1" --tags "Key=Name,Value=$2"; }
 buscar() { q ec2 "$1" --filters "Name=tag:Name,Values=$2" "${@:3}"; }

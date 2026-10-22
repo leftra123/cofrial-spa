@@ -23,7 +23,9 @@ log() { printf '\n==> %s\n' "$*"; }
 q() { aws "$@" --output text; }
 
 command -v aws >/dev/null || { echo "Falta la AWS CLI v2"; exit 1; }
-q sts get-caller-identity --query Arn >/dev/null || { echo "Credenciales inválidas o caducadas: copia las de AWS Details en el Learner Lab"; exit 1; }
+ARN=$(q sts get-caller-identity --query Arn) || { echo "Credenciales inválidas o caducadas: copia las de AWS Details en el Learner Lab"; exit 1; }
+echo "Identidad: $ARN"
+case "$ARN" in *assumed-role/runserver/*) echo "Estás con el rol 'runserver' de la terminal del laboratorio, que no puede crear VPC, RDS ni EC2. Exporta las llaves de AWS Details (AWS CLI: Show) para usar LabRole y vuelve a ejecutar."; exit 1;; esac
 
 # ---------------------------------------------------------------- destruir
 if [ "${1:-}" = "destruir" ]; then
@@ -108,7 +110,13 @@ DB_HOST=$(q rds describe-db-instances --db-instance-identifier "${P}-db" --query
 
 # ---------------------------------------------------------------- EC2
 log "EC2 web e IoT"
-AMI=$(q ssm get-parameter --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id --query Parameter.Value)
+# La imagen de Ubuntu 24.04: primero el parámetro público de SSM; si el rol no puede leerlo (pasa con algunos roles del
+# laboratorio), se busca la más reciente publicada por Canonical (propietario 099720109477).
+AMI=$(q ssm get-parameter --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id --query Parameter.Value 2>/dev/null) || AMI=""
+if [ -z "$AMI" ] || [ "$AMI" = "None" ]; then
+  AMI=$(q ec2 describe-images --owners 099720109477 --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*" "Name=state,Values=available" --query 'sort_by(Images,&CreationDate)[-1].ImageId')
+fi
+[ -n "$AMI" ] && [ "$AMI" != "None" ] || { echo "No pude determinar la imagen de Ubuntu 24.04; define AMI=ami-... a mano"; exit 1; }
 if [ ! -f "$ESTADO/${P}-key.pem" ]; then
   aws ec2 delete-key-pair --key-name "${P}-key" 2>/dev/null || true
   aws ec2 create-key-pair --key-name "${P}-key" --query KeyMaterial --output text > "$ESTADO/${P}-key.pem"; chmod 400 "$ESTADO/${P}-key.pem"

@@ -1,4 +1,6 @@
-# Actualización del tablero de Trello (preparada el 22-oct-2026)
+# Actualización del tablero de Trello (APLICADA el 22-oct-2026)
+
+> Este plan ya se aplicó en el tablero: las 9 tarjetas de la sección 1 y las 4 del Hito 1 ya completas están en «Terminado»; las abiertas de la sección 2 llevan un comentario con lo que falta; y las 7 de la sección 3 existen (más «Guion de la defensa» y «Respaldar secretos»). El archivo queda como registro.
 
 Estado de cada tarjeta según lo verificado en `main`. Objetivo: que el tablero muestre **solo lo que falta**. La conexión con Trello estaba caída al preparar este documento, por eso las acciones se listan para aplicarlas a mano.
 

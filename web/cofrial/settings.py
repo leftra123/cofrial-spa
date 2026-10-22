@@ -62,6 +62,7 @@ DATABASES = {"default": {
     "HOST": entorno("DB_HOST", "localhost"),
     "PORT": entorno("DB_PORT", "5432"),
     "CONN_MAX_AGE": 60,
+    "OPTIONS": {"sslmode": entorno("DB_SSLMODE", "prefer")},     # contra RDS: DB_SSLMODE=require
 }}
 
 AUTH_PASSWORD_VALIDATORS = [

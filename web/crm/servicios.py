@@ -9,7 +9,8 @@ from flota.models import Telemetria
 from pedidos import servicios as pedidos
 from pedidos.models import Orden
 
-from .models import EtapaPipeline, Interaccion, Prospecto, Requerimiento
+from . import ia
+from .models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 
 ROLES = ("admin", "gerencia", "vendedor", "despachador")
 
@@ -168,7 +169,43 @@ def crear_pedido_para_cliente(usuario, cliente_id, cantidades, direccion_id, num
     return pedidos.generar_orden(cliente, direccion_id, numero_oc)
 
 
-# ---------------------------------------------------------------- RN-14 (manual) y reportes
+# ---------------------------------------------------------------- RN-14: clasificación con IA y manual
+UMBRAL_CONFIANZA = 0.60            # supuesto del informe (RN-14): por debajo, revisión manual
+
+
+def clasificar_con_ia(requerimiento):
+    """RN-14. Clasifica con IA y guarda la confianza. Si la API falla o la confianza es menor que el umbral,
+    el requerimiento queda «sin clasificar» para revisión manual. Nunca lanza ni pierde el requerimiento."""
+    categorias = {c.nombre: c for c in CategoriaRequerimiento.objects.all()}
+    try:
+        nombre, confianza = ia.clasificar(requerimiento.asunto, requerimiento.descripcion, list(categorias))
+    except ia.ErrorIA as e:
+        ia.log.warning("Requerimiento %s sin clasificar por IA: %s", requerimiento.pk, e)
+        requerimiento.ia_no_disponible = True          # solo para informar a quien lo pidió; no se guarda
+        return requerimiento
+    requerimiento.confianza_ia = round(confianza, 2)
+    if confianza >= UMBRAL_CONFIANZA:
+        requerimiento.categoria_requerimiento = categorias[nombre]
+        requerimiento.estado = "clasificado"
+    requerimiento.save(update_fields=["confianza_ia", "categoria_requerimiento", "estado"])
+    return requerimiento
+
+
+def crear_requerimiento(cliente, asunto, descripcion):
+    """CU-09: el cliente registra su consulta; se guarda siempre y luego se intenta clasificar."""
+    asunto, descripcion = asunto.strip(), descripcion.strip()
+    if not asunto or not descripcion:
+        raise ErrorDeNegocio("Indica el asunto y describe tu consulta.")
+    r = Requerimiento.objects.create(cliente=cliente, asunto=asunto[:150], descripcion=descripcion)
+    return clasificar_con_ia(r)
+
+
+def reintentar_ia(usuario, requerimiento_id):
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
+    return clasificar_con_ia(Requerimiento.objects.get(pk=requerimiento_id))
+
+
 def clasificar_manual(usuario, requerimiento_id, categoria_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")

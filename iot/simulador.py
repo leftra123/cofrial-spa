@@ -27,7 +27,8 @@ RUTA = [(-38.7359, -72.5904), (-38.7290, -72.6120), (-38.7480, -72.6300), (-38.7
 
 def conectar():
     dsn = (f"host={os.environ['DB_HOST']} port={os.environ.get('DB_PORT', '5432')} dbname={os.environ['DB_NAME']} "
-           f"user={os.environ['DB_USER']} password={os.environ['DB_PASSWORD']} connect_timeout=5")
+           f"user={os.environ['DB_USER']} password={os.environ['DB_PASSWORD']} connect_timeout=5 "
+           f"sslmode={os.environ.get('DB_SSLMODE', 'prefer')}")
     while True:
         try:
             con = psycopg.connect(dsn, autocommit=True)

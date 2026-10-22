@@ -5,6 +5,9 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from crm import servicios as crm
+from crm.models import Requerimiento
+
 from . import servicios as s
 
 
@@ -113,3 +116,18 @@ def cancelar(request, cliente, orden_id):
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
     return redirect("orden", orden_id=orden_id)
+
+
+@solo_clientes
+def soporte(request, cliente):
+    """CU-09: el cliente registra una consulta o reclamo; la IA la clasifica (RN-14) y llega a la bandeja del CRM."""
+    if request.method == "POST":
+        try:
+            r = crm.crear_requerimiento(cliente, request.POST.get("asunto", ""), request.POST.get("descripcion", ""))
+            messages.success(request, "Recibimos tu consulta. Te responderemos a la brevedad." if r.estado != "clasificado"
+                             else f"Recibimos tu consulta y la derivamos a «{r.categoria_requerimiento}».")
+            return redirect("soporte")
+        except s.ErrorDeNegocio as e:
+            _mostrar_errores(request, e)
+    return render(request, "pedidos/soporte.html", {
+        "requerimientos": Requerimiento.objects.filter(cliente=cliente).select_related("categoria_requerimiento").order_by("-creado_en")})

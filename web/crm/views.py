@@ -193,6 +193,22 @@ def requerimiento_clasificar(request, pk):
     return redirect("crm_requerimientos")
 
 
+@require_POST
+@con_rol(*COMERCIAL)
+def requerimiento_ia(request, pk):
+    try:
+        r = s.reintentar_ia(request.user, pk)
+        if r.estado == "clasificado":
+            messages.success(request, f"La IA lo clasificó como «{r.categoria_requerimiento}» (confianza {r.confianza_ia}).")
+        elif getattr(r, "ia_no_disponible", False):
+            messages.warning(request, "La IA no está disponible ahora (revisa la clave o la conexión). El requerimiento sigue sin clasificar: clasifícalo a mano.")
+        else:
+            messages.warning(request, "La IA no estuvo lo bastante segura (confianza bajo 0,60); clasifícalo a mano.")
+    except (ObjectDoesNotExist, *ERRORES):
+        messages.error(request, "No se pudo clasificar el requerimiento.")
+    return redirect("crm_requerimientos")
+
+
 @con_rol(*TODOS)
 def alertas(request):
     return render(request, "crm/alertas.html", _contexto(request, ordenes=s.ordenes_afectadas(request.user)))

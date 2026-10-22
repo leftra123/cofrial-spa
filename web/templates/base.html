@@ -25,6 +25,7 @@
       <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Catálogo</a>
       {% if menu.cliente %}<a href="/carrito/" {% if "/carrito/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito</a>{% endif %}
       {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Mis pedidos</a>{% endif %}
+      {% if menu.cliente %}<a href="/soporte/" {% if "/soporte/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-6.4A8 8 0 1121 12z"/></svg>Soporte</a>{% endif %}
       {% if menu.flota or menu.crm or menu.admin %}
       <div class="nav-etiqueta">Operación</div>
       {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% include "componentes/ico_camion.html" %}Flota</a>{% endif %}

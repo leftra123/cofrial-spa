@@ -75,3 +75,20 @@ El Hito 1 debe dejar un diseño que el Hito 2 pueda construir sin rehacerlo. Se 
 8. **Decidir el nivel de fidelidad** de los mockups: los wireframes cumplen la sección 3 del PDF; si el docente espera mockups de alta fidelidad por el calendario, habría que elevarlos.
 
 ## Notas del equipo
+
+
+## Estado de implementación del Hito 2 (verificado el 22-oct-2026)
+
+**Tabla 4**
+*Exigencias del Hito 2 frente a lo construido y verificado en `web/`, `iot/`, `grafana/` y `aws/`*
+
+| Exigencia | Evidencia | Estado |
+|---|---|---|
+| E-commerce conectado a la base: catálogo, B2B/B2C, carrito y órdenes | `web/catalogo`, `web/pedidos`; 50 pruebas automáticas; compra completa probada en navegador | Cubierto |
+| CRM: clientes, prospectos y seguimiento de pedidos web | `web/crm`; embudo, interacciones, pedido a nombre del cliente y alertas | Cubierto |
+| IoT con Docker, con los 6 campos exactos | `iot/simulador.py`; probado en contenedores contra una base limpia: tipos correctos y alerta coherente con el rango del camión | Cubierto en local; falta correrlo en la EC2 dedicada |
+| Dashboard en vivo que cruza ventas con alertas de frío | `grafana/`; las 12 consultas responden con datos reales; captura en `docs/capturas-visual/grafana-bi.png` | Cubierto en local |
+| IA gratuita integrada, con falla controlada | `web/crm/ia.py` (Gemini y respaldo Groq), formulario de Soporte, botón en el CRM, 11 pruebas con la API simulada | Implementada; **falta la clave** `GEMINI_API_KEY` y probarla en vivo con `probar_ia` y `evaluar_ia` |
+| EC2 y RDS funcionales y estables | `aws/` (compose por nodo, variables y guía); probado en local en modo producción | **Falta ejecutarlo en el Learner Lab** (requiere las credenciales de cada integrante) |
+
+*Nota.* Elaboración propia. «Cubierto en local» significa verificado sin AWS; la dimensión 1 del Hito 2 solo se logra al desplegar.

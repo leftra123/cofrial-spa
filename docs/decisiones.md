@@ -51,3 +51,9 @@ El scaffold está en `backend/` (Django 5.2, `psycopg` 3 y `python-dotenv`; conf
 - **Uso:** la pantalla `/flota/` consulta la API con **axios** (cargado por CDN, sin `node_modules`) cada 5 s, el mismo intervalo del simulador, y refresca los números sin recargar. Si la API falla, la página conserva los últimos datos.
 - **Por qué:** D-01 dejó a DRF como alternativa en empate técnico y anotó que la API "se puede exponer con Django REST Framework sin rehacer el modelo". Se hizo así: el modelo no cambia. La lógica de armado de datos quedó en `web/flota/servicios.py`, compartida por la pantalla y la API.
 - **Dos aplicaciones en el repositorio:** `backend/` (scaffold y portal de otras sesiones) y `web/` (CRM, flota, rediseño y pruebas) conviven hasta que el equipo decida cuál queda. Para correr `web/` con el simulador y Grafana: `docker compose -f docker-compose.web.yml --env-file .env up`, copiando antes `.env.web.example` a `.env`.
+
+
+## IA y despliegue (22-oct-2026)
+- **IA (D-06):** Gemini (free tier) como proveedor principal y Groq de respaldo, con solo la biblioteca estándar (`urllib`), sin dependencias nuevas. Modelo configurable con `GEMINI_MODEL` porque la oferta gratuita de Google cambia; no se fijó en código. Cumple RN-14: confianza guardada, umbral 0,60, tiempo máximo de 5 s y, ante cualquier falla, el requerimiento queda «sin clasificar» y nunca se pierde.
+- **Cómo se prueba:** `manage.py probar_ia` verifica la clave contra la API real y `manage.py evaluar_ia` mide el acierto sobre 20 mensajes etiquetados frente a la meta de 85 % de CU-09. **Ninguno de los dos se ejecutó todavía con una clave real**; las pruebas automáticas usan la API simulada.
+- **Despliegue:** `aws/` separa el compose en EC2 web e IoT, con `DB_SSLMODE=require` contra RDS. Se probó en local; falta ejecutarlo en el Learner Lab.

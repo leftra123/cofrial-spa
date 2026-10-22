@@ -10,7 +10,32 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 | EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 3 contenedores de camiones |
 | RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, Single-AZ | Base `cofrial` |
 
-## Pasos
+## Opción rápida: script de aprovisionamiento
+
+`aws/provision.sh` crea todo lo de abajo (VPC, subredes, Security Groups encadenados, RDS, las dos EC2 con IP elástica y los contenedores arrancando solos). Genera las contraseñas al azar y las guarda en `aws/.estado/` (ignorado por git). **Está escrito pero no se ha ejecutado contra AWS**; se probó el flujo y los scripts de arranque con un reemplazo del comando `aws`, que no valida la semántica real de AWS. Ejecútalo la primera vez leyendo cada mensaje.
+
+```bash
+# 1. Learner Lab > AWS Details > AWS CLI: copiar las tres variables y exportarlas
+export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=...
+export GEMINI_API_KEY=...        # opcional aquí; también se puede agregar después (ver «Activar la IA»)
+bash aws/provision.sh            # ~10 minutos (RDS es lo más lento)
+bash aws/provision.sh destruir   # borra todo al terminar
+```
+
+Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), parámetro público de SSM para la AMI de Ubuntu 24.04 y que el laboratorio permite crear VPC, RDS y EC2 (no crea roles de IAM). Si algo de esto no se cumple, usa los pasos manuales de más abajo. Las claves quedan también en el user-data de la EC2: aceptable para un laboratorio, no para producción (allí iría Secrets Manager).
+
+## Activar la IA (clave gratuita de Gemini)
+
+1. En https://aistudio.google.com/apikey crear una clave (cuenta Google, plan gratuito, sin tarjeta). **No la pegues en el chat ni en el repositorio.**
+2. Local: ponerla en `.env` como `GEMINI_API_KEY=...`. En AWS, en la EC2 web:
+   ```bash
+   cd /opt/cofrial && nano .env        # completar GEMINI_API_KEY y, si hace falta, GEMINI_MODEL
+   docker compose -f aws/docker-compose.web.yml --env-file .env up -d
+   ```
+3. Verificar con la API real: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` debe responder «IA operativa». Si dice que no respondió, el mensaje trae la causa (clave, modelo no disponible o límite de uso). El modelo se cambia con `GEMINI_MODEL`.
+4. Medir el acierto (meta del informe: más de 85 %): `... exec web python manage.py evaluar_ia`.
+
+## Pasos manuales
 
 1. **Red.** VPC con una subred pública y dos privadas (RDS exige un grupo de subredes con dos zonas), Internet Gateway y tabla de ruteo de la subred pública.
 2. **Security Groups encadenados** (no abrir RDS a internet):

@@ -6,6 +6,8 @@
 
 ## Criterios
 
+Cada decisión de herramienta se evalúa con los mismos seis criterios, definidos y ponderados antes de puntuar. Las alternativas se califican de 1 a 5 y el puntaje final es el promedio ponderado. Un puntaje de 2 o menos en el cumplimiento de la pauta es eliminatorio: la alternativa se descarta aunque sume más puntos en el resto.
+
 **Tabla 1**
 *Criterios de evaluación y ponderación aplicados a todas las decisiones*
 
@@ -160,7 +162,7 @@
 
 *Nota.* Elaboración propia. Borrador pendiente de validación del equipo. En C1 se evaluó si genera un diagrama de topología con los íconos oficiales de AWS, que pide la rúbrica H1-D3. En C5 todas puntúan 5 porque ninguna depende de los permisos del Learner Lab. El puntaje de archify en C1 se verificó probándolo con el mismo diagrama: no incluye íconos oficiales de AWS y solo agrupa por región y Security Group, sin cajas de VPC, subredes ni zonas de disponibilidad. A cambio entrega un HTML interactivo (zoom, modo claro y oscuro, exportar) que pasó sus 9 validaciones de calidad.
 
-**Conclusión.** draw.io gana porque es gratuito, trae la librería oficial de íconos AWS y guarda el diagrama como archivo `.drawio` editable que se versiona en git, de modo que cualquiera del equipo lo corrige sin depender de Claude. Mermaid se descarta por no tener íconos oficiales de AWS, lo que lo deja bajo el mínimo de C1. Lucidchart pierde por el límite de su plan gratuito. archify queda como complemento para animar el flujo en la defensa del Hito 2.
+**Conclusión.** draw.io gana porque es gratuito, trae la librería oficial de íconos AWS y guarda el diagrama como archivo `.drawio` editable que se versiona en git, de modo que cualquiera del equipo lo corrige sin depender de la herramienta que lo generó. Mermaid se descarta por no tener íconos oficiales de AWS, lo que lo deja bajo el mínimo de C1. Lucidchart pierde por el límite de su plan gratuito. archify queda como complemento para animar el flujo en la defensa del Hito 2.
 
 ## Síntesis de decisiones
 

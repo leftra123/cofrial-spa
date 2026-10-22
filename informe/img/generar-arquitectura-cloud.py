@@ -29,7 +29,7 @@ def edge(id,src,tgt,value="",ex=None,en=None,dashed=False,color=None,straight=Fa
     cells.append(f'<mxCell id="{id}" value={quoteattr(value)} style={quoteattr(st)} edge="1" parent="1" source="{src}" target="{tgt}"><mxGeometry relative="1" as="geometry" /></mxCell>')
 
 add("bg","","rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=none;",0,0,2400,1400)
-add("title","<b>Cofrial SpA - Arquitectura cloud del prototipo</b><br>Consultora TD-TIEL15 | 2026-10-12 | v0.1 borrador",
+add("title","<b>Cofrial SpA - Arquitectura cloud del prototipo</b><br>Equipo consultor TD-TIEL15 | Hito 1 | Octubre de 2026",
     "text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=14;spacing=8;",40,30,620,60)
 # actores
 actors=[("a_b2c","Cliente B2C<br>(portal web)"),("a_b2b","Cliente B2B<br>(lista institucional)"),("a_ven","Vendedor<br>(CRM)"),("a_des","Despachador<br>(torre de control)"),("a_ger","Gerencia<br>(dashboard BI)")]

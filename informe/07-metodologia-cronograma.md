@@ -2,6 +2,11 @@
 
 ## Metodología
 
+El equipo adopta Kanban (Anderson, 2010) como método de trabajo diario: el flujo se hace visible en un tablero y el trabajo en curso se limita. Los dos hitos de la pauta funcionan como cierres de iteración, de modo que se toma de Scrum solo la idea de revisar y ajustar en cada uno.
+
+**Tabla 1**
+*Enfoques de metodología considerados*
+
 | Enfoque | Fortaleza | Limitación | Decisión |
 |---|---|---|---|
 | Kanban | Flujo visible y continuo; encaja con un tablero y dos personas | No fija iteraciones | Adoptada para el día a día |
@@ -14,6 +19,9 @@ Nota. Elaboración propia.
 
 Tablero: https://trello.com/b/yrKII80H/cofrial-spa-transformaci%C3%B3n-digital
 
+**Tabla 2**
+*Listas del tablero de Trello y su uso*
+
 | Lista | Uso |
 |---|---|
 | Inicio del proyecto | Kickoff, roles, herramientas |
@@ -22,13 +30,16 @@ Tablero: https://trello.com/b/yrKII80H/cofrial-spa-transformaci%C3%B3n-digital
 | Hito 2 · Despliegue | Backlog del prototipo |
 | En curso / En revisión / Terminado | Flujo Kanban |
 
-Nota. Elaboración propia. Para el informe sirve una captura del tablero como figura de evidencia de gestión.
+Nota. Elaboración propia.
 
 ## Herramientas de gestión evaluadas
 
+**Tabla 3**
+*Herramientas de gestión evaluadas*
+
 | Herramienta | Fortaleza | Limitación | Decisión |
 |---|---|---|---|
-| Trello | Gratis, simple, lo conocen ambos, se integra con Claude | Sin Gantt nativo en el plan gratuito | Adoptada |
+| Trello | Gratis, simple, lo conocen ambos, se integra con asistentes de IA | Sin Gantt nativo en el plan gratuito | Adoptada |
 | GitHub Projects | Vinculado al código | Menos cómodo para tareas del informe | Complementaria (issues del código) |
 | Jira | Muy completo | Curva de aprendizaje alta para dos personas | Descartada |
 | Notion | Flexible | Gestión de tareas menos directa | Descartada |
@@ -36,6 +47,9 @@ Nota. Elaboración propia. Para el informe sirve una captura del tablero como fi
 Nota. Elaboración propia.
 
 ## Cronograma (base para la carta Gantt)
+
+**Tabla 4**
+*Cronograma de actividades*
 
 | Actividad | Responsable | Inicio | Término | Semana |
 |---|---|---|---|---|
@@ -62,9 +76,19 @@ Nota. Elaboración propia.
 | Pruebas integrales y ensayo de defensa | Ambos | 10-nov | 11-nov | S5 |
 | Entrega Hito 2 y defensa | Ambos | 12-nov | 12-nov | S5 |
 
-Nota. Elaboración propia. La carta Gantt se genera con matplotlib a partir de esta tabla.
+Nota. Elaboración propia. La carta Gantt de la Figura 1 se genera a partir de esta tabla.
+
+**Figura 1**
+*Carta Gantt del proyecto*
+
+![Carta Gantt del proyecto](img/gantt.png)
+
+*Nota.* Elaboración propia a partir del cronograma de actividades. El color indica quién es responsable de cada actividad; las líneas rojas marcan los dos hitos de entrega.
 
 ## Equipo y matriz RACI
+
+**Tabla 5**
+*Matriz de responsabilidades (RACI)*
 
 | Actividad | Eric Aguayo Quintriqueo | Sergio Vásquez Marimán |
 |---|---|---|
@@ -80,6 +104,9 @@ Nota. R: responsable, A: aprueba, C: consultado, I: informado. Elaboración prop
 
 ## Matriz de riesgos
 
+**Tabla 6**
+*Matriz de riesgos del proyecto*
+
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|
 | La sesión del Learner Lab se cierra y detiene las instancias | Alta | Alto | Servicios con reinicio automático; guion para levantar todo en menos de 10 minutos antes de la defensa |
@@ -88,5 +115,7 @@ Nota. R: responsable, A: aprueba, C: consultado, I: informado. Elaboración prop
 | La API de IA gratuita alcanza su límite | Media | Medio | Manejo de error y una segunda API de respaldo (ver `08-herramientas.md`) |
 | Créditos de AWS Academy insuficientes | Baja | Alto | Instancias pequeñas y apagarlas al terminar cada sesión |
 | Errores de normalización en el MER | Media | Alto | Revisión cruzada contra la checklist de 3FN antes del 27-oct |
+| Imágenes Docker construidas en un Mac con chip Apple no corren en las EC2, que son x86 | Media | Alto | Construir con `--platform linux/amd64` y probar el contenedor antes de desplegar |
+| Diferencias entre macOS y Linux: mayúsculas en nombres de archivo, puertos ocupados y versiones de Python o PostgreSQL | Media | Medio | Desarrollar y probar dentro de contenedores con las mismas versiones que en AWS; nombrar los archivos en minúsculas |
 
 Nota. Elaboración propia.

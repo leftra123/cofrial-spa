@@ -27,10 +27,15 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Se redactan los borradores de D4: canales (`04c`), CRM (`04d`) y casos de uso (`06`) con wireframes, user journeys, arquitectura funcional, pipeline y especificaciones.
 - Se verifica el repositorio contra el PDF original de la pauta (`09-verificacion-pauta.md`): las cuatro dimensiones del Hito 1 tienen contenido que responde al criterio; la brecha principal es armar el informe único.
 
+## 2026-10-16 (informe en Word)
+- Se arma el informe único del Hito 1 en Word con formato APA 7 (`informe/entrega/Informe_Hito1_Cofrial_SpA.docx`) y su versión en PDF: portada, índices, resumen ejecutivo, glosario, 13 secciones, conclusiones, referencias y dos anexos. Se genera con `informe/exportar/exportar-informe.js` a partir de los archivos `.md`.
+- Se verifican en línea el artículo 68 del Reglamento Sanitario de los Alimentos y la función `CompositePrimaryKey` de Django 5.2, y se agregan 11 referencias.
+- Se genera la carta Gantt desde el cronograma (`informe/img/generar-gantt.py`).
+
 ## 2026-10-20 a 2026-10-22
 - Rediseño visual de la aplicación (`web/`): barra lateral, tarjetas, chips de estado, filtros con contador en Mis pedidos y CRM unificado. Pantalla de flota con tarjetas por camión, viajes activos y actualización en vivo (API con Django REST Framework y axios). Auditoría con siete roles: se corrigió el menú por rol, las páginas 403 y 404 y el favicon.
-- La aplicación convive en el repositorio con `backend/` (portal de otras sesiones); queda por decidir cuál es la oficial. Ante conflictos del informe se tomó la versión de `main`.
+- La aplicación convive en el repositorio con `backend/` (portal de otras sesiones); queda por decidir cuál es la oficial. El informe se reconstruyó con una fusión de tres vías entre `main` y las versiones desarrolladas que no estaban en GitHub (secciones 01, 02, 03, 04a, 05 y 06, carta Gantt, íconos de AWS y plan de despliegue); una fusión anterior había dejado en `main` borradores tempranos más cortos de esas secciones.
 - IA: clasificación de requerimientos con Gemini (RN-14, CU-09), formulario de Soporte en el portal y botón en el CRM. Medición con la API real: 90 % de acierto. Se corrigió el modelo por defecto, que estaba retirado, y se amplió el tiempo máximo de 5 a 12 segundos.
-- Despliegue en AWS Academy con `aws/provision.sh`: VPC, RDS PostgreSQL, EC2 web con IP elástica y EC2 IoT dedicada. Verificación de punta a punta sobre AWS (compras, CRM, flota, tablero de BI e IA). Desviaciones del diseño en la Tabla 10 de `03-arquitectura-cloud.md`.
+- Despliegue en AWS Academy con `aws/provision.sh`: VPC, RDS PostgreSQL, EC2 web con IP elástica y EC2 IoT dedicada. Verificación de punta a punta sobre AWS (compras, CRM, flota, tablero de BI e IA). Desviaciones del diseño en la Tabla 3 de `03-arquitectura-cloud.md`.
 - Hallazgos del proceso: el terminal del laboratorio usa un rol sin permisos para crear recursos; los parámetros públicos de SSM están bloqueados; Grafana no admite `sslmode=prefer`; un archivo de ejemplo de variables quedaba oculto por el `.gitignore`.
 - Decisiones registradas en `docs/decisiones.md` (capa visual, API, IA y despliegue).

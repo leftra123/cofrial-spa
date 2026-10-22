@@ -130,7 +130,7 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 | RN-07 | **Estados y cancelación.** La orden avanza según la Figura 9. Se puede cancelar antes de «Despachada»; el cliente solo mientras esté «Recibida», y el vendedor hasta «En preparación». Cancelar repone el stock. | W5, W6 |
 | RN-08 | **Compra recurrente.** «Repetir mi último pedido» copia al carrito las líneas de la última orden no cancelada; las cantidades se ajustan al stock disponible y se avisa de cada ajuste. | W2 |
 
-*Nota.* Elaboración propia. Las reglas del CRM (RN-09 en adelante) están en `04d-crm.md`.
+*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15) están en `04d-crm.md`.
 
 ## Pendiente
 

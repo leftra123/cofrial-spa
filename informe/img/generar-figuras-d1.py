@@ -349,7 +349,7 @@ PROCESOS["p3-tobe"] = dict(
 
 
 def exportar_drawio(archivo):
-    subprocess.run([DRAWIO, "-x", "-f", "png", "-e", "-b", "10", "-s", "1", "-o", str(archivo.with_suffix(".drawio.png")), str(archivo)],
+    subprocess.run([DRAWIO, "-x", "-f", "png", "-e", "-b", "10", "-s", "2", "-o", str(archivo.with_suffix(".drawio.png")), str(archivo)],
                    check=True, capture_output=True)
 
 

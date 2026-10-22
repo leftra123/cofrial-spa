@@ -14,6 +14,7 @@ El modelo tiene **25 tablas** en cinco módulos: geografía y cadena de frío, c
 - Un despacho (viaje de un camión) lleva varias órdenes; una orden va en un solo despacho.
 - La telemetría llega cada 5 segundos por camión (estimación: unas 864 000 lecturas diarias con 50 camiones).
 - El pago queda fuera del alcance: B2B con número de orden de compra, B2C con pago simulado.
+- La implementación en Django usa `CompositePrimaryKey` para las tres tablas de clave compuesta, función disponible desde Django 5.2 (Django Software Foundation, 2025); en versiones anteriores se usa una clave autogenerada con restricción de unicidad sobre el par, que mantiene la 3FN.
 
 ## Diagrama entidad-relación
 
@@ -195,6 +196,8 @@ erDiagram
 
 ## Normalización
 
+La normalización sigue el modelo relacional propuesto por Codd (1970): cada tabla se revisa contra la primera, segunda y tercera forma normal, y luego contra la forma de Boyce-Codd.
+
 ### Resultado por forma normal
 
 - **Primera forma normal (1FN).** Todos los campos son atómicos y no hay grupos repetitivos: los productos de un carrito o de una orden están en tablas de líneas (`carrito_item`, `orden_item`), no en columnas como `producto1`, `producto2`. Cada tabla tiene clave primaria.
@@ -270,7 +273,7 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 - En un requerimiento, si `orden_id` está presente, la orden debe ser del mismo `cliente_id`. Es una dependencia condicional (solo aplica cuando la orden no es nula), por eso no se trata como dependencia funcional.
 - Al ganar un prospecto se crea el cliente, se completa `prospecto.cliente_id` y la etapa pasa a "Cliente ganado".
 - Al perder un prospecto, la etapa «Perdido» exige `motivo_perdida` y `cerrado_en`; la base solo impide un motivo sin fecha de cierre, por lo que la exigencia completa se valida en la aplicación (RN-11 de `04d-crm.md`).
-- La clasificación de un requerimiento no es obligatoria: si la IA no responde, queda `sin_clasificar` (caso de uso CU-09).
+- La clasificación de un requerimiento no es obligatoria: si la IA no responde, queda `sin_clasificar`.
 
 ## Cómo responde el modelo a la rúbrica y a los casos de uso
 
@@ -294,7 +297,7 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 
 ## Validación realizada
 
-El esquema se probó en PostgreSQL 16 (contenedor temporal):
+El esquema (archivo `esquema.sql` del repositorio del proyecto; Aguayo Quintriqueo y Vásquez Marimán, 2026) se probó en PostgreSQL 16, en un contenedor temporal:
 
 - El script `esquema.sql` crea sin errores las 25 tablas y 2 vistas.
 - `datos_prueba.sql` carga datos ficticios coherentes (hospital B2B, cliente B2C, camiones, órdenes, lecturas con una alerta, pipeline y un requerimiento).

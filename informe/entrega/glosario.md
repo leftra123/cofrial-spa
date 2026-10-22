@@ -1,0 +1,34 @@
+- **3FN:** tercera forma normal; regla de diseño de bases de datos que evita datos repetidos y dependencias entre atributos que no son clave.
+- **API:** interfaz de programación de aplicaciones (*Application Programming Interface*); forma en que un programa ofrece sus funciones a otro.
+- **AS-IS:** situación actual de un proceso, antes de la propuesta.
+- **AWS:** Amazon Web Services; plataforma de servicios en la nube.
+- **AZ:** zona de disponibilidad (*Availability Zone*); centro de datos aislado dentro de una región de AWS.
+- **B2B:** *Business to Business*; venta a empresas e instituciones.
+- **B2C:** *Business to Consumer*; venta a personas.
+- **BCNF:** forma normal de Boyce-Codd; versión más estricta de la 3FN.
+- **BI:** *Business Intelligence*; análisis de datos para apoyar decisiones.
+- **BPMN:** *Business Process Model and Notation*; notación estándar para modelar procesos.
+- **Cadena de frío:** conservación de un producto a temperatura controlada desde su origen hasta el cliente.
+- **CIDR:** *Classless Inter-Domain Routing*; notación para indicar el rango de direcciones de una red, por ejemplo `10.0.0.0/16`.
+- **CRM:** *Customer Relationship Management*; sistema para gestionar clientes, prospectos y ventas.
+- **Docker y Docker Compose:** tecnología de contenedores, que empaqueta una aplicación con lo que necesita para ejecutarse, y herramienta para definir y levantar varios contenedores juntos.
+- **EC2:** Amazon Elastic Compute Cloud; servidores virtuales en AWS.
+- **Grafana:** plataforma gratuita para visualizar datos en paneles que se actualizan en vivo.
+- **HTTP y HTTPS:** protocolo de la web sin cifrar y con cifrado, respectivamente.
+- **IA:** inteligencia artificial.
+- **IGW:** *Internet Gateway*; puerta de entrada y salida a internet de una red en AWS.
+- **IoT:** internet de las cosas; dispositivos que miden y envían datos de forma automática.
+- **Learner Lab:** entorno de AWS Academy para estudiantes, con servicios y permisos acotados.
+- **MER:** modelo entidad-relación; diagrama de las tablas de una base de datos y sus relaciones.
+- **NACL:** *Network Access Control List*; lista de control de acceso a nivel de subred.
+- **ORM:** *Object-Relational Mapping*; técnica que permite manejar las tablas de una base de datos como objetos del programa.
+- **Pipeline comercial:** embudo de ventas; etapas por las que avanza un prospecto hasta ganarse o perderse.
+- **RDS:** Amazon Relational Database Service; base de datos relacional gestionada por AWS.
+- **Security Group:** cortafuegos virtual que define qué tráfico entra y sale de un recurso.
+- **Shadow IT:** uso de herramientas no oficiales, como cuentas personales de WhatsApp o planillas, para tareas de la empresa.
+- **SKU:** *Stock Keeping Unit*; código único de un producto.
+- **SQL:** *Structured Query Language*; lenguaje para consultar y modificar bases de datos relacionales.
+- **Telemetría:** medición y envío automático de datos a distancia, por ejemplo la temperatura de un camión.
+- **TO-BE:** situación propuesta de un proceso, después de la solución.
+- **UML:** *Unified Modeling Language*; lenguaje gráfico estándar para modelar sistemas.
+- **VPC:** *Virtual Private Cloud*; red virtual privada propia dentro de AWS.

@@ -1,0 +1,6 @@
+{
+  "name": "exportar-informe",
+  "private": true,
+  "description": "Genera el informe del Hito 1 en Word (APA 7) a partir de los archivos .md de informe/",
+  "dependencies": { "docx": "^9.0.0" }
+}

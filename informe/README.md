@@ -31,4 +31,4 @@ Cada archivo es la materia prima de una sección del informe: datos del caso, qu
 | XIII | Conclusiones | — | se arma al final | Ambos | Pendiente |
 | XIV | Referencias (APA 7, lista única) | — | `99-bitacora.md` registra las fuentes | Ambos | Pendiente |
 
-`09-verificacion-pauta.md` contrasta el repositorio con el PDF del curso y lista las brechas para llegar a «Logrado». `99-bitacora.md` registra avances, acuerdos y fuentes consultadas.
+`entrega/` contiene el informe único en Word y PDF y los textos que lo completan (resumen, glosario, introducción, conclusiones, referencias y anexo); `exportar/` tiene el script que lo arma (`cd informe/exportar && npm install && node exportar-informe.js`). `09-verificacion-pauta.md` contrasta el repositorio con el PDF del curso y lista las brechas para llegar a «Logrado». `99-bitacora.md` registra avances, acuerdos y fuentes consultadas.

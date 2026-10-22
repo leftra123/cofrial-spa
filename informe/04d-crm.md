@@ -17,16 +17,16 @@ El CRM no es un sistema aparte: es una vista de la misma base de datos que usa e
 ## Módulos
 
 **Tabla 1**
-*Módulos del CRM, usuarios, datos y casos de uso*
+*Módulos del CRM, usuarios, datos y pantallas*
 
-| Módulo | Usuarios | Qué hace | Tablas principales | Casos de uso | Pantalla |
-|---|---|---|---|---|---|
-| Clientes | Vendedor | Ficha del cliente, historial de pedidos e interacciones, alertas de frío que lo afectan | `cliente`, `direccion`, `interaccion`, `v_orden` | CU-06 | W8 |
-| Prospectos | Vendedor | Embudo comercial por etapas, con el monto estimado de cada oportunidad | `prospecto`, `etapa_pipeline`, `interaccion` | CU-07 | W7 |
-| Pedidos web | Vendedor | Seguimiento de las órdenes del portal: estado, despacho y total | `orden`, `orden_item`, `estado_orden`, `despacho` | CU-08 | W8 |
-| Requerimientos | Vendedor | Bandeja de consultas y reclamos clasificados por IA | `requerimiento`, `categoria_requerimiento` | CU-09 | W9 |
-| Alertas de frío | Despachador, vendedor | Pedidos afectados por una ruptura de frío durante el viaje | `telemetria`, `despacho`, `orden` | CU-11, CU-12 | W8 |
-| Reportes | Gerencia | Conversión, valor del embudo, ventas por canal | `prospecto`, `v_orden`, `v_orden_total` | CU-13 | Grafana |
+| Módulo | Usuarios | Qué hace | Tablas principales | Pantalla |
+|---|---|---|---|---|
+| Clientes | Vendedor | Ficha del cliente, historial de pedidos e interacciones, alertas de frío que lo afectan | `cliente`, `direccion`, `interaccion`, `v_orden` | W8 |
+| Prospectos | Vendedor | Embudo comercial por etapas, con el monto estimado de cada oportunidad | `prospecto`, `etapa_pipeline`, `interaccion` | W7 |
+| Pedidos web | Vendedor | Seguimiento de las órdenes del portal: estado, despacho y total | `orden`, `orden_item`, `estado_orden`, `despacho` | W8 |
+| Requerimientos | Vendedor | Bandeja de consultas y reclamos clasificados por IA | `requerimiento`, `categoria_requerimiento` | W9 |
+| Alertas de frío | Despachador, vendedor | Pedidos afectados por una ruptura de frío durante el viaje | `telemetria`, `despacho`, `orden` | W8 |
+| Reportes | Gerencia | Conversión, valor del embudo, ventas por canal | `prospecto`, `v_orden`, `v_orden_total` | Grafana |
 
 *Nota.* Elaboración propia. Las pantallas W7 a W9 corresponden a los wireframes de esta sección; W1 a W6 están en `04c-canales-b2b-b2c.md`.
 
@@ -85,10 +85,20 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 | RN-11 | **Cierre.** Perder un prospecto exige un motivo y registra la fecha de cierre. Ganarlo crea el cliente (tipo B2B, con la lista institucional y el mismo vendedor) y vincula el prospecto a él. | Se aprende de las ventas perdidas; la conversión se puede medir |
 | RN-12 | **Registro de interacciones.** Toda llamada, correo o reunión con un prospecto o cliente se registra en su ficha. «Si no está en el CRM, no ocurrió.» | Historial en la empresa, no en el celular |
 | RN-13 | **Alerta de frío.** Cuando una lectura trae `alerta_ruptura_frio` durante el viaje de un despacho, sus órdenes se consideran afectadas y aparecen destacadas en la ficha del cliente y en el seguimiento del pedido. | El vendedor actúa antes del reclamo |
-| RN-14 | **Clasificación con IA** (implementada en `web/crm/ia.py` y `web/crm/servicios.py`; umbral 0,60 en `UMBRAL_CONFIANZA`). Cada requerimiento se clasifica con IA y se guarda con su confianza. Si la API falla o la confianza es menor que 0,60 (umbral supuesto), queda marcado para revisión manual. El servicio nunca pierde un requerimiento. | La IA ayuda, la persona decide |
+| RN-14 | **Clasificación con IA.** Cada requerimiento se clasifica con IA y se guarda con su confianza. Si la API falla o la confianza es menor que 0,60 (umbral supuesto), queda marcado para revisión manual. El servicio nunca pierde un requerimiento. | La IA ayuda, la persona decide |
 | RN-15 | **Pedido a nombre del cliente.** Durante la transición, el vendedor puede generar el pedido desde la ficha del cliente y debe registrar la interacción (llamada o correo) que lo originó. | Los clientes que aún llaman quedan dentro del sistema |
 
 *Nota.* Elaboración propia. Las reglas del portal (RN-01 a RN-08) están en `04c-canales-b2b-b2c.md`.
+
+## Verificación de la regla RN-14 en el prototipo
+
+La regla de clasificación con IA se implementó y se midió con la interfaz real de Gemini (Google, s.f.), en la capa gratuita y sobre la instalación desplegada en AWS Academy. El cliente registra su consulta en la sección de soporte del portal; el sistema la guarda siempre y consulta a la IA, que devuelve una categoría y una confianza. Con confianza de 0,60 o más el requerimiento queda clasificado y aparece en el CRM con su categoría y la confianza de la IA; si es menor o la API falla, queda sin clasificar y el vendedor lo resuelve a mano o reintenta con la IA.
+
+- **Acierto medido: 90 % (18 de 20 mensajes etiquetados)**, sobre la meta de más de 85 %. Las 18 respuestas recibidas fueron correctas; las otras dos no obtuvieron respuesta del proveedor (una por demora y otra por saturación), por lo que el sistema las habría dejado sin clasificar. El margen es estrecho y depende de la disponibilidad de un servicio gratuito, razón por la cual se contempla un segundo proveedor de respaldo.
+- **Tiempo de respuesta: de 4 a 7 segundos por consulta.** El diseño inicial fijaba un máximo de cinco segundos, plazo con el que casi todas las consultas habrían quedado sin clasificar; el prototipo concede doce segundos en total.
+- **Categorías implementadas:** consulta de producto, reclamo por temperatura, atraso en entrega, facturación y otro.
+- **Alcance:** el enrutamiento automático por área y el aviso al supervisor cuando la IA falla no se implementaron; hoy existe una bandeja única de requerimientos en el CRM, que el vendedor ve y gestiona.
+- **Una lección sobre la capa gratuita.** El primer modelo elegido ya no estaba disponible para cuentas nuevas y los vigentes se consumen con otra interfaz. Por eso el nombre del modelo se configura y se prueba en cascada en lugar de fijarse en el código.
 
 ## Wireframes del CRM
 

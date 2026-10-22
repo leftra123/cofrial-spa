@@ -84,7 +84,7 @@ El Hito 1 debe dejar un diseño que el Hito 2 pueda construir sin rehacerlo. Se 
 
 | Exigencia | Evidencia | Estado |
 |---|---|---|
-| EC2 y RDS funcionales y estables | `aws/`; instalación creada con `provision.sh`: EC2 web, EC2 IoT y RDS PostgreSQL 16 respondiendo; ver Tabla 10 de `03-arquitectura-cloud.md` | Cubierto |
+| EC2 y RDS funcionales y estables | `aws/`; instalación creada con `provision.sh`: EC2 web, EC2 IoT y RDS PostgreSQL 16 respondiendo; ver Tabla 3 de `03-arquitectura-cloud.md` | Cubierto |
 | E-commerce conectado a la base: catálogo, B2B/B2C, carrito y órdenes | `web/catalogo`, `web/pedidos`; compra B2B y B2C probada sobre AWS; 57 pruebas automáticas | Cubierto |
 | CRM: clientes, prospectos y seguimiento de pedidos web | `web/crm`; embudo, interacciones, pedido a nombre del cliente y alertas, probados sobre AWS | Cubierto |
 | IoT con Docker, con los 6 campos exactos | `iot/simulador.py`; contenedores en la EC2 dedicada insertando en RDS; tipos correctos y alerta coherente con el rango | Cubierto |
@@ -95,4 +95,4 @@ El Hito 1 debe dejar un diseño que el Hito 2 pueda construir sin rehacerlo. Se 
 
 **Pendientes del Hito 2:** configurar Groq como respaldo de la IA (aumentaría la disponibilidad), preparar el guion de la defensa y ensayar el apagado y encendido del laboratorio.
 
-**Pendientes del Hito 1** (siguen vigentes, ver sección 5): armar el informe único, la revisión de Sergio sobre 03, 04a, 04b y 08, votar las decisiones D-05 a D-08 y quitar las marcas de borrador del diagrama. Además, `04a-diagrama-arquitectura.md` describe el diseño; las diferencias con lo desplegado están en la Tabla 10 de `03-arquitectura-cloud.md` y deberían reflejarse en el diagrama final.
+**Pendientes del Hito 1** (siguen vigentes, ver sección 5): armar el informe único, la revisión de Sergio sobre 03, 04a, 04b y 08, votar las decisiones D-05 a D-08 y quitar las marcas de borrador del diagrama. Además, `04a-diagrama-arquitectura.md` describe el diseño; las diferencias con lo desplegado están en la Tabla 3 de `03-arquitectura-cloud.md` y deberían reflejarse en el diagrama final.

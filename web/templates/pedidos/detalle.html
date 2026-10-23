@@ -17,13 +17,13 @@
 <div class="tarjeta-ui">
   <h2>Seguimiento del envío</h2>
   {% with f=orden.estado_orden.orden_flujo %}
-  <div class="pasos">
-    <div class="paso {% if f >= 1 %}hecho{% endif %}{% if f == 1 %} actual{% endif %}">Recibida</div>
-    <div class="paso {% if f >= 2 %}hecho{% endif %}{% if f == 2 %} actual{% endif %}">Confirmada</div>
-    <div class="paso {% if f >= 3 %}hecho{% endif %}{% if f == 3 %} actual{% endif %}">En preparación</div>
-    <div class="paso {% if f >= 4 %}hecho{% endif %}{% if f == 4 %} actual{% endif %}">Despachada</div>
-    <div class="paso {% if f >= 5 %}hecho{% endif %}{% if f == 5 %} actual{% endif %}">Entregada</div>
-  </div>
+  <ol class="pasos" style="list-style:none;padding:0" aria-label="Etapas del pedido">
+    <li class="paso {% if f >= 1 %}hecho{% endif %}{% if f == 1 %} actual{% endif %}" {% if f == 1 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Recibida<small>{{ orden.creada_en|date:"d/m H:i" }}</small></li>
+    <li class="paso {% if f >= 2 %}hecho{% endif %}{% if f == 2 %} actual{% endif %}" {% if f == 2 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Confirmada</li>
+    <li class="paso {% if f >= 3 %}hecho{% endif %}{% if f == 3 %} actual{% endif %}" {% if f == 3 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>En preparación</li>
+    <li class="paso {% if f >= 4 %}hecho{% endif %}{% if f == 4 %} actual{% endif %}" {% if f == 4 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Despachada</li>
+    <li class="paso {% if f >= 5 %}hecho{% endif %}{% if f == 5 %} actual{% endif %}" {% if f == 5 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Entregada</li>
+  </ol>
   {% endwith %}
 </div>
 {% endif %}
@@ -31,17 +31,22 @@
 <div class="seg-grid" id="seg" data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     <h2>Dónde va su pedido</h2>
-    <p class="sub" style="margin:2px 0 10px">Camión {{ seg.camion_id }} · <span id="seg-hace">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span></p>
-    <div id="mapa" class="mapa" role="img" aria-label="Posición del camión y ruta a su dirección"></div>
-    <p class="ruta-info" id="ruta-info"></p>
+    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} · <span id="seg-hace">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span></p>
+    <div style="position:relative">
+      <div id="mapa" class="mapa alto" role="img" aria-label="Posición del camión y ruta a su dirección"></div>
+      <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
+    </div>
+    <p class="ruta-info" id="ruta-info" aria-live="polite"></p>
+    <ul class="leyenda"><li><span class="pt" style="background:#1D4ED8" aria-hidden="true">C</span>Camión</li><li><span class="pt" style="background:#16A34A" aria-hidden="true">D</span>Su dirección</li><li><span class="pt" style="background:#1D4ED8;border-radius:2px;height:4px;width:22px" aria-hidden="true"></span>Ruta</li></ul>
   </div>
   <div class="tarjeta-ui">
     <h2>Temperatura de la cámara</h2>
-    <div class="temp-grande"><b id="seg-temp">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}—{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}cancelado{% else %}entregado{% endif %}" id="seg-estado">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% else %}Dentro de rango{% endif %}</span></div>
-    <p class="sub">Rango de conservación: {{ seg.banda.min|floatformat:"-1" }} a {{ seg.banda.max|floatformat:"-1" }} °C ({{ seg.banda.nombre }})</p>
-    <svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora"></svg>
-    <p class="sub" style="margin:4px 0 0">Última hora · franja verde = rango permitido</p>
-    <div class="aviso error" id="seg-ruptura" {% if not seg.hubo_ruptura %}hidden{% endif %}>Detectamos una variación de temperatura en el transporte de su pedido. Ya estamos revisándola; si lo desea, informe cualquier problema.</div>
+    <div class="temp-grande"><b id="seg-temp" class="{% if not seg.ultima %}skeleton{% endif %}">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}00,0{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}alerta{% elif seg.ultima %}entregado{% else %}cancelado{% endif %}" id="seg-estado" role="status">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% elif seg.ultima %}Dentro de rango{% else %}Sin lecturas{% endif %}</span></div>
+    <p class="sub" style="color:var(--texto-3)">Rango de conservación: {{ seg.banda.min|floatformat:"-1" }} a {{ seg.banda.max|floatformat:"-1" }} °C ({{ seg.banda.nombre }})</p>
+    <svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora" hidden></svg>
+    <div class="spark-vacio" id="spark-vacio">Aún no hay lecturas de temperatura de este viaje.</div>
+    <p class="frio" style="margin:6px 0 0">Última hora · franja verde = rango permitido</p>
+    <div class="aviso error" id="seg-ruptura" style="margin-top:14px" {% if not seg.hubo_ruptura %}hidden{% endif %}>Detectamos una variación de temperatura en el transporte de su pedido. Ya estamos revisándola; si lo desea, informe cualquier problema.</div>
   </div>
 </div>
 <p><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Reportar un problema con este pedido</a></p>
@@ -79,20 +84,23 @@
   var mapa = null, marcador = null, linea = null, ultimaRuta = 0, encuadrado = false;
   function pintarSerie(serie) {
     var svg = document.getElementById("spark");
+    var vacio = document.getElementById("spark-vacio");
+    svg.hidden = !serie.length; vacio.hidden = serie.length > 0;
     if (!serie.length) { svg.innerHTML = ""; return; }
     var t = serie.map(function (p) { return p.temp; });
     var lo = Math.min.apply(null, t.concat([min])) - 1, hi = Math.max.apply(null, t.concat([max])) + 1;
     function y(v) { return 100 - (v - lo) / (hi - lo) * 100; }
     var pts = serie.map(function (p, i) { return (serie.length === 1 ? 150 : i / (serie.length - 1) * 300).toFixed(1) + "," + y(p.temp).toFixed(1); }).join(" ");
-    svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#DCFCE7"/><polyline points="' + pts + '" fill="none" stroke="#1D4ED8" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+    svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#16A34A" fill-opacity=".16"/><polyline points="' + pts + '" fill="none" stroke="#1D4ED8" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   }
   function pintar(d) {
     var s = d.seguimiento; if (!s) return;
     var u = s.ultima;
     if (u) {
-      document.getElementById("seg-temp").textContent = u.temp_camara.toFixed(1);
+      var tt = document.getElementById("seg-temp"); tt.textContent = u.temp_camara.toFixed(1).replace(".", ","); tt.classList.remove("skeleton");
+      document.getElementById("mapa-vacio").hidden = true;
       document.getElementById("seg-hace").textContent = "última posición hace " + u.hace_seg + " s";
-      var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "cancelado" : "entregado");
+      var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "alerta" : "entregado");
       if (window.L) {
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {

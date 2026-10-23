@@ -13,17 +13,29 @@
   <div class="kpi-card"><div class="etiqueta">Requerimientos por clasificar</div><div class="valor">{{ ind.requerimientos_pendientes }}</div><div class="detalle">pendientes de revisión</div></div>
 </div>
 <div class="rejilla dos" style="margin-top:20px">
-  <div>
-    <div class="seccion" style="margin-top:8px"><h2>Ventas por canal</h2></div>
-    <div class="tabla-caja"><table><thead><tr><th>Canal</th><th class="num">Ventas</th></tr></thead><tbody>
-    {% for canal, monto in ind.ventas_por_canal %}<tr><td>{{ canal }}</td><td class="num">{{ monto|clp }}</td></tr>{% empty %}<tr><td colspan="2" class="vacio">Sin ventas todavía.</td></tr>{% endfor %}
-    </tbody></table></div>
-  </div>
-  <div>
-    <div class="seccion" style="margin-top:8px"><h2>Embudo por etapa</h2></div>
-    <div class="tabla-caja"><table><thead><tr><th>Etapa</th><th class="num">Prospectos</th><th class="num">Monto estimado</th></tr></thead><tbody>
-    {% for e in ind.por_etapa %}<tr><td>{{ e.etapa__nombre }}</td><td class="num">{{ e.n }}</td><td class="num">{{ e.monto|default:0|clp }}</td></tr>{% empty %}<tr><td colspan="3" class="vacio">Sin prospectos abiertos.</td></tr>{% endfor %}
-    </tbody></table></div>
-  </div>
+  <section class="tarjeta-ui" aria-labelledby="h-canal">
+    <h2 id="h-canal">Ventas por canal</h2>
+    <div class="hbarra" data-barras>
+    {% for canal, monto in ind.ventas_por_canal %}<div class="hbarra-fila"><span>{{ canal }}</span><div class="pista" role="presentation"><i data-valor="{{ monto|floatformat:0 }}" style="width:0"></i></div><b>{{ monto|clp }}</b></div>
+    {% empty %}<p class="muted" style="margin:0">Sin ventas todavía. Cuando haya órdenes, verá aquí cuánto vendió cada canal (B2B y B2C).</p>{% endfor %}
+    </div>
+  </section>
+  <section class="tarjeta-ui" aria-labelledby="h-etapa">
+    <h2 id="h-etapa">Embudo por etapa</h2>
+    <div class="hbarra" data-barras>
+    {% for e in ind.por_etapa %}<div class="hbarra-fila"><span>{{ e.etapa__nombre }}</span><div class="pista" role="presentation"><i data-valor="{{ e.monto|default:0|floatformat:0 }}" style="width:0"></i></div><b>{{ e.n }} · {{ e.monto|default:0|clp }}</b></div>
+    {% empty %}<p class="muted" style="margin:0">Sin prospectos abiertos. <a href="/crm/prospectos/nuevo/">Crear el primero</a>.</p>{% endfor %}
+    </div>
+  </section>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  /* ancho de cada barra relativo a la mayor de su gráfico (los números exactos siempre se muestran al lado) */
+  document.querySelectorAll("[data-barras]").forEach(function (g) {
+    var b = g.querySelectorAll("i[data-valor]"), max = 0;
+    b.forEach(function (i) { max = Math.max(max, parseFloat(i.dataset.valor) || 0); });
+    requestAnimationFrame(function () { b.forEach(function (i) { i.style.width = max ? Math.max(2, (parseFloat(i.dataset.valor) || 0) / max * 100) + "%" : "0"; }); });
+  });
+</script>
 {% endblock %}

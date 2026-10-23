@@ -1,0 +1,14 @@
+<script>
+  (function () {
+    var raiz = document.documentElement;
+    function oscuro() { var t = raiz.getAttribute("data-tema"); return t ? t === "oscuro" : matchMedia("(prefers-color-scheme: dark)").matches; }
+    document.querySelectorAll("[data-tema-btn]").forEach(function (b) {
+      b.setAttribute("aria-pressed", oscuro());
+      b.addEventListener("click", function () {
+        var n = oscuro() ? "claro" : "oscuro"; raiz.setAttribute("data-tema", n);
+        try { localStorage.setItem("cofrial-tema", n); } catch (e) {}
+        document.querySelectorAll("[data-tema-btn]").forEach(function (x) { x.setAttribute("aria-pressed", n === "oscuro"); });
+      });
+    });
+  })();
+</script>

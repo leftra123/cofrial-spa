@@ -3,7 +3,7 @@
 {% block contenido %}
 <div class="auth-doble">
   <div class="tarjeta-ui">
-    <h1 style="font-size:1.4rem;margin-bottom:4px">Ingresar</h1>
+    <h1>Ingresar</h1>
     <p class="muted">Clientes institucionales y particulares, y personal de Cofrial.</p>
     <form method="post">{% csrf_token %}
       {{ form.as_p }}
@@ -11,9 +11,13 @@
       <button>Ingresar</button>
     </form>
   </div>
-  <div class="tarjeta-ui">
+  <div class="tarjeta-ui auth-lateral">
     <h2>¿Primera vez?</h2>
     <p class="muted" style="margin-top:6px">Si compra como persona, cree su cuenta de cliente particular: necesita su RUT, un correo y una dirección de entrega.</p>
+    <ul>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Compre con los precios del público general</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Siga su pedido con mapa y temperatura</li>
+    </ul>
     <a class="btn" href="/cuenta/registro/">Crear mi cuenta</a>
     <p class="muted" style="margin-top:16px">Las instituciones reciben su acceso de su ejecutivo comercial de Cofrial.</p>
   </div>

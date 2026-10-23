@@ -11,35 +11,40 @@
 {% endblock %}
 {% block contenido %}
 {% if filas %}
-<div class="tabla-caja">
-<table>
-  <thead><tr><th>Producto</th><th class="num">Precio</th><th>Cantidad</th><th class="num">Subtotal</th></tr></thead>
-  <tbody>
+<div class="carro">
+  <div class="carro-lineas">
   {% for f in filas %}
-    <tr>
-      <td>{{ f.producto.nombre }}{% if not f.hay_stock %}<br><span class="alerta">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</td>
-      <td class="num">{{ f.precio|clp }}</td>
-      <td><form class="en-linea" method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}"><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0" aria-label="Cantidad de {{ f.producto.nombre }}"> <button class="btn-sec">Actualizar</button></form></td>
-      <td class="num">{{ f.subtotal|clp }}</td>
-    </tr>
+    <article class="linea">
+      <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "tienda/ilustracion.html" with categoria=f.producto.categoria.nombre %}</a>
+      <div class="linea-info"><h3><a href="{% url 'producto' f.producto.producto_id %}" style="color:var(--texto)">{{ f.producto.nombre }}</a></h3>
+        <span class="frio">{{ f.precio|clp }} c/u</span>
+        {% if not f.hay_stock %}<span class="alerta" style="margin-top:6px">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</div>
+      <div class="linea-total">{{ f.subtotal|clp }}</div>
+      <form class="linea-form" method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}">
+        <span class="cant"><button type="button" data-menos aria-label="Una unidad menos">−</button><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0" aria-label="Cantidad de {{ f.producto.nombre }}"><button type="button" data-mas aria-label="Una unidad más">+</button></span>
+        <button class="btn-sec">Actualizar</button>
+      </form>
+    </article>
   {% endfor %}
-    {% if pide_oc %}<tr><td colspan="3" class="num">Neto</td><td class="num">{{ total|clp }}</td></tr>
-    <tr><td colspan="3" class="num">IVA 19 %</td><td class="num">{{ total|iva }}</td></tr>
-    <tr class="fila-total"><th colspan="3" class="num">Total con IVA</th><th class="num">{{ total|con_iva }}</th></tr>
-    {% else %}<tr class="fila-total"><th colspan="3" class="num">Total (IVA incluido)</th><th class="num">{{ total|clp }}</th></tr>{% endif %}
-  </tbody>
-</table>
-</div>
-<div class="tarjeta-ui">
-  <h2>Entrega</h2>
-  <form method="post" action="/carrito/confirmar/">{% csrf_token %}
-    <label for="direccion">Dirección de entrega</label>
-    <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
-    {% if pide_oc %}<label for="numero_oc">Número de orden de compra (obligatorio)</label><input name="numero_oc" id="numero_oc" required>{% endif %}
-    <p style="margin-top:18px"><button>Generar orden</button></p>
-  </form>
+  </div>
+  <aside class="resumen" aria-labelledby="res-t">
+    <h2 id="res-t">Resumen del pedido</h2>
+    <dl>
+    {% if pide_oc %}<div><dt>Neto</dt><dd>{{ total|clp }}</dd></div>
+      <div><dt>IVA 19 %</dt><dd>{{ total|iva }}</dd></div>
+      <div class="total"><dt>Total con IVA</dt><dd>{{ total|con_iva }}</dd></div>
+    {% else %}<div class="total"><dt>Total (IVA incluido)</dt><dd>{{ total|clp }}</dd></div>{% endif %}
+    </dl>
+    <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
+      <label for="direccion">Dirección de entrega</label>
+      <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      {% if pide_oc %}<label for="numero_oc">Número de orden de compra (obligatorio)</label><input name="numero_oc" id="numero_oc" required>{% endif %}
+      <button class="confirmar" data-cargando="Generando orden…">Generar orden</button>
+    </form>
+    <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde «Mis pedidos»</p>
+  </aside>
 </div>
 {% else %}
-<div class="tarjeta-ui"><p class="vacio" style="text-align:center;color:var(--texto-3);padding:24px 0;margin:0">Tu carrito está vacío. <a href="/catalogo/">Ver catálogo</a></p></div>
+<div class="tarjeta-ui vacio-caja">{% include "componentes/vacio.html" with ico="carro" %}<h2>Tu carrito está vacío</h2><p>Agregue productos del catálogo para generar su orden.</p><a class="btn" href="/catalogo/">Ver catálogo</a></div>
 {% endif %}
 {% endblock %}

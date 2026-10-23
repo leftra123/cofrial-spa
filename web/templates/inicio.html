@@ -1,38 +1,50 @@
 {% extends "tienda/base.html" %}
 {% block titulo %}Cofrial SpA | Carnes y refrigerados{% endblock %}
 {% block contenido %}
-<section class="t-hero">
-  <h1>Carnes y refrigerados con la temperatura bajo control</h1>
+<section class="t-hero" aria-labelledby="hero-titulo">
+  <svg class="copo" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4v92M10 27l80 46M90 27L10 73M50 4l-8 9M50 4l8 9M50 96l-8-9M50 96l8-9M10 27l11 1M10 27l4 10M90 73l-11-1M90 73l-4-10M90 27l-11 1M90 27l-4 10M10 73l11-1M10 73l4-10"/></svg>
+  <span class="etiqueta-hero">Cadena de frío de punta a punta</span>
+  <h1 id="hero-titulo">Carnes y refrigerados con la temperatura bajo control</h1>
   <p>Del frigorífico a su puerta, sin romper la cadena de frío. Compre con su lista de precios y siga cada pedido con la temperatura de la cámara y la posición del camión.</p>
   <form class="buscar-grande" action="/catalogo/" method="get" role="search">
     <input type="search" name="q" placeholder="Busque un producto, por ejemplo «lomo» o «salmón»" aria-label="Buscar productos">
     <button>Buscar</button>
   </form>
+  <div class="acciones-hero"><span>¿Ya hizo un pedido?</span><a href="/seguimiento/">Siga su entrega</a></div>
 </section>
 
-<div class="seccion" style="margin-top:28px"><h2>Elija cómo desea comprar</h2></div>
+<div class="t-cifras">
+  <div class="t-cifra"><b>{{ n_productos }}</b><span>productos en {{ categorias|length }} categorías</span></div>
+  <div class="t-cifra"><b>0 a 4 °C</b><span>refrigerado · congelado −25 a −18 °C</span></div>
+  <div class="t-cifra"><b>{{ n_camiones }}</b><span>camiones con sensor de temperatura</span></div>
+  {% if hace_seg is not None %}<div class="t-cifra"><b>{{ hace_seg }} s</b><span>desde la última lectura de la flota</span></div>{% endif %}
+</div>
+
+<div class="seccion"><h2>Elija cómo desea comprar</h2></div>
 <div class="t-perfiles">
   <div class="t-perfil">
+    <span class="vehiculo-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 10h1M14 10h1"/></svg></span>
     <h2>Soy una institución</h2>
     <p>Hospitales, hoteles, casinos y supermercados: lista de precios institucional (neto), orden de compra y «repetir mi último pedido».</p>
-    {% if menu.cliente %}<a class="btn" href="/catalogo/">Ir al catálogo institucional</a>{% else %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/">Ingresar con la cuenta de la empresa</a>{% endif %}
+    <div class="acciones">{% if menu.cliente %}<a class="btn" href="/catalogo/">Ir al catálogo institucional</a>{% else %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/">Ingresar con la cuenta de la empresa</a>{% endif %}</div>
   </div>
   <div class="t-perfil">
+    <span class="vehiculo-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></svg></span>
     <h2>Soy cliente particular</h2>
     <p>Revise el catálogo sin cuenta; cree la suya en un minuto para comprar y seguir su pedido.</p>
-    <a class="btn" href="/catalogo/">Ver catálogo</a>
-    {% if not user.is_authenticated %}<a class="btn btn-sec" href="/cuenta/registro/">Crear mi cuenta</a>{% endif %}
+    <div class="acciones"><a class="btn" href="/catalogo/">Ver catálogo</a>
+    {% if not user.is_authenticated %}<a class="btn btn-sec" href="/cuenta/registro/">Crear mi cuenta</a>{% endif %}</div>
   </div>
 </div>
 
-<div class="t-confianza">
-  <span><b>{{ n_productos }}</b> productos en {{ categorias|length }} categorías</span>
-  <span>Refrigerado <b>0 a 4 °C</b> · Congelado <b>−25 a −18 °C</b></span>
-  <span><b>{{ n_camiones }}</b> camiones con sensor de temperatura</span>
-  {% if hace_seg is not None %}<span>Última lectura de la flota hace <b>{{ hace_seg }} s</b></span>{% endif %}
-</div>
+<div class="seccion"><h2>Así funciona</h2></div>
+<ol class="t-pasos">
+  <li><b>Elija sus productos</b><span>Precios según su perfil, con stock y rango de temperatura a la vista.</span></li>
+  <li><b>Genere su orden</b><span>Con su dirección de entrega y, si es institución, su orden de compra.</span></li>
+  <li><b>Siga la entrega</b><span>Mapa del camión y temperatura de la cámara, en vivo hasta su puerta.</span></li>
+</ol>
 
-<div class="seccion"><h2>Explore por categoría</h2></div>
+<div class="seccion"><h2>Explore por categoría</h2><a class="mas" href="/catalogo/">Ver todo el catálogo →</a></div>
 <div class="t-cats">
   {% for c in categorias %}<a class="t-cat" href="/catalogo/?categoria={{ c.pk }}">{% include "tienda/ilustracion.html" with categoria=c.nombre %}{{ c.nombre }}</a>{% endfor %}
 </div>

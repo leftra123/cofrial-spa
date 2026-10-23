@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
+  {% include "componentes/tema_head.html" %}
+  <meta name="color-scheme" content="light dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M6 11h12v9H6zM18 14h5l3 3v3h-8z' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -12,10 +14,11 @@
   {% block cabeza %}{% endblock %}
 </head>
 <body>
+<a class="salto" href="#contenido">Saltar al contenido</a>
 {% with ruta=request.path %}
 <div class="barra-movil">
   <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>Cofrial</a>
-  <button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú</button>
+  <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú</button></span>
 </div>
 <div class="app">
   <aside class="lateral" id="lateral">
@@ -36,15 +39,16 @@
     </nav>
     <div class="usuario">
       {% if user.is_authenticated %}
-        <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
+        <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
         <div class="usuario-datos"><b>{{ user.username }}</b>
           <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Cerrar sesión</button></form></div>
+        {% include "componentes/tema_btn.html" %}
       {% else %}
         <div class="usuario-datos"><a class="btn" href="/cuenta/entrar/">Entrar</a></div>
       {% endif %}
     </div>
   </aside>
-  <main class="contenido">
+  <main class="contenido" id="contenido">
     {% if messages %}<div class="avisos" role="status">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
     {% block cabecera %}{% endblock %}
     {% block contenido %}{% endblock %}
@@ -57,6 +61,7 @@
     b.addEventListener("click", function () { var a = l.classList.toggle("abierto"); b.setAttribute("aria-expanded", a); });
   })();
 </script>
+{% include "componentes/tema_js.html" %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

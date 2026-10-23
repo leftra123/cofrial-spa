@@ -61,3 +61,17 @@ class PedidosAPI(APIView):
                   "numero_oc": o.numero_oc, "total_clp": pedidos.total_orden(o)}
                  for o in pedidos.ordenes_de(cliente)]
         return Response({"cliente": cliente.nombre, "ordenes": datos})
+
+
+class SeguimientoAPI(APIView):
+    """Posición y temperatura del camión de una orden del propio cliente; la pantalla de la orden la consulta cada 5 s."""
+
+    def get(self, request, orden_id):
+        cliente = pedidos.cliente_de(request.user)
+        if cliente is None:
+            return Response({"detail": "Tu cuenta no está asociada a un cliente."}, status=403)
+        orden = pedidos.ordenes_de(cliente).filter(pk=orden_id).first()
+        if orden is None:
+            return Response({"detail": "Orden no encontrada."}, status=404)       # ajena e inexistente se ven igual
+        return Response({"orden_id": orden.orden_id, "estado": orden.estado_orden.nombre,
+                         "seguimiento": pedidos.seguimiento(orden)})

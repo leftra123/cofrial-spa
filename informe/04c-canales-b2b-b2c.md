@@ -140,3 +140,18 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 - [ ] Renumerar figuras y tablas al integrar el informe completo.
 
 ## Notas del equipo
+
+## Implementación frente a los wireframes (23-oct-2026)
+
+La parte del cliente se rehízo para que el prototipo coincida con W1 a W6: tienda pública con barra superior y sin menú lateral (el personal conserva su panel en «Panel interno»).
+
+| Wireframe | Implementación | Dónde |
+|---|---|---|
+| W1 Portada | Buscador, «Seguir mi pedido», «Ingresar», tarjetas «Soy una institución» y «Soy cliente particular», y datos reales (productos, camiones, última lectura de la flota) | `/` |
+| W2 Catálogo | Tarjetas con ilustración por categoría, filtros (categoría, rango de temperatura, solo con stock), búsqueda por nombre o SKU, estado de stock (verde, ámbar, rojo), −1+ y «Agregar», y «Repetir mi último pedido» para B2B | `/catalogo/` |
+| W3 Detalle | Rango de conservación, descripción, stock y productos de la misma categoría | `/catalogo/<id>/` |
+| W4 y W5 | Carrito y confirmación con las validaciones RN-01 a RN-08 (sin cambios) | `/carrito/`, `/pedidos/<id>/` |
+| W6 Seguimiento | Mapa con la posición del camión, temperatura de la cámara con su franja permitida y gráfico de la última hora, aviso si hubo ruptura de frío y «Reportar un problema», que crea un requerimiento ligado a la orden y lo clasifica la IA | `/pedidos/<id>/` y `/api/pedidos/<id>/seguimiento/` |
+| Registro B2C | Formulario con RUT validado (módulo 11), correo, dirección y clave; crea cuenta, cliente B2C y dirección principal | `/cuenta/registro/` |
+
+El catálogo de demostración tiene 20 productos en 4 categorías (cárnicos refrigerados, aves, congelados, lácteos y embutidos). Las imágenes son ilustraciones propias por categoría, no fotografías de producto. El seguimiento se actualiza cada 5 s consultando la API; el mapa usa Leaflet con teselas de OpenStreetMap.

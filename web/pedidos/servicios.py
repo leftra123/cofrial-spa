@@ -171,3 +171,31 @@ def repetir_ultimo_pedido(cliente):
             avisos.append(f"{p.nombre}: se ajustó de {item.cantidad} a {cantidad} por stock.")
         agregar(cliente, p.pk, cantidad)
     return avisos
+
+
+def seguimiento(orden):
+    """Datos del envío para el cliente (W6): última lectura del camión, banda de conservación y lecturas de la última hora.
+
+    Sin despacho no hay camión que seguir. La alerta se informa si hubo ruptura de frío en la última hora del camión."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from flota.models import Telemetria
+
+    if orden.despacho_id is None:
+        return None
+    camion = orden.despacho.camion
+    desde = timezone.now() - timedelta(minutes=60)
+    lecturas = list(Telemetria.objects.filter(camion=camion, registrado_en__gte=desde).order_by("registrado_en"))
+    ultima = (lecturas[-1] if lecturas else Telemetria.objects.filter(camion=camion).order_by("-registrado_en").first())
+    rango = camion.rango_temperatura
+    return {
+        "camion_id": camion.camion_id, "patente": camion.patente,
+        "banda": {"min": rango.temp_min_c, "max": rango.temp_max_c, "nombre": rango.nombre},
+        "ultima": None if ultima is None else {
+            "temp_camara": ultima.temp_camara, "lat": ultima.lat, "long": ultima.long, "combustible_pct": ultima.combustible_pct,
+            "alerta_ruptura_frio": ultima.alerta_ruptura_frio, "hace_seg": int((timezone.now() - ultima.registrado_en).total_seconds())},
+        "hubo_ruptura": any(l.alerta_ruptura_frio for l in lecturas),
+        "serie": [{"t": l.registrado_en.isoformat(), "temp": l.temp_camara} for l in lecturas][-120:],
+    }

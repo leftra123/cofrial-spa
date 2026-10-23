@@ -84,6 +84,13 @@ def confirmar(request, cliente):
 
 
 @solo_clientes
+def seguimiento(request, cliente):
+    """«Seguir mi pedido» de la barra superior: lleva al pedido más reciente que sigue en curso, o a la lista."""
+    activa = s.ordenes_de(cliente).filter(estado_orden__es_final=False).first()
+    return redirect("orden", orden_id=activa.orden_id) if activa else redirect("pedidos")
+
+
+@solo_clientes
 def mis_pedidos(request, cliente):
     ordenes = list(s.ordenes_de(cliente))
     for o in ordenes:
@@ -103,6 +110,7 @@ def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     return render(request, "pedidos/detalle.html", {
         "orden": orden, "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
 
 
@@ -121,13 +129,15 @@ def cancelar(request, cliente, orden_id):
 @solo_clientes
 def soporte(request, cliente):
     """CU-09: el cliente registra una consulta o reclamo; la IA la clasifica (RN-14) y llega a la bandeja del CRM."""
+    ref = request.POST.get("orden") or request.GET.get("orden") or ""
+    orden = s.ordenes_de(cliente).filter(pk=int(ref)).first() if ref.isdigit() else None     # solo una orden propia
     if request.method == "POST":
         try:
-            r = crm.crear_requerimiento(cliente, request.POST.get("asunto", ""), request.POST.get("descripcion", ""))
+            r = crm.crear_requerimiento(cliente, request.POST.get("asunto", ""), request.POST.get("descripcion", ""), orden=orden)
             messages.success(request, "Recibimos tu consulta. Te responderemos a la brevedad." if r.estado != "clasificado"
                              else f"Recibimos tu consulta y la derivamos a «{r.categoria_requerimiento}».")
             return redirect("soporte")
         except s.ErrorDeNegocio as e:
             _mostrar_errores(request, e)
     return render(request, "pedidos/soporte.html", {
-        "requerimientos": Requerimiento.objects.filter(cliente=cliente).select_related("categoria_requerimiento").order_by("-creado_en")})
+        "orden": orden, "requerimientos": Requerimiento.objects.filter(cliente=cliente).select_related("categoria_requerimiento").order_by("-creado_en")})

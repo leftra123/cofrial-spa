@@ -89,3 +89,55 @@ class CuentasTests(TestCase):
         for u in ("admin", "ana@correo.test", "abastecimiento@hospital.test", "vendedora@cofrial.test", "vendedor2@cofrial.test",
                   "gerente@cofrial.test", "despachador@cofrial.test"):
             self.assertTrue(self.entra(u, clave="123456"), u)
+
+
+class RegistroB2CTests(TestCase):
+    datos = {"nombre": "Luis Mora", "rut": "11.111.111-1", "email": "luis@correo.test", "telefono": "",
+             "direccion": "Calle 1 123", "clave": "una-clave-larga-92", "clave2": "una-clave-larga-92"}
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+        from clientes.models import Comuna
+        cls.datos = dict(cls.datos, comuna=Comuna.objects.first().pk)
+
+    def test_rut_valido_e_invalido(self):
+        from clientes import rut
+        self.assertTrue(rut.es_valido("11.111.111-1"))
+        self.assertTrue(rut.es_valido("12.345.678-5"))
+        self.assertFalse(rut.es_valido("11.111.111-2"))
+        self.assertEqual(rut.formatear("111111111"), "11.111.111-1")
+
+    def test_registro_crea_cliente_b2c_y_abre_sesion(self):
+        from clientes.models import Cliente
+        r = self.client.post("/cuenta/registro/", self.datos)
+        self.assertRedirects(r, "/catalogo/", fetch_redirect_response=False)
+        c = Cliente.objects.get(email="luis@correo.test")
+        self.assertEqual(c.tipo_cliente.codigo, "B2C")
+        self.assertEqual(c.direccion_set.filter(es_principal=True).count(), 1)
+        self.assertEqual(self.client.get("/carrito/").status_code, 200)
+
+    def test_rut_malo_o_duplicado_no_crea(self):
+        from clientes.models import Cliente
+        antes = Cliente.objects.count()
+        r = self.client.post("/cuenta/registro/", dict(self.datos, rut="11.111.111-9"))
+        self.assertContains(r, "RUT no es válido")
+        r = self.client.post("/cuenta/registro/", dict(self.datos, rut="12.345.678-5"))
+        self.assertContains(r, "Ya existe una cuenta con ese RUT")
+        self.assertEqual(Cliente.objects.count(), antes)
+
+    def test_claves_distintas_o_debiles(self):
+        self.assertContains(self.client.post("/cuenta/registro/", dict(self.datos, clave2="otra")), "no coinciden")
+        self.assertContains(self.client.post("/cuenta/registro/", dict(self.datos, clave="123", clave2="123")), "demasiado corta")
+
+    def test_login_lleva_al_personal_al_crm_y_a_los_clientes_al_catalogo(self):
+        from django.contrib.auth import get_user_model
+        U = get_user_model()
+        U.objects.filter(username="ana@correo.test").first().set_password("x-clave-larga-77") or None
+        for usuario, destino in [("ana@correo.test", "/catalogo/"), ("vendedora@cofrial.test", "/crm/")]:
+            u = U.objects.get(username=usuario)
+            u.set_password("x-clave-larga-77")
+            u.save()
+            r = self.client.post("/cuenta/entrar/", {"username": usuario, "password": "x-clave-larga-77"})
+            self.assertRedirects(r, destino, fetch_redirect_response=False)
+            self.client.logout()

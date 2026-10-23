@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from django.views.generic import TemplateView
+from . import vistas
 
 from flota.urls import api_urlpatterns as flota_api
 
@@ -16,13 +16,14 @@ def salud(request):
 
 
 urlpatterns = [
-    path("", TemplateView.as_view(template_name="inicio.html"), name="inicio"),
+    path("", vistas.inicio, name="inicio"),
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),
     path("flota/", include("flota.urls")),
     path("api/", include(flota_api)),
     path("", include("pedidos.urls")),
-    path("cuenta/entrar/", auth_views.LoginView.as_view(template_name="cuenta/entrar.html"), name="entrar"),
+    path("cuenta/entrar/", vistas.Entrar.as_view(), name="entrar"),
+    path("cuenta/registro/", vistas.registro, name="registro"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
     path("salud/", salud),
     path("admin/", admin.site.urls),

@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 from decimal import Decimal
 
+from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
@@ -81,3 +84,57 @@ class ApiFlotaTests(TestCase):
         self.assertEqual(len(r.json()["ordenes"]), 1)
         self.entrar("ana@correo.test")
         self.assertEqual(self.client.get("/api/pedidos/").json()["ordenes"], [])
+
+
+class SeguimientoPedidoTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def _orden(self, oc):
+        from pedidos.models import Orden
+        return Orden.objects.get(numero_oc=oc)
+
+    def test_cliente_ve_temperatura_y_posicion_de_su_camion(self):
+        from flota.models import Camion, Telemetria
+        o = self._orden("OC-2026-0457")
+        Telemetria.objects.create(camion=o.despacho.camion, temp_camara=2.5, lat=-38.73, long=-72.59, combustible_pct=70, alerta_ruptura_frio=False)
+        self.client.login(username="abastecimiento@hospital.test", password="demo-cofrial-2026")
+        d = self.client.get(f"/api/pedidos/{o.orden_id}/seguimiento/").json()["seguimiento"]
+        self.assertEqual(d["camion_id"], o.despacho.camion_id)
+        self.assertEqual(d["ultima"]["temp_camara"], 2.5)
+        self.assertFalse(d["hubo_ruptura"])
+        self.assertEqual(len(d["serie"]), 1)
+        r = self.client.get(f"/pedidos/{o.orden_id}/")
+        self.assertContains(r, "Dónde va su pedido")
+
+    def test_ruptura_de_frio_se_avisa(self):
+        from flota.models import Telemetria
+        o = self._orden("OC-2026-0457")
+        Telemetria.objects.create(camion=o.despacho.camion, temp_camara=9.0, lat=-38.7, long=-72.5, combustible_pct=60, alerta_ruptura_frio=True)
+        self.client.login(username="abastecimiento@hospital.test", password="demo-cofrial-2026")
+        self.assertTrue(self.client.get(f"/api/pedidos/{o.orden_id}/seguimiento/").json()["seguimiento"]["hubo_ruptura"])
+
+    def test_orden_ajena_no_se_ve(self):
+        o = self._orden("OC-SUR-118")
+        self.client.login(username="abastecimiento@hospital.test", password="demo-cofrial-2026")
+        self.assertEqual(self.client.get(f"/api/pedidos/{o.orden_id}/seguimiento/").status_code, 404)
+        self.client.logout()
+        self.assertIn(self.client.get(f"/api/pedidos/{o.orden_id}/seguimiento/").status_code, (401, 403))
+
+    def test_reportar_problema_liga_el_requerimiento_a_la_orden(self):
+        from crm.models import Requerimiento
+        o = self._orden("OC-2026-0457")
+        self.client.login(username="abastecimiento@hospital.test", password="demo-cofrial-2026")
+        self.assertContains(self.client.get(f"/soporte/?orden={o.orden_id}"), f"orden N.º {o.orden_id}")
+        with patch("crm.ia.clasificar", side_effect=__import__("crm.ia", fromlist=["x"]).ErrorIA("sin red")):
+            self.client.post("/soporte/", {"orden": o.orden_id, "asunto": "Llegó tibio", "descripcion": "La caja venía caliente."})
+        self.assertEqual(Requerimiento.objects.get(asunto="Llegó tibio").orden_id, o.orden_id)
+
+    def test_reporte_con_orden_ajena_se_ignora(self):
+        from crm.models import Requerimiento
+        o = self._orden("OC-SUR-118")
+        self.client.login(username="abastecimiento@hospital.test", password="demo-cofrial-2026")
+        with patch("crm.ia.clasificar", side_effect=__import__("crm.ia", fromlist=["x"]).ErrorIA("sin red")):
+            self.client.post("/soporte/", {"orden": o.orden_id, "asunto": "Otro", "descripcion": "Texto."})
+        self.assertIsNone(Requerimiento.objects.get(asunto="Otro").orden_id)

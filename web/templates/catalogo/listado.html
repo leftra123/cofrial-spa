@@ -1,28 +1,39 @@
-{% extends "base.html" %}
+{% extends "tienda/base.html" %}
 {% block titulo %}Catálogo | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
-  <div><h1>Catálogo de refrigerados y congelados</h1>{% if perfil %}<p class="sub">Lista de precios: {{ perfil.lista_precio.nombre }}</p>{% endif %}</div>
-  <div class="acciones"><a class="btn" href="/carrito/">Ver carrito</a></div>
+  <div><h1>Catálogo de refrigerados y congelados</h1><p class="sub">{{ filas|length }} producto{{ filas|length|pluralize }}{% if perfil %} · Lista: {{ perfil.lista_precio.nombre }}{% endif %}</p></div>
+  {% if menu.cliente and perfil.codigo == "B2B" %}<div class="acciones"><form method="post" action="/carrito/repetir/">{% csrf_token %}<button class="btn-sec">Repetir mi último pedido</button></form></div>{% endif %}
 </div>
 {% endblock %}
 {% block contenido %}
-<div class="tabla-caja">
-<table>
-  <thead><tr><th>Producto</th><th>Categoría</th><th>Conservación</th><th class="num">Precio (CLP)</th><th></th></tr></thead>
-  <tbody>
-  {% for p, precio in filas %}
-    <tr>
-      <td><b>{{ p.nombre }}</b><br><span class="frio">{{ p.sku }} · {{ p.get_unidad_medida_display }}</span></td>
-      <td>{{ p.categoria.nombre }}</td>
-      <td><span class="chip transito">{{ p.categoria.rango_temperatura }}</span></td>
-      <td class="num">{% if precio %}<b>${{ precio|floatformat:"0g" }}</b>{% else %}<span class="frio">Sin precio</span>{% endif %}</td>
-      <td class="num">{% if precio and p.stock_disponible > 0 %}<form class="en-linea" method="post" action="/carrito/agregar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ p.producto_id }}"><input type="number" name="cantidad" value="1" min="1" max="{{ p.stock_disponible }}" aria-label="Cantidad"> <button>Agregar</button></form>{% elif precio %}<span class="chip cancelado">Sin stock</span>{% endif %}</td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="5" class="vacio">No hay productos cargados.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="cat-layout">
+  <form class="filtros" method="get" action="/catalogo/">
+    <h2>Buscar</h2>
+    <input type="search" name="q" value="{{ q }}" placeholder="Nombre o SKU" aria-label="Buscar">
+    <h2>Categoría</h2>
+    <label><input type="radio" name="categoria" value="" {% if not cat %}checked{% endif %}> Todas</label>
+    {% for c in categorias %}<label><input type="radio" name="categoria" value="{{ c.pk }}" {% if cat == c.pk|stringformat:"s" %}checked{% endif %}> {{ c.nombre }}</label>{% endfor %}
+    <h2>Rango de temperatura</h2>
+    <label><input type="radio" name="temperatura" value="" {% if not temp %}checked{% endif %}> Todos</label>
+    {% for r in rangos %}<label><input type="radio" name="temperatura" value="{{ r.pk }}" {% if temp == r.pk|stringformat:"s" %}checked{% endif %}> {{ r.nombre }} ({{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C)</label>{% endfor %}
+    <h2>Disponibilidad</h2>
+    <label><input type="checkbox" name="stock" value="1" {% if solo_stock %}checked{% endif %}> Solo con stock</label>
+    <button>Aplicar filtros</button>
+    {% if filtrado %}<p style="margin:10px 0 0;text-align:center"><a href="/catalogo/">Limpiar filtros</a></p>{% endif %}
+  </form>
+  <div class="productos">
+    {% for f in filas %}{% include "catalogo/_tarjeta.html" %}
+    {% empty %}<div class="vacio-grande">No encontramos productos con esos filtros. <a href="/catalogo/">Ver todo el catálogo</a></div>{% endfor %}
+  </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll(".cant").forEach(function (c) {
+    var i = c.querySelector("input"), max = parseInt(i.max, 10) || 9999;
+    c.querySelector("[data-menos]").addEventListener("click", function () { i.value = Math.max(1, (parseInt(i.value, 10) || 1) - 1); });
+    c.querySelector("[data-mas]").addEventListener("click", function () { i.value = Math.min(max, (parseInt(i.value, 10) || 1) + 1); });
+  });
+</script>
 {% endblock %}

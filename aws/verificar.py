@@ -110,9 +110,10 @@ def titulo(t):
     print(f"\n{t}")
 
 
-def precio(html, producto):
-    m = re.search(re.escape(producto) + r"</b>.*?<b>\$([0-9  .]+)</b>", html, re.S)
-    return re.sub(r"\D", "", m.group(1)) if m else None
+def precio(html, sku):
+    """Precio del producto según el atributo data-precio de su tarjeta en el catálogo."""
+    m = re.search(r'data-sku="' + re.escape(sku) + r'"\s+data-precio="(\d+)"', html)
+    return m.group(1) if m else None
 
 
 def consulta_grafana(sql):
@@ -157,7 +158,7 @@ def main():
 
     titulo("2. E-commerce: perfiles B2B y B2C")
     if sesiones["hospital"] and sesiones["ana"]:
-        producto = "Lomo vetado de vacuno 5 kg"
+        producto = "VAC-LOM-5K"          # Lomo vetado de vacuno 5 kg
         pb = precio(sesiones["hospital"].pedir("/catalogo/")[1], producto)
         pc = precio(sesiones["ana"].pedir("/catalogo/")[1], producto)
         chk(pb and pc and pb != pc, f"El mismo producto tiene precio distinto: B2B ${pb} y B2C ${pc}", "los precios son iguales o no se encontraron")

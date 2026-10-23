@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "tienda/base.html" %}
 {% block titulo %}Orden {{ orden.orden_id }} | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
@@ -10,6 +10,7 @@
   </div>
 </div>
 {% endblock %}
+{% block cabeza %}{% if seg %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endif %}{% endblock %}
 {% block contenido %}
 {% if orden.estado_orden.nombre != "Cancelada" %}
 <div class="tarjeta-ui">
@@ -24,6 +25,24 @@
   </div>
   {% endwith %}
 </div>
+{% endif %}
+{% if seg %}
+<div class="seg-grid" id="seg" data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
+  <div class="tarjeta-ui">
+    <h2>Dónde va su pedido</h2>
+    <p class="sub" style="margin:2px 0 10px">Camión {{ seg.camion_id }} · <span id="seg-hace">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span></p>
+    <div id="mapa" class="mapa" role="img" aria-label="Posición del camión"></div>
+  </div>
+  <div class="tarjeta-ui">
+    <h2>Temperatura de la cámara</h2>
+    <div class="temp-grande"><b id="seg-temp">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}—{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}cancelado{% else %}entregado{% endif %}" id="seg-estado">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% else %}Dentro de rango{% endif %}</span></div>
+    <p class="sub">Rango de conservación: {{ seg.banda.min|floatformat:"-1" }} a {{ seg.banda.max|floatformat:"-1" }} °C ({{ seg.banda.nombre }})</p>
+    <svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora"></svg>
+    <p class="sub" style="margin:4px 0 0">Última hora · franja verde = rango permitido</p>
+    <div class="aviso error" id="seg-ruptura" {% if not seg.hubo_ruptura %}hidden{% endif %}>Detectamos una variación de temperatura en el transporte de su pedido. Ya estamos revisándola; si lo desea, informe cualquier problema.</div>
+  </div>
+</div>
+<p><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Reportar un problema con este pedido</a></p>
 {% endif %}
 <div class="tarjeta-ui">
   <h2>Datos de la entrega</h2>
@@ -43,4 +62,45 @@
   </tbody>
 </table>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if seg %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+<script>
+(function () {
+  var raiz = document.getElementById("seg"), min = parseFloat(raiz.dataset.min), max = parseFloat(raiz.dataset.max);
+  var mapa = null, marcador = null;
+  function pintarSerie(serie) {
+    var svg = document.getElementById("spark");
+    if (!serie.length) { svg.innerHTML = ""; return; }
+    var t = serie.map(function (p) { return p.temp; });
+    var lo = Math.min.apply(null, t.concat([min])) - 1, hi = Math.max.apply(null, t.concat([max])) + 1;
+    function y(v) { return 100 - (v - lo) / (hi - lo) * 100; }
+    var pts = serie.map(function (p, i) { return (serie.length === 1 ? 150 : i / (serie.length - 1) * 300).toFixed(1) + "," + y(p.temp).toFixed(1); }).join(" ");
+    svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#DCFCE7"/><polyline points="' + pts + '" fill="none" stroke="#1D4ED8" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+  }
+  function pintar(d) {
+    var s = d.seguimiento; if (!s) return;
+    var u = s.ultima;
+    if (u) {
+      document.getElementById("seg-temp").textContent = u.temp_camara.toFixed(1);
+      document.getElementById("seg-hace").textContent = "última posición hace " + u.hace_seg + " s";
+      var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "cancelado" : "entregado");
+      if (window.L) {
+        if (!mapa) {
+          mapa = L.map("mapa").setView([u.lat, u.long], 13);
+          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 18, attribution: "&copy; OpenStreetMap"}).addTo(mapa);
+          marcador = L.marker([u.lat, u.long]).addTo(mapa);
+        } else { marcador.setLatLng([u.lat, u.long]); mapa.panTo([u.lat, u.long]); }
+      }
+    }
+    document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;
+    pintarSerie(s.serie || []);
+  }
+  function cargar() { axios.get(raiz.dataset.url, {headers: {"Accept": "application/json"}}).then(function (r) { pintar(r.data); }).catch(function () {}); }
+  cargar(); setInterval(cargar, 5000);
+})();
+</script>
+{% endif %}
 {% endblock %}

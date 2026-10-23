@@ -1,13 +1,13 @@
-{% extends "base.html" %}
+{% extends "tienda/base.html" %}
 {% block titulo %}Soporte | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab"><div><h1>Soporte</h1><p class="sub">Cuéntanos tu consulta o reclamo. Un asistente de IA la clasifica y la deriva al área que corresponde.</p></div></div>
 {% endblock %}
 {% block contenido %}
 <div class="tarjeta-ui" style="max-width:640px">
-  <h2>Nueva consulta</h2>
-  <form method="post">{% csrf_token %}
-    <label for="asunto">Asunto</label><input name="asunto" id="asunto" maxlength="150" required>
+  <h2>Nueva consulta{% if orden %} sobre la orden N.º {{ orden.orden_id }}{% endif %}</h2>
+  <form method="post">{% csrf_token %}{% if orden %}<input type="hidden" name="orden" value="{{ orden.orden_id }}">{% endif %}
+    <label for="asunto">Asunto</label><input name="asunto" id="asunto" maxlength="150" required{% if orden %} value="Problema con mi pedido {{ orden.orden_id }}"{% endif %}>
     <label for="descripcion">¿Qué ocurrió?</label>
     <textarea name="descripcion" id="descripcion" rows="5" required style="width:100%;max-width:none"></textarea>
     <p style="margin-top:18px"><button>Enviar consulta</button></p>

@@ -191,12 +191,12 @@ def clasificar_con_ia(requerimiento):
     return requerimiento
 
 
-def crear_requerimiento(cliente, asunto, descripcion):
+def crear_requerimiento(cliente, asunto, descripcion, orden=None):
     """CU-09: el cliente registra su consulta; se guarda siempre y luego se intenta clasificar."""
     asunto, descripcion = asunto.strip(), descripcion.strip()
     if not asunto or not descripcion:
         raise ErrorDeNegocio("Indica el asunto y describe tu consulta.")
-    r = Requerimiento.objects.create(cliente=cliente, asunto=asunto[:150], descripcion=descripcion)
+    r = Requerimiento.objects.create(cliente=cliente, orden=orden, asunto=asunto[:150], descripcion=descripcion)
     return clasificar_con_ia(r)
 
 

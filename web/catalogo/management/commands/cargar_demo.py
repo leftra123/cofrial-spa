@@ -21,7 +21,44 @@ PRODUCTOS = [
     ("CER-COS-5K", "Costillar de cerdo 5 kg", "Cárnicos refrigerados", "caja", 60, 31990, 37990),
     ("MAR-CON-2K", "Mariscos congelados 2 kg", "Congelados", "caja", 60, 21990, 25990),
     ("PES-FIL-3K", "Filete de salmón congelado 3 kg", "Congelados", "caja", 45, 27990, 32990),
+    ("VAC-POS-5K", "Posta rosada de vacuno 5 kg", "Cárnicos refrigerados", "caja", 90, 33990, 39990),
+    ("VAC-MOL-5K", "Carne molida de vacuno 5 kg", "Cárnicos refrigerados", "caja", 150, 23990, 28990),
+    ("CER-LOM-4K", "Lomo de cerdo 4 kg", "Cárnicos refrigerados", "caja", 70, 26990, 31990),
+    ("COR-PIE-6K", "Pierna de cordero 6 kg", "Cárnicos refrigerados", "caja", 8, 52990, 61990),
+    ("POL-TRU-8K", "Trutros de pollo 8 kg", "Aves", "caja", 110, 17990, 21990),
+    ("POL-ENT-10K", "Pollo entero 10 kg", "Aves", "caja", 130, 19990, 24990),
+    ("PAV-PEC-5K", "Pechuga de pavo 5 kg", "Aves", "caja", 55, 28990, 34990),
+    ("PES-MER-5K", "Filete de merluza congelado 5 kg", "Congelados", "caja", 12, 24990, 29990),
+    ("MAR-CAM-1K", "Camarones congelados 1 kg", "Congelados", "caja", 0, 11990, 14990),
+    ("VER-MIX-10K", "Mix de verduras congeladas 10 kg", "Congelados", "caja", 95, 14990, 17990),
+    ("PAP-FRI-10K", "Papas prefritas congeladas 10 kg", "Congelados", "caja", 140, 15990, 18990),
+    ("LAC-QUE-5K", "Queso gauda laminado 5 kg", "Lácteos y embutidos", "caja", 65, 31990, 37990),
+    ("LAC-MAN-10K", "Mantequilla en bloque 10 kg", "Lácteos y embutidos", "caja", 40, 54990, 64990),
+    ("EMB-JAM-3K", "Jamón cocido 3 kg", "Lácteos y embutidos", "caja", 85, 16990, 20990),
+    ("EMB-LON-4K", "Longaniza ahumada 4 kg", "Lácteos y embutidos", "caja", 18, 19990, 23990),
 ]
+DESCRIPCIONES = {
+    "VAC-LOM-5K": "Corte premium de vacuno para parrilla y plancha, envasado al vacío.",
+    "POL-PEC-10K": "Pechuga de pollo sin hueso, fresca, lista para porcionar.",
+    "CER-COS-5K": "Costillar de cerdo para horno o parrilla, envasado al vacío.",
+    "MAR-CON-2K": "Mix de mariscos congelados individualmente (IQF), sin glaseado excesivo.",
+    "PES-FIL-3K": "Filete de salmón sin espinas, congelado en origen.",
+    "VAC-POS-5K": "Posta rosada magra, ideal para asados y cocidos.",
+    "VAC-MOL-5K": "Carne molida de vacuno con baja materia grasa, para preparaciones de alto volumen.",
+    "CER-LOM-4K": "Lomo de cerdo entero, para asar o cortar en medallones.",
+    "COR-PIE-6K": "Pierna de cordero patagónico con hueso, para hornear.",
+    "POL-TRU-8K": "Trutros de pollo con piel, frescos, para guisos y horno.",
+    "POL-ENT-10K": "Pollo entero eviscerado, fresco, de venta por caja.",
+    "PAV-PEC-5K": "Pechuga de pavo fresca, magra y sin hueso.",
+    "PES-MER-5K": "Filete de merluza sin piel, congelado, para fritura u horno.",
+    "MAR-CAM-1K": "Camarones pelados y desvenados, congelados individualmente.",
+    "VER-MIX-10K": "Mezcla de zanahoria, arvejas y choclo congelada, lista para cocer.",
+    "PAP-FRI-10K": "Papas prefritas en bastón, congeladas, para freír directo.",
+    "LAC-QUE-5K": "Queso gauda en láminas separadas por papel, para sándwich y cocina.",
+    "LAC-MAN-10K": "Mantequilla sin sal en bloque, para panadería y cocina.",
+    "EMB-JAM-3K": "Jamón cocido de cerdo, pieza entera para cortar en fiambrería.",
+    "EMB-LON-4K": "Longaniza ahumada tradicional, lista para cocer.",
+}
 ESTADOS_ORDEN = [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False), ("Entregada", True), ("Cancelada", True)]
 ETAPAS = [("Prospecto", False, False), ("Contactado", False, False), ("Propuesta enviada", False, False), ("Negociación", False, False), ("Cliente ganado", True, True), ("Perdido", True, False)]
 CATEGORIAS_REQ = ["Consulta de producto", "Reclamo por temperatura", "Atraso en entrega", "Facturación", "Otro"]
@@ -44,6 +81,8 @@ class Command(BaseCommand):
         categorias = {
             "Cárnicos refrigerados": Categoria.objects.get_or_create(nombre="Cárnicos refrigerados", defaults=dict(rango_temperatura=refrigerado))[0],
             "Congelados": Categoria.objects.get_or_create(nombre="Congelados", defaults=dict(rango_temperatura=congelado))[0],
+            "Aves": Categoria.objects.get_or_create(nombre="Aves", defaults=dict(rango_temperatura=refrigerado))[0],
+            "Lácteos y embutidos": Categoria.objects.get_or_create(nombre="Lácteos y embutidos", defaults=dict(rango_temperatura=refrigerado))[0],
         }
         b2b, _ = ListaPrecio.objects.get_or_create(nombre="Institucional B2B")
         b2c, _ = ListaPrecio.objects.get_or_create(nombre="Público B2C")
@@ -51,6 +90,13 @@ class Command(BaseCommand):
             p, _ = Producto.objects.get_or_create(sku=sku, defaults=dict(nombre=nombre, categoria=categorias[cat], unidad_medida=unidad, stock_disponible=stock))
             PrecioProducto.objects.get_or_create(lista_precio=b2b, producto=p, defaults=dict(precio_clp=precio_b2b))
             PrecioProducto.objects.get_or_create(lista_precio=b2c, producto=p, defaults=dict(precio_clp=precio_b2c))
+            cambios = {}
+            if not p.descripcion and sku in DESCRIPCIONES:
+                cambios["descripcion"] = DESCRIPCIONES[sku]
+            if p.categoria_id != categorias[cat].pk and cat == "Aves":     # la pechuga ya existía como «Cárnicos refrigerados»
+                cambios["categoria"] = categorias[cat]
+            if cambios:
+                Producto.objects.filter(pk=p.pk).update(**cambios)
 
         tipo_b2b, _ = TipoCliente.objects.get_or_create(codigo="B2B", defaults=dict(nombre="Institucional", lista_precio=b2b))
         tipo_b2c, _ = TipoCliente.objects.get_or_create(codigo="B2C", defaults=dict(nombre="Público general", lista_precio=b2c))

@@ -1,8 +1,12 @@
-from django.shortcuts import render
+from django.db.models import Q
+from django.http import Http404
+from django.shortcuts import get_object_or_404, render
 
 from clientes.models import Cliente, TipoCliente
 
-from .models import PrecioProducto, Producto
+from .models import Categoria, PrecioProducto, Producto, RangoTemperatura
+
+STOCK_BAJO = 20      # por debajo se avisa «Quedan pocas unidades»
 
 
 def lista_del_visitante(request):
@@ -14,11 +18,52 @@ def lista_del_visitante(request):
     return TipoCliente.objects.select_related("lista_precio").filter(codigo="B2C").first()
 
 
+def _precios(perfil):
+    if not perfil:
+        return {}
+    return dict(PrecioProducto.objects.filter(lista_precio=perfil.lista_precio).values_list("producto_id", "precio_clp"))
+
+
+def _estado_stock(p):
+    if p.stock_disponible <= 0:
+        return "nada", "Sin stock"
+    if p.stock_disponible <= STOCK_BAJO:
+        return "poco", f"Quedan {p.stock_disponible}"
+    return "ok", "En stock"
+
+
+def _fila(p, precios):
+    clase, texto = _estado_stock(p)
+    return {"p": p, "precio": precios.get(p.producto_id), "stock_clase": clase, "stock_texto": texto}
+
+
 def listado(request):
     perfil = lista_del_visitante(request)
-    precios = {}
-    if perfil:
-        precios = dict(PrecioProducto.objects.filter(lista_precio=perfil.lista_precio).values_list("producto_id", "precio_clp"))
+    precios = _precios(perfil)
+    q = request.GET.get("q", "").strip()
+    cat = request.GET.get("categoria", "")
+    temp = request.GET.get("temperatura", "")
+    solo_stock = request.GET.get("stock") == "1"
+
     productos = Producto.objects.filter(activo=True).select_related("categoria__rango_temperatura").order_by("categoria__nombre", "nombre")
-    filas = [(p, precios.get(p.producto_id)) for p in productos]
-    return render(request, "catalogo/listado.html", {"filas": filas, "perfil": perfil})
+    if q:
+        productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q) | Q(categoria__nombre__icontains=q))
+    if cat.isdigit():
+        productos = productos.filter(categoria_id=int(cat))
+    if temp.isdigit():
+        productos = productos.filter(categoria__rango_temperatura_id=int(temp))
+    if solo_stock:
+        productos = productos.filter(stock_disponible__gt=0)
+    filas = [_fila(p, precios) for p in productos]
+    return render(request, "catalogo/listado.html", {
+        "filas": filas, "perfil": perfil, "q": q, "cat": cat, "temp": temp, "solo_stock": solo_stock,
+        "categorias": Categoria.objects.order_by("nombre"), "rangos": RangoTemperatura.objects.order_by("-temp_min_c"),
+        "filtrado": bool(q or cat or temp or solo_stock)})
+
+
+def detalle(request, producto_id):
+    p = get_object_or_404(Producto.objects.select_related("categoria__rango_temperatura"), pk=producto_id, activo=True)
+    perfil = lista_del_visitante(request)
+    fila = _fila(p, _precios(perfil))
+    similares = [_fila(s, _precios(perfil)) for s in Producto.objects.filter(activo=True, categoria=p.categoria).exclude(pk=p.pk).order_by("nombre")[:4]]
+    return render(request, "catalogo/detalle.html", {"fila": fila, "perfil": perfil, "similares": similares})

@@ -1,4 +1,5 @@
 {% extends "tienda/base.html" %}
+{% load static %}
 {% block titulo %}Orden {{ orden.orden_id }} | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
@@ -31,7 +32,8 @@
   <div class="tarjeta-ui">
     <h2>Dónde va su pedido</h2>
     <p class="sub" style="margin:2px 0 10px">Camión {{ seg.camion_id }} · <span id="seg-hace">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span></p>
-    <div id="mapa" class="mapa" role="img" aria-label="Posición del camión"></div>
+    <div id="mapa" class="mapa" role="img" aria-label="Posición del camión y ruta a su dirección"></div>
+    <p class="ruta-info" id="ruta-info"></p>
   </div>
   <div class="tarjeta-ui">
     <h2>Temperatura de la cámara</h2>
@@ -67,10 +69,11 @@
 {% if seg %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+<script src="{% static 'js/mapa.js' %}"></script>
 <script>
 (function () {
   var raiz = document.getElementById("seg"), min = parseFloat(raiz.dataset.min), max = parseFloat(raiz.dataset.max);
-  var mapa = null, marcador = null;
+  var mapa = null, marcador = null, linea = null, ultimaRuta = 0, encuadrado = false;
   function pintarSerie(serie) {
     var svg = document.getElementById("spark");
     if (!serie.length) { svg.innerHTML = ""; return; }
@@ -88,11 +91,21 @@
       document.getElementById("seg-hace").textContent = "última posición hace " + u.hace_seg + " s";
       var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "cancelado" : "entregado");
       if (window.L) {
+        var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
-          mapa = L.map("mapa").setView([u.lat, u.long], 13);
-          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 18, attribution: "&copy; OpenStreetMap"}).addTo(mapa);
-          marcador = L.marker([u.lat, u.long]).addTo(mapa);
-        } else { marcador.setLatLng([u.lat, u.long]); mapa.panTo([u.lat, u.long]); }
+          mapa = CofrialMapa.crear("mapa", cam, 14);
+          marcador = L.marker(cam, {icon: CofrialMapa.pin("C", "#1D4ED8")}).addTo(mapa).bindPopup("Camión " + s.camion_id);
+          if (dest) L.marker(dest, {icon: CofrialMapa.pin("D", "#16A34A")}).addTo(mapa).bindPopup(s.destino.direccion);
+        } else { marcador.setLatLng(cam); }
+        if (dest && Date.now() - ultimaRuta > 20000) {       // la ruta se recalcula cada 20 s para no abusar del servicio gratuito
+          ultimaRuta = Date.now();
+          CofrialMapa.ruta([cam, dest], false).then(function (r) {
+            if (linea) mapa.removeLayer(linea);
+            linea = L.polyline(r.linea, {color: "#1D4ED8", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
+            if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30]}); encuadrado = true; }
+            document.getElementById("ruta-info").textContent = "Faltan " + CofrialMapa.texto(r) + " hasta " + s.destino.direccion;
+          });
+        }
       }
     }
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;

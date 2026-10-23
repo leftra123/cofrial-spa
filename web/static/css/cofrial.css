@@ -263,3 +263,10 @@ td.celda-acciones select { max-width: 100%; }
 /* tablas de texto corrido (por ejemplo el estado de la IA): las celdas sí parten línea */
 .tabla-caja.texto td, .tabla-caja.texto th { white-space: normal; vertical-align: top; }
 .tabla-caja.texto th { width: 34%; }
+
+/* pines del mapa */
+.pin-mapa span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; font-weight: 700; font-size: .8rem; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.ruta-info { font-size: .9rem; color: var(--texto-2); margin: 8px 0 0; }
+.ruta-lista { margin: 8px 0 0; padding-left: 20px; font-size: .9rem; }
+.mapa { isolation: isolate; height: 280px; border-radius: var(--radio-sm); background: var(--fondo); }
+.mapa .leaflet-tile-pane { filter: grayscale(.9) contrast(.92) brightness(1.06); }   /* mapa claro y minimalista */

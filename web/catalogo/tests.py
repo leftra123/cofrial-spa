@@ -8,7 +8,8 @@ class CatalogoTests(TestCase):
         call_command("cargar_demo", verbosity=0)
 
     def _precio_lomo(self, contenido):
-        return contenido.split("Lomo vetado")[1].split("$")[1].split("<")[0]
+        import re
+        return re.search(r'data-sku="VAC-LOM-5K"\s+data-precio="(\d+)"', contenido).group(1)
 
     def test_visitante_ve_lista_publica(self):
         r = self.client.get("/catalogo/")
@@ -72,3 +73,11 @@ class TiendaTests(TestCase):
         r = self.client.get("/catalogo/")
         self.assertNotContains(r, 'action="/carrito/agregar/"')
         self.assertContains(r, "Ingresar para comprar")
+
+    def test_fotos_con_credito_y_respaldo_de_ilustracion(self):
+        r = self.client.get("/catalogo/")
+        self.assertContains(r, 'src="/static/productos/POL-PEC-10K.jpg"')      # tiene foto descargada
+        self.assertContains(r, "<svg")                                         # los sin foto usan ilustración
+        from catalogo.models import Producto
+        p = Producto.objects.get(sku="POL-PEC-10K")
+        self.assertContains(self.client.get(f"/catalogo/{p.pk}/"), "Wikimedia Commons")

@@ -1,5 +1,6 @@
 """Configuración de Cofrial. Todo lo sensible viene del entorno (.env), nunca del código."""
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -91,3 +92,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 LOGIN_URL = "/cuenta/entrar/"
 LOGIN_REDIRECT_URL = "/catalogo/"
 LOGOUT_REDIRECT_URL = "/"
+
+# Mapa y rutas (OpenStreetMap, sin clave). La base es el punto de salida de los camiones, el mismo donde parte el simulador IoT.
+BASE_LOGISTICA = {"nombre": "Frigorífico central, Temuco", "lat": -38.7359, "long": -72.5904}
+GEOCODIFICAR = os.environ.get("GEOCODIFICAR", "1") == "1" and "test" not in sys.argv

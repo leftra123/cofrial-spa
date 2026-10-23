@@ -1,3 +1,8 @@
+import json
+from functools import lru_cache
+from pathlib import Path
+
+from django.conf import settings
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
@@ -32,9 +37,20 @@ def _estado_stock(p):
     return "ok", "En stock"
 
 
+@lru_cache(maxsize=1)
+def _creditos():
+    """Fotos referenciales descargadas con `descargar_imagenes` (autor y licencia). Sin archivo, todo usa la ilustración."""
+    try:
+        return json.loads((Path(settings.BASE_DIR) / "static" / "productos" / "creditos.json").read_text())
+    except (OSError, ValueError):
+        return {}
+
+
 def _fila(p, precios):
     clase, texto = _estado_stock(p)
-    return {"p": p, "precio": precios.get(p.producto_id), "stock_clase": clase, "stock_texto": texto}
+    credito = _creditos().get(p.sku)
+    return {"p": p, "precio": precios.get(p.producto_id), "stock_clase": clase, "stock_texto": texto,
+            "foto": f"productos/{p.sku}.jpg" if credito else None, "credito": credito}
 
 
 def listado(request):

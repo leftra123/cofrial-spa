@@ -97,8 +97,12 @@ body.tienda { background: var(--fondo); }
 /* seguimiento del pedido */
 .seg-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 16px; }
 .seg-grid .tarjeta-ui { margin: 0; }
-.mapa { isolation: isolate; height: 280px; border-radius: var(--radio-sm); background: var(--fondo); }
 .temp-grande { font-size: 1rem; color: var(--texto-2); display: flex; align-items: baseline; gap: 6px; }
 .temp-grande b { font-size: 2.6rem; color: var(--texto); }
 .spark { width: 100%; height: 90px; margin-top: 10px; background: var(--fondo); border-radius: 8px; }
 @media (max-width: 860px) { .seg-grid { grid-template-columns: 1fr; } }
+
+
+.prod-img .foto { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; display: block; }
+.det .prod-img .foto { height: 300px; }
+.credito { font-size: .72rem; color: var(--texto-3); margin: 6px 0 0; }

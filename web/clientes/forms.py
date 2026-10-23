@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 
-from . import rut as rutlib
+from . import geo, rut as rutlib
 from .models import Cliente, Comuna, Direccion, TipoCliente
 
 
@@ -50,5 +50,6 @@ class RegistroB2CForm(forms.Form):
         u = get_user_model().objects.create_user(d["email"], email=d["email"], password=d["clave"])
         c = Cliente.objects.create(usuario=u, tipo_cliente=TipoCliente.objects.get(codigo="B2C"), rut=d["rut"],
                                    nombre=d["nombre"], email=d["email"], telefono=d["telefono"])
-        Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)
+        dir_ = Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)
+        geo.ubicar(dir_)
         return u

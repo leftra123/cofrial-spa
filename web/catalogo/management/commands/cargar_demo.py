@@ -150,6 +150,11 @@ class Command(BaseCommand):
         if creado:
             Direccion.objects.create(cliente=sur, calle_numero="Av. Pedro de Valdivia 1200", comuna=temuco, es_principal=True)
 
+        # ubicaciones de las direcciones de demostración (obtenidas de OpenStreetMap), para trazar las rutas sin depender de la red
+        for calle, lat, lon in [("Manuel Montt 115", -38.73616, -72.59899), ("Av. Pedro de Valdivia 1200", -38.72879, -72.60956),
+                                ("Av. Alemania 0671", -38.73265, -72.61016)]:
+            Direccion.objects.filter(calle_numero=calle, lat__isnull=True).update(lat=lat, long=lon)
+
         etapas = {e.nombre: e for e in EtapaPipeline.objects.all()}
         for nombre, empresa, email, etapa, monto, v in [
             ("Jorge Rivas", "Casino Escolar Lautaro", "jorge@casino.test", "Prospecto", 4500000, vendedora),

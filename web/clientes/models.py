@@ -83,6 +83,8 @@ class Direccion(models.Model):
     comuna = models.ForeignKey(Comuna, on_delete=models.PROTECT)
     referencia = models.CharField(max_length=150, blank=True)
     es_principal = models.BooleanField(default=False)
+    lat = models.FloatField(null=True, blank=True)       # ubicación para trazar la ruta; se obtiene de OpenStreetMap
+    long = models.FloatField(null=True, blank=True)
 
     class Meta:
         db_table = "direccion"

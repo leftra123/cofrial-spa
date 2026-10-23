@@ -196,6 +196,7 @@ def seguimiento(orden):
         "ultima": None if ultima is None else {
             "temp_camara": ultima.temp_camara, "lat": ultima.lat, "long": ultima.long, "combustible_pct": ultima.combustible_pct,
             "alerta_ruptura_frio": ultima.alerta_ruptura_frio, "hace_seg": int((timezone.now() - ultima.registrado_en).total_seconds())},
+        "destino": None if orden.direccion.lat is None else {"lat": orden.direccion.lat, "long": orden.direccion.long, "direccion": str(orden.direccion)},
         "hubo_ruptura": any(l.alerta_ruptura_frio for l in lecturas),
         "serie": [{"t": l.registrado_en.isoformat(), "temp": l.temp_camara} for l in lecturas][-120:],
     }

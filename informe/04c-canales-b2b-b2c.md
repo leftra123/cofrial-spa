@@ -155,3 +155,5 @@ La parte del cliente se rehízo para que el prototipo coincida con W1 a W6: tien
 | Registro B2C | Formulario con RUT validado (módulo 11), correo, dirección y clave; crea cuenta, cliente B2C y dirección principal | `/cuenta/registro/` |
 
 El catálogo de demostración tiene 20 productos en 4 categorías (cárnicos refrigerados, aves, congelados, lácteos y embutidos). Las imágenes son ilustraciones propias por categoría, no fotografías de producto. El seguimiento se actualiza cada 5 s consultando la API; el mapa usa Leaflet con teselas de OpenStreetMap.
+
+**Imágenes y rutas (23-oct-2026).** Las fotos de producto son referenciales y provienen de Wikimedia Commons (API pública sin cuenta ni clave), con licencias libres; el autor y la licencia se muestran en el detalle del producto y los productos sin foto adecuada usan una ilustración. Los mapas usan OpenStreetMap; las direcciones se ubican con Nominatim y las rutas se calculan con OSRM, ambos gratuitos y sin clave. El panel de flota propone el orden de entrega de cada viaje (recorrido de menor distancia desde el frigorífico central) y el cliente ve la ruta restante de su camión hasta su dirección.

@@ -104,6 +104,7 @@ class SeguimientoPedidoTests(TestCase):
         self.assertEqual(d["camion_id"], o.despacho.camion_id)
         self.assertEqual(d["ultima"]["temp_camara"], 2.5)
         self.assertFalse(d["hubo_ruptura"])
+        self.assertAlmostEqual(d["destino"]["lat"], -38.73616, places=3)      # dirección ubicada para trazar la ruta
         self.assertEqual(len(d["serie"]), 1)
         r = self.client.get(f"/pedidos/{o.orden_id}/")
         self.assertContains(r, "Dónde va su pedido")

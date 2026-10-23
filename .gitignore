@@ -24,6 +24,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.*.example
+!.env.example
 *.pem
 *.key
 credentials
@@ -41,3 +43,10 @@ pnpm-debug.log*
 
 # Locales de Claude
 .claude/settings.local.json
+__pycache__/
+*.pyc
+web/staticfiles/
+web/db.sqlite3
+
+# Estado local del aprovisionamiento (llaves y claves generadas): nunca se sube
+aws/.estado/

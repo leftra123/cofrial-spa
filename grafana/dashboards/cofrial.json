@@ -1,0 +1,780 @@
+{
+ "uid": "cofrial-torre",
+ "title": "Cofrial: ventas y cadena de frío",
+ "tags": [
+  "cofrial",
+  "bi"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "5s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "timepicker": {
+  "refresh_intervals": [
+   "5s",
+   "10s",
+   "30s",
+   "1m"
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "title": "Ventas del período (CLP)",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT coalesce(sum(t.total_clp),0) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     },
+     "unit": "prefix:$"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 2,
+   "title": "Pedidos del período",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 3,
+   "title": "Lecturas con alerta de frío",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en)"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 4,
+   "title": "Camiones en alerta ahora",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT count(*) AS camiones FROM (SELECT DISTINCT ON (camion_id) alerta_ruptura_frio FROM telemetria ORDER BY camion_id, registrado_en DESC) u WHERE alerta_ruptura_frio"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Pedidos afectados por ruptura de frío",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio\n  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"
+    }
+   ],
+   "description": "Órdenes despachadas cuyo camión reportó una lectura fuera de rango durante el viaje.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 6,
+   "title": "Ventas en riesgo (CLP)",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT coalesce(sum(t.total_clp),0) AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio\n  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"
+    }
+   ],
+   "description": "Monto de los pedidos afectados: lo que la ruptura de frío pone en juego.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "prefix:$"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 7,
+   "title": "Ventas vs alertas de frío en el tiempo",
+   "type": "timeseries",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 16,
+    "h": 9
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT $__timeGroupAlias(o.creada_en,'10m'), o.canal AS metric, sum(t.total_clp) AS value FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY 1"
+    },
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "B",
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT $__timeGroupAlias(registrado_en,'10m'), 'Alertas de frío' AS metric, count(*) AS value FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "description": "Cruce pedido por la pauta: las ventas de cada canal junto a las alertas de ruptura de frío, en la misma línea de tiempo.",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 60,
+      "lineWidth": 1
+     },
+     "unit": "short"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Alertas de frío"
+      },
+      "properties": [
+       {
+        "id": "custom.drawStyle",
+        "value": "line"
+       },
+       {
+        "id": "custom.axisPlacement",
+        "value": "right"
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       },
+       {
+        "id": "custom.lineWidth",
+        "value": 3
+       },
+       {
+        "id": "custom.fillOpacity",
+        "value": 0
+       },
+       {
+        "id": "custom.spanNulls",
+        "value": true
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 8,
+   "title": "Ventas por canal",
+   "type": "piechart",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 4,
+    "w": 8,
+    "h": 9
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT o.canal AS canal, sum(t.total_clp) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY 1"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "prefix:$"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "values": [
+      "value",
+      "percent"
+     ]
+    },
+    "pieType": "donut",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": true,
+     "fields": "/^ventas$/"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "title": "Temperatura de cámara por camión (°C)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 13,
+    "w": 16,
+    "h": 9
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) ORDER BY 1"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "celsius",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 0
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 10,
+   "title": "Posición actual de la flota",
+   "type": "geomap",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 13,
+    "w": 8,
+    "h": 9
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, alerta_ruptura_frio FROM telemetria ORDER BY camion_id, registrado_en DESC"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": -10
+       },
+       {
+        "color": "orange",
+        "value": 4
+       },
+       {
+        "color": "red",
+        "value": 8
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "view": {
+     "id": "coords",
+     "lat": -38.7459,
+     "lon": -72.6,
+     "zoom": 11
+    },
+    "controls": {
+     "showZoom": true,
+     "mouseWheelZoom": true
+    },
+    "basemap": {
+     "type": "osm-standard",
+     "name": "Mapa"
+    },
+    "layers": [
+     {
+      "type": "markers",
+      "name": "Camiones",
+      "config": {
+       "showLegend": true,
+       "style": {
+        "size": {
+         "fixed": 9,
+         "min": 2,
+         "max": 15
+        },
+        "color": {
+         "field": "temp_camara",
+         "fixed": "dark-green"
+        },
+        "symbol": {
+         "mode": "fixed",
+         "fixed": "img/icons/marker/circle.svg"
+        },
+        "text": {
+         "mode": "field",
+         "field": "camion_id",
+         "fixed": ""
+        },
+        "textConfig": {
+         "fontSize": 12,
+         "offsetY": -12
+        }
+       }
+      },
+      "location": {
+       "mode": "coords",
+       "latitude": "lat",
+       "longitude": "long"
+      },
+      "tooltip": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 11,
+   "title": "Pedidos afectados por ruptura de frío",
+   "type": "table",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 22,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", t.total_clp AS \"Monto (CLP)\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now())\nWHERE d.salida_en IS NOT NULL GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
+    }
+   ],
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Monto (CLP)"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "prefix:$"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Lecturas con alerta"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "orange",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 10
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true
+   }
+  }
+ ],
+ "annotations": {
+  "list": []
+ },
+ "templating": {
+  "list": []
+ },
+ "description": "Tablero en vivo: ventas por canal cruzadas con las alertas de ruptura de frío de la flota."
+}

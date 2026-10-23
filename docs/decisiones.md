@@ -3,15 +3,67 @@
 Cada decisión se vota en Trello (lista "Decisiones") y, una vez cerrada, se anota aquí con su trade-off.
 Esto alimenta `informe/03-arquitectura-cloud.md`. La evaluación con criterios ponderados está en `informe/08-herramientas.md`.
 
-| # | Tema | Adoptada | Alternativa descartada | Trade-off |
-|---|---|---|---|---|
-| D-01 | Web (e-commerce + CRM + API) | Astro en modo servidor (@astrojs/node) | Astro + Express | Un solo proyecto, un solo despliegue, menor curva de aprendizaje |
-| D-02 | Motor de BD en RDS | PostgreSQL | MySQL | Datos geográficos, series de tiempo e integración con Grafana |
-| D-03 | Acceso a datos | SQL directo con la librería postgres | ORM Drizzle / Prisma | El MER del informe se convierte tal cual en el script de creación |
-| D-04 | Simulador IoT | Node/TypeScript en Docker, docker compose | Python en Docker | Un solo lenguaje en todo el proyecto |
-| D-05 | Dashboard BI | Grafana en Docker | Metabase / Chart.js propio | Refresco cada 5 s (en vivo), mapa para lat/long, y sin pagar |
-| D-06 | IA gratuita | Google Gemini API (free tier) | Groq / Hugging Face | Calidad en español; Groq queda de respaldo si se alcanza límite |
-| D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS privada | Elastic Beanstalk | Lo exige la pauta; deja visible la configuración de red |
-| D-08 | Extra visual | Torre de control con mapa Leaflet 2D | Vista isométrica 3D con Three.js | Alcanzable en plazo; 3D solo si lo obligatorio está listo antes del 10-nov |
+Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS Academy y que sume puntos en la rúbrica.
 
-Nota. Adoptadas por la pauta EVA2_3 y confirmadas por criterios ponderados en `informe/08-herramientas.md`.
+| # | Tema | Decisión | Alternativas | Estado |
+|---|---|---|---|---|
+| D-01 | Web (e-commerce + CRM + API) | **Django con plantillas (HTMX y Tailwind)**: ORM con migraciones, autenticación, grupos B2B/B2C y panel de administración como CRM base | React + Django REST Framework (empate técnico) / Next.js / Astro | **Adoptada** el 15-oct (elegida por Claude por delegación de Eric; Sergio debe confirmarla) |
+| D-02 | Motor de BD en RDS | **PostgreSQL** | MySQL | Adoptada (sin objeciones; Django y Grafana lo soportan de forma nativa) |
+| D-03 | Acceso a datos | **ORM de Django con migraciones**. `informe/modelo/esquema.sql` queda como diseño de referencia validado | SQL directo / Drizzle / Prisma | **Adoptada** el 15-oct, consecuencia de D-01 |
+| D-04 | Simulador IoT | **Python en Docker**, `docker compose` con varios contenedores (camiones) | Node/TypeScript en Docker | **Adoptada** el 15-oct, consecuencia de D-01 (un solo lenguaje) |
+| D-05 | Dashboard BI | **Grafana** en Docker (gratis, actualización cada 5 s, mapa para `lat`/`long`) + torre de control propia como extra | Metabase (más simple, refresco más lento) / Chart.js propio | Por confirmar |
+| D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Por confirmar |
+| D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por confirmar |
+| D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por confirmar |
+| D-09 | Cuentas de clientes | Inicio de sesión propio sobre la tabla `usuario` (PBKDF2 de Django, límite de intentos, sesión renovada al entrar); registro público solo B2C | `django.contrib.auth` (`auth_user`) | **Adoptada** el 20-oct (prototipo). Mantiene las 25 tablas del MER; si se quiere el panel de administración de Django como CRM, habrá que migrar a `auth_user` |
+
+> El modelo de datos (25 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
+
+## Por qué esta combinación
+- **Un solo lenguaje (Python)** para web, API, cálculos e IoT: lo que aprende uno le sirve al otro y el simulador comparte herramientas con la aplicación.
+- **Django** entrega ORM con migraciones, autenticación, permisos por grupo y un panel de administración. Esas cuatro piezas son justo las que exigen el e-commerce y el CRM, y con otro framework habría que armarlas a mano en cinco semanas.
+- **PostgreSQL + Django:** el MER del informe se convierte en modelos y migraciones; Django y Grafana soportan PostgreSQL de forma nativa.
+- **Grafana** cumple "en vivo" sin programar gráficos y tiene un panel de mapa que muestra los camiones.
+- **Defensa:** si preguntan por qué no React o Next.js, la rúbrica evalúa el negocio, la conexión a la base de datos y la estabilidad del despliegue, no el framework de la vista; Django permitió gastar el tiempo en eso.
+
+## Registro de decisiones cerradas
+
+**D-01 Web: Django con plantillas (15-oct-2026).** Puntaje 4,75 frente a React + Django REST Framework (4,65, empate técnico), Astro (4,35) y Next.js (4,30); ver Tabla 4 de `informe/08-herramientas.md`. Trade-off: se renuncia al ecosistema de React y a una interfaz más rica a cambio de una sola aplicación, menos piezas que desplegar y un panel de administración listo como CRM base. Si más adelante se necesita una interfaz más dinámica, HTMX cubre la mayoría de los casos y la API se puede exponer con Django REST Framework sin rehacer el modelo.
+
+**D-03 Acceso a datos: ORM de Django (15-oct-2026).** Consecuencia de D-01. Las tablas de clave compuesta (`precio_producto`, `carrito_item`, `orden_item`) se implementan con `CompositePrimaryKey` (Django 5.2 o superior) o, si la versión no lo permite, con clave autogenerada más restricción de unicidad sobre el par; ambas mantienen la 3FN. La tabla `usuario` se reemplaza por la autenticación de Django.
+
+**D-04 Simulador IoT: Python en Docker (15-oct-2026).** Consecuencia de D-01: Python es el lenguaje común y los contenedores usan una imagen ligera. Puntaje 4,90 frente a 4,40 de Node/TypeScript; ver Tabla 5 de `informe/08-herramientas.md`.
+
+## Estado de la implementación
+El scaffold está en `backend/` (Django 5.2, `psycopg` 3 y `python-dotenv`; configuración por variables de entorno, ver `.env.example`). Aún no hay modelos: el esquema vive en `informe/modelo/esquema.sql`.
+
+> Sincronizado con `informe/03-arquitectura-cloud.md` y `informe/08-herramientas.md` (Tablas 4 y 5: Django 4,75; Python 4,90). Los puntajes son un borrador que Sergio debe validar, sobre todo C3 (facilidad de aprendizaje).
+
+## Capa visual del prototipo (rediseño "Fleet Dispatch")
+- **Qué cambió:** solo presentación. CSS propio en `web/static/css/cofrial.css` (sin frameworks ni `node_modules`), layout con barra lateral en `templates/base.html` y componentes reutilizables en `templates/componentes/`. Tipografía Inter por CDN de Google Fonts, con respaldo a la fuente del sistema.
+- **Acento único azul `#1D4ED8`** (variable `--acento`); verde, ámbar y rojo solo para estados. Se reemplazó el rojo corporativo anterior porque chocaba con el rojo de las alertas de frío.
+- **Estados de orden:** los seis estados reales se agrupan en cuatro chips: Recibida y Confirmada (ámbar, "pendiente"), En preparación (azul, "asignado"), Despachada (celeste, "en tránsito"), Entregada (verde) y Cancelada (gris). Los filtros de `Mis pedidos` con contador se calculan en el navegador, sin tocar las vistas.
+- **Flota:** no existía pantalla. Se agregó `/flota/` (solo lectura, roles admin, gerencia y despachador) con KPIs, tarjetas por camión con su última lectura de telemetría y viajes activos. No hay modelo de conductor, así que la tarjeta de viaje muestra al cliente con avatar.
+- **Sin cambios** en modelos, servicios ni reglas de negocio. Capturas antes/después en `docs/capturas-visual/`.
+
+## API con Django REST Framework y axios (20-oct-2026)
+- **Qué se agregó (en `web/`):** `djangorestframework` con dos endpoints JSON de solo lectura: `GET /api/flota/` (camiones, última lectura de telemetría y resumen; roles admin, gerencia y despachador) y `GET /api/pedidos/` (órdenes del cliente autenticado). Usan la misma sesión del sitio, exigen sesión iniciada y rechazan escritura (405).
+- **Uso:** la pantalla `/flota/` consulta la API con **axios** (cargado por CDN, sin `node_modules`) cada 5 s, el mismo intervalo del simulador, y refresca los números sin recargar. Si la API falla, la página conserva los últimos datos.
+- **Por qué:** D-01 dejó a DRF como alternativa en empate técnico y anotó que la API "se puede exponer con Django REST Framework sin rehacer el modelo". Se hizo así: el modelo no cambia. La lógica de armado de datos quedó en `web/flota/servicios.py`, compartida por la pantalla y la API.
+- **Dos aplicaciones en el repositorio:** `backend/` (scaffold y portal de otras sesiones) y `web/` (CRM, flota, rediseño y pruebas) conviven hasta que el equipo decida cuál queda. Para correr `web/` con el simulador y Grafana: `docker compose -f docker-compose.web.yml --env-file .env up`, copiando antes `.env.web.example` a `.env`.
+
+
+## IA y despliegue (22-oct-2026)
+- **IA (D-06):** Gemini (free tier) como proveedor principal y Groq de respaldo, con solo la biblioteca estándar (`urllib`), sin dependencias nuevas. Modelo configurable con `GEMINI_MODEL` porque la oferta gratuita de Google cambia; no se fijó en código. Cumple RN-14: confianza guardada, umbral 0,60, tiempo máximo de 5 s y, ante cualquier falla, el requerimiento queda «sin clasificar» y nunca se pierde.
+- **Cómo se prueba:** `manage.py probar_ia` verifica la clave contra la API real y `manage.py evaluar_ia` mide el acierto sobre 20 mensajes etiquetados frente a la meta de 85 % de CU-09. **Ninguno de los dos se ejecutó todavía con una clave real**; las pruebas automáticas usan la API simulada.
+- **Despliegue:** `aws/` separa el compose en EC2 web e IoT, con `DB_SSLMODE=require` contra RDS. Se probó en local; falta ejecutarlo en el Learner Lab.
+
+- **Corrección tras probar la IA con la API real (22-oct-2026):** el modelo `gemini-2.5-flash`, que figuraba por defecto, ya no está disponible para cuentas nuevas (Google responde 404 «no longer available to new users»), y los modelos 3.x se usan con la **Interactions API** (`/v1beta/interactions`), no con `generateContent`. El cliente se rehízo para eso y prueba en orden `gemini-3.5-flash-lite`, `gemini-flash-lite-latest` y `gemini-3.5-flash` (configurable con `GEMINI_MODELS`), pasando al siguiente si uno está saturado (503).
+- **Tiempo máximo de la IA: 12 s en lugar de 5 s.** La latencia medida es de 4 a 7 s por consulta; con 5 s casi todas habrían quedado «sin clasificar». Es un desvío deliberado del flujo alternativo de CU-09 («no responde en 5 segundos»), que conviene actualizar en el informe.
+- **Acierto medido: 100 % (20 de 20)** con `manage.py evaluar_ia` y las APIs reales (Gemini principal y Groq de respaldo, 22-oct-2026, tarde). Solo con Gemini se había medido 90 % (18 de 20: dos consultas sin respuesta por demora o saturación), de ahí la necesidad del respaldo.
+- **Groq como respaldo, con tres correcciones tras probarlo con la clave real:** (1) la protección contra bots de Groq (Cloudflare, error 1010) bloquea el identificador por defecto de `urllib`, así que el cliente se identifica como `cofrial-crm/1.0`; (2) el modelo de respaldo elegido (`llama-3.3-70b-versatile`) no existe en la cuenta, y se usa en cascada `openai/gpt-oss-20b`, `openai/gpt-oss-120b` y `qwen/qwen3.8-27b` (configurable con `GROQ_MODELS`); (3) con Gemini lento el respaldo no llegaba a ejecutarse porque Gemini consumía todo el presupuesto de 12 s, por lo que ahora un proveedor con respaldo detrás solo puede usar el 65 % del tiempo restante. Groq responde en cerca de 1 s. El orden se invierte con `IA_PROVEEDORES=groq,gemini`.
+- **Tienda alineada con los wireframes (23-oct-2026):** se separó el diseño del cliente (`templates/tienda/base.html`, barra superior) del panel interno (menú lateral). Ilustraciones SVG propias por categoría en lugar de fotos (sin derechos de imagen ni peso extra). Seguimiento del pedido con Leaflet + OpenStreetMap, que necesita internet en el navegador. El verificador de AWS lee el precio desde `data-sku`/`data-precio` para no depender del texto de la tarjeta.
+- **Fotos y rutas sin cuentas (23-oct-2026):** Wikimedia Commons para las fotos (descarga única con `manage.py descargar_imagenes`, créditos en `static/productos/creditos.json`), Nominatim para ubicar direcciones y OSRM para las rutas y el orden de entrega (viajante). Los tres son gratuitos y sin clave, pero son servicios compartidos con límites de uso: por eso las fotos se versionan en el repositorio, las coordenadas de la demostración van en el seed y la ruta del cliente se recalcula solo cada 20 s. Si OSRM no responde, el mapa dibuja una línea recta. Se probó Carto Positron para un mapa más limpio, pero ahora exige clave; se usan las teselas estándar de OpenStreetMap atenuadas con CSS.
+- **Ilustraciones SVG con IA (23-oct-2026):** se reutilizan los proveedores del CRM. Gemini 3.5 Flash dibuja bastante mejor que Flash-Lite y que Groq (con ellos salían formas abstractas), por eso el comando prueba primero ese modelo; ante un error 429 se reintenta. El SVG se limpia con lista blanca (`catalogo/svg_seguro.py`) porque es contenido generado. Orden de uso en la tienda: foto, ilustración de IA, ilustración genérica de la categoría. Solo se generan para los productos sin foto; con `--todos` se pueden generar para todos.
+- **Precios al modo chileno:** filtro `clp` (`$34.990`) y `miles` disponibles en todas las plantillas; IVA de 19 % desglosado para B2B, cuyos precios son netos, e indicado como incluido para B2C.
+- **Pedido extra de demostración:** `OC-SUR-119` en el mismo camión que el del Hospital, para que el viaje de CAM-01 tenga dos paradas y se vea el orden de entrega sugerido.

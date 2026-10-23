@@ -1,0 +1,20 @@
+# EC2 IoT DEDICADA: solo los contenedores de camiones, que insertan telemetría en RDS cada INTERVALO_SEG segundos.
+# Uso desde la raíz del repositorio:  docker compose -f aws/docker-compose.iot.yml --env-file .env up -d --build
+# Los camiones deben existir en la base: los crea `cargar_demo` al arrancar la EC2 web (CAM-01 a CAM-03).
+x-camion: &camion
+  build: ../iot
+  restart: unless-stopped
+x-bd: &bd
+  DB_HOST: ${DB_HOST:?define DB_HOST (endpoint de RDS) en .env}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-cofrial}
+  DB_USER: ${DB_USER:-cofrial}
+  DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+  DB_SSLMODE: ${DB_SSLMODE:-require}
+  INTERVALO_SEG: ${INTERVALO_SEG:-5}
+  PROB_RUPTURA: ${PROB_RUPTURA:-0.01}
+
+services:
+  camion-01: {<<: *camion, environment: {<<: *bd, CAMION_ID: CAM-01}}
+  camion-02: {<<: *camion, environment: {<<: *bd, CAMION_ID: CAM-02}}
+  camion-03: {<<: *camion, environment: {<<: *bd, CAMION_ID: CAM-03}}

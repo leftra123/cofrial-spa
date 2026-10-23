@@ -1,0 +1,18 @@
+{
+ "PES-MER-5K": {
+  "modelo": "Gemini gemini-3.5-flash",
+  "producto": "Filete de merluza congelado 5 kg"
+ },
+ "MAR-CON-2K": {
+  "modelo": "Gemini gemini-3.5-flash",
+  "producto": "Mariscos congelados 2 kg"
+ },
+ "LAC-MAN-10K": {
+  "modelo": "Gemini gemini-3.5-flash",
+  "producto": "Mantequilla en bloque 10 kg"
+ },
+ "VAC-MOL-5K": {
+  "modelo": "Gemini gemini-3.5-flash",
+  "producto": "Carne molida de vacuno 5 kg"
+ }
+}

@@ -1,0 +1,89 @@
+{% extends "crm/base.html" %}
+{% block titulo %}IA | Cofrial SpA{% endblock %}
+{% block crm %}
+<div class="pagina-cab">
+  <div><h1>Panel de IA</h1><p class="sub">Qué hace la inteligencia artificial en Cofrial, cómo está configurada y una prueba en vivo.</p></div>
+  <div class="acciones"><a class="btn btn-sec" href="/crm/requerimientos/">Ver requerimientos</a></div>
+</div>
+
+<div class="tarjeta-ui">
+  <h2>¿Qué hace la IA aquí?</h2>
+  <p class="muted" style="margin-bottom:12px">Clasifica automáticamente los reclamos y consultas que los clientes envían desde <b>Soporte</b>, para que lleguen ordenados al CRM.</p>
+  <div class="pasos" style="grid-template-columns:repeat(4,1fr)">
+    <div class="paso hecho">1. El cliente escribe su consulta en Soporte</div>
+    <div class="paso hecho">2. La aplicación la guarda <b>siempre</b> y se la envía a la IA con la lista de categorías</div>
+    <div class="paso hecho">3. La IA responde una categoría y qué tan segura está (de 0 a 1)</div>
+    <div class="paso hecho">4. Si está segura (≥ {{ umbral|floatformat:2 }}) queda <b>clasificada</b>; si no, queda <b>sin clasificar</b> para una persona</div>
+  </div>
+  <p class="muted" style="margin-top:6px">La IA ayuda y la persona decide: si la IA falla o duda, el requerimiento no se pierde, queda para revisión manual.</p>
+</div>
+
+<div class="rejilla dos" style="margin-top:20px">
+  <div class="tarjeta-ui">
+    <h2>Estado de los proveedores</h2>
+    <div class="tabla-caja texto" style="box-shadow:none"><table><tbody>
+      <tr><th>Gemini (Google)</th><td>{% if ia.gemini %}<span class="chip entregado">Clave configurada</span>{% else %}<span class="chip alerta">Sin clave</span>{% endif %}</td></tr>
+      <tr><th>Groq (respaldo)</th><td>{% if ia.groq %}<span class="chip entregado">Clave configurada</span>{% else %}<span class="chip alerta">Sin clave</span>{% endif %}</td></tr>
+      <tr><th>Orden de uso</th><td>{{ ia.orden|join:" → " }} <span class="frio">(si el primero falla, prueba el siguiente)</span></td></tr>
+      <tr><th>Modelos de Gemini</th><td class="frio">{{ ia.modelos_gemini|join:", " }}</td></tr>
+      <tr><th>Modelos de Groq</th><td class="frio">{{ ia.modelos_groq|join:", " }}</td></tr>
+      <tr><th>Tiempo máximo</th><td>{{ ia.presupuesto|floatformat:0 }} s en total; el primer proveedor usa a lo más el {{ ia.parte_con_respaldo }} %, para dejar tiempo al respaldo</td></tr>
+      <tr><th>Umbral de confianza</th><td>{{ umbral|floatformat:2 }}</td></tr>
+    </tbody></table></div>
+    <p class="frio" style="margin-top:10px">Las claves nunca se muestran: solo si existen.</p>
+  </div>
+  <div class="tarjeta-ui">
+    <h2>Lo que ha hecho hasta ahora</h2>
+    <div class="rejilla" style="grid-template-columns:repeat(2,1fr)">
+      <div class="kpi-card acento"><div class="etiqueta">Clasificados por la IA</div><div class="valor">{{ resumen.por_ia }}</div></div>
+      <div class="kpi-card"><div class="etiqueta">La IA dudó (sin clasificar)</div><div class="valor">{{ resumen.ia_dudo }}</div></div>
+      <div class="kpi-card"><div class="etiqueta">Clasificados a mano</div><div class="valor">{{ resumen.manual }}</div></div>
+      <div class="kpi-card"><div class="etiqueta">Sin clasificar</div><div class="valor">{{ resumen.sin_clasificar }}</div></div>
+    </div>
+    <p class="frio" style="margin-top:10px">{{ resumen.total }} requerimientos en total.</p>
+  </div>
+</div>
+
+<div class="tarjeta-ui" style="margin-top:20px">
+  <h2>Probar la IA ahora</h2>
+  <p class="muted">Escribe un mensaje como si fueras un cliente. La prueba se hace con <b>cada proveedor por separado</b> y <b>no crea ningún requerimiento</b>.</p>
+  <form method="post">{% csrf_token %}
+    <label for="asunto">Asunto</label><input name="asunto" id="asunto" value="{{ asunto }}" maxlength="150">
+    <label for="descripcion">Mensaje del cliente</label>
+    <textarea name="descripcion" id="descripcion" rows="3" style="width:100%;max-width:none">{{ texto }}</textarea>
+    <p style="margin-top:14px"><button>Probar con la IA</button> <span class="frio">Tarda unos segundos.</span></p>
+  </form>
+  {% if filas %}
+  <div class="tabla-caja" style="margin-top:16px"><table>
+    <thead><tr><th>Proveedor</th><th>Modelo</th><th>Respuesta</th><th class="num">Confianza</th><th class="num">Tiempo</th><th>Resultado</th></tr></thead>
+    <tbody>
+    {% for f in filas %}<tr>
+      <td><b>{{ f.proveedor }}</b></td>
+      <td class="frio">{{ f.modelo|default:"–" }}</td>
+      <td>{% if f.ok %}<b>{{ f.categoria }}</b>{% else %}<span class="frio">{{ f.error }}</span>{% endif %}</td>
+      <td class="num">{% if f.ok %}{{ f.confianza|floatformat:2 }}{% else %}–{% endif %}</td>
+      <td class="num">{{ f.segundos|floatformat:1 }} s</td>
+      <td>{% if f.ok %}<span class="chip entregado">Respondió</span>{% else %}<span class="chip alerta">Sin respuesta</span>{% endif %}</td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+  <details style="margin-top:14px"><summary class="muted" style="cursor:pointer">Ver exactamente lo que se le envía a la IA</summary>
+    <pre style="white-space:pre-wrap;background:var(--fondo);padding:14px;border-radius:12px;font-size:.82rem;margin-top:8px">{{ prompt }}</pre></details>
+  {% endif %}
+</div>
+
+<div class="seccion"><h2>Últimos requerimientos y qué hizo la IA</h2></div>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Quién clasificó</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for r in ultimos %}<tr>
+    <td><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:70 }}</span></td>
+    <td>{{ r.cliente|default:"–" }}</td>
+    <td>{{ r.categoria_requerimiento|default:"–" }}</td>
+    <td>{% if r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado">IA · {{ r.confianza_ia }}</span>
+        {% elif r.categoria_requerimiento %}<span class="chip cancelado">Manual</span>
+        {% elif r.confianza_ia is not None %}<span class="chip pendiente">IA dudó · {{ r.confianza_ia }}</span>
+        {% else %}<span class="frio">Aún nadie</span>{% endif %}</td>
+    <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% else %}entregado{% endif %}">{{ r.get_estado_display }}</span></td>
+  </tr>{% empty %}<tr><td colspan="5" class="vacio">Aún no hay requerimientos.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

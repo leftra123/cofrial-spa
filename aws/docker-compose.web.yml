@@ -1,0 +1,52 @@
+# EC2 WEB (subred pública): aplicación Django + Grafana. La base está en RDS (subred privada), no aquí.
+# Uso desde la raíz del repositorio:  docker compose -f aws/docker-compose.web.yml --env-file .env up -d --build
+x-bd: &bd
+  DB_HOST: ${DB_HOST:?define DB_HOST (endpoint de RDS) en .env}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-cofrial}
+  DB_USER: ${DB_USER:-cofrial}
+  DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+  DB_SSLMODE: ${DB_SSLMODE:-require}
+
+services:
+  web:
+    build: ../web
+    # migrate y datos de demostración son idempotentes; preparar_bi crea el usuario de solo lectura de Grafana en RDS
+    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py cambiar_clave_demo --si-hay-clave $${DEMO_CLAVE_DEBIL:+--permitir-clave-debil} && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 30"
+    environment:
+      <<: *bd
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      DJANGO_DEBUG: "0"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      DJANGO_CSRF_ORIGINS: ${DJANGO_CSRF_ORIGINS:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?define DEMO_PASSWORD en .env}
+      DEMO_CLAVE_DEBIL: ${DEMO_CLAVE_DEBIL:-}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?define GRAFANA_DB_PASSWORD en .env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODELS: ${GEMINI_MODELS:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODELS: ${GROQ_MODELS:-}
+      IA_PROVEEDORES: ${IA_PROVEEDORES:-}
+    ports: ["80:8000"]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-cofrial}
+      DB_SSLMODE: ${DB_SSLMODE:-require}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?define GRAFANA_DB_PASSWORD en .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?define GRAFANA_PASSWORD en .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/cofrial.json
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports: ["3000:3000"]
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [web]
+    restart: unless-stopped

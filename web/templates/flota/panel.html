@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Flota | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Flota</h1><p class="sub">Estado de cada camión según su última lectura de telemetría.</p></div>
+  <div class="acciones"><span class="muted" id="en-vivo" hidden>En vivo · cada 5 s</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a></div>
+</div>
+{% endblock %}
+{% block contenido %}
+<div class="rejilla">
+  <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor" data-resumen="activos">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
+  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor" data-resumen="en_ruta">{{ resumen.en_ruta }}</div><div class="detalle">con despacho en curso</div></div>
+  <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor" data-resumen="con_alerta">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
+  <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
+</div>
+
+<div class="seccion"><h2>Mapa y rutas sugeridas</h2></div>
+<div class="tarjeta-ui">
+  <div id="mapa-flota" class="mapa" role="img" aria-label="Mapa de la flota y rutas de entrega"></div>
+  <p class="frio" style="margin:8px 0 0">B = frigorífico central · C = camión (rojo si tiene ruptura de frío) · números = orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
+  <div id="rutas-sugeridas"></div>
+</div>
+
+<div class="seccion"><h2>Vehículos</h2></div>
+<div class="rejilla vehiculos">
+{% for x in tarjetas %}
+  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}" data-camion="{{ x.camion.camion_id }}">
+    <div class="vehiculo-cab">
+      <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
+        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}</div></div></div>
+      {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
+      {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
+      {% elif x.viaje %}<span class="chip transito">En ruta</span>
+      {% else %}<span class="chip entregado">Disponible</span>{% endif %}
+    </div>
+    {% if x.lectura %}
+    <div class="mini">
+      <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
+      <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
+      <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div>
+    </div>
+    <div class="barra" data-campo="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
+    <div class="frio" data-campo="lectura">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
+    {% else %}
+    <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
+    {% endif %}
+  </article>
+{% empty %}
+  <div class="tarjeta-ui">No hay camiones registrados.</div>
+{% endfor %}
+</div>
+
+{% if viajes %}
+<div class="seccion"><h2>Viajes activos</h2></div>
+<div class="rejilla dos">
+{% for x in viajes %}
+  <article class="tarjeta-ui viaje">
+    <div class="vehiculo-cab"><div><div class="patente" style="font-weight:700">{{ x.camion.patente }}</div><div class="frio">Despacho N.º {{ x.viaje.despacho_id }}</div></div>
+      {% if x.alerta %}<span class="chip alerta">Ruptura de frío</span>{% else %}<span class="chip transito">En tránsito</span>{% endif %}</div>
+    <div class="ruta">
+      <span class="punto"></span><div><b>Frigorífico central</b><div class="frio">Temuco · salida {{ x.viaje.salida_en|date:"d/m H:i" }}</div></div>
+      <span class="linea"></span><span></span>
+      <span class="punto fin"></span><div>{% if x.destino %}<b>{{ x.destino.calle_numero }}</b><div class="frio">{{ x.destino.comuna.nombre }}</div>{% else %}<b>Sin destino asignado</b>{% endif %}</div>
+    </div>
+    {% for o in x.pedidos %}
+    <div class="conductor"><span class="avatar">{{ o.direccion.cliente.nombre|slice:":1"|upper }}</span>
+      <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Orden N.º {{ o.orden_id }}</div></div>
+      <span style="margin-left:auto">{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</span></div>
+    {% endfor %}
+  </article>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endblock %}
+{% block scripts %}
+{{ mapa|json_script:"datos-mapa" }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{% static 'js/mapa.js' %}"></script>
+<script>
+  (function () {
+    var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
+    var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
+    L.marker(base, {icon: CofrialMapa.pin("B", "#111827")}).addTo(m).bindPopup(d.base.nombre);
+    d.camiones.forEach(function (c) {
+      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.pin("C", c.alerta ? "#DC2626" : "#1D4ED8")}).addTo(m).bindPopup(c.id + " · " + c.patente);
+    });
+    var todos = [base];
+    d.viajes.forEach(function (v, i) {
+      if (!v.paradas.length) return;
+      var color = colores[i % colores.length], pts = [base].concat(v.paradas.map(function (p) { return [p.lat, p.long]; }));
+      v.paradas.forEach(function (p) { todos.push([p.lat, p.long]); });
+      CofrialMapa.ruta(pts, true).then(function (r) {
+        L.polyline(r.linea, {color: color, weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(m);
+        var orden = r.orden || pts.map(function (_, k) { return k; }), lista = [];
+        v.paradas.forEach(function (p, k) {
+          var n = orden[k + 1];                                   // posición de la parada en el recorrido (la base es 0)
+          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color)}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
+          lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + ")</span></li>";
+        });
+        document.getElementById("rutas-sugeridas").insertAdjacentHTML("beforeend",
+          "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b>, ruta sugerida: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.join("") + "</ol>");
+      });
+    });
+    if (todos.length > 1) m.fitBounds(todos, {padding: [40, 40]});
+    window.moverCamion = function (id, lat, lon, alerta) {
+      if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.pin("C", alerta ? "#DC2626" : "#1D4ED8")); }
+    };
+  })();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+<script>
+  /* Refresco en vivo: consulta /api/flota/ cada 5 s (el simulador inserta una lectura por camión en ese intervalo)
+     y actualiza solo los números. Si la API falla, la página sigue mostrando los últimos datos. */
+  (function () {
+    if (!window.axios) return;
+    var marca = document.getElementById("en-vivo");
+    function pon(el, txt, malo) { if (el) { el.textContent = txt; if (malo !== undefined) el.classList.toggle("mal", malo); } }
+    function pintar(d) {
+      Object.keys(d.resumen).forEach(function (k) { pon(document.querySelector('[data-resumen="' + k + '"]'), d.resumen[k]); });
+      d.camiones.forEach(function (c) {
+        var t = document.querySelector('[data-camion="' + c.camion_id + '"]'), l = c.ultima_lectura;
+        if (!t || !l) return;
+        t.classList.toggle("en-alerta", c.alerta);
+        pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
+        pon(t.querySelector('[data-campo="comb"]'), l.combustible_pct + " %", c.combustible_bajo);
+        var b = t.querySelector('[data-campo="barra"] i');
+        if (b) { b.style.width = l.combustible_pct + "%"; b.classList.toggle("bajo", c.combustible_bajo); }
+        if (window.moverCamion) window.moverCamion(c.camion_id, l.lat, l.long, c.alerta);
+        pon(t.querySelector('[data-campo="lectura"]'), "Última lectura " + new Date(l.registrado_en).toLocaleString("es-CL"));
+      });
+      if (marca) marca.hidden = false;
+    }
+    function actualizar() {
+      axios.get("/api/flota/", {headers: {"Accept": "application/json"}}).then(function (r) { pintar(r.data); }).catch(function () { if (marca) marca.hidden = true; });
+    }
+    setInterval(actualizar, 5000);
+  })();
+</script>
+{% endblock %}

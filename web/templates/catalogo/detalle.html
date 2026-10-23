@@ -1,0 +1,51 @@
+{% extends "tienda/base.html" %}
+{% load static %}
+{% block titulo %}{{ fila.p.nombre }} | Cofrial SpA{% endblock %}
+{% block contenido %}
+{% with f=fila p=fila.p %}
+<p class="migas"><a href="/catalogo/">Catálogo</a> / <a href="/catalogo/?categoria={{ p.categoria_id }}">{{ p.categoria.nombre }}</a> / {{ p.nombre }}</p>
+<div class="det">
+  <div>
+    <div class="prod-img">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ p.nombre }}">{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
+    {% if f.ilustracion_ia %}<p class="credito">Ilustración generada con IA ({{ f.modelo_ia }}).</p>{% endif %}
+    {% if f.credito %}<p class="credito">Foto referencial: {{ f.credito.autor|truncatechars:60 }}, {{ f.credito.licencia }}, vía <a href="{{ f.credito.pagina }}" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>{% endif %}
+  </div>
+  <div>
+    <span class="prod-sku">{{ p.sku }}</span>
+    <h1 style="margin:4px 0 10px">{{ p.nombre }}</h1>
+    <span class="stock {{ f.stock_clase }}">{{ f.stock_texto }}</span>
+    <p style="margin-top:12px;color:var(--texto-2)">{{ p.descripcion|default:"Producto de la línea de cadena de frío de Cofrial." }}</p>
+    <div class="prod-precio" style="margin-top:8px">{% if f.precio %}<b data-precio-valor>{{ f.precio|clp }}</b><small>{% if perfil.codigo == "B2B" %}Precio institucional (neto){% else %}Precio por {{ p.get_unidad_medida_display|lower }}{% endif %}</small>{% else %}<span class="frio">Sin precio</span>{% endif %}</div>
+    <dl>
+      <dt>Categoría</dt><dd>{{ p.categoria.nombre }}</dd>
+      <dt>Conservación</dt><dd>{{ p.categoria.rango_temperatura.nombre }}: {{ p.categoria.rango_temperatura.temp_min_c|floatformat:"-1" }} a {{ p.categoria.rango_temperatura.temp_max_c|floatformat:"-1" }} °C</dd>
+      <dt>Formato de venta</dt><dd>{{ p.get_unidad_medida_display }}</dd>
+      <dt>Disponible</dt><dd>{{ p.stock_disponible }}</dd>
+    </dl>
+    <div class="prod-comprar" style="max-width:340px">
+      {% if not user.is_authenticated %}{% if f.precio and p.stock_disponible > 0 %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/{{ p.producto_id }}/">Ingresar para comprar</a>{% endif %}
+      {% elif menu.cliente and f.precio and p.stock_disponible > 0 %}
+      <form method="post" action="/carrito/agregar/">{% csrf_token %}
+        <input type="hidden" name="producto" value="{{ p.producto_id }}"><input type="hidden" name="volver" value="{{ request.get_full_path }}">
+        <span class="cant"><button type="button" data-menos aria-label="Menos">−</button><input type="number" name="cantidad" value="1" min="1" max="{{ p.stock_disponible }}" aria-label="Cantidad"><button type="button" data-mas aria-label="Más">+</button></span>
+        <button class="agregar">Agregar al carrito</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% if similares %}
+<div class="seccion" style="margin-top:28px"><h2>Más de {{ fila.p.categoria.nombre }}</h2></div>
+<div class="productos">{% for f in similares %}{% include "catalogo/_tarjeta.html" %}{% endfor %}</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll(".cant").forEach(function (c) {
+    var i = c.querySelector("input"), max = parseInt(i.max, 10) || 9999;
+    c.querySelector("[data-menos]").addEventListener("click", function () { i.value = Math.max(1, (parseInt(i.value, 10) || 1) - 1); });
+    c.querySelector("[data-mas]").addEventListener("click", function () { i.value = Math.min(max, (parseInt(i.value, 10) || 1) + 1); });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "crm/base.html" %}
+{% block crm %}
+<div class="pagina-cab"><div><h1>Clientes</h1><p class="sub">Cartera de clientes B2B y B2C.</p></div></div>
+<div class="tabla-caja"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>Vendedor</th><th>Correo</th></tr></thead><tbody>
+{% for c in clientes %}<tr><td><a class="id-orden" href="/crm/clientes/{{ c.cliente_id }}/">{{ c.nombre }}</a></td><td><span class="chip {% if c.tipo_cliente.codigo == 'B2B' %}asignado{% else %}transito{% endif %}">{{ c.tipo_cliente.codigo }}</span></td><td>{{ c.vendedor|default:"–" }}</td><td>{{ c.email }}</td></tr>{% empty %}<tr><td colspan="4" class="vacio">No hay clientes en tu cartera.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

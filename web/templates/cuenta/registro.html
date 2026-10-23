@@ -1,0 +1,13 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Crear cuenta | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth tarjeta-ui">
+  <h1 style="font-size:1.4rem;margin-bottom:4px">Crear cuenta de cliente particular</h1>
+  <p class="muted">Con ella compra con los precios del público general y sigue sus pedidos.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {{ form.as_p }}
+    <button>Crear cuenta</button>
+  </form>
+  <p class="muted" style="margin-top:14px">¿Ya tiene cuenta? <a href="/cuenta/entrar/">Ingresar</a></p>
+</div>
+{% endblock %}

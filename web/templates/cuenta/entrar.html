@@ -1,0 +1,21 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Ingresar | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth-doble">
+  <div class="tarjeta-ui">
+    <h1 style="font-size:1.4rem;margin-bottom:4px">Ingresar</h1>
+    <p class="muted">Clientes institucionales y particulares, y personal de Cofrial.</p>
+    <form method="post">{% csrf_token %}
+      {{ form.as_p }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button>Ingresar</button>
+    </form>
+  </div>
+  <div class="tarjeta-ui">
+    <h2>¿Primera vez?</h2>
+    <p class="muted" style="margin-top:6px">Si compra como persona, cree su cuenta de cliente particular: necesita su RUT, un correo y una dirección de entrega.</p>
+    <a class="btn" href="/cuenta/registro/">Crear mi cuenta</a>
+    <p class="muted" style="margin-top:16px">Las instituciones reciben su acceso de su ejecutivo comercial de Cofrial.</p>
+  </div>
+</div>
+{% endblock %}

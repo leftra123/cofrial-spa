@@ -1,0 +1,47 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M6 11h12v9H6zM18 14h5l3 3v3h-8z' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
+  {% block cabeza %}{% endblock %}
+</head>
+<body class="tienda">
+{% with ruta=request.path %}
+<header class="tb">
+  <div class="tb-fila">
+    <a class="tb-marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>COFRIAL</a>
+    <form class="tb-buscar" action="/catalogo/" method="get" role="search">
+      <input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos, SKU o categoría" aria-label="Buscar productos">
+    </form>
+    <nav class="tb-nav" aria-label="Principal">
+      <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo"{% endif %}>Catálogo</a>
+      {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo"{% endif %}>Mis pedidos</a>{% endif %}
+      <a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>
+      {% if menu.cliente %}<a class="tb-carro" href="/carrito/" {% if "/carrito/" in ruta %}class="activo"{% endif %}>Carrito{% if carrito_n %}<span class="tb-n">{{ carrito_n }}</span>{% endif %}</a>{% endif %}
+    </nav>
+    <div class="tb-cuenta">
+      {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }}">{{ cliente_tienda.nombre }}<b class="perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}">{{ cliente_tienda.tipo_cliente.codigo }}</b></span>{% endif %}
+      {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{% if menu.crm %}/crm/{% elif menu.flota %}/flota/{% else %}/admin/{% endif %}">Panel interno</a>{% endif %}
+      {% if user.is_authenticated %}
+        <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Salir</button></form>
+      {% else %}
+        <a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+<main class="t-main">
+  {% if messages %}<div class="avisos" role="status">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+  {% block cabecera %}{% endblock %}
+  {% block contenido %}{% endblock %}
+</main>
+<footer class="t-pie">Cofrial SpA · Frigorífico y distribución en cadena de frío · La Araucanía · Prototipo académico INACAP Temuco</footer>
+{% endwith %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

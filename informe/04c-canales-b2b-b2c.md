@@ -1,228 +1,161 @@
 # 4c. Arquitectura de canales: wireframes y user journeys B2B/B2C
 
-Rúbrica H1-D4 (Logrado): user journeys **avanzados** del portal con diferenciación B2B/B2C.
+> Rúbrica H1-D4 (Logrado): user journeys **avanzados** del portal con diferenciación B2B/B2C y lógica de negocio detrás de cada pantalla.
+> **Estado: borrador de redacción**, pendiente de validación del equipo. Los clientes de los ejemplos son ficticios; las emociones de los journeys son estimaciones del equipo que se contrastan con entrevistas a clientes reales.
 
-## Perfiles y diferenciales
+## Perfiles y qué los diferencia
 
-| Aspecto | B2B (Institucional) | B2C (Público general) |
+El portal atiende a dos perfiles con la misma plataforma y la misma base de datos. Lo que cambia entre ellos no es la pantalla, sino las reglas que se aplican.
+
+**Tabla 1**
+*Diferencias de negocio entre los perfiles B2B y B2C*
+
+| | B2B (institucional) | B2C (público general) | Regla |
+|---|---|---|---|
+| Quiénes | Hospitales, supermercados, ferias, instituciones | Personas | |
+| Lista de precios | Institucional | Pública | RN-01 |
+| Número de orden de compra | Obligatorio | No aplica | RN-05 |
+| Vendedor asignado | Sí; ve sus pedidos en el CRM | No | RN-09 |
+| Compra recurrente | «Repetir mi último pedido» | Recompra desde el historial | RN-08 |
+| Pago | Factura posterior (simulado en el prototipo) | Pago inmediato (simulado) | Fuera de alcance |
+| Registro | Cuenta institucional creada con RUT de empresa | Cuenta rápida al comprar (RUT y correo) | |
+
+*Nota.* Elaboración propia. El carácter obligatorio de la orden de compra y la forma de pago son supuestos a validar con Cofrial.
+
+## Arquitectura de canales
+
+La propuesta ofrece tres canales de entrada. Los tres terminan en la misma base de datos, que es lo que impide que un pedido o una consulta vuelvan a vivir en un celular.
+
+**Tabla 2**
+*Canales de entrada y dónde queda el registro*
+
+| Canal | Quién lo usa | Qué puede hacer | Dónde queda el registro |
+|---|---|---|---|
+| Portal web | Clientes B2B y B2C | Comprar, seguir el pedido y reportar un problema | `orden`, `requerimiento` |
+| CRM del vendedor | Vendedor | Gestionar su cartera y, durante la transición, ingresar un pedido a nombre del cliente (RN-15) | `orden`, `interaccion`, `prospecto` |
+| Atención por requerimientos | Clientes y visitantes | Enviar una consulta o un reclamo, clasificado por IA | `requerimiento` |
+
+*Nota.* Elaboración propia.
+
+## User journeys
+
+Cada journey sigue a una persona ficticia a lo largo de seis etapas. Compara lo que ocurre hoy (línea roja punteada) con lo que ocurre con la plataforma (línea verde) e indica en cada etapa la pantalla, el dato y la regla de negocio que intervienen. Las pantallas (W1 a W6) se muestran en la sección siguiente.
+
+**Figura 1**
+*User journey B2B: encargada de abastecimiento de un hospital*
+
+![User journey B2B](img/journey-b2b.png)
+
+*Nota.* Elaboración propia. Persona ficticia. Las emociones son estimaciones del equipo en una escala de 1 (frustrado) a 5 (satisfecho).
+
+**Lectura del journey B2B.** La mayor brecha está en las etapas 4 y 5 (confirmar y seguir el despacho), donde hoy el cliente espera una confirmación por WhatsApp y no sabe en qué condiciones viaja la carga. Es también donde el cliente institucional más valora la plataforma: un hospital necesita demostrar que la cadena de frío se mantuvo. La compra recurrente (etapa 2) reduce el esfuerzo de un cliente que pide casi lo mismo cada semana.
+
+**Figura 2**
+*User journey B2C: cliente particular*
+
+![User journey B2C](img/journey-b2c.png)
+
+*Nota.* Elaboración propia. Persona ficticia. Las emociones son estimaciones del equipo en una escala de 1 a 5.
+
+**Lectura del journey B2C.** Hoy no existe un canal para este perfil, por lo que la comparación es contra no poder comprar a distancia. La etapa crítica es el carrito y los datos (3): pedir demasiados datos antes de comprar es la causa más común de abandono, por eso la cuenta se crea una sola vez y con los campos mínimos.
+
+## Wireframes del portal
+
+Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones numeradas que explican la regla de negocio y la tabla de datos detrás de cada elemento. Los ejemplos de productos y precios coinciden con los datos de prueba del modelo (`informe/modelo/datos_prueba.sql`).
+
+**Figura 3**
+*W1. Inicio y selección de perfil*
+
+![W1 Inicio y selección de perfil](img/wf-w1.png)
+
+*Nota.* Elaboración propia.
+
+**Figura 4**
+*W2. Catálogo con filtros y precio según el perfil*
+
+![W2 Catálogo](img/wf-w2.png)
+
+*Nota.* Elaboración propia.
+
+**Figura 5**
+*W3. Detalle de producto con rango de conservación*
+
+![W3 Detalle de producto](img/wf-w3.png)
+
+*Nota.* Elaboración propia.
+
+**Figura 6**
+*W4. Carrito con validaciones de stock, dirección y orden de compra*
+
+![W4 Carrito](img/wf-w4.png)
+
+*Nota.* Elaboración propia.
+
+**Figura 7**
+*W5. Confirmación de la orden*
+
+![W5 Confirmación](img/wf-w5.png)
+
+*Nota.* Elaboración propia.
+
+**Figura 8**
+*W6. Seguimiento del pedido con estado, posición y temperatura*
+
+![W6 Seguimiento](img/wf-w6.png)
+
+*Nota.* Elaboración propia.
+
+## Ciclo de vida de una orden
+
+**Figura 9**
+*Estados de una orden y sus transiciones*
+
+![Estados de la orden](img/estados-orden.png)
+
+*Nota.* Elaboración propia. Los estados corresponden a la tabla `estado_orden`.
+
+## Reglas de negocio del portal
+
+**Tabla 3**
+*Reglas de negocio del e-commerce*
+
+| ID | Regla | Dónde se ve |
 |---|---|---|
-| Usuarios típicos | Hospitales, supermercados, ferias, instituciones | Personas, restaurantes, pequeños negocios |
-| Precio | Lista de precios institucional (negociado, con volumen mínimo) | Precio público sin descuentos |
-| Crédito | Línea de crédito (pagar en 15-30 días) | Pago inmediato (tarjeta, transferencia) |
-| Volumen | Pedidos grandes, recurrentes | Pedidos puntuales, menores |
-| Contacto | Vendedor asignado, soporte dedicado | Atención automática + chat |
-| Documentación | Factura con referencias PO, DNI empresa | Boleta simple |
+| RN-01 | **Precio por perfil.** El precio mostrado y cobrado sale de la lista de precios del tipo de cliente. Un cliente solo ve su lista. | W2, W3, W4 |
+| RN-02 | **Stock transaccional.** Una orden solo se genera si todas sus líneas tienen stock suficiente. La validación y el descuento ocurren en una misma transacción con bloqueo del producto, para que dos compras simultáneas no vendan la misma unidad. | W4, W5 |
+| RN-03 | **Un carrito abierto por cliente.** Al generar la orden el carrito pasa a «convertido». | W4 |
+| RN-04 | **Dirección propia.** La dirección de entrega debe pertenecer al cliente que compra. | W4 |
+| RN-05 | **Orden de compra B2B.** Los clientes institucionales deben indicar su número de orden de compra; no aplica a B2C. | W4 |
+| RN-06 | **Precio congelado.** Cada línea de la orden guarda el precio vigente al comprar; cambios posteriores de la lista no la alteran. | W5 |
+| RN-07 | **Estados y cancelación.** La orden avanza según la Figura 9. Se puede cancelar antes de «Despachada»; el cliente solo mientras esté «Recibida», y el vendedor hasta «En preparación». Cancelar repone el stock. | W5, W6 |
+| RN-08 | **Compra recurrente.** «Repetir mi último pedido» copia al carrito las líneas de la última orden no cancelada; las cantidades se ajustan al stock disponible y se avisa de cada ajuste. | W2 |
 
-Nota. Elaboración propia.
+*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15) están en `04d-crm.md`.
 
-## User journeys principales
+## Pendiente
 
-### Journey 1: Cliente B2B compra un pedido institucional
+- [ ] Validar con una persona de Cofrial los supuestos de la Tabla 1 (orden de compra obligatoria, forma de pago, quién puede cancelar).
+- [ ] Contrastar las emociones de los journeys con entrevistas breves a un cliente institucional y a uno particular.
+- [x] Se agregaron «Mis pedidos» (listado) e inicio de sesión con registro B2C; los B2B los crea Cofrial (ver `backend/README.md`).
+- [ ] Renumerar figuras y tablas al integrar el informe completo.
 
-```
-ETAPA 1: DESCUBRIMIENTO
-├─ Cliente institucional accede al e-commerce (o recibe link de vendedor)
-├─ Página de login: "¿Eres cliente B2B?"
-└─ Inicia sesión con correo/contraseña (datos preexistentes de la BD)
+## Notas del equipo
 
-ETAPA 2: CONSULTA Y SELECCIÓN
-├─ Ve su lista de precios (ej. Hospital Temuco: -15 % respecto precio público)
-├─ Busca por categoría: Carnes | Embutidos | Productos del mar
-├─ Filtra por temperatura: -20°C | -10°C | 0-4°C (interés en especificaciones)
-├─ Selecciona productos: Lomo Vetado 1kg × 20 unidades
-└─ Ve **rango de temperatura del producto** (etiqueta verde: "0-4°C")
+## Implementación frente a los wireframes (23-oct-2026)
 
-ETAPA 3: CARRITO Y VALIDACIÓN
-├─ Carrito muestra: producto, cantidad, precio institucional, subtotal
-├─ Sistema valida **stock en tiempo real** (descuento automático)
-├─ Si falta stock: "Disponible en 3 días. ¿Deseas reservar?"
-├─ Cliente ingresa:
-│  ├─ Dirección de entrega (autocompletado de direcciones previas, o nueva)
-│  ├─ Fecha de entrega deseada
-│  └─ Contacto en el sitio (ej. "Entrega en Pañol, Tel: 2231-4567")
-└─ Revisa resumen
+La parte del cliente se rehízo para que el prototipo coincida con W1 a W6: tienda pública con barra superior y sin menú lateral (el personal conserva su panel en «Panel interno»).
 
-ETAPA 4: PAGO Y CONFIRMACIÓN
-├─ Elige forma de pago:
-│  ├─ Crédito a 15 días (si tiene saldo disponible)
-│  └─ Transferencia bancaria (opción alternativa)
-├─ Sistema **genera la orden automáticamente** en RDS
-├─ Estado inicial: "Confirmada - Pendiente preparación"
-└─ Recibe confirmación por correo + SMS
+| Wireframe | Implementación | Dónde |
+|---|---|---|
+| W1 Portada | Buscador, «Seguir mi pedido», «Ingresar», tarjetas «Soy una institución» y «Soy cliente particular», y datos reales (productos, camiones, última lectura de la flota) | `/` |
+| W2 Catálogo | Tarjetas con ilustración por categoría, filtros (categoría, rango de temperatura, solo con stock), búsqueda por nombre o SKU, estado de stock (verde, ámbar, rojo), −1+ y «Agregar», y «Repetir mi último pedido» para B2B | `/catalogo/` |
+| W3 Detalle | Rango de conservación, descripción, stock y productos de la misma categoría | `/catalogo/<id>/` |
+| W4 y W5 | Carrito y confirmación con las validaciones RN-01 a RN-08 (sin cambios) | `/carrito/`, `/pedidos/<id>/` |
+| W6 Seguimiento | Mapa con la posición del camión, temperatura de la cámara con su franja permitida y gráfico de la última hora, aviso si hubo ruptura de frío y «Reportar un problema», que crea un requerimiento ligado a la orden y lo clasifica la IA | `/pedidos/<id>/` y `/api/pedidos/<id>/seguimiento/` |
+| Registro B2C | Formulario con RUT validado (módulo 11), correo, dirección y clave; crea cuenta, cliente B2C y dirección principal | `/cuenta/registro/` |
 
-ETAPA 5: SEGUIMIENTO
-├─ Cliente accede a "Mis pedidos" en el e-commerce
-├─ Ve estado en tiempo real:
-│  ├─ "Confirmada" → "Preparando en bodega" → "En ruta" → "Entregada"
-│  └─ Nota: cada etapa incluye fecha/hora y contacto del responsable
-├─ Si el estado es "En ruta":
-│  ├─ Aparece información del camión:
-│  │  ├─ Temperatura actual de la cámara (verde si ≤ 4°C, rojo si > 4°C)
-│  │  ├─ Ubicación del camión (mapa, aunque sea simplificada)
-│  │  └─ ETA estimada de entrega
-│  └─ Si hay **alerta de ruptura de frío**: notificación inmediata
-└─ Entrega: cliente confirma recepción en la plataforma (opcionalmente)
-```
+El catálogo de demostración tiene 20 productos en 4 categorías (cárnicos refrigerados, aves, congelados, lácteos y embutidos). Las imágenes son ilustraciones propias por categoría, no fotografías de producto. El seguimiento se actualiza cada 5 s consultando la API; el mapa usa Leaflet con teselas de OpenStreetMap.
 
-**Puntos de dolor que se erradican:**
-- ❌ Antes: pedido por teléfono → vendedor anota → bodega no lo recibe a tiempo
-- ✅ Ahora: orden inmediata en RDS, bodega la ve de inmediato
+**Imágenes y rutas (23-oct-2026).** Las fotos de producto son referenciales y provienen de Wikimedia Commons (API pública sin cuenta ni clave), con licencias libres; el autor y la licencia se muestran en el detalle del producto y los productos sin foto adecuada usan una ilustración. Los mapas usan OpenStreetMap; las direcciones se ubican con Nominatim y las rutas se calculan con OSRM, ambos gratuitos y sin clave. El panel de flota propone el orden de entrega de cada viaje (recorrido de menor distancia desde el frigorífico central) y el cliente ve la ruta restante de su camión hasta su dirección.
 
----
-
-### Journey 2: Cliente B2C compra sin contrato previo
-
-```
-ETAPA 1: LLEGADA Y AUTENTICACIÓN
-├─ Cliente entra sin cuenta (invitado)
-├─ Página de inicio: "¿Eres cliente nuevo?" → "Crear cuenta rápida"
-├─ Ingresa: correo, contraseña, nombre, teléfono
-└─ Sistema lo registra como B2C automáticamente (no requiere RUT empresa)
-
-ETAPA 2: COMPRA PUNTUAL
-├─ Busca productos a precio público (sin filtro de contrato)
-├─ Selecciona: Pollo entero 2kg × 2 unidades
-├─ Carrito muestra precio público + IVA
-├─ Descuenta stock (si quedan < 5 unidades, muestra "Últimos disponibles")
-└─ Revisa subtotal
-
-ETAPA 3: PAGO INMEDIATO
-├─ Elige forma de pago:
-│  ├─ Tarjeta de crédito / débito
-│  └─ Transferencia (si es en horario bancario)
-├─ Sistema procesa pago de inmediato
-├─ Si pago rechazado: permite reintentar
-└─ Si aprobado: genera la orden
-
-ETAPA 4: CONFIRMACIÓN Y ENTREGA
-├─ Correo de confirmación con número de orden
-├─ Dirección de entrega: ingresa nueva (sin historial)
-├─ Fecha de entrega: próximo día hábil (opciones predeterminadas)
-└─ Sin vendedor asignado (atención automática si hay dudas)
-
-ETAPA 5: SEGUIMIENTO SIMPLIFICADO
-├─ Link en correo: "Seguir mi pedido"
-├─ Vista simplificada: Estado (Preparando → En ruta → Entregado)
-├─ Contacto: chat automático (o número de WhatsApp del despacho)
-└─ Si hay alerta de frío: notificación (pero menor énfasis que B2B)
-```
-
-**Diferencial clave:** B2C es **sin fricción**, pago inmediato, sin soporte dedicado. B2B es **con servicio**, crédito, vendedor.
-
----
-
-## Wireframes de pantallas críticas
-
-### Pantalla 1: Home - Selector de perfil
-
-```
-┌─────────────────────────────────────┐
-│ COFRIAL · Cadena de Frío Inteligente│
-├─────────────────────────────────────┤
-│                                     │
-│  ¿Quién eres?                       │
-│                                     │
-│  ┌─────────────┐   ┌─────────────┐ │
-│  │ Institución │   │  Persona /  │ │
-│  │  Hospital   │   │ Restaurante │ │
-│  │ Supermercad│   │             │ │
-│  │    o       │   │             │ │
-│  │  [Login B2B]│   │ [Login B2C] │ │
-│  └─────────────┘   └─────────────┘ │
-│                                     │
-└─────────────────────────────────────┘
-```
-
-### Pantalla 2: Catálogo B2B (con precio institucional)
-
-```
-┌──────────────────────────────────────┐
-│ COFRIAL · Mi Catálogo Institucional  │
-├──────────────────────────────────────┤
-│ Bienvenido, Hospital Temuco          │
-│ Tu descuento: 15%                    │
-├──────────────────────────────────────┤
-│ Filtrar por: ▼ Categoría             │
-│             ▼ Temperatura            │
-│             ▼ Disponibilidad         │
-├──────────────────────────────────────┤
-│                                      │
-│ ┌────────────────────────────┐      │
-│ │ Lomo Vetado 1kg            │      │
-│ │ Temp: 0-4°C                │      │
-│ │ Precio público: $12.000    │      │
-│ │ Tu precio (B2B): $10.200   │ (-15%)
-│ │ Stock: 45 unidades         │      │
-│ │ [Agregar al carrito]       │      │
-│ └────────────────────────────┘      │
-│                                      │
-│ ┌────────────────────────────┐      │
-│ │ Pollo Entero 2kg           │      │
-│ │ Temp: -18°C                │      │
-│ │ Precio público: $8.500     │      │
-│ │ Tu precio (B2B): $7.225    │ (-15%)
-│ │ Stock: 120 unidades        │      │
-│ │ [Agregar al carrito]       │      │
-│ └────────────────────────────┘      │
-│                                      │
-│ [Carrito: 2 items] [$18.925]  [→]   │
-└──────────────────────────────────────┘
-```
-
-### Pantalla 3: Seguimiento de pedido (con temperatura en vivo)
-
-```
-┌──────────────────────────────────────┐
-│ Pedido #ORD-2026-1045                │
-├──────────────────────────────────────┤
-│ Cliente: Hospital Temuco             │
-│ Fecha: 15-oct-2026 · 14:32           │
-│                                      │
-│ Estado:           EN RUTA            │
-│ ├─ Confirmada     ✓ (15:05)          │
-│ ├─ Preparando     ✓ (15:30)          │
-│ ├─ Despachada     ✓ (16:20)          │
-│ └─ En ruta →      ⏳ ETA: 16:50     │
-│                                      │
-│ Camión: TR-2205                      │
-│ Temperatura: 3.8°C                   │ ✓ Verde (en rango)
-│ Ubicación: Ruta 5 Sur, Km 12         │ 📍 Mapa
-│ Combustible: 68%                     │
-│                                      │
-│ [Contactar al despachador]           │
-│                                      │
-└──────────────────────────────────────┘
-```
-
-**Nota:** si `temp_camara` > 4°C, el fondo pasa a rojo y aparece una alerta.
-
----
-
-## Flujo de validaciones en el carrito
-
-```
-Cliente selecciona producto
-        ↓
-Sistema verifica stock en RDS en tiempo real
-        ↓
-¿Stock disponible?
-  ├─ SÍ: Descuenta del stock virtual
-  │      Precio se calcula según perfil (B2B/B2C)
-  │      Item se agrega al carrito
-  │
-  └─ NO: Muestra mensaje "Stock disponible en 3 días"
-         Opción: "¿Reservar?" (pone en espera)
-```
-
----
-
-## Próximas pantallas a diseñar (Hito 2)
-
-- Detalle de producto (con especificaciones de temperatura)
-- Checkout (dirección, pago)
-- Confirmación de orden
-- Perfil del cliente (historial, direcciones, facturas)
-- Panel del vendedor en el CRM (ver órdenes de sus clientes)
-- Torre de control (vista del despachador con flota en tiempo real)
-
-Nota. Wireframes: borrador en texto. En el Hito 2 se harán en Figma o draw.io como figuras. Elaboración propia.
+**Ilustraciones generadas con IA y formato chileno (23-oct-2026).** Los productos sin foto libre adecuada (carne molida, merluza, mix de mariscos y mantequilla) usan una ilustración SVG creada con IA (Gemini, con Groq como respaldo) mediante `manage.py generar_ilustraciones`. El SVG se valida y se reconstruye con una lista blanca de etiquetas y atributos antes de guardarse, y el detalle del producto indica el modelo que lo creó. Los precios se muestran al modo chileno (`$34.990`, punto como separador de miles y sin «CLP»); a los clientes institucionales se les desglosa neto, IVA de 19 % y total.

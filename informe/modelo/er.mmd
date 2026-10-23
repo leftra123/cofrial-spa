@@ -1,0 +1,143 @@
+erDiagram
+  region ||--o{ comuna : "contiene"
+  comuna ||--o{ direccion : "ubica"
+  rango_temperatura ||--o{ categoria : "exige"
+  rango_temperatura ||--o{ camion : "opera en"
+  categoria ||--o{ producto : "agrupa"
+  lista_precio ||--o{ precio_producto : "fija"
+  producto ||--o{ precio_producto : "tiene"
+  lista_precio ||--o{ tipo_cliente : "usa"
+  tipo_cliente ||--o{ cliente : "clasifica"
+  usuario |o--o| cliente : "accede como"
+  usuario ||--o| vendedor : "accede como"
+  vendedor |o--o{ cliente : "atiende"
+  cliente ||--o{ direccion : "registra"
+  cliente ||--o{ carrito : "arma"
+  carrito ||--o{ carrito_item : "contiene"
+  producto ||--o{ carrito_item : "se agrega"
+  direccion ||--o{ orden : "recibe"
+  estado_orden ||--o{ orden : "describe"
+  despacho |o--o{ orden : "transporta"
+  orden ||--o{ orden_item : "detalla"
+  producto ||--o{ orden_item : "se vende"
+  camion ||--o{ despacho : "realiza"
+  camion ||--o{ telemetria : "reporta"
+  vendedor ||--o{ prospecto : "gestiona"
+  etapa_pipeline ||--o{ prospecto : "ubica"
+  cliente |o--o{ prospecto : "nace de"
+  vendedor ||--o{ interaccion : "registra"
+  prospecto |o--o{ interaccion : "recibe"
+  cliente |o--o{ interaccion : "recibe"
+  cliente |o--o{ requerimiento : "envia"
+  orden |o--o{ requerimiento : "motiva"
+  categoria_requerimiento |o--o{ requerimiento : "clasifica"
+  region {
+    integer region_id PK
+  }
+  comuna {
+    integer comuna_id PK
+    integer region_id FK
+  }
+  rango_temperatura {
+    integer rango_temperatura_id PK
+  }
+  categoria {
+    integer categoria_id PK
+    integer rango_temperatura_id FK
+  }
+  producto {
+    integer producto_id PK
+    integer categoria_id FK
+  }
+  lista_precio {
+    integer lista_precio_id PK
+  }
+  precio_producto {
+    integer lista_precio_id PK
+    integer producto_id PK
+  }
+  tipo_cliente {
+    integer tipo_cliente_id PK
+    integer lista_precio_id FK
+  }
+  usuario {
+    integer usuario_id PK
+  }
+  vendedor {
+    integer vendedor_id PK
+    integer usuario_id FK
+  }
+  cliente {
+    integer cliente_id PK
+    integer usuario_id FK
+    integer tipo_cliente_id FK
+    integer vendedor_id FK
+  }
+  direccion {
+    integer direccion_id PK
+    integer cliente_id FK
+    integer comuna_id FK
+  }
+  carrito {
+    integer carrito_id PK
+    integer cliente_id FK
+  }
+  carrito_item {
+    integer carrito_id PK
+    integer producto_id PK
+  }
+  estado_orden {
+    integer estado_orden_id PK
+  }
+  camion {
+    varchar camion_id PK
+    integer rango_temperatura_id FK
+  }
+  despacho {
+    integer despacho_id PK
+    varchar camion_id FK
+  }
+  orden {
+    integer orden_id PK
+    integer direccion_id FK
+    integer estado_orden_id FK
+    integer despacho_id FK
+  }
+  orden_item {
+    integer orden_id PK
+    integer producto_id PK
+  }
+  telemetria {
+    bigint telemetria_id PK
+    varchar camion_id FK
+    double_precision temp_camara
+    double_precision lat
+    double_precision long
+    integer combustible_pct
+    boolean alerta_ruptura_frio
+    timestamptz registrado_en
+  }
+  etapa_pipeline {
+    integer etapa_id PK
+  }
+  prospecto {
+    integer prospecto_id PK
+    integer vendedor_id FK
+    integer etapa_id FK
+    integer cliente_id FK
+  }
+  interaccion {
+    integer interaccion_id PK
+    integer vendedor_id FK
+    integer prospecto_id FK
+    integer cliente_id FK
+  }
+  categoria_requerimiento {
+    integer categoria_requerimiento_id PK
+  }
+  requerimiento {
+    integer requerimiento_id PK
+    integer cliente_id FK
+    integer orden_id FK
+    integer categoria_requerimiento_id FK
+  }

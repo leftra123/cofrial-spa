@@ -1,0 +1,15 @@
+{% extends "crm/base.html" %}
+{% block titulo %}Embudo | Cofrial SpA{% endblock %}
+{% block crm %}
+<div class="pagina-cab">
+  <div><h1>Embudo comercial</h1><p class="sub">Prospectos por etapa del pipeline.</p></div>
+  {% if puede_editar %}<div class="acciones"><a class="btn" href="/crm/prospectos/nuevo/">+ Nuevo prospecto</a></div>{% endif %}
+</div>
+<div class="embudo">
+{% for c in columnas %}
+<div class="col"><div class="col-cab"><span>{{ c.etapa.orden_etapa }}. {{ c.etapa.nombre }}</span><span class="n">{{ c.prospectos|length }}</span></div>
+  {% for p in c.prospectos %}<div class="tarjeta"><a href="/crm/prospectos/{{ p.prospecto_id }}/">{{ p.empresa|default:p.nombre_contacto }}</a><br><span class="frio">{{ p.nombre_contacto }} · {{ p.vendedor }}</span>{% if p.monto_estimado_clp %}<div style="margin-top:6px"><span class="chip asignado">{{ p.monto_estimado_clp|clp }}</span></div>{% endif %}</div>{% endfor %}
+</div>
+{% endfor %}
+</div>
+{% endblock %}

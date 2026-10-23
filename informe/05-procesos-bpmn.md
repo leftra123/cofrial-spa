@@ -1,55 +1,42 @@
-# 5. Procesos AS-IS y TO-BE (BPMN 2.0)
+# Procesos AS-IS y TO-BE (BPMN 2.0)
 
-Aporta a H1-D1 (diagnóstico visible en AS-IS) y a H1-D4 (TO-BE muestra cómo desaparece el Shadow IT).
+> Aporta a H1-D1 (el diagnóstico se ve en el AS-IS) y a H1-D4 (el TO-BE muestra cómo se elimina el Shadow IT).
+> **Estado: borrador de redacción**, pendiente de validación del equipo. Los seis diagramas están hechos; falta contrastarlos con cómo opera Cofrial en la realidad.
 
-## Decisión de notación
+## Notación elegida
+
+Los procesos se modelan con Business Process Model and Notation (BPMN) 2.0, estándar abierto del Object Management Group (OMG) para representar procesos con responsables, eventos y decisiones (Object Management Group [OMG], 2013). La **Tabla 1** compara las alternativas consideradas.
+
+**Tabla 1**
+*Comparación de notaciones de modelado de procesos*
 
 | Notación | Fortaleza | Limitación | Decisión |
 |---|---|---|---|
-| BPMN 2.0 | Estándar abierto, carriles por responsable, eventos y compuertas | Requiere aprender la simbología | Adoptada. Los traspasos entre responsables son donde hoy se pierde la información |
-| Diagrama de actividades UML | Conocido en desarrollo de software | Menos legible para gerencia no técnica | Descartada |
-| Flujograma simple | Muy fácil de leer | Sin carriles: oculta responsabilidades | Complementaria. Solo para presentaciones |
+| BPMN 2.0 | Estándar abierto, con carriles por responsable, eventos y compuertas | Requiere conocer la simbología | Adoptada. Muestra los traspasos entre vendedor, bodega y despacho, que es donde hoy se pierde la información |
+| Diagrama de actividades UML | Conocido en desarrollo de software | Menos legible para la gerencia | Descartada |
+| Flujograma simple | Muy fácil de leer | Sin carriles: oculta quién hace cada paso | Complementaria. Solo para la presentación |
 
-Nota. Elaboración propia. Herramienta: bpmn.io / Camunda Modeler (gratis).
+*Nota.* Elaboración propia.
 
-## Proceso 1: Pedido de cliente institucional (B2B)
+**Herramienta.** Los diagramas usan la notación BPMN 2.0 (carriles, eventos de inicio y fin, tareas y compuertas exclusivas) dibujada en draw.io, que es gratuito, guarda un archivo `.drawio` editable y exporta a PNG. Se eligió sobre bpmn.io porque ya se usa para el diagrama de arquitectura. Se trata de dibujos con notación BPMN, no de modelos ejecutables: si se necesitara un archivo `.bpmn`, se reconstruyen en bpmn.io a partir de estos diagramas. Los archivos y el script que los genera están en `informe/img/` (`generar-figuras-d1.py`).
 
-### AS-IS (problema: registro manual, doble digitación, stock descuadrado)
+**Convenciones de lectura.** Círculo verde: inicio. Círculo con borde grueso: fin. Círculo doble naranja: evento intermedio. Rombo: compuerta exclusiva (se sigue un solo camino). Círculos rojos numerados: **puntos de dolor** del proceso actual, explicados en la leyenda de cada diagrama AS-IS.
 
-**Carriles:** Cliente institucional | Vendedor | Bodega | Contabilidad
+## Proceso 1: pedido de un cliente institucional (B2B)
 
-1. Cliente llama o envía correo al vendedor.
-2. Vendedor **anota en papel o celular** el pedido (marca, cantidad, fecha requerida).
-3. Vendedor avisa a bodega **por WhatsApp o llamada** (traspaso informal).
-4. Bodega revisa **su planilla Excel local** (que puede no coincidir con contabilidad).
-5. **Compuerta:** ¿hay stock según la planilla?
-   - Si NO: bodega llama al cliente o al vendedor para avisar faltante.
-   - Si SÍ: bodega separa la carga (registro manual en el Excel).
-6. Contabilidad recibe un **correo o una factura manual** del vendedor.
-7. Contabilidad factura en su **sistema cerrado** (sin enlace a bodega).
-8. **Punto de dolor:** si contabilidad acaba de vender otras unidades del mismo producto, bodega no lo sabe. Stock sale negativo.
+**Figura 1**
+*Proceso 1 AS-IS: pedido de un cliente institucional*
 
-**Puntos marcados en el diagrama BPMN:**
-- Rectángulo rojo: "Anota en celular/papel" (Shadow IT).
-- Rectángulo rojo: "Revisa Excel local" (no es origen único).
-- Compuerta de decisión: "Stock según planilla" (información desactualizada).
+![Proceso 1 AS-IS](img/bpmn-p1-asis.drawio.png)
 
-### TO-BE (solución: orden digital, RDS único, sin papeles)
+*Nota.* Elaboración propia. Carriles: cliente institucional, vendedor, bodega y contabilidad.
 
-**Carriles:** Cliente B2B | E-commerce | CRM | Bodega | RDS (base de datos)
+**Figura 2**
+*Proceso 1 TO-BE: pedido B2B en la plataforma*
 
-1. Cliente inicia sesión en el e-commerce con perfil B2B.
-2. Ve su **lista de precios institucional** (descuento, volumen mínimo, crédito límite).
-3. Busca productos, agrega al carrito.
-4. **La orden se genera automáticamente** en RDS y aparece en CRM con estado "Nueva".
-5. Sistema revisa **stock en RDS en tiempo real** (única fuente de verdad).
-6. **Compuerta:** ¿stock disponible?
-   - Si NO: orden entra en estado "Pendiente stock" y se notifica al cliente.
-   - Si SÍ: bodega ve la orden, la prepara, actualiza stock en RDS.
-7. Contabilidad **ve la orden en RDS automáticamente**, factura desde el sistema.
-8. El vendedor asignado recibe una **notificación en el CRM** (no por WhatsApp).
+![Proceso 1 TO-BE](img/bpmn-p1-tobe.drawio.png)
 
-**Mejora:** cero papeles, cero diferencias de inventario, trazabilidad completa.
+*Nota.* Elaboración propia. Carriles: cliente institucional, e-commerce, CRM, bodega y base de datos.
 
 ### Diagrama BPMN Proceso 1 (B2B Order: AS-IS vs TO-BE)
 
@@ -65,40 +52,31 @@ Exportar a: `informe/img/bpmn-01-b2b-order.png`
 
 ---
 
-## Proceso 2: Despacho con cadena de frío
+| Punto de dolor (AS-IS) | Qué ocurre hoy | Cómo lo resuelve el TO-BE |
+|---|---|---|
+| 1. Registro informal | El vendedor anota el pedido en su celular o en papel | El cliente genera la orden en el portal; queda registrada en la base de datos |
+| 2. Canal no oficial | El vendedor avisa a bodega por WhatsApp personal | Bodega ve la orden en la misma base de datos, sin intermediarios |
+| 3. Stock descuadrado | Bodega revisa su Excel local, que no coincide con contabilidad | El portal valida el stock en tiempo real contra la base central y descuenta al confirmar |
+| 4. Doble digitación | Contabilidad vuelve a ingresar el pedido en un sistema cerrado | La orden existe una sola vez; se exporta a contabilidad desde la base (ver límites en `02-propuesta-valor.md`) |
+| 5. Sin seguimiento | Nadie sabe dónde está el pedido | El cliente ve el estado y el vendedor lo ve en el CRM |
 
-### AS-IS (problema: temperatura desconocida, ruptura silenciosa)
+*Nota.* Elaboración propia. Casos de uso asociados: CU-01 a CU-05 y CU-08.
 
-**Carriles:** Despachador | Conductor | Cliente | Plataforma (inexistente)
+## Proceso 2: despacho con cadena de frío
 
-1. Despachador asigna ruta **por teléfono o WhatsApp**.
-2. Conductor sale con la carga sin registros iniciales.
-3. **Durante el viaje:**
-   - Si el conductor **nota que la temperatura sube**, podría llamar al despachador.
-   - O **no se da cuenta** (conducción, distracciones).
-   - O **la cobertura está mala** y no puede comunicar.
-4. Cliente recibe la carga.
-5. **Evento crítico:** temperatura fuera de rango → cliente rechaza la entrega (merma).
-6. **No hay registro de por qué pasó.** El despachador registra "devolución" sin causa.
+**Figura 3**
+*Proceso 2 AS-IS: despacho con cadena de frío*
 
-**Puntos de pérdida:** paso 3 completo es un agujero negro. Nadie sabe si la temperatura subió o no.
+![Proceso 2 AS-IS](img/bpmn-p2-asis.drawio.png)
 
-### TO-BE (solución: IoT, alertas en tiempo real)
+*Nota.* Elaboración propia. Carriles: despachador, conductor y cliente.
 
-**Carriles:** Camión (IoT) | Plataforma | Despachador | Cliente | Torre de control
+**Figura 4**
+*Proceso 2 TO-BE: despacho con telemetría y alerta de frío*
 
-1. Camión se prepara con los equipos IoT calibrados.
-2. Conductor confirma salida; la plataforma registra `camion_id`, `tiempo_salida`, `temp_inicial`.
-3. **Cada N segundos (ej. 30 seg):**
-   - IoT envia: `camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct`.
-   - Sistema inserta en RDS.
-   - Dashboard actualiza en vivo.
-4. **Compuerta:** ¿`temp_camara` fuera del rango crítico?
-   - Si SÍ: `alerta_ruptura_frio = true` → torre de control y despachador reciben alerta.
-   - Despachador actúa: desvía a una parada refrigerada, busca alternativa, o reprograma entrega.
-5. Cliente recibe la carga **dentro del rango, con documentación** de temperatura histórica.
+![Proceso 2 TO-BE](img/bpmn-p2-tobe.drawio.png)
 
-**Mejora:** detección inmediata, actuación antes del daño, registro completo.
+*Nota.* Elaboración propia. Carriles: camión (IoT), plataforma, despachador y cliente. La compuerta compara `temp_camara` con el rango del camión (tabla `rango_temperatura`, ver `04b-modelo-datos.md`).
 
 ### Diagrama BPMN Proceso 2 (Cold-Chain: AS-IS vs TO-BE)
 
@@ -114,31 +92,28 @@ Exportar a: `informe/img/bpmn-02-coldchain.png`
 
 ---
 
-## Proceso 3: Gestión comercial de prospectos
+| Punto de dolor (AS-IS) | Qué ocurre hoy | Cómo lo resuelve el TO-BE |
+|---|---|---|
+| 1. Coordinación informal | La ruta se asigna por teléfono o WhatsApp | El despacho queda registrado en la plataforma, asociado a un camión y a sus órdenes |
+| 2. Última milla a ciegas | El conductor sale sin registro de temperatura ni GPS | El camión envía telemetría con posición, temperatura y combustible cada pocos segundos |
+| 3. Ruptura no detectada | La temperatura sube y nadie se entera | Cada lectura se evalúa contra el rango del camión y marca `alerta_ruptura_frio` |
+| 4. Pérdida | El cliente rechaza la carga al recibirla y se convierte en merma | El despachador ve la alerta mientras el camión está en ruta y puede actuar antes de entregar |
 
-### AS-IS (problema: cartera dispersa)
+*Nota.* Elaboración propia. Casos de uso asociados: CU-10, CU-11 y CU-12.
 
-**Carriles:** Vendedor | Prospecto/Cliente | Vendedor (celular personal)
+## Proceso 3: gestión comercial de prospectos
 
-1. Vendedor contacta a un prospecto (hospital, supermercado).
-2. Negocia verbalmente; mantiene notas **en su celular** (WhatsApp, correos, notas de voz).
-3. Prospecto está en alguna etapa (le interesa / pidió precio / está negociando), pero **solo el vendedor lo sabe**.
-4. Si el vendedor se va, **toda la información desaparece**.
-5. No hay métricas: ¿cuántos prospectos hay? ¿cuántos se cierran? ¿en cuánto tiempo?
+**Figura 5**
+*Proceso 3 AS-IS: gestión comercial de prospectos*
 
-### TO-BE (solución: CRM centralizado)
+![Proceso 3 AS-IS](img/bpmn-p3-asis.drawio.png)
 
-**Carriles:** Vendedor | CRM | Prospecto/Cliente | IA (clasificación)
+*Nota.* Elaboración propia. Carriles: vendedor y prospecto o cliente.
 
-1. Vendedor abre el CRM y crea un prospecto con datos básicos (nombre, rubro, contacto).
-2. **Estados del pipeline (carril de decisión):**
-   - Prospecto (nuevo contacto) → Contactado (tuvo conversación) → Propuesta enviada → Negociación → Ganado / Perdido.
-3. Cada transición se registra con **fecha, motivo y notas** (en CRM, no en celular).
-4. Si un requerimiento llega por el e-commerce, **IA lo clasifica** automáticamente (reclamo, cotización, despacho, calidad).
-5. El sistema **enruta a la persona correcta** basado en la clasificación.
-6. Gerencia **ve el pipeline en tiempo real:** cuántos prospectos, en qué etapa, cuál va lento.
+**Figura 6**
+*Proceso 3 TO-BE: embudo comercial en el CRM*
 
-**Mejora:** información centralizada, métricas reales, formación del equipo sin pérdida de conocimiento.
+![Proceso 3 TO-BE](img/bpmn-p3-tobe.drawio.png)
 
 ### Diagrama BPMN Proceso 3 (Prospect Management: AS-IS vs TO-BE)
 
@@ -154,9 +129,22 @@ Exportar a: `informe/img/bpmn-03-prospects.png`
 
 ---
 
-## Herramientas y siguientes pasos
+**Tabla 4**
+*Proceso 3: de dónde viene el dolor y cómo lo resuelve el TO-BE*
 
-- **Diagramas:** generados en bpmn.io, exportados a PNG y almacenados en `informe/img/`.
-- **Base para el Hito 2:** estos procesos definen los **casos de uso** del e-commerce, CRM e IoT.
+| Punto de dolor (AS-IS) | Qué ocurre hoy | Cómo lo resuelve el TO-BE |
+|---|---|---|
+| 1. Cartera personal | El contacto se guarda en el celular del vendedor | El prospecto queda en el CRM, asignado al vendedor pero propiedad de la empresa |
+| 2. Canales informales | Se contacta por llamada o WhatsApp, sin registro | Cada contacto se registra como interacción en la ficha |
+| 3. Sin etapas ni métricas | Nadie sabe en qué punto está cada prospecto | El prospecto avanza por etapas visibles en un tablero |
+| 4. Pérdidas sin motivo | Si el prospecto no acepta, no queda rastro | Se cierra como Perdido con el motivo, y la gerencia mide la conversión |
 
-Nota. Elaboración propia.
+*Nota.* Elaboración propia. Casos de uso asociados: CU-06, CU-07 y CU-09. El requerimiento que llega por el portal lo clasifica la IA antes de ingresar al CRM; si la API no responde, queda "sin clasificar" y lo revisa una persona.
+
+## Pendiente
+
+- [ ] Contrastar los seis diagramas con una conversación con Cofrial (en especial los pasos de bodega y contabilidad, que son supuestos del equipo).
+- [ ] Revisar si hace falta un cuarto proceso (por ejemplo, devoluciones o reclamos por cadena de frío).
+- [ ] Renumerar figuras y tablas al integrar el informe completo.
+
+## Notas del equipo

@@ -82,7 +82,7 @@ class Sesion:
     def entrar(self, usuario):
         t = self.token("/cuenta/entrar/")
         st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": CLAVE, "next": "/"})
-        return st == 200 and "Cerrar sesión" in html
+        return st == 200 and "/cuenta/salir/" in html          # el formulario de salida solo aparece con sesión iniciada
 
     def json(self, ruta):
         st, cuerpo, _ = self.pedir(ruta)

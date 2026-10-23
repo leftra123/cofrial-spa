@@ -9,7 +9,7 @@
   <label>Correo</label><input name="email" type="email">
   <label>Teléfono</label><input name="telefono">
   <label>Origen</label><select name="origen">{% for v, t in origenes %}<option value="{{ v }}">{{ t }}</option>{% endfor %}</select>
-  <label>Monto estimado (CLP)</label><input name="monto" type="number" min="0" style="width:200px">
+  <label>Monto estimado ($)</label><input name="monto" type="number" min="0" style="width:200px">
   <p class="frio" style="margin-top:12px">Se necesita al menos un correo o un teléfono.</p>
   <button>Crear prospecto</button>
 </form></div>

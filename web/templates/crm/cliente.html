@@ -6,7 +6,7 @@
 </div>
 <div class="seccion" style="margin-top:0"><h2>Pedidos web</h2></div>
 <div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th>Camión</th><th class="num">Total</th><th></th></tr></thead><tbody>
-{% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td>{{ o.despacho.camion|default:"–" }}</td><td class="num">${{ o.total|floatformat:"0g" }}</td>
+{% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td>{{ o.despacho.camion|default:"–" }}</td><td class="num">{{ o.total|clp }}</td>
   <td>{% if o.alertas_frio %}<span class="alerta">Alerta de frío: {{ o.alertas_frio }} lecturas fuera de rango</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="vacio">Sin pedidos.</td></tr>{% endfor %}
 </tbody></table></div>
 <div class="seccion"><h2>Interacciones</h2></div>

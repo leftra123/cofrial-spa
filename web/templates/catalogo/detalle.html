@@ -6,7 +6,8 @@
 <p class="migas"><a href="/catalogo/">Catálogo</a> / <a href="/catalogo/?categoria={{ p.categoria_id }}">{{ p.categoria.nombre }}</a> / {{ p.nombre }}</p>
 <div class="det">
   <div>
-    <div class="prod-img">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
+    <div class="prod-img">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ p.nombre }}">{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
+    {% if f.ilustracion_ia %}<p class="credito">Ilustración generada con IA ({{ f.modelo_ia }}).</p>{% endif %}
     {% if f.credito %}<p class="credito">Foto referencial: {{ f.credito.autor|truncatechars:60 }}, {{ f.credito.licencia }}, vía <a href="{{ f.credito.pagina }}" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>{% endif %}
   </div>
   <div>
@@ -14,7 +15,7 @@
     <h1 style="margin:4px 0 10px">{{ p.nombre }}</h1>
     <span class="stock {{ f.stock_clase }}">{{ f.stock_texto }}</span>
     <p style="margin-top:12px;color:var(--texto-2)">{{ p.descripcion|default:"Producto de la línea de cadena de frío de Cofrial." }}</p>
-    <div class="prod-precio" style="margin-top:8px">{% if f.precio %}<b data-precio-valor>${{ f.precio|floatformat:"0g" }}</b><small>{% if perfil.codigo == "B2B" %}Precio institucional (neto){% else %}Precio por {{ p.get_unidad_medida_display|lower }}{% endif %}</small>{% else %}<span class="frio">Sin precio</span>{% endif %}</div>
+    <div class="prod-precio" style="margin-top:8px">{% if f.precio %}<b data-precio-valor>{{ f.precio|clp }}</b><small>{% if perfil.codigo == "B2B" %}Precio institucional (neto){% else %}Precio por {{ p.get_unidad_medida_display|lower }}{% endif %}</small>{% else %}<span class="frio">Sin precio</span>{% endif %}</div>
     <dl>
       <dt>Categoría</dt><dd>{{ p.categoria.nombre }}</dd>
       <dt>Conservación</dt><dd>{{ p.categoria.rango_temperatura.nombre }}: {{ p.categoria.rango_temperatura.temp_min_c|floatformat:"-1" }} a {{ p.categoria.rango_temperatura.temp_max_c|floatformat:"-1" }} °C</dd>

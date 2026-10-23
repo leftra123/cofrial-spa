@@ -81,3 +81,55 @@ class TiendaTests(TestCase):
         from catalogo.models import Producto
         p = Producto.objects.get(sku="POL-PEC-10K")
         self.assertContains(self.client.get(f"/catalogo/{p.pk}/"), "Wikimedia Commons")
+
+
+class FormatoChilenoTests(TestCase):
+    def test_precios_con_punto_y_sin_clp(self):
+        from catalogo.templatetags.formato import clp, con_iva, iva, miles
+        self.assertEqual(clp(34990), "$34.990")
+        self.assertEqual(clp(1234567), "$1.234.567")
+        self.assertEqual(clp(0), "$0")
+        self.assertEqual(miles(5000), "5.000")
+        self.assertEqual(iva(100000), "$19.000")
+        self.assertEqual(con_iva(100000), "$119.000")
+
+    def test_el_catalogo_muestra_el_precio_sin_clp(self):
+        call_command("cargar_demo", verbosity=0)
+        r = self.client.get("/catalogo/")
+        self.assertContains(r, "$45.990")
+        self.assertNotContains(r, "CLP")
+
+
+class SvgSeguroTests(TestCase):
+    def test_conserva_formas_y_descarta_scripts_y_enlaces(self):
+        from catalogo.svg_seguro import limpiar
+        sucio = ('<svg viewBox="0 0 160 120" onload="alert(1)"><script>alert(1)</script><image href="http://x/y.png"/>'
+                 '<circle cx="10" cy="10" r="5" fill="#fff" onclick="x()"/><rect x="1" y="1" width="5" height="5" fill="url(http://x)"/>'
+                 '<path d="M0 0L5 5" stroke="#000"/><ellipse cx="3" cy="3" rx="2" ry="1"/></svg>')
+        limpio = limpiar("Aquí va: " + sucio)
+        for malo in ("script", "image", "onload", "onclick", "http://x", "url(", "href"):
+            self.assertNotIn(malo, limpio)
+        self.assertIn("<circle", limpio)
+        self.assertIn("<path", limpio)
+
+    def test_rechaza_entidades_xml_mal_formado_y_vacios(self):
+        from catalogo.svg_seguro import SvgInvalido, limpiar
+        for malo in ('<!DOCTYPE svg [<!ENTITY a "b">]><svg><g/></svg>', "<svg><g></svg>", "hola", "", "<svg><circle/></svg>"):
+            with self.assertRaises(SvgInvalido):
+                limpiar(malo)
+
+
+class IlustracionIATests(TestCase):
+    def test_comando_guarda_el_svg_validado_con_el_modelo(self):
+        import json, tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from django.test import override_settings
+        call_command("cargar_demo", verbosity=0)
+        svg = '{"svg": "<svg viewBox=\\"0 0 160 120\\"><circle cx=\\"1\\" cy=\\"1\\" r=\\"1\\"/><rect x=\\"1\\" y=\\"1\\" width=\\"2\\" height=\\"2\\"/><path d=\\"M0 0L1 1\\"/></svg>"}'
+        with tempfile.TemporaryDirectory() as d, override_settings(BASE_DIR=Path(d)), \
+                patch("crm.ia._llamar", return_value=svg), patch("crm.ia.ultimo_modelo", "Gemini prueba"), patch("time.sleep"):
+            call_command("generar_ilustraciones", sku="MAR-CAM-1K", verbosity=0)
+            self.assertTrue((Path(d) / "static/productos/ia/MAR-CAM-1K.svg").exists())
+            self.assertEqual(json.loads((Path(d) / "static/productos/ia/creditos.json").read_text())["MAR-CAM-1K"]["modelo"], "Gemini prueba")

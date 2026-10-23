@@ -180,6 +180,15 @@ class Command(BaseCommand):
                 pedidos.avanzar(orden)                                      # Despachada
             Requerimiento.objects.create(cliente=sur, asunto="Mi pedido llegó tibio", descripcion="El camión llegó con la carga sin la temperatura adecuada y rechazamos dos cajas. Necesitamos reposición urgente.")
 
+        # un tercer pedido en el mismo camión que el del Hospital: así el viaje tiene dos paradas y se ve el orden de entrega sugerido
+        base = Orden.objects.filter(numero_oc="OC-2026-0457", despacho__isnull=False).select_related("despacho").first()
+        if base and not Orden.objects.filter(numero_oc="OC-SUR-119").exists():
+            pedidos.agregar(sur, Producto.objects.get(sku="POL-PEC-10K").pk, 3)
+            orden = pedidos.avanzar(pedidos.avanzar(pedidos.generar_orden(sur, sur.direccion_set.first().pk, "OC-SUR-119")))
+            orden.despacho = base.despacho
+            orden.save(update_fields=["despacho"])
+            pedidos.avanzar(orden)
+
         if not Usuario.objects.filter(username="admin").exists():
             Usuario.objects.create_superuser("admin", "admin@cofrial.test", clave)
         self.stdout.write(self.style.SUCCESS("Datos de demostración listos (usuarios de prueba: contraseña en DEMO_PASSWORD)."))

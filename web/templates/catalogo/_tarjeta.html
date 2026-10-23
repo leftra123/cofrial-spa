@@ -1,11 +1,11 @@
 {% load static %}<article class="prod" data-sku="{{ f.p.sku }}"{% if f.precio %} data-precio="{{ f.precio|floatformat:0 }}"{% endif %}>
-  <a class="prod-img" href="{% url 'producto' f.p.producto_id %}" tabindex="-1">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ f.p.nombre }}" loading="lazy">{% else %}{% include "tienda/ilustracion.html" with categoria=f.p.categoria.nombre %}{% endif %}</a>
+  <a class="prod-img" href="{% url 'producto' f.p.producto_id %}" tabindex="-1">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ f.p.nombre }}" loading="lazy">{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ f.p.nombre }}" loading="lazy">{% else %}{% include "tienda/ilustracion.html" with categoria=f.p.categoria.nombre %}{% endif %}</a>
   <div class="prod-cuerpo">
     <span class="prod-sku">{{ f.p.categoria.nombre }} · {{ f.p.sku }}</span>
     <h3><a href="{% url 'producto' f.p.producto_id %}">{{ f.p.nombre }}</a></h3>
     {% with r=f.p.categoria.rango_temperatura %}<span class="chip transito">{{ r.nombre }} · {{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C</span>{% endwith %}
     <span class="stock {{ f.stock_clase }}">{{ f.stock_texto }}</span>
-    <div class="prod-precio">{% if f.precio %}<b data-precio-valor>${{ f.precio|floatformat:"0g" }}</b><small>{% if perfil.codigo == "B2B" %}Precio institucional (neto){% else %}Precio por {{ f.p.get_unidad_medida_display|lower }}{% endif %}</small>{% else %}<span class="frio">Sin precio</span>{% endif %}</div>
+    <div class="prod-precio">{% if f.precio %}<b data-precio-valor>{{ f.precio|clp }}</b><small>{% if perfil.codigo == "B2B" %}Precio institucional (neto){% else %}Precio por {{ f.p.get_unidad_medida_display|lower }}{% endif %}</small>{% else %}<span class="frio">Sin precio</span>{% endif %}</div>
     <div class="prod-comprar">
       {% if not user.is_authenticated and f.precio and f.p.stock_disponible > 0 %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/{{ f.p.producto_id }}/">Ingresar para comprar</a>
       {% elif menu.cliente and f.precio and f.p.stock_disponible > 0 %}

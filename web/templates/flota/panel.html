@@ -38,12 +38,12 @@
     <div class="mini">
       <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
       <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
-      <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|floatformat:"0g" }} kg</b></div>
+      <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div>
     </div>
     <div class="barra" data-campo="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
     <div class="frio" data-campo="lectura">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
     {% else %}
-    <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|floatformat:"0g" }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
+    <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
     {% endif %}
   </article>
 {% empty %}

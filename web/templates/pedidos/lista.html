@@ -22,7 +22,7 @@
     <td><a class="id-orden" href="/pedidos/{{ o.orden_id }}/">N.º {{ o.orden_id }}</a></td>
     <td>{{ o.creada_en|date:"d/m/Y H:i" }}</td>
     <td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td>
-    <td class="num">${{ o.total|floatformat:"0g" }}</td>
+    <td class="num">{{ o.total|clp }}</td>
     <td class="num"><a href="/pedidos/{{ o.orden_id }}/">Ver detalle →</a></td></tr>
   {% empty %}<tr><td colspan="5" class="vacio">Aún no tienes pedidos. <a href="/catalogo/">Explora el catálogo</a>.</td></tr>{% endfor %}
   <tr id="sin-resultados" hidden><td colspan="5" class="vacio">No hay pedidos en este estado.</td></tr>

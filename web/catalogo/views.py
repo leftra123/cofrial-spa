@@ -46,11 +46,22 @@ def _creditos():
         return {}
 
 
+@lru_cache(maxsize=1)
+def _ilustraciones_ia():
+    """Ilustraciones SVG creadas con IA por `generar_ilustraciones` (modelo que las creó)."""
+    try:
+        return json.loads((Path(settings.BASE_DIR) / "static" / "productos" / "ia" / "creditos.json").read_text())
+    except (OSError, ValueError):
+        return {}
+
+
 def _fila(p, precios):
     clase, texto = _estado_stock(p)
     credito = _creditos().get(p.sku)
     return {"p": p, "precio": precios.get(p.producto_id), "stock_clase": clase, "stock_texto": texto,
-            "foto": f"productos/{p.sku}.jpg" if credito else None, "credito": credito}
+            "foto": f"productos/{p.sku}.jpg" if credito else None, "credito": credito,
+            "ilustracion_ia": f"productos/ia/{p.sku}.svg" if p.sku in _ilustraciones_ia() and not credito else None,
+            "modelo_ia": _ilustraciones_ia().get(p.sku, {}).get("modelo")}
 
 
 def listado(request):

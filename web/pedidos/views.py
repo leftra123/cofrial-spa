@@ -109,7 +109,7 @@ def _orden_del_cliente(cliente, orden_id):
 def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     return render(request, "pedidos/detalle.html", {
-        "orden": orden, "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
         "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
 

@@ -8,7 +8,7 @@
   <dl class="datos">
     <div><dt>Responsable</dt><dd>{{ p.vendedor }}</dd></div>
     <div><dt>Origen</dt><dd>{{ p.origen }}</dd></div>
-    {% if p.monto_estimado_clp %}<div><dt>Monto estimado</dt><dd>${{ p.monto_estimado_clp|floatformat:"0g" }}</dd></div>{% endif %}
+    {% if p.monto_estimado_clp %}<div><dt>Monto estimado</dt><dd>{{ p.monto_estimado_clp|clp }}</dd></div>{% endif %}
     <div><dt>Contacto</dt><dd>{{ p.nombre_contacto }}<br><span class="frio">{{ p.email }} {{ p.telefono }}</span></dd></div>
     {% if p.motivo_perdida %}<div><dt>Motivo de pérdida</dt><dd>{{ p.motivo_perdida }}</dd></div>{% endif %}
     {% if p.cliente %}<div><dt>Cliente</dt><dd><a href="/crm/clientes/{{ p.cliente_id }}/">Ver cliente creado</a></dd></div>{% endif %}

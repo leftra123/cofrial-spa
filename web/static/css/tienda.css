@@ -106,3 +106,4 @@ body.tienda { background: var(--fondo); }
 .prod-img .foto { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; display: block; }
 .det .prod-img .foto { height: 300px; }
 .credito { font-size: .72rem; color: var(--texto-3); margin: 6px 0 0; }
+.prod-img .foto.ia { object-fit: contain; background: #F8FAFC; }

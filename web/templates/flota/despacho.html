@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Armar despacho | Cofrial SpA{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Armar despacho</h1><p class="sub">Elige el camión y los pedidos del viaje. El mapa propone el mejor orden de entrega antes de salir.</p></div>
+  <div class="acciones"><a class="btn btn-sec" href="/flota/">Volver a la flota</a></div>
+</div>
+{% endblock %}
+{% block contenido %}
+<form method="post" id="form-despacho">{% csrf_token %}
+<div class="despacho-grid">
+  <div>
+    <div class="seccion"><h2>1. Camión</h2></div>
+    <div class="tarjeta-ui">
+      {% for c in camiones %}
+      <label class="opcion"><input type="radio" name="camion" value="{{ c.camion_id }}" {% if forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rango_temperatura.nombre }}</span> <span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
+      {% empty %}<p class="vacio" style="margin:0">No hay camiones libres: todos están en ruta o inactivos.</p>{% endfor %}
+    </div>
+
+    <div class="seccion"><h2>2. Pedidos por despachar</h2></div>
+    <div class="tarjeta-ui">
+      {% for p in pedidos %}
+      <label class="opcion pedido">
+        <input type="checkbox" name="ordenes" value="{{ p.o.orden_id }}" data-orden="{{ p.o.orden_id }}" {% if not p.ubicada %}data-sin-ubicar="1"{% endif %}>
+        <span><b>Orden N.º {{ p.o.orden_id }}</b> · {{ p.o.direccion.cliente.nombre }}
+          <span class="frio" style="display:block">{{ p.o.direccion }} · {% include "componentes/chip_estado.html" with estado=p.o.estado_orden.nombre %}
+            {% if p.mixto %}<span class="chip alerta">Mezcla frío y congelado</span>{% else %}{% for r in p.rangos %}<span class="chip transito">{{ r }}</span>{% endfor %}{% endif %}
+            {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}</span></span>
+      </label>
+      {% if not p.ubicada %}
+      <button class="btn-sec" type="submit" formnovalidate formaction="/flota/despachar/ubicar/{{ p.o.direccion_id }}/" style="margin:0 0 8px 26px">Ubicar «{{ p.o.direccion.calle_numero }}» en el mapa</button>
+      {% endif %}
+      {% empty %}<p class="vacio" style="margin:0">No hay pedidos pendientes. Cuando un cliente compre, aparecerá aquí.</p>{% endfor %}
+    </div>
+    <p><button class="btn" id="btn-despachar" {% if not camiones %}disabled{% endif %}>Despachar y salir ahora</button></p>
+  </div>
+  <div>
+    <div class="seccion"><h2>Ruta sugerida</h2></div>
+    <div class="tarjeta-ui">
+      <div id="mapa-despacho" class="mapa" role="img" aria-label="Vista previa de la ruta del despacho"></div>
+      <p class="ruta-info" id="resumen-ruta">Marca pedidos para ver la ruta.</p>
+      <ol class="ruta-lista" id="lista-ruta"></ol>
+    </div>
+  </div>
+</div>
+</form>
+{% endblock %}
+{% block scripts %}
+{{ mapa|json_script:"datos-mapa" }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{% static 'js/mapa.js' %}"></script>
+<script>
+(function () {
+  var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
+  var m = CofrialMapa.crear("mapa-despacho", base, 13), capa = L.layerGroup().addTo(m), version = 0;
+  L.marker(base, {icon: CofrialMapa.pin("B", "#111827")}).addTo(m).bindPopup(d.base.nombre);
+  var resumen = document.getElementById("resumen-ruta"), lista = document.getElementById("lista-ruta");
+  function marcados() { return Array.prototype.filter.call(document.querySelectorAll("input[name=ordenes]"), function (c) { return c.checked; }); }
+  function recalcular() {
+    var mio = ++version, sel = marcados(), paradas = [], sinUbicar = 0;
+    sel.forEach(function (c) { var p = d.pedidos[c.dataset.orden]; if (p) paradas.push({id: c.dataset.orden, p: p}); else sinUbicar++; });
+    capa.clearLayers(); lista.innerHTML = "";
+    if (!paradas.length) { resumen.textContent = sel.length ? "Los pedidos marcados no tienen ubicación; usa «Ubicar»." : "Marca pedidos para ver la ruta."; return; }
+    var pts = [base].concat(paradas.map(function (x) { return [x.p.lat, x.p.long]; }));
+    resumen.textContent = "Calculando la mejor ruta…";
+    CofrialMapa.ruta(pts, true).then(function (r) {
+      if (mio !== version) return;                         // llegó tarde: ya se cambió la selección
+      L.polyline(r.linea, {color: "#1D4ED8", weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(capa);
+      var orden = r.orden || pts.map(function (_, k) { return k; }), filas = [];
+      paradas.forEach(function (x, k) {
+        var n = orden[k + 1];
+        L.marker([x.p.lat, x.p.long], {icon: CofrialMapa.pin(n, "#1D4ED8")}).addTo(capa).bindPopup(x.p.cliente + "<br>" + x.p.direccion);
+        filas[n - 1] = "<li><b>" + x.p.cliente + "</b> · " + x.p.direccion + " <span class='frio'>(orden N.º " + x.id + ")</span></li>";
+      });
+      lista.innerHTML = filas.join("");
+      resumen.textContent = "Recorrido sugerido: " + CofrialMapa.texto(r) + (sinUbicar ? " · " + sinUbicar + " pedido(s) sin ubicar quedan fuera del cálculo" : "");
+      m.fitBounds(pts, {padding: [40, 40]});
+    });
+  }
+  document.querySelectorAll("input[name=ordenes]").forEach(function (c) { c.addEventListener("change", recalcular); });
+})();
+</script>
+{% endblock %}

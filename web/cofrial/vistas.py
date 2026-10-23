@@ -39,5 +39,7 @@ def registro(request):
         usuario = form.guardar()
         login(request, usuario)
         messages.success(request, "Cuenta creada. Ya puedes comprar con precios para clientes particulares.")
+        if not form.ubicada:
+            messages.warning(request, "No pudimos ubicar tu dirección en el mapa. Puedes comprar igual; revisaremos la dirección antes de despachar.")
         return redirect("catalogo")
     return render(request, "cuenta/registro.html", {"form": form})

@@ -55,11 +55,21 @@ def _ilustraciones_ia():
         return {}
 
 
+def _propia(sku):
+    """Imagen propia puesta a mano en static/productos/propias/<SKU>.(jpg|png|webp); tiene prioridad sobre todo lo demás."""
+    carpeta = Path(settings.BASE_DIR) / "static" / "productos" / "propias"
+    for ext in ("jpg", "jpeg", "png", "webp"):
+        if (carpeta / f"{sku}.{ext}").exists():
+            return f"productos/propias/{sku}.{ext}"
+    return None
+
+
 def _fila(p, precios):
     clase, texto = _estado_stock(p)
-    credito = _creditos().get(p.sku)
+    propia = _propia(p.sku)
+    credito = {"propia": True} if propia else _creditos().get(p.sku)
     return {"p": p, "precio": precios.get(p.producto_id), "stock_clase": clase, "stock_texto": texto,
-            "foto": f"productos/{p.sku}.jpg" if credito else None, "credito": credito,
+            "foto": propia or (f"productos/{p.sku}.jpg" if credito else None), "credito": credito,
             "ilustracion_ia": f"productos/ia/{p.sku}.svg" if p.sku in _ilustraciones_ia() and not credito else None,
             "modelo_ia": _ilustraciones_ia().get(p.sku, {}).get("modelo")}
 

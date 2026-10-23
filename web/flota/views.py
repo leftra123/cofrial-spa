@@ -1,9 +1,16 @@
 """Panel de flota (solo lectura): estado de cada camión según su última lectura de telemetría y su viaje activo."""
 from django.conf import settings
-from django.shortcuts import render
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
+from clientes import geo
+from clientes.models import Direccion
+from pedidos.servicios import ErrorDeNegocio
 
 from crm.views import con_rol
 
+from . import servicios
 from .servicios import estado_flota
 
 
@@ -21,3 +28,37 @@ def panel(request):
                                     for o in x["pedidos"] if o.direccion.lat is not None]} for x in viajes]}
     return render(request, "flota/panel.html", {"rol": request.rol, "tarjetas": tarjetas, "resumen": resumen,
                                                 "viajes": viajes, "mapa": mapa})
+
+
+@con_rol("admin", "gerencia", "despachador")
+def despachar(request):
+    """Armar un viaje: elegir camión y pedidos; la ruta sugerida se previsualiza en el mapa antes de salir."""
+    if request.method == "POST":
+        try:
+            d = servicios.despachar(request.POST.get("camion", ""), [int(i) for i in request.POST.getlist("ordenes") if i.isdigit()])
+            messages.success(request, f"Despacho N.º {d.despacho_id} en ruta con {d.camion_id}. Ya puedes ver la ruta sugerida.")
+            return redirect("flota")
+        except ErrorDeNegocio as e:
+            for m in e.mensajes:
+                messages.error(request, m)
+        return redirect("despachar")
+    pedidos = []
+    for o in servicios.pedidos_por_despachar():
+        rangos = servicios.rangos_de(o)
+        pedidos.append({"o": o, "rangos": rangos, "mixto": len(rangos) > 1, "ubicada": o.direccion.lat is not None})
+    mapa = {"base": settings.BASE_LOGISTICA,
+            "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
+                                          "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}
+    return render(request, "flota/despacho.html", {"pedidos": pedidos, "camiones": servicios.camiones_libres(), "mapa": mapa})
+
+
+@require_POST
+@con_rol("admin", "gerencia", "despachador")
+def ubicar_direccion(request, direccion_id):
+    """Reintenta ubicar una dirección en el mapa (OpenStreetMap) cuando el registro no la encontró."""
+    direccion = get_object_or_404(Direccion.objects.select_related("comuna"), pk=direccion_id)
+    if geo.ubicar(direccion):
+        messages.success(request, f"Ubicamos «{direccion}» en el mapa.")
+    else:
+        messages.warning(request, f"No encontramos «{direccion}» en OpenStreetMap. Revisa que la calle y el número estén bien escritos.")
+    return redirect("despachar")

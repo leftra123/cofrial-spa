@@ -2,7 +2,11 @@ from django.urls import path
 
 from . import api, views
 
-urlpatterns = [path("", views.panel, name="flota")]
+urlpatterns = [
+    path("", views.panel, name="flota"),
+    path("despachar/", views.despachar, name="despachar"),
+    path("despachar/ubicar/<int:direccion_id>/", views.ubicar_direccion, name="ubicar_direccion"),
+]
 api_urlpatterns = [
     path("flota/", api.FlotaAPI.as_view(), name="api_flota"),
     path("pedidos/", api.PedidosAPI.as_view(), name="api_pedidos"),

@@ -133,3 +133,20 @@ class IlustracionIATests(TestCase):
             call_command("generar_ilustraciones", sku="MAR-CAM-1K", verbosity=0)
             self.assertTrue((Path(d) / "static/productos/ia/MAR-CAM-1K.svg").exists())
             self.assertEqual(json.loads((Path(d) / "static/productos/ia/creditos.json").read_text())["MAR-CAM-1K"]["modelo"], "Gemini prueba")
+
+
+class ImagenPropiaTests(TestCase):
+    def test_imagen_propia_tiene_prioridad_y_se_acredita_como_ia(self):
+        import tempfile
+        from pathlib import Path
+
+        from django.test import override_settings
+        call_command("cargar_demo", verbosity=0)
+        from catalogo.models import Producto
+        p = Producto.objects.get(sku="POL-PEC-10K")
+        with tempfile.TemporaryDirectory() as d, override_settings(BASE_DIR=Path(d)):
+            (Path(d) / "static/productos/propias").mkdir(parents=True)
+            (Path(d) / "static/productos/propias/POL-PEC-10K.png").write_bytes(b"x")
+            r = self.client.get(f"/catalogo/{p.pk}/")
+            self.assertContains(r, "productos/propias/POL-PEC-10K.png")
+            self.assertContains(r, "generada con IA")

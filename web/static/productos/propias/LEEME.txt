@@ -1,0 +1,1 @@
+Coloca aquí las imágenes propias de cada producto con el nombre del SKU, por ejemplo VAC-MOL-5K.jpg (también .png o .webp). Tienen prioridad sobre las fotos de Commons y las ilustraciones.

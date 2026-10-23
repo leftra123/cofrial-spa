@@ -270,3 +270,8 @@ td.celda-acciones select { max-width: 100%; }
 .ruta-lista { margin: 8px 0 0; padding-left: 20px; font-size: .9rem; }
 .mapa { isolation: isolate; height: 280px; border-radius: var(--radio-sm); background: var(--fondo); }
 .mapa .leaflet-tile-pane { filter: grayscale(.9) contrast(.92) brightness(1.06); }   /* mapa claro y minimalista */
+.despacho-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.opcion { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--borde); font-weight: 400; cursor: pointer; }
+.opcion:last-child { border-bottom: 0; }
+.opcion input { width: auto; margin-top: 4px; }
+@media (max-width: 860px) { .despacho-grid { grid-template-columns: 1fr; } }

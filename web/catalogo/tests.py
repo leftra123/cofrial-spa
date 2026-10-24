@@ -76,11 +76,11 @@ class TiendaTests(TestCase):
 
     def test_fotos_con_credito_y_respaldo_de_ilustracion(self):
         r = self.client.get("/catalogo/")
-        self.assertContains(r, 'src="/static/productos/POL-PEC-10K.jpg"')      # tiene foto descargada
+        self.assertContains(r, 'src="/static/productos/propias/POL-PEC-10K.jpg"')      # imagen propia: tiene prioridad
         self.assertContains(r, "<svg")                                         # los sin foto usan ilustración
         from catalogo.models import Producto
-        p = Producto.objects.get(sku="POL-PEC-10K")
-        self.assertContains(self.client.get(f"/catalogo/{p.pk}/"), "Wikimedia Commons")
+        self.assertContains(self.client.get(f"/catalogo/{Producto.objects.get(sku='POL-PEC-10K').pk}/"), "generada con IA")
+        self.assertContains(self.client.get(f"/catalogo/{Producto.objects.get(sku='EMB-JAM-3K').pk}/"), "Wikimedia Commons")   # sin imagen propia: foto de Commons
 
 
 class FormatoChilenoTests(TestCase):

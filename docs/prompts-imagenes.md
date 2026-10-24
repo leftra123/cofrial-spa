@@ -38,3 +38,23 @@ Cómo usarlos: genera cada imagen (formato horizontal 4:3, mínimo 1200 px), gu�
 | Categoría Lácteos y embutidos | `web/static/productos/propias/cat-lacteos.jpg` | Queso laminado, bloque de mantequilla y jamón cocido sobre fondo blanco. |
 
 Las de portada y categorías son opcionales: hoy la portada y las categorías usan ilustraciones y no leen esos archivos todavía; pídele a la sesión de mejora visual que las incorpore si las generas.
+
+
+## Estado de las imágenes propias (24-oct-2026)
+
+Ya cargadas en `web/static/productos/propias/` (10): `VAC-LOM-5K`, `POL-PEC-10K`, `CER-COS-5K`, `PES-FIL-3K`, `VAC-POS-5K`, `CER-LOM-4K`, `COR-PIE-6K`, `POL-TRU-8K`, `POL-ENT-10K` y `PAV-PEC-5K`.
+
+Faltan 10. Prompts en el mismo estilo que las ya hechas (vista desde arriba, fondo blanco, etiqueta en blanco sin texto, sin marcas):
+
+| SKU | Archivo | Prompt |
+|---|---|---|
+| VAC-MOL-5K | `VAC-MOL-5K.jpg` | Fotografía de producto de estudio, vista cenital, fondo blanco, luz suave. Bandeja blanca de espuma con carne molida de vacuno cruda, roja y de textura fina, cubierta con film transparente y una etiqueta blanca en blanco, sin texto. |
+| PES-MER-5K | `PES-MER-5K.jpg` | Mismo estilo. Bolsa al vacío transparente con tres filetes de merluza cruda sin piel, de carne blanca y brillante, con una etiqueta blanca en blanco. |
+| MAR-CON-2K | `MAR-CON-2K.jpg` | Mismo estilo. Bolsa transparente de mariscos congelados mixtos (choritos, camarones, anillos de calamar y almejas) con escarcha, y una etiqueta blanca en blanco. |
+| MAR-CAM-1K | `MAR-CAM-1K.jpg` | Mismo estilo. Bolsa transparente con camarones crudos pelados y congelados, con escarcha, y una etiqueta blanca en blanco. |
+| VER-MIX-10K | `VER-MIX-10K.jpg` | Mismo estilo. Bolsa transparente grande de verduras mixtas congeladas (zanahoria en cubos, arvejas y choclo) con escarcha, y una etiqueta blanca en blanco. |
+| PAP-FRI-10K | `PAP-FRI-10K.jpg` | Mismo estilo. Bolsa transparente de papas prefritas en bastón, congeladas y con escarcha, y una etiqueta blanca en blanco. |
+| LAC-QUE-5K | `LAC-QUE-5K.jpg` | Mismo estilo. Paquete al vacío de láminas de queso gauda amarillo apiladas con papel separador, y una etiqueta blanca en blanco. |
+| LAC-MAN-10K | `LAC-MAN-10K.jpg` | Mismo estilo. Bloque rectangular de mantequilla amarilla envuelto en papel blanco, con una esquina cortada a la vista y una etiqueta blanca en blanco. |
+| EMB-JAM-3K | `EMB-JAM-3K.jpg` | Mismo estilo. Pieza entera de jamón cocido rosado envasada al vacío, con una etiqueta blanca en blanco. |
+| EMB-LON-4K | `EMB-LON-4K.jpg` | Mismo estilo. Cuatro longanizas ahumadas de color café rojizo en una bandeja blanca cubierta con film transparente, con una etiqueta blanca en blanco. |

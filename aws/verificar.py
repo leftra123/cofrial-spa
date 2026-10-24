@@ -119,6 +119,7 @@ def precio(html, sku):
 
 
 def consulta_grafana(sql):
+    sql = sql.replace("$camion", "'CAM-01'")           # variable del selector de camiones del tablero: aquí se prueba con uno
     cuerpo = json.dumps({"queries": [{"refId": "A", "datasource": {"uid": "cofrial-pg"}, "rawSql": sql, "format": "table"}],
                          "from": "now-24h", "to": "now"}).encode()
     pedido = urllib.request.Request(f"http://{HOST}:3000/api/ds/query", data=cuerpo, headers={"Content-Type": "application/json"})

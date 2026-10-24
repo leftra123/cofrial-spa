@@ -22,3 +22,4 @@ def _variantes(ruta):
 def foto(ruta, clase="foto", alt="", sizes="100vw", ancho=800, alto=800, prioridad=False):
     return {"src": static(ruta), "avif": ", ".join(_variantes(ruta)), "clase": clase, "alt": alt, "sizes": sizes,
             "ancho": ancho, "alto": alto, "prioridad": prioridad}
+

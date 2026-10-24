@@ -27,7 +27,7 @@
         <span><b>Orden N.º {{ p.o.orden_id }}</b> · {{ p.o.direccion.cliente.nombre }}
           <span class="frio" style="display:block">{{ p.o.direccion }} · {% include "componentes/chip_estado.html" with estado=p.o.estado_orden.nombre %}
             {% if p.mixto %}<span class="chip alerta">Mezcla frío y congelado</span>{% else %}{% for r in p.rangos %}<span class="chip transito">{{ r }}</span>{% endfor %}{% endif %}
-            {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}</span></span>
+            {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}{% if p.o.oc_pendiente %}<span class="chip pendiente">OC pendiente</span>{% endif %}</span></span>
       </label>
       {% if not p.ubicada %}
       <button class="btn-sec" type="submit" formnovalidate formaction="/flota/despachar/ubicar/{{ p.o.direccion_id }}/" style="margin:0 0 8px 26px">Ubicar «{{ p.o.direccion.calle_numero }}» en el mapa</button>

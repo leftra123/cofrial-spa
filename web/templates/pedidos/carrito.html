@@ -44,7 +44,7 @@
     <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
-      {% if pide_oc %}<label for="numero_oc">Número de orden de compra (obligatorio)</label><input name="numero_oc" id="numero_oc" placeholder="Ej.: OC-2026-0457" autocomplete="off" required>{% endif %}
+      {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
       <button class="confirmar" data-cargando="Generando orden…">Generar orden</button>
     </form>
     <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde "Mis pedidos"</p>

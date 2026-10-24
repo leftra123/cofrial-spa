@@ -14,13 +14,13 @@ El portal atiende a dos perfiles con la misma plataforma y la misma base de dato
 |---|---|---|---|
 | Quiénes | Hospitales, supermercados, ferias, instituciones | Personas | |
 | Lista de precios | Institucional | Pública | RN-01 |
-| Número de orden de compra | Obligatorio | No aplica | RN-05 |
+| Número de orden de compra | Se solicita; si falta, la orden queda «OC pendiente» | No aplica | RN-05 |
 | Vendedor asignado | Sí; ve sus pedidos en el CRM | No | RN-09 |
 | Compra recurrente | «Repetir mi último pedido» | Recompra desde el historial | RN-08 |
 | Pago | Factura posterior (simulado en el prototipo) | Pago inmediato (simulado) | Fuera de alcance |
 | Registro | Cuenta institucional creada con RUT de empresa | Cuenta rápida al comprar (RUT y correo) | |
 
-*Nota.* Elaboración propia. El carácter obligatorio de la orden de compra y la forma de pago son supuestos a validar con Cofrial.
+*Nota.* Elaboración propia. La forma de solicitar la orden de compra (con la opción de dejarla pendiente) y la forma de pago son supuestos a validar con Cofrial.
 
 ## Arquitectura de canales
 
@@ -125,7 +125,7 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 | RN-02 | **Stock transaccional.** Una orden solo se genera si todas sus líneas tienen stock suficiente. La validación y el descuento ocurren en una misma transacción con bloqueo del producto, para que dos compras simultáneas no vendan la misma unidad. | W4, W5 |
 | RN-03 | **Un carrito abierto por cliente.** Al generar la orden el carrito pasa a «convertido». | W4 |
 | RN-04 | **Dirección propia.** La dirección de entrega debe pertenecer al cliente que compra. | W4 |
-| RN-05 | **Orden de compra B2B.** Los clientes institucionales deben indicar su número de orden de compra; no aplica a B2C. | W4 |
+| RN-05 | **Orden de compra B2B.** Se solicita a los clientes institucionales su número de orden de compra, que emite la propia institución y no puede generarlo Cofrial. Si todavía no la tienen, la orden se crea igual, con una referencia propia (WEB-año-número) y marcada «OC pendiente»; el cliente la reemplaza por la real desde el detalle del pedido, y el CRM muestra cuántas órdenes siguen pendientes para que ventas la gestione. No aplica a B2C. | W4 |
 | RN-06 | **Precio congelado.** Cada línea de la orden guarda el precio vigente al comprar; cambios posteriores de la lista no la alteran. | W5 |
 | RN-07 | **Estados y cancelación.** La orden avanza según la Figura 9. Se puede cancelar antes de «Despachada»; el cliente solo mientras esté «Recibida», y el vendedor hasta «En preparación». Cancelar repone el stock. | W5, W6 |
 | RN-08 | **Compra recurrente.** «Repetir mi último pedido» copia al carrito las líneas de la última orden no cancelada; las cantidades se ajustan al stock disponible y se avisa de cada ajuste. | W2 |
@@ -134,7 +134,7 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 
 ## Pendiente
 
-- [ ] Validar con una persona de Cofrial los supuestos de la Tabla 1 (orden de compra obligatoria, forma de pago, quién puede cancelar).
+- [ ] Validar con una persona de Cofrial los supuestos de la Tabla 1 (orden de compra que puede quedar pendiente, forma de pago, quién puede cancelar).
 - [ ] Contrastar las emociones de los journeys con entrevistas breves a un cliente institucional y a uno particular.
 - [x] «Mis pedidos» (`/pedidos/`), inicio de sesión (`/cuenta/entrar/`) y registro B2C (`/cuenta/registro/`) existen en la aplicación `web/`.
 - [ ] Renumerar figuras y tablas al integrar el informe completo.
@@ -163,3 +163,5 @@ El catálogo de demostración tiene 20 productos en 4 categorías (cárnicos ref
 **Avisos de stock (24-oct-2026).** Cuando un producto está sin stock, el cliente con sesión puede pedir que se le avise al haber al menos la cantidad que necesita (por ejemplo, 5 cajas). El aviso se muestra en «Avisos» de la barra superior y como novedad en el catálogo en cuanto el stock alcanza esa cantidad, y se da por atendido cuando el cliente agrega el producto al carrito. No se envía correo electrónico; el equipo comercial ve la demanda en espera en el CRM (pestaña «Demanda en espera»), con los clientes que esperan, las unidades pedidas y si el stock alcanza.
 
 **Imágenes de producto (24-oct-2026).** Las fotografías del catálogo son imágenes referenciales de cada producto en su envase, creadas con herramientas de inteligencia artificial generativa a partir de descripciones del producto, con etiqueta en blanco y sin marcas; no son fotografías de las cajas reales de Cofrial. Las ilustraciones y fotos de Wikimedia Commons que se usaron antes quedan como respaldo si falta una imagen. En la tienda las etiquetas de conservación muestran el rango de temperatura con un ícono (termómetro para refrigerado y copo para congelado) y el estado de stock se indica con texto, sin leyendas sobre cómo se creó la imagen.
+
+**Orden de compra pendiente (25-oct-2026).** Por decisión del equipo, un cliente institucional puede comprar sin escribir su orden de compra: la orden se crea con la referencia propia WEB-año-número y el aviso «OC pendiente», que se ve en sus pedidos, en el detalle (con un campo para agregar la real), en la ficha del cliente y en un indicador del CRM, y se informa en la API de pedidos. La regla RN-05 cambió de «obligatoria» a «se solicita; si falta, queda pendiente» para no frenar la compra, sin perder el control de la facturación.

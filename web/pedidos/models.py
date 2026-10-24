@@ -54,6 +54,7 @@ class Orden(models.Model):
     estado_orden = models.ForeignKey(EstadoOrden, on_delete=models.PROTECT)
     despacho = models.ForeignKey(Despacho, null=True, blank=True, on_delete=models.SET_NULL)
     numero_oc = models.CharField(max_length=30, blank=True)
+    oc_pendiente = models.BooleanField(default=False, db_default=False)       # B2B que compró sin su OC: numero_oc lleva una referencia WEB-aaaa-nnnn hasta que la agregue
     creada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:

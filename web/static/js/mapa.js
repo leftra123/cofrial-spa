@@ -16,22 +16,16 @@ window.CofrialMapa = (function () {
       html: '<span style="background:' + color + '">' + texto + "</span>"});
   }
 
-  /* Camión frigorífico (vista lateral, mirando a la derecha): caja blanca con copo, franja y cabina del color pedido.
-     Con alerta (ruptura de frío) pasa a rojo y late. `etiqueta` es el código que se muestra bajo el camión. */
+  /* Camión frigorífico (imagen de marca, vista lateral mirando a la derecha). Con alerta (ruptura de frío) usa la versión roja y late.
+     `etiqueta` es el código que se muestra bajo el camión. Las imágenes viven en static/img/marca/; la ruta se deduce de la de este mismo script. */
+  var BASE_IMG = (function () {
+    var t = document.querySelector('script[src*="js/mapa.js"]');
+    return t ? t.getAttribute("src").replace(/js\/mapa\.js.*$/, "img/marca/") : "/static/img/marca/";
+  })();
   function camion(alerta, etiqueta) {
-    var c = alerta ? "#DC2626" : "#143A7B";
-    var svg = '<svg viewBox="0 0 60 38" width="76" height="48" aria-hidden="true">' +
-      '<ellipse cx="30" cy="35.5" rx="25" ry="2.4" fill="#0F172A" opacity=".2"/>' +
-      '<rect x="2" y="5" width="37" height="23" rx="3" fill="#fff" stroke="#CBD5E1"/>' +
-      '<path d="M2 23h37v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z" fill="' + c + '"/>' +
-      '<g stroke="' + c + '" stroke-width="1.7" stroke-linecap="round"><path d="M20.5 8v12M15.3 11l10.4 6M15.3 17l10.4-6"/></g>' +
-      '<path d="M41 11.5h8.2c1.3 0 2.5.7 3.2 1.7l4.2 6.2c.6.9.9 1.9.9 3V28a2 2 0 0 1-2 2H41z" fill="' + c + '"/>' +
-      '<path d="M44 14.6h4.9c.7 0 1.3.3 1.7.9l2.5 3.8H44z" fill="#DBEAFE"/>' +
-      '<rect x="55.4" y="22.5" width="2.6" height="3" rx="1" fill="#FDE68A"/>' +
-      '<g fill="#0F172A"><circle cx="12" cy="30" r="4.3"/><circle cx="23" cy="30" r="4.3"/><circle cx="48" cy="30" r="4.3"/></g>' +
-      '<g fill="#CBD5E1"><circle cx="12" cy="30" r="1.8"/><circle cx="23" cy="30" r="1.8"/><circle cx="48" cy="30" r="1.8"/></g></svg>';
-    return L.divIcon({className: "pin-camion" + (alerta ? " alerta" : ""), iconSize: [76, 64], iconAnchor: [38, 42], popupAnchor: [0, -38],
-      html: svg + (etiqueta ? '<b class="pin-etq">' + etiqueta + "</b>" : "")});
+    var img = '<img src="' + BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png") + '" width="92" height="58" alt="" draggable="false">';
+    return L.divIcon({className: "pin-camion" + (alerta ? " alerta" : ""), iconSize: [92, 78], iconAnchor: [46, 48], popupAnchor: [0, -44],
+      html: img + (etiqueta ? '<b class="pin-etq">' + etiqueta + "</b>" : "")});
   }
 
   /* Destino de entrega: gota verde con una casa. */

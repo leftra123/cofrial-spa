@@ -128,10 +128,10 @@ def _groq(prompt, plazo_total):
     raise ErrorIA("; ".join(errores))
 
 
-def _proveedores():
-    """Orden de los proveedores: IA_PROVEEDORES=groq,gemini lo invierte (Groq responde en ~1 s; Gemini tarda 4 a 7 s)."""
+def _proveedores(orden=None):
+    """Orden de los proveedores: IA_PROVEEDORES=groq,gemini lo invierte (Groq responde en ~1 s; Gemini tarda 4 a 7 s). `orden` lo fuerza (lista de nombres)."""
     disponibles = {"gemini": _gemini, "groq": _groq}
-    orden = [n.strip().lower() for n in (os.environ.get("IA_PROVEEDORES") or "gemini,groq").split(",")]
+    orden = [n.strip().lower() for n in (orden or (os.environ.get("IA_PROVEEDORES") or "gemini,groq").split(","))]
     return [disponibles[n] for n in orden if n in disponibles] or [_gemini, _groq]
 
 
@@ -140,12 +140,12 @@ def _proveedores():
 PARTE_MAXIMA_CON_RESPALDO = 0.65
 
 
-def _llamar(prompt):
-    """Prueba los proveedores en orden. Hay un solo presupuesto de tiempo y se reserva una parte para el respaldo."""
+def _llamar(prompt, plazo=None, orden=None):
+    """Prueba los proveedores en orden. Hay un solo presupuesto de tiempo (`plazo`, por defecto el de la clasificación) y se reserva una parte para el respaldo."""
     inicio, errores = time.monotonic(), []
-    proveedores = _proveedores()
+    proveedores = _proveedores(orden)
     for i, proveedor in enumerate(proveedores):
-        restante = _presupuesto() - (time.monotonic() - inicio)
+        restante = (plazo or _presupuesto()) - (time.monotonic() - inicio)
         if restante < 1:
             errores.append("sin tiempo")
             break

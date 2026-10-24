@@ -49,3 +49,4 @@
 <div class="tarjeta-ui vacio-caja">{% include "componentes/vacio.html" with ico="carro" %}<h2>Tu carrito está vacío</h2><p>Agregue productos del catálogo para generar su orden.</p><a class="btn" href="/catalogo/">Ver catálogo</a></div>
 {% endif %}
 {% endblock %}
+{% block asistente %}{% include "componentes/asistente.html" with pagina="carrito" %}{% endblock %}

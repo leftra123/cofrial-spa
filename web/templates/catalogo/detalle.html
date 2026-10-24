@@ -51,3 +51,4 @@
 <div class="productos">{% for f in similares %}{% include "catalogo/_tarjeta.html" %}{% endfor %}</div>
 {% endif %}
 {% endblock %}
+{% block asistente %}{% include "componentes/asistente.html" with producto_id=fila.p.producto_id pagina="producto" %}{% endblock %}

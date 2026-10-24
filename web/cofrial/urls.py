@@ -27,6 +27,7 @@ urlpatterns = [
     path("demo/pulso/", flota_demo.pulso, name="demo_pulso"),
     path("demo/apagar/", flota_demo.apagar, name="demo_apagar"),
     path("demo/limpiar/", flota_demo.limpiar, name="demo_limpiar"),
+    path("api/asistente/", catalogo_views.api_asistente, name="api_asistente"),
     path("api/productos/", catalogo_views.api_productos, name="api_productos"),
     path("api/productos/<str:sku>/", catalogo_views.api_productos, name="api_producto"),
     path("api/", include(flota_api)),

@@ -1,5 +1,6 @@
 """Carga datos de demostración (ficticios) de forma idempotente: se puede ejecutar varias veces."""
 import os
+import random
 from datetime import timedelta
 from decimal import Decimal
 
@@ -63,6 +64,21 @@ ESTADOS_ORDEN = [("Recibida", False), ("Confirmada", False), ("En preparación",
 ETAPAS = [("Prospecto", False, False), ("Contactado", False, False), ("Propuesta enviada", False, False), ("Negociación", False, False), ("Cliente ganado", True, True), ("Perdido", True, False)]
 CATEGORIAS_REQ = ["Consulta de producto", "Reclamo por temperatura", "Atraso en entrega", "Facturación", "Otro"]
 CAMIONES = [("CAM-01", "HJKL-42", 8000, "Refrigerado"), ("CAM-02", "PQRS-17", 6000, "Congelado"), ("CAM-03", "TUVW-93", 8000, "Refrigerado")]
+TOTAL_CAMIONES = 50          # la flota del caso; CAM-04 a CAM-50 se generan de forma reproducible (mismas patentes en cada carga)
+
+
+def flota_completa():
+    azar = random.Random(2026)
+    camiones = list(CAMIONES)
+    usadas = {c[1] for c in camiones}
+    for n in range(len(camiones) + 1, TOTAL_CAMIONES + 1):
+        while True:
+            patente = "".join(azar.choice("BCDFGHJKLPRSTVWXYZ") for _ in range(4)) + f"-{azar.randint(10, 99)}"
+            if patente not in usadas:
+                break
+        usadas.add(patente)
+        camiones.append((f"CAM-{n:02d}", patente, azar.choice([3000, 5000, 6000, 8000, 10000]), "Congelado" if n % 3 == 0 else "Refrigerado"))
+    return camiones
 
 
 class Command(BaseCommand):
@@ -114,7 +130,7 @@ class Command(BaseCommand):
         for nombre in CATEGORIAS_REQ:
             CategoriaRequerimiento.objects.get_or_create(nombre=nombre)
         rangos = {"Refrigerado": refrigerado, "Congelado": congelado}
-        for camion_id, patente, capacidad, rango in CAMIONES:
+        for camion_id, patente, capacidad, rango in flota_completa():
             Camion.objects.get_or_create(camion_id=camion_id, defaults=dict(patente=patente, capacidad_kg=capacidad, rango_temperatura=rangos[rango]))
 
         grupo_vendedores, _ = Group.objects.get_or_create(name="vendedores")

@@ -7,9 +7,13 @@ camion_id, temp_camara, lat, long, combustible_pct y alerta_ruptura_frio.
 La alerta es verdadera cuando la temperatura sale del rango del camión. La mayoría de la flota funciona bien; de vez en
 cuando un camión sufre una ruptura de frío (falla del equipo) que sube su temperatura hasta que se "repara".
 
-Recorridos (líneas rectas entre puntos, con el tiempo acelerado para que se vean en una demostración):
+Sin viaje, recorridos (líneas rectas entre puntos, con el tiempo acelerado para que se vean en una demostración):
   - urbano: vueltas alrededor de la base (INACAP Temuco) dentro de unos 7 km;
   - regional: viaje de ida y vuelta entre la base y una ciudad lejana de La Araucanía (hasta ~100 km).
+
+Con un despacho en curso (salida registrada y sin llegada) en la tabla despacho, el camión parte desde donde está hacia las
+direcciones de entrega de sus pedidos (el más cercano primero), se detiene unas lecturas en cada parada intermedia y queda
+estacionado en la última, listo para marcar el despacho como entregado.
 """
 import logging
 import math
@@ -25,6 +29,10 @@ log = logging.getLogger("simulador")
 INTERVALO = float(os.environ.get("INTERVALO_SEG", "5"))
 PROB_RUPTURA = float(os.environ.get("PROB_RUPTURA", "0.001"))     # por lectura y camión: la flota casi siempre está sana
 VELOCIDAD_X = float(os.environ.get("VELOCIDAD_X", "1"))           # multiplica los kilómetros que avanza cada camión por lectura
+# Velocidad en viaje de entrega. 120 km/h hace que un reparto de pocos km termine en un par de minutos (modo demostración);
+# con 30 km/h coincide con la velocidad urbana que usa la web para estimar la llegada.
+VELOCIDAD_KMH = float(os.environ.get("VELOCIDAD_KMH", "120"))
+DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas detenido en cada parada intermedia
 if os.environ.get("CAMION_ID"):
     IDS = [os.environ["CAMION_ID"]]
 else:
@@ -57,8 +65,40 @@ def conectar():
             time.sleep(5)
 
 
-def km(a, b):
-    return math.hypot((b[0] - a[0]) * KM_LAT, (b[1] - a[1]) * KM_LON)
+def km_entre(a, b):
+    """Distancia en km sobre la esfera (haversine) entre dos puntos (lat, long)."""
+    p1, p2 = math.radians(a[0]), math.radians(b[0])
+    h = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(b[1] - a[1]) / 2) ** 2
+    return 12742 * math.asin(math.sqrt(h))
+
+
+def ordenar_paradas(origen, paradas):
+    """Vecino más cercano: de la posición actual a la parada más próxima, y desde ahí a la siguiente más próxima."""
+    pendientes, orden, actual = list(paradas), [], origen
+    while pendientes:
+        siguiente = min(pendientes, key=lambda p: km_entre(actual, p))
+        pendientes.remove(siguiente)
+        orden.append(siguiente)
+        actual = siguiente
+    return orden
+
+
+def viajes_en_curso(con, ids):
+    """{camion_id: (despacho_id, direcciones)} de los viajes en curso (salida registrada y sin llegada); las direcciones sin
+    ubicar o de pedidos ya cerrados no cuentan."""
+    viajes = {}
+    for camion_id, despacho_id in con.execute(
+            "SELECT camion_id, despacho_id FROM despacho WHERE camion_id = ANY(%s) AND salida_en IS NOT NULL AND llegada_en IS NULL "
+            "ORDER BY salida_en DESC", (ids,)).fetchall():
+        viajes[camion_id] = (despacho_id, [])                    # si hubiera dos abiertos, gana el más antiguo
+    if viajes:
+        por_despacho = {v[0]: v[1] for v in viajes.values()}
+        for despacho_id, lat, lon in con.execute(
+                'SELECT DISTINCT o.despacho_id, d.lat, d."long" FROM orden o JOIN direccion d USING (direccion_id) '
+                "JOIN estado_orden e USING (estado_orden_id) WHERE o.despacho_id = ANY(%s) AND NOT e.es_final "
+                'AND d.lat IS NOT NULL AND d."long" IS NOT NULL', (list(por_despacho),)).fetchall():
+            por_despacho[despacho_id].append((float(lat), float(lon)))
+    return viajes
 
 
 class Camion:
@@ -85,17 +125,52 @@ class Camion:
         self.avance = azar.random()
         self.combustible = random.randint(60, 100)
         self.ruptura_restante = 0
+        a, b = self.puntos[self.tramo], self.puntos[self.siguiente(self.tramo)]
+        self.pos = (a[0] + (b[0] - a[0]) * self.avance, a[1] + (b[1] - a[1]) * self.avance)   # parte en algún punto del recorrido
+        self.tramo = self.siguiente(self.tramo)                  # punto del recorrido al que se dirige
+        self.despacho = None            # viaje en curso: id, paradas por visitar y lecturas que faltan de detención
+        self.paradas = []
+        self.detenido = 0
 
     def siguiente(self, tramo):
         return 1 - tramo if self.regional else (tramo + 1) % len(self.puntos)
 
+    def asignar(self, despacho_id, paradas):
+        """Sincroniza con el viaje activo de la base: al aparecer uno nuevo ordena sus paradas desde la posición actual."""
+        if despacho_id != self.despacho:
+            self.despacho, self.detenido = despacho_id, 0
+            self.paradas = ordenar_paradas(self.pos, paradas)
+            if despacho_id:
+                log.info("%s, viaje %s: %d parada(s)", self.id, despacho_id, len(self.paradas))
+            else:
+                log.info("%s sin viaje: vuelve a su recorrido", self.id)
+        elif despacho_id:
+            vigentes = set(paradas)
+            self.paradas = [p for p in self.paradas if p in vigentes]    # un pedido entregado o cancelado deja de ser parada
+
     def posicion(self):
-        a, b = self.puntos[self.tramo], self.puntos[self.siguiente(self.tramo)]
-        self.avance += self.paso_km / max(km(a, b), 0.1)
-        if self.avance >= 1:
-            self.avance, self.tramo = 0.0, self.siguiente(self.tramo)
-            a, b = self.puntos[self.tramo], self.puntos[self.siguiente(self.tramo)]
-        return a[0] + (b[0] - a[0]) * self.avance, a[1] + (b[1] - a[1]) * self.avance
+        if self.detenido > 0:
+            self.detenido -= 1
+            return self.pos
+        if self.despacho is not None:
+            if not self.paradas:
+                return self.pos                                   # estacionado en la última entrega
+            destino, paso_km = self.paradas[0], VELOCIDAD_KMH * INTERVALO / 3600
+        else:
+            destino, paso_km = self.puntos[self.tramo], self.paso_km
+        faltan = km_entre(self.pos, destino)
+        if faltan <= paso_km:
+            self.pos = destino
+            if self.despacho is None:
+                self.tramo = self.siguiente(self.tramo)
+            else:
+                self.paradas.pop(0)
+                if self.paradas:                                  # la última parada no se espera: queda estacionado
+                    self.detenido = DETENCION_LECTURAS
+        else:
+            f = paso_km / faltan
+            self.pos = (self.pos[0] + (destino[0] - self.pos[0]) * f, self.pos[1] + (destino[1] - self.pos[1]) * f)
+        return self.pos
 
     def paso(self):
         if self.ruptura_restante == 0 and random.random() < PROB_RUPTURA:
@@ -134,8 +209,10 @@ def main():
                     flota[cid] = Camion(cid, tmin, tmax)
                 if len(flota) < len(IDS):
                     log.warning("Faltan %d camiones en la base (se reintenta); activos: %d", len(IDS) - len(flota), len(flota))
+            viajes = viajes_en_curso(con, list(flota))
             filas = []
             for c in flota.values():
+                c.asignar(*viajes.get(c.id, (None, [])))
                 temp, lat, lon, comb, alerta = c.paso()
                 filas.append((c.id, temp, lat, lon, comb, alerta))
             if filas:

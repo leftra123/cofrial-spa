@@ -36,6 +36,8 @@ services:
       MAP_TILE_ATTRIBUTION: ${MAP_TILE_ATTRIBUTION:-}
       MAP_TILE_MAX_ZOOM: ${MAP_TILE_MAX_ZOOM:-}
       MAP_TILE_SUBDOMAINS: ${MAP_TILE_SUBDOMAINS:-}
+      ASISTENTE_ACTIVO: ${ASISTENTE_ACTIVO:-1}
+      IA_CHAT_PROVEEDORES: ${IA_CHAT_PROVEEDORES:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODELS: ${GEMINI_MODELS:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -49,7 +51,7 @@ services:
   # La flota de 50 camiones se reparte en 5 contenedores de 10 (CAM-01 a CAM-10, CAM-11 a CAM-20, ...)
   flota-1: &flota
     build: ./iot
-    environment: &flota-env {<<: *bd, PRIMER_CAMION: "1", NUM_CAMIONES: "10", INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.001}"}
+    environment: &flota-env {<<: *bd, PRIMER_CAMION: "1", NUM_CAMIONES: "10", INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.001}", VELOCIDAD_KMH: "${VELOCIDAD_KMH:-120}"}
     depends_on: [web]
     restart: unless-stopped
   flota-2: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "11"}}

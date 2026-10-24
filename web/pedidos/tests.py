@@ -57,12 +57,40 @@ class ReglasDePedidos(TestCase):
         with self.assertRaises(s.ErrorDeNegocio):
             s.generar_orden(self.ana, self.dir_de(self.hospital))
 
-    def test_rn05_b2b_exige_orden_de_compra_y_b2c_no(self):
+    def test_rn05_b2b_sin_oc_queda_pendiente_con_referencia_propia_y_b2c_no(self):
         s.agregar(self.hospital, self.lomo.pk, 1)
-        with self.assertRaises(s.ErrorDeNegocio):
-            s.generar_orden(self.hospital, self.dir_de(self.hospital), "")
-        orden = s.generar_orden(self.hospital, self.dir_de(self.hospital), "OC-77")
-        self.assertEqual(orden.numero_oc, "OC-77")
+        pendiente = s.generar_orden(self.hospital, self.dir_de(self.hospital), "")
+        self.assertTrue(pendiente.oc_pendiente)
+        self.assertEqual(pendiente.numero_oc, f"WEB-{pendiente.creada_en.year}-{pendiente.orden_id:04d}")
+        s.agregar(self.hospital, self.lomo.pk, 1)
+        con_oc = s.generar_orden(self.hospital, self.dir_de(self.hospital), "OC-77")
+        self.assertEqual((con_oc.numero_oc, con_oc.oc_pendiente), ("OC-77", False))
+        s.agregar(self.ana, self.pollo.pk, 1)
+        b2c = s.generar_orden(self.ana, self.dir_de(self.ana), "")
+        self.assertEqual((b2c.numero_oc, b2c.oc_pendiente), ("", False))          # a B2C no se le pide ni se le marca
+
+    def test_registrar_la_oc_real_reemplaza_la_referencia(self):
+        s.agregar(self.hospital, self.lomo.pk, 1)
+        orden = s.generar_orden(self.hospital, self.dir_de(self.hospital), "")
+        s.registrar_oc(self.hospital, orden.pk, "  OC-2026-555  ")
+        orden.refresh_from_db()
+        self.assertEqual((orden.numero_oc, orden.oc_pendiente), ("OC-2026-555", False))
+
+    def test_registrar_oc_valida_dueno_estado_y_formato(self):
+        s.agregar(self.hospital, self.lomo.pk, 1)
+        pendiente = s.generar_orden(self.hospital, self.dir_de(self.hospital), "")
+        for cliente, orden_id, oc in ((self.hospital, pendiente.pk, ""), (self.hospital, pendiente.pk, "X" * 31), (self.ana, pendiente.pk, "OC-1"),
+                                      (self.hospital, 99999, "OC-1")):
+            with self.assertRaises(s.ErrorDeNegocio):
+                s.registrar_oc(cliente, orden_id, oc)
+        s.registrar_oc(self.hospital, pendiente.pk, "OC-1")
+        with self.assertRaises(s.ErrorDeNegocio):                                  # ya no está pendiente
+            s.registrar_oc(self.hospital, pendiente.pk, "OC-2")
+        s.agregar(self.hospital, self.lomo.pk, 1)
+        otra = s.generar_orden(self.hospital, self.dir_de(self.hospital), "")
+        s.cancelar(otra, como="cliente")
+        with self.assertRaises(s.ErrorDeNegocio):                                  # orden cancelada: no se modifica
+            s.registrar_oc(self.hospital, otra.pk, "OC-3")
 
     def test_rn06_precio_congelado(self):
         s.agregar(self.hospital, self.lomo.pk, 2)
@@ -188,3 +216,99 @@ class AvisosDeLaCampanita(TestCase):
             self.client.force_login(usuario)
             tipos = {a["tipo"] for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.orden_id}
             self.assertIn("salio", tipos)
+
+
+class AgregarSinRecargar(TestCase):
+    """Con el encabezado de la tienda, «Agregar» responde JSON (sin redirección); sin él, todo sigue igual que antes."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def setUp(self):
+        self.client.login(username="ana@correo.test", password=CLAVE)
+        self.lomo = Producto.objects.get(sku="VAC-LOM-5K")
+
+    def test_json_con_mensajes_y_contador(self):
+        r = self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 2}, headers={"X-Requested-With": "fetch"})
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertTrue(d["ok"])
+        self.assertEqual(d["carrito_n"], 2)
+        self.assertEqual(d["mensajes"][0]["tipo"], "success")
+        self.assertNotContains(self.client.get("/catalogo/"), "Producto agregado al carrito")      # el mensaje no reaparece en la página siguiente
+
+    def test_error_de_negocio_vuelve_como_json_con_ok_falso(self):
+        r = self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 0}, headers={"X-Requested-With": "fetch"})
+        d = r.json()
+        self.assertFalse(d["ok"])
+        self.assertEqual(d["mensajes"][0]["tipo"], "error")
+
+    def test_sin_el_encabezado_sigue_redirigiendo(self):
+        r = self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 1, "volver": "/catalogo/"})
+        self.assertRedirects(r, "/catalogo/", fetch_redirect_response=False)
+
+    def test_la_miniatura_del_carrito_usa_la_imagen_del_producto(self):
+        self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 1})
+        html = self.client.get("/carrito/").content.decode()
+        linea = html[html.index('class="linea-img"'):].split("</a>")[0]
+        self.assertIn("productos/", linea)                                   # foto propia, de Commons o ilustración de IA...
+        self.assertNotIn('class="ilus"', linea)                              # ...y no el dibujo genérico de la categoría
+
+
+class OcPendienteEnLaWeb(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def _pedido_sin_oc(self, usuario="felipe@cofrial.cl"):
+        self.client.login(username=usuario, password=CLAVE)
+        lomo = Producto.objects.get(sku="VAC-LOM-5K")
+        self.client.post("/carrito/agregar/", {"producto": lomo.pk, "cantidad": 1})
+        direccion = Cliente.objects.get(usuario__username=usuario).direccion_set.first().pk
+        self.client.post("/carrito/confirmar/", {"direccion": direccion, "numero_oc": ""})
+        return Orden.objects.order_by("-orden_id").first()
+
+    def test_el_formulario_ya_no_exige_la_oc_y_explica_que_queda_pendiente(self):
+        self.client.login(username="felipe@cofrial.cl", password=CLAVE)
+        self.client.post("/carrito/agregar/", {"producto": Producto.objects.get(sku="VAC-LOM-5K").pk, "cantidad": 1})
+        html = self.client.get("/carrito/").content.decode()
+        campo = html[html.index('name="numero_oc"'):].split(">")[0]
+        self.assertNotIn("required", campo)
+        self.assertIn("OC pendiente", html)
+
+    def test_compra_sin_oc_se_ve_pendiente_y_el_cliente_la_completa(self):
+        orden = self._pedido_sin_oc()
+        self.assertTrue(orden.oc_pendiente)
+        self.assertContains(self.client.get("/pedidos/"), "OC pendiente")
+        detalle = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(detalle, "OC pendiente")
+        self.assertContains(detalle, "Agregar mi orden de compra")
+        r = self.client.post(f"/pedidos/{orden.pk}/oc/", {"numero_oc": "OC-FELIPE-9"}, follow=True)
+        self.assertContains(r, "Registramos tu orden de compra")
+        orden.refresh_from_db()
+        self.assertEqual((orden.numero_oc, orden.oc_pendiente), ("OC-FELIPE-9", False))
+        self.assertNotContains(self.client.get(f"/pedidos/{orden.pk}/"), "Agregar mi orden de compra")
+
+    def test_otro_cliente_no_puede_completar_la_oc_ajena(self):
+        orden = self._pedido_sin_oc("felipe@cofrial.cl")
+        self.client.logout()
+        self.client.login(username="abastecimiento@hospital.test", password=CLAVE)
+        self.client.post(f"/pedidos/{orden.pk}/oc/", {"numero_oc": "OC-HACK"})
+        orden.refresh_from_db()
+        self.assertTrue(orden.oc_pendiente)
+
+    def test_ventas_ve_el_indicador_y_el_chip_en_la_ficha_del_cliente(self):
+        orden = self._pedido_sin_oc()
+        self.client.logout()
+        self.client.login(username="gerencia@cofrial.cl", password=CLAVE)
+        panel = self.client.get("/crm/")
+        self.assertContains(panel, "Órdenes con OC pendiente")
+        self.assertEqual(panel.context["ind"]["oc_pendientes"], 1)
+        ficha = self.client.get(f"/crm/clientes/{orden.direccion.cliente_id}/")
+        self.assertContains(ficha, "OC pendiente")
+
+    def test_la_api_de_pedidos_informa_si_la_oc_esta_pendiente(self):
+        orden = self._pedido_sin_oc()
+        datos = self.client.get("/api/pedidos/").json()["ordenes"]
+        self.assertTrue([o for o in datos if o["orden_id"] == orden.pk][0]["oc_pendiente"])

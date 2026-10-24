@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block titulo %}Armar despacho | Cofrial SpA{% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
   <div><h1>Armar despacho</h1><p class="sub">Elige el camión y los pedidos del viaje. El mapa propone el mejor orden de entrega antes de salir.</p></div>
@@ -27,7 +27,7 @@
         <span><b>Orden N.º {{ p.o.orden_id }}</b> · {{ p.o.direccion.cliente.nombre }}
           <span class="frio" style="display:block">{{ p.o.direccion }} · {% include "componentes/chip_estado.html" with estado=p.o.estado_orden.nombre %}
             {% if p.mixto %}<span class="chip alerta">Mezcla frío y congelado</span>{% else %}{% for r in p.rangos %}<span class="chip transito">{{ r }}</span>{% endfor %}{% endif %}
-            {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}</span></span>
+            {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}{% if p.o.oc_pendiente %}<span class="chip pendiente">OC pendiente</span>{% endif %}</span></span>
       </label>
       {% if not p.ubicada %}
       <button class="btn-sec" type="submit" formnovalidate formaction="/flota/despachar/ubicar/{{ p.o.direccion_id }}/" style="margin:0 0 8px 26px">Ubicar «{{ p.o.direccion.calle_numero }}» en el mapa</button>
@@ -49,7 +49,7 @@
 {% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script>
 (function () {

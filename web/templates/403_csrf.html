@@ -1,0 +1,11 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}El formulario venció | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="tarjeta-ui error-pag">
+  <div class="codigo" aria-hidden="true">403</div>
+  <span class="chip pendiente" style="margin-bottom:14px">Formulario vencido</span>
+  <h1>Esta página llevaba mucho tiempo abierta</h1>
+  <p>Por seguridad el formulario dejó de ser válido. No se guardó nada: vuelve, actualiza la página e inténtalo de nuevo. Si cerraste sesión en otra pestaña, ingresa otra vez.</p>
+  <div class="acciones"><a class="btn" href="{{ volver }}">Volver</a><a class="btn btn-sec" href="/cuenta/entrar/">Ingresar de nuevo</a></div>
+</div>
+{% endblock %}

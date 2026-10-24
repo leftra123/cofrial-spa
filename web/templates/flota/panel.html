@@ -4,7 +4,7 @@
 {% block cabecera %}
 <div class="pagina-cab">
   <div><h1>Flota</h1><p class="sub">Estado de cada camión según su última lectura de telemetría.</p></div>
-  <div class="acciones"><span class="muted" id="en-vivo" hidden>En vivo · cada 5 s</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a><a class="btn" href="/flota/despachar/">Armar despacho</a></div>
+  <div class="acciones"><span id="en-vivo" aria-live="off">Conectando…</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a><a class="btn" href="/flota/despachar/">Armar despacho</a></div>
 </div>
 {% endblock %}
 {% block contenido %}
@@ -48,12 +48,14 @@
     {% endif %}
   </article>
 {% empty %}
-  <div class="tarjeta-ui">No hay camiones registrados.</div>
+  {% include "componentes/vacio_estado.html" with ico="camion" titulo="No hay camiones registrados" texto="Registra la flota desde Administración para ver aquí su estado y su telemetría." url="/admin/" accion="Ir a Administración" %}
 {% endfor %}
 </div>
 
-{% if viajes %}
 <div class="seccion"><h2>Viajes activos</h2></div>
+{% if not viajes %}
+{% include "componentes/vacio_estado.html" with compacto=True ico="mapa" titulo="Ningún camión está en ruta" texto="Cuando despaches pedidos, cada viaje aparece aquí con su ruta, su temperatura y sus entregas." url="/flota/despachar/" accion="Armar despacho" %}
+{% else %}
 <div class="rejilla dos">
 {% for x in viajes %}
   <article class="tarjeta-ui viaje">
@@ -127,7 +129,7 @@
      y actualiza solo los números. Si la API falla, la página sigue mostrando los últimos datos. */
   (function () {
     if (!window.fetch) return;
-    var marca = document.getElementById("en-vivo");
+    var vivo = CofrialEstados.vivo(document.getElementById("en-vivo"), {etiqueta: "En vivo · cada 5 s", alCambiar: function (e) { document.getElementById("contenido").classList.toggle("desactualizado", e === "caido"); }});
     function pon(el, txt, malo) { if (el) { el.textContent = txt; if (malo !== undefined) el.classList.toggle("mal", malo); } }
     function pintar(d) {
       Object.keys(d.resumen).forEach(function (k) { pon(document.querySelector('[data-resumen="' + k + '"]'), d.resumen[k]); });
@@ -142,12 +144,11 @@
         if (window.moverCamion) window.moverCamion(c.camion_id, l.lat, l.long, c.alerta);
         pon(t.querySelector('[data-campo="lectura"]'), "Última lectura " + new Date(l.registrado_en).toLocaleString("es-CL"));
       });
-      if (marca) marca.hidden = false;
     }
     function actualizar() {
-      fetch("/api/flota/", {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(pintar).catch(function () { if (marca) marca.hidden = true; });
+      fetch("/api/flota/", {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (d) { vivo.ok(); pintar(d); }).catch(function () { vivo.falla(); });
     }
-    setInterval(actualizar, 5000);
+    actualizar(); setInterval(actualizar, 5000);
   })();
 </script>
 {% endblock %}

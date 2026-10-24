@@ -47,11 +47,11 @@
 <div class="tarjeta-ui" style="margin-top:20px">
   <h2>Probar la IA ahora</h2>
   <p class="muted">Escribe un mensaje como si fueras un cliente. La prueba se hace con <b>cada proveedor por separado</b> y <b>no crea ningún requerimiento</b>.</p>
-  <form method="post">{% csrf_token %}
+  <form method="post" data-carga>{% csrf_token %}
     <label for="asunto">Asunto</label><input name="asunto" id="asunto" value="{{ asunto }}" maxlength="150">
     <label for="descripcion">Mensaje del cliente</label>
     <textarea name="descripcion" id="descripcion" rows="3" style="width:100%;max-width:none">{{ texto }}</textarea>
-    <p style="margin-top:14px"><button>Probar con la IA</button> <span class="frio">Tarda unos segundos.</span></p>
+    <p style="margin-top:14px"><button data-cargando="Consultando a los proveedores…">Probar con la IA</button> <span class="frio">Tarda unos segundos.</span></p>
   </form>
   {% if filas %}
   <div class="tabla-caja" style="margin-top:16px"><table>

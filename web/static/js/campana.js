@@ -10,11 +10,15 @@
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
   var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", llego: "Llegó", frio: "Temperatura"};
 
+  var VACIO = "Sin avisos por ahora. Te avisamos cuando tu pedido salga, esté cerca y llegue.", cargado = false, nota = document.getElementById("campana-nota");
+  function mensaje(clase, texto) { lista.innerHTML = ""; var li = document.createElement("li"); li.className = clase; li.textContent = texto; lista.appendChild(li); return li; }
   function pintar() {
+    if (!cargado) return;
+    lista.setAttribute("aria-busy", "false");
     var nuevos = actuales.filter(function (a) { return vistos.indexOf(a.id) < 0; });
     n.hidden = nuevos.length === 0; n.textContent = nuevos.length;
     btn.setAttribute("aria-label", nuevos.length ? "Avisos de tus pedidos: " + nuevos.length + " sin leer" : "Avisos de tus pedidos");
-    if (!actuales.length) return;
+    if (!actuales.length) { mensaje("campana-vacio", VACIO); return; }
     lista.innerHTML = "";
     actuales.forEach(function (a) {
       var li = document.createElement("li"); li.className = "campana-item" + (vistos.indexOf(a.id) < 0 ? " nuevo" : "");
@@ -30,15 +34,26 @@
     var b = document.createElement("a"); b.href = "/pedidos/" + a.orden_id + "/"; b.textContent = a.texto; t.appendChild(b);
     toasts.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 400); }, 8000);
   }
+  /* Un fallo no se disfraza de «sin avisos»: si nunca se cargó, el panel lo dice y ofrece reintentar; si ya había avisos, se quedan con una nota de que no están al día. */
+  function fallo() {
+    if (nota) nota.hidden = false;
+    if (cargado) return;
+    lista.setAttribute("aria-busy", "false");
+    var li = mensaje("campana-error", "No pudimos cargar tus avisos."), b = document.createElement("button");
+    b.type = "button"; b.className = "btn-sec"; b.textContent = "Reintentar";
+    b.addEventListener("click", function (e) { e.stopPropagation(); mensaje("campana-vacio cargando", "Cargando avisos…"); lista.setAttribute("aria-busy", "true"); cargar(); });
+    li.appendChild(b);
+  }
   function cargar() {
     fetch("/api/avisos/", {credentials: "same-origin", headers: {"Accept": "application/json"}})
-      .then(function (r) { return r.ok ? r.json() : {avisos: []}; })
+      .then(function (r) { if (!r.ok) throw r; return r.json(); })
       .then(function (d) {
+        cargado = true; if (nota) nota.hidden = true;
         var nuevos = d.avisos.filter(function (a) { return vistos.indexOf(a.id) < 0 && !actuales.some(function (x) { return x.id === a.id; }); });
         actuales = d.avisos;
         if (!primera) nuevos.forEach(aviso);          // avisa emergente solo lo que aparece mientras navegas
         primera = false; pintar();
-      }).catch(function () {});
+      }).catch(fallo);
   }
   btn.addEventListener("click", function () {
     var abre = panel.hidden; panel.hidden = !abre; btn.setAttribute("aria-expanded", abre);

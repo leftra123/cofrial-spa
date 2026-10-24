@@ -7,7 +7,7 @@
   <div class="acciones">
     {% include "componentes/chip_estado.html" with estado=orden.estado_orden.nombre %}
     <a class="btn btn-sec" href="/pedidos/">Volver a mis pedidos</a>
-    {% if puede_cancelar %}<form method="post" action="/pedidos/{{ orden.orden_id }}/cancelar/">{% csrf_token %}<button class="btn-peligro">Cancelar orden</button></form>{% endif %}
+    {% if puede_cancelar %}<form method="post" action="/pedidos/{{ orden.orden_id }}/cancelar/" data-carga>{% csrf_token %}<button class="btn-peligro" data-confirmar="¿Seguro? Cancelar" data-cargando="Cancelando…">Cancelar orden</button></form>{% endif %}
   </div>
 </div>
 {% endblock %}
@@ -22,6 +22,21 @@
     <div class="acciones"><a class="btn" href="/pedidos/">Mis pedidos</a><a class="btn btn-sec" href="/catalogo/">Seguir comprando</a></div></div>
 </section>
 {% endif %}
+{% if not request.GET.nueva %}{% with n=orden.estado_orden.nombre %}
+<section class="estado-pedido{% if n == "Cancelada" %} cancelada{% elif n == "Entregada" %} entregada{% elif n == "Despachada" %} transito{% endif %}" aria-labelledby="ep-t">
+  <span class="ep-ico" aria-hidden="true"><svg viewBox="0 0 24 24">{% if n == "Cancelada" %}<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>{% elif n == "Entregada" %}<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.5"/>{% elif n == "Despachada" %}<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>{% elif n == "En preparación" %}<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>{% else %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>{% endif %}</svg></span>
+  <div>
+    {% if n == "Cancelada" %}<h2 id="ep-t">Esta orden fue cancelada</h2><p>El stock de los productos quedó repuesto. Si fue un error, arma el pedido de nuevo desde el catálogo.</p>
+      <div class="acciones"><a class="btn" href="/catalogo/">Ir al catálogo</a><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Consultar por esta orden</a></div>
+    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado</h2><p>Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura. Si algo no llegó como esperabas, cuéntanoslo.</p>
+      <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+    {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p>Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.</p>
+    {% elif n == "En preparación" %}<h2 id="ep-t">Estamos preparando tu pedido</h2><p>Cada producto se arma en su rango de temperatura. Te avisamos por la campanita cuando salga el camión.</p>
+    {% elif n == "Confirmada" %}<h2 id="ep-t">Tu pedido está confirmado</h2><p>Ya reservamos el stock. En breve lo pasamos a preparación.</p>
+    {% else %}<h2 id="ep-t">Recibimos tu pedido</h2><p>Estamos confirmando el stock.{% if puede_cancelar %} Mientras esté en esta etapa puedes cancelarlo.{% endif %}</p>{% endif %}
+  </div>
+</section>
+{% endwith %}{% endif %}
 {% if orden.estado_orden.nombre != "Cancelada" %}
 <div class="tarjeta-ui">
   <h2>Seguimiento del envío</h2>
@@ -37,10 +52,10 @@
 </div>
 {% endif %}
 {% if seg %}
-<div class="seg-grid" id="seg" data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
+<div class="seg-grid" id="seg"{% if orden.estado_orden.nombre == "Entregada" %} data-final{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     <h2>Dónde va su pedido</h2>
-    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} <span id="seg-hace" class="solo-lector">{% if seg.ultima and seg.ultima.hace_seg > 300 %}sin señal reciente{% elif seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span> · se actualiza solo</p>
+    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} <span id="seg-hace" class="solo-lector">{% if seg.ultima and seg.ultima.hace_seg > 300 %}sin señal reciente{% elif seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span> · <span id="seg-vivo">Conectando…</span></p>
     <div class="seg-llego" id="seg-llego" hidden><b>Tu pedido llegó</b> <span id="seg-llego-hora"></span></div>
     <div class="seg-datos">
       <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
@@ -73,7 +88,7 @@
   <dl class="datos">
     <div><dt>Dirección</dt><dd>{{ orden.direccion }}</dd></div>
     {% if orden.numero_oc %}<div><dt>Orden de compra</dt><dd>{{ orden.numero_oc }} {% if orden.oc_pendiente %}<span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</dd></div>{% endif %}
-    {% if orden.oc_pendiente and not orden.estado_orden.es_final %}<div class="oc-registro"><dt>Agregar mi orden de compra</dt><dd><form method="post" action="/pedidos/{{ orden.orden_id }}/oc/" class="en-linea">{% csrf_token %}<input name="numero_oc" maxlength="30" required aria-label="Número de orden de compra"> <button class="btn-sec">Guardar</button></form></dd></div>{% endif %}
+    {% if orden.oc_pendiente and not orden.estado_orden.es_final %}<div class="oc-registro"><dt>Agregar mi orden de compra</dt><dd><form method="post" action="/pedidos/{{ orden.orden_id }}/oc/" class="en-linea" data-carga>{% csrf_token %}<input name="numero_oc" maxlength="30" required aria-label="Número de orden de compra"> <button class="btn-sec" data-cargando="Guardando…">Guardar</button></form></dd></div>{% endif %}
     {% if orden.despacho %}<div><dt>Camión</dt><dd>{{ orden.despacho.camion }}</dd></div>{% endif %}
   </dl>
 </div>
@@ -100,7 +115,8 @@
 <script>
 (function () {
   var raiz = document.getElementById("seg"), min = parseFloat(raiz.dataset.min), max = parseFloat(raiz.dataset.max);
-  var mapa = null, marcador = null, linea = null, ultimaRuta = 0, encuadrado = false;
+  var mapa = null, marcador = null, linea = null, ultimaRuta = 0, encuadrado = false, final = raiz.hasAttribute("data-final"), temporizador = null, conectado = false;
+  var vivo = CofrialEstados.vivo(document.getElementById("seg-vivo"), {alCambiar: function (e) { raiz.classList.toggle("desactualizado", e === "caido"); }});
   function pintarSerie(serie) {
     var svg = document.getElementById("spark");
     var vacio = document.getElementById("spark-vacio");
@@ -163,8 +179,15 @@
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;
     pintarSerie(s.serie || []);
   }
-  function cargar() { fetch(raiz.dataset.url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(pintar).catch(function () {}); }
-  cargar(); setInterval(cargar, 5000);
+  /* Si la primera consulta falla, los marcadores de carga no pueden quedarse girando: se reemplazan por «Sin datos» y el indicador avisa que no hay conexión. */
+  function sinDatos() { ["seg-salio", "seg-eta", "seg-senal"].forEach(function (id) { var e = document.getElementById(id); if (e.classList.contains("skeleton")) quitarSk(id, "Sin datos"); }); var t = document.getElementById("seg-temp"); if (t.classList.contains("skeleton")) quitarSk("seg-temp", "–"); }
+  function cargar() {
+    fetch(raiz.dataset.url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (d) {
+      conectado = true; vivo.ok(); pintar(d);
+      if (final) { clearInterval(temporizador); var v = document.getElementById("seg-vivo"); v.dataset.estado = "final"; v.textContent = "Viaje terminado"; }       // un viaje entregado ya no cambia: se deja de consultar
+    }, function () { vivo.falla(); if (!conectado) sinDatos(); });
+  }
+  cargar(); temporizador = setInterval(cargar, 5000);
 })();
 </script>
 {% endif %}

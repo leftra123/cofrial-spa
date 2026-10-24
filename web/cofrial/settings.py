@@ -14,6 +14,7 @@ SECRET_KEY = entorno("DJANGO_SECRET_KEY", "clave-solo-para-desarrollo")
 DEBUG = entorno("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = [h for h in entorno("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in entorno("DJANGO_CSRF_ORIGINS", "").split(",") if o]
+CSRF_FAILURE_VIEW = "cofrial.vistas.csrf_fallo"
 
 INSTALLED_APPS = [
     "django.contrib.admin",

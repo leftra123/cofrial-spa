@@ -7,15 +7,17 @@
 </div>
 {% endblock %}
 {% block contenido %}
-{% if ordenes %}
+{% if not ordenes %}
+{% include "componentes/vacio_estado.html" with ico="caja" titulo="Aún no tienes pedidos" texto="Cuando generes tu primera orden aparecerá aquí, con su seguimiento paso a paso." url="/catalogo/" accion="Explorar el catálogo" %}
+{% else %}
 <div class="tabs" role="group" aria-label="Filtrar por estado" id="filtros" hidden>
   <button type="button" class="tab activo" data-filtro="todos" aria-pressed="true">Todos <span class="n" data-cuenta="todos">{{ ordenes|length }}</span></button>
   <button type="button" class="tab" data-filtro="pendiente" aria-pressed="false">Pendientes <span class="n" data-cuenta="pendiente">0</span></button>
-  <button type="button" class="tab" data-filtro="asignado" aria-pressed="false">Asignados <span class="n" data-cuenta="asignado">0</span></button>
+  <button type="button" class="tab" data-filtro="asignado" aria-pressed="false">En preparación <span class="n" data-cuenta="asignado">0</span></button>
   <button type="button" class="tab" data-filtro="transito" aria-pressed="false">En tránsito <span class="n" data-cuenta="transito">0</span></button>
   <button type="button" class="tab" data-filtro="entregado" aria-pressed="false">Entregados <span class="n" data-cuenta="entregado">0</span></button>
+  <button type="button" class="tab" data-filtro="otro" aria-pressed="false">Cancelados <span class="n" data-cuenta="otro">0</span></button>
 </div>
-{% endif %}
 <div class="tabla-caja tabla-lista">
 <table>
   <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th class="num">Total</th><th><span class="solo-lector">Acciones</span></th></tr></thead>
@@ -26,8 +28,7 @@
     <td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td>
     <td class="num">{{ o.total|clp }}</td>
     <td class="num"><a href="/pedidos/{{ o.orden_id }}/">Ver detalle →</a></td></tr>
-  {% empty %}<tr><td colspan="5" class="vacio-caja">{% include "componentes/vacio.html" with ico="caja" %}<h2>Aún no tienes pedidos</h2><p>Cuando generes tu primera orden aparecerá aquí, con su seguimiento.</p><a class="btn" href="/catalogo/">Explorar el catálogo</a></td></tr>{% endfor %}
-  <tr id="sin-resultados" hidden><td colspan="5" class="vacio">No hay pedidos en este estado.</td></tr>
+  {% endfor %}
   </tbody>
 </table>
 </div>
@@ -36,6 +37,11 @@
     <span class="fila"><b>Orden N.º {{ o.orden_id }}</b>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}{% if o.oc_pendiente %}<span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</span>
     <span class="fila"><span class="frio">{{ o.creada_en|date:"d/m/Y H:i" }}</span><b>{{ o.total|clp }}</b></span></a>{% endfor %}
 </div>
+<div class="sin-resultados" id="sin-resultados" hidden>
+  {% include "componentes/vacio_estado.html" with compacto=True ico="lupa" titulo="No hay pedidos en este estado" texto="Prueba con otra pestaña para ver el resto de tus órdenes." %}
+  <p style="text-align:center;margin-top:-4px"><button type="button" class="btn-sec" id="ver-todos">Ver todos los pedidos</button></p>
+</div>
+{% endif %}
 {% endblock %}
 {% block scripts %}
 <script>
@@ -44,7 +50,7 @@
     var barra = document.getElementById("filtros"), filas = document.querySelectorAll("#filas-pedidos tr[data-estado], #lista-movil [data-estado]");
     if (!barra || !filas.length) return;
     barra.hidden = false;
-    var cuentas = {todos: 0, pendiente: 0, asignado: 0, transito: 0, entregado: 0};
+    var cuentas = {todos: 0, pendiente: 0, asignado: 0, transito: 0, entregado: 0, otro: 0};
     document.querySelectorAll("#filas-pedidos tr[data-estado]").forEach(function (f) { cuentas.todos++; if (cuentas[f.dataset.estado] !== undefined) cuentas[f.dataset.estado]++; });
     Object.keys(cuentas).forEach(function (k) { barra.querySelector('[data-cuenta="' + k + '"]').textContent = cuentas[k]; });
     barra.addEventListener("click", function (e) {
@@ -53,7 +59,9 @@
       var visibles = 0;
       filas.forEach(function (f) { var ok = t.dataset.filtro === "todos" || f.dataset.estado === t.dataset.filtro; f.hidden = !ok; if (ok && f.tagName === "TR") visibles++; });
       document.getElementById("sin-resultados").hidden = visibles > 0;
+      if (!visibles) CofrialEstados.anunciar("No hay pedidos en este estado.");
     });
+    document.getElementById("ver-todos").addEventListener("click", function () { barra.querySelector('[data-filtro="todos"]').click(); barra.querySelector('[data-filtro="todos"]').focus(); });
   })();
 </script>
 {% endblock %}

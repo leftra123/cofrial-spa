@@ -492,3 +492,29 @@ class PanelIA(TestCase):
         self.assertContains(resp, "1 clasificado")
         r.refresh_from_db()
         self.assertEqual((r.estado, str(r.categoria_requerimiento)), ("clasificado", "Reclamo por temperatura"))
+
+
+class EstadosDelCrm(TestCase):
+    """Vacíos del embudo y formulario de prospecto que no pierde lo escrito."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def entrar(self, usuario):
+        self.client.logout()
+        self.assertTrue(self.client.login(username=usuario, password=CLAVE))
+
+    def test_embudo_sin_prospectos_ofrece_crear_el_primero(self):
+        self.entrar("vendedor2@cofrial.cl")
+        Prospecto.objects.all().delete()
+        r = self.client.get("/crm/embudo/")
+        self.assertContains(r, "El embudo está vacío")
+        self.assertNotContains(r, "Sin prospectos en esta etapa")
+
+    def test_formulario_de_prospecto_con_error_conserva_lo_escrito_y_marca_el_campo(self):
+        self.entrar("vendedora@cofrial.cl")
+        r = self.client.post("/crm/prospectos/nuevo/", {"nombre_contacto": "Ana Pérez", "empresa": "Hotel Lago", "origen": "referido"})
+        self.assertContains(r, "Ingresa al menos un correo o un teléfono")
+        self.assertContains(r, 'value="Hotel Lago"')
+        self.assertContains(r, 'aria-invalid="true"')

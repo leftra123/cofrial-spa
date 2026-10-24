@@ -44,6 +44,20 @@ La lógica de negocio está en `web/pedidos/servicios.py` y `web/crm/servicios.p
 | Tablero Grafana en vivo (`grafana/`, puerto 3000): ventas por canal cruzadas con alertas de ruptura de frío en una misma línea de tiempo, ventas en riesgo, temperatura por camión, mapa de la flota y pedidos afectados. Se actualiza cada 5 s; lee la base con un usuario de solo lectura (`grafana_ro`) que crea `preparar_bi`; el tablero se regenera con `python3 grafana/generar_dashboard.py` | Hecho y verificado con datos reales del simulador |
 | Despliegue en AWS (VPC, EC2 web, EC2 IoT, RDS) | Pendiente; lo ejecutan Eric y Sergio con sus credenciales del laboratorio |
 
+## Estados de la interfaz
+Todo estado que no es el camino feliz se resuelve con piezas compartidas, para que cada ruta se comporte igual:
+
+| Estado | Pieza | Dónde se usa |
+|---|---|---|
+| Vacío | `templates/componentes/vacio_estado.html` (parámetros `ico`, `titulo`, `texto`, `url`, `cols`, `compacto`, `plano`) | listas, tablas y paneles de la tienda, el CRM y la flota |
+| Cargando | `data-carga` en el `<form>` y `data-cargando="texto"` en el botón (`static/js/estados.js`) | todos los formularios que envían datos; los lentos (IA, geocodificación) dicen qué esperan |
+| Confirmar | `data-confirmar="¿Seguro? …"` en el botón (dos toques, vence a los 5 s) | cancelar orden, marcar prospecto como perdido |
+| Error de formulario | `templates/componentes/resumen_errores.html` + `aria-invalid` de Django | ingreso y registro; en el CRM el formulario vuelve con lo escrito |
+| Sin conexión | `CofrialEstados.vivo(elemento, opciones)` (conectando, vivo, retraso, caído) | seguimiento del pedido, flota; la campanita muestra «Reintentar» |
+| Errores HTTP | `400.html`, `403.html`, `403_csrf.html` (`CSRF_FAILURE_VIEW`), `404.html` (cambia el texto según la ruta), `500.html` | toda la web |
+
+Las pruebas están en `pedidos/tests.py` (`EstadosDeLasRutas`) y `crm/tests.py` (`EstadosDelCrm`).
+
 ## Diferencias deliberadas con el diseño
 
 - Las tablas de clave compuesta (`precio_producto`, `carrito_item`, `orden_item`) usan clave autogenerada más restricción de unicidad sobre el par, la salida que prevé D-03 (el panel de administración de Django 5.2 no soporta claves compuestas). La 3FN se mantiene.

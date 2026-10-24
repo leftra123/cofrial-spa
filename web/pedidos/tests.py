@@ -7,7 +7,7 @@ from django.test import TestCase, TransactionTestCase
 from catalogo.models import Producto
 from clientes.models import Cliente, Direccion
 from pedidos import servicios as s
-from pedidos.models import Carrito, Orden, OrdenItem
+from pedidos.models import Carrito, EstadoOrden, Orden, OrdenItem
 
 CLAVE = "demo-cofrial-2026"
 
@@ -312,3 +312,87 @@ class OcPendienteEnLaWeb(TestCase):
         orden = self._pedido_sin_oc()
         datos = self.client.get("/api/pedidos/").json()["ordenes"]
         self.assertTrue([o for o in datos if o["orden_id"] == orden.pk][0]["oc_pendiente"])
+
+
+class EstadosDeLasRutas(TestCase):
+    """Los estados que no son el camino feliz: vacíos, bloqueos, errores y avisos al volver de una redirección."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+        cls.ana = Cliente.objects.get(rut="12.345.678-5")
+        cls.lomo = Producto.objects.get(sku="VAC-LOM-5K")
+
+    def entrar(self, usuario="ana@correo.test"):
+        self.client.logout()
+        self.assertTrue(self.client.login(username=usuario, password=CLAVE))
+
+    def test_seguimiento_sin_pedidos_en_curso_explica_por_que_cae_en_la_lista(self):
+        self.entrar()
+        s.agregar(self.ana, self.lomo.pk, 1)
+        s.generar_orden(self.ana, self.ana.direccion_set.first().pk)
+        Orden.objects.filter(direccion__cliente=self.ana).update(estado_orden=EstadoOrden.objects.get(nombre="Entregada"))
+        r = self.client.get("/seguimiento/", follow=True)
+        self.assertRedirects(r, "/pedidos/")
+        self.assertContains(r, "No tienes pedidos en curso")
+
+    def test_lista_de_pedidos_vacia_muestra_el_vacio_fuera_de_la_tabla(self):
+        """En móvil la tabla está oculta: el estado vacío no puede vivir dentro de ella."""
+        self.entrar()
+        Orden.objects.filter(direccion__cliente=self.ana).delete()
+        html = self.client.get("/pedidos/").content.decode()
+        self.assertIn("Aún no tienes pedidos", html)
+        self.assertNotIn('id="filas-pedidos"', html)
+
+    def test_carrito_con_producto_sin_stock_bloquea_la_orden_y_lo_explica(self):
+        self.entrar()
+        s.agregar(self.ana, self.lomo.pk, 1)
+        Producto.objects.filter(pk=self.lomo.pk).update(stock_disponible=0)
+        r = self.client.get("/carrito/")
+        self.assertEqual(len(r.context["sin_stock"]), 1)
+        self.assertContains(r, "Agotado por ahora")
+        self.assertContains(r, "supera el stock")
+        self.assertContains(r, 'aria-describedby="why-confirmar"')
+
+    def test_carrito_con_stock_no_bloquea_la_orden(self):
+        self.entrar()
+        s.agregar(self.ana, self.lomo.pk, 1)
+        r = self.client.get("/carrito/")
+        self.assertEqual(r.context["sin_stock"], [])
+        self.assertNotContains(r, "why-confirmar")
+
+    def test_orden_cancelada_explica_que_paso_y_ofrece_salida(self):
+        self.entrar()
+        s.agregar(self.ana, self.lomo.pk, 1)
+        orden = s.generar_orden(self.ana, self.ana.direccion_set.first().pk)
+        s.cancelar(orden, como="cliente")
+        r = self.client.get(f"/pedidos/{orden.orden_id}/")
+        self.assertContains(r, "Esta orden fue cancelada")
+        self.assertContains(r, "Ir al catálogo")
+        self.assertNotContains(r, "Seguimiento del envío")
+
+    def test_cancelar_pide_confirmacion_en_dos_pasos(self):
+        self.entrar()
+        s.agregar(self.ana, self.lomo.pk, 1)
+        orden = s.generar_orden(self.ana, self.ana.direccion_set.first().pk)
+        self.assertContains(self.client.get(f"/pedidos/{orden.orden_id}/"), "data-confirmar=")
+
+    def test_404_de_una_orden_ajena_habla_de_ordenes(self):
+        self.entrar()
+        r = self.client.get("/pedidos/999999/")
+        self.assertContains(r, "no pertenece a tu cuenta", status_code=404)
+
+    def test_formulario_vencido_muestra_la_pagina_propia_y_no_la_de_django(self):
+        cliente = self.client_class(enforce_csrf_checks=True)
+        r = cliente.post("/cuenta/entrar/", {"username": "ana@correo.test", "password": CLAVE})
+        self.assertContains(r, "Formulario vencido", status_code=403)
+
+    def test_login_fallido_resume_el_error_y_no_lo_repite(self):
+        r = self.client.post("/cuenta/entrar/", {"username": "ana@correo.test", "password": "mal"})
+        self.assertContains(r, 'id="resumen-errores"')
+        self.assertContains(r, "No pudimos ingresarte")
+        self.assertContains(r, "no coinciden")
+
+    def test_soporte_sin_consultas_usa_el_vacio_compartido(self):
+        self.entrar()
+        self.assertContains(self.client.get("/soporte/"), "Aún no has enviado consultas")

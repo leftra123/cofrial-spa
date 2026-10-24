@@ -512,5 +512,29 @@ td.celda-acciones select { max-width: 100%; }
 /* icono de la aplicación en el menú del panel interno */
 .marca-icono { width: 32px; height: 32px; border-radius: 8px; flex: none; display: block; }
 
+/* ---------- panel interno (CRM, flota) con la dirección «Termómetro» ---------- */
+.pagina-cab .marca-texto { background: none; color: inherit; padding: 0; font-weight: inherit; }
+.pagina-cab h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.03em; }
+.tarjeta-ui, .kpi-card, .tabla-caja { border-radius: 18px; box-shadow: none; }
+.kpi-card { container-type: inline-size; padding: 18px 20px; }
+.kpi-card::before { display: none; }
+.kpi-card.critico { border-color: var(--alerta-borde); }
+.kpi-card .valor { font-size: clamp(1.4rem, 12cqi, 2rem); letter-spacing: -.035em; white-space: nowrap; }
+.rejilla.kpis, .rejilla:has(> .kpi-card) { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.hbarra-fila .pista { height: 8px; }
+.hbarra-fila .pista i { background: var(--acento); }
+:root[data-tema="oscuro"] .hbarra-fila .pista i { background: #2E5AA8; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .hbarra-fila .pista i { background: #2E5AA8; } }
+/* navegación del CRM: pestañas con subrayado, no una caja con botones */
+.subnav { background: none; border: 0; border-bottom: 1px solid var(--borde); border-radius: 0; box-shadow: none; padding: 0; gap: 4px 20px; width: auto; max-width: 100%; margin-bottom: 28px; }
+.subnav a { padding: 10px 2px; border-radius: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subnav a:hover { background: none; border-bottom-color: var(--borde-fuerte); }
+.subnav a.activo { background: none; color: var(--texto); font-weight: 650; border-bottom-color: var(--lima); }
+.panel-bi { background: none; color: var(--acento); padding: 10px 2px; border-radius: 0; font-weight: 600; }
+:root[data-tema="oscuro"] .panel-bi { color: var(--texto); } @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .panel-bi { color: var(--texto); } }
+.subnav .rol { margin: 0 0 0 auto; }
+.embudo .col, .embudo > * { border-radius: 18px; }
+.tabla-caja { position: relative; }
+.pagina-cab > div:first-child { flex: 1 1 320px; min-width: 0; }
 .cerrar-viaje { margin: 14px 0 0; }
 .cerrar-viaje button { width: 100%; }

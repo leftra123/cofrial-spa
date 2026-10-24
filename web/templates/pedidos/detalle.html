@@ -37,7 +37,7 @@
       <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
     </div>
     <p class="ruta-info" id="ruta-info" aria-live="polite"></p>
-    <ul class="leyenda"><li><span class="pt" style="background:#1D4ED8" aria-hidden="true">C</span>Camión</li><li><span class="pt" style="background:#16A34A" aria-hidden="true">D</span>Su dirección</li><li><span class="pt" style="background:#1D4ED8;border-radius:2px;height:4px;width:22px" aria-hidden="true"></span>Ruta</li></ul>
+    <ul class="leyenda"><li><span class="pt" style="background:#143A7B" aria-hidden="true">C</span>Camión</li><li><span class="pt" style="background:#16A34A" aria-hidden="true">D</span>Su dirección</li><li><span class="pt" style="background:#143A7B;border-radius:2px;height:4px;width:22px" aria-hidden="true"></span>Ruta</li></ul>
   </div>
   <div class="tarjeta-ui">
     <h2>Temperatura de la cámara</h2>
@@ -91,7 +91,7 @@
     var lo = Math.min.apply(null, t.concat([min])) - 1, hi = Math.max.apply(null, t.concat([max])) + 1;
     function y(v) { return 100 - (v - lo) / (hi - lo) * 100; }
     var pts = serie.map(function (p, i) { return (serie.length === 1 ? 150 : i / (serie.length - 1) * 300).toFixed(1) + "," + y(p.temp).toFixed(1); }).join(" ");
-    svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#16A34A" fill-opacity=".16"/><polyline points="' + pts + '" fill="none" stroke="#1D4ED8" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+    svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#16A34A" fill-opacity=".16"/><polyline points="' + pts + '" fill="none" stroke="#143A7B" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   }
   function pintar(d) {
     var s = d.seguimiento; if (!s) return;
@@ -105,14 +105,14 @@
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
           mapa = CofrialMapa.crear("mapa", cam, 14);
-          marcador = L.marker(cam, {icon: CofrialMapa.pin("C", "#1D4ED8")}).addTo(mapa).bindPopup("Camión " + s.camion_id);
+          marcador = L.marker(cam, {icon: CofrialMapa.pin("C", "#143A7B")}).addTo(mapa).bindPopup("Camión " + s.camion_id);
           if (dest) L.marker(dest, {icon: CofrialMapa.pin("D", "#16A34A")}).addTo(mapa).bindPopup(s.destino.direccion);
         } else { marcador.setLatLng(cam); }
         if (dest && Date.now() - ultimaRuta > 20000) {       // la ruta se recalcula cada 20 s para no abusar del servicio gratuito
           ultimaRuta = Date.now();
           CofrialMapa.ruta([cam, dest], false).then(function (r) {
             if (linea) mapa.removeLayer(linea);
-            linea = L.polyline(r.linea, {color: "#1D4ED8", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
+            linea = L.polyline(r.linea, {color: "#143A7B", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
             if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30]}); encuadrado = true; }
             document.getElementById("ruta-info").textContent = "Faltan " + CofrialMapa.texto(r) + " hasta " + s.destino.direccion;
           });

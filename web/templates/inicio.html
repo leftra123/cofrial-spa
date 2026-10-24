@@ -1,10 +1,11 @@
 {% extends "tienda/base.html" %}
+{% load static %}
 {% block titulo %}Cofrial SpA | Carnes y refrigerados{% endblock %}
 {% block contenido %}
 <section class="t-hero" aria-labelledby="hero-titulo">
-  <svg class="copo" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4v92M10 27l80 46M90 27L10 73M50 4l-8 9M50 4l8 9M50 96l-8-9M50 96l8-9M10 27l11 1M10 27l4 10M90 73l-11-1M90 73l-4-10M90 27l-11 1M90 27l-4 10M10 73l11-1M10 73l4-10"/></svg>
+  <img class="camion-deco" src="{% static 'img/cofrial-camion.png' %}" alt="" width="300" height="178">
   <span class="etiqueta-hero">Cadena de frío de punta a punta</span>
-  <h1 id="hero-titulo">Carnes y refrigerados con la temperatura bajo control</h1>
+  <h1 id="hero-titulo">Carnes y refrigerados con la <span class="marca-texto">temperatura bajo control</span></h1>
   <p>Del frigorífico a su puerta, sin romper la cadena de frío. Compre con su lista de precios y siga cada pedido con la temperatura de la cámara y la posición del camión.</p>
   <form class="buscar-grande" action="/catalogo/" method="get" role="search">
     <input type="search" name="q" placeholder="Busque un producto, por ejemplo «lomo» o «salmón»" aria-label="Buscar productos">

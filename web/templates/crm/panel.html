@@ -2,7 +2,7 @@
 {% block titulo %}Panel del CRM | Cofrial SpA{% endblock %}
 {% block crm %}
 <div class="pagina-cab">
-  <div><h1>Panel del CRM</h1><p class="sub">{% if rol == "vendedor" %}Indicadores de tu cartera.{% else %}Indicadores de toda la cartera.{% endif %}</p></div>
+  <div><h1>Panel del <span class="marca-texto">CRM</span></h1><p class="sub">{% if rol == "vendedor" %}Indicadores de tu cartera.{% else %}Indicadores de toda la cartera.{% endif %}</p></div>
   {% if puede_editar %}<div class="acciones"><a class="btn" href="/crm/prospectos/nuevo/">+ Nuevo prospecto</a></div>{% endif %}
 </div>
 <div class="rejilla">

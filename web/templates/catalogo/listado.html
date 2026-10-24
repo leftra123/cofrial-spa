@@ -1,18 +1,19 @@
 {% extends "tienda/base.html" %}
+{% load static %}
 {% block titulo %}Catálogo | Cofrial SpA{% endblock %}
 {% block cabecera %}
-<div class="pagina-cab">
-  <div><h1>Catálogo de refrigerados y congelados</h1><p class="sub">{{ filas|length }} producto{{ filas|length|pluralize }}{% if perfil %} · Lista: {{ perfil.lista_precio.nombre }}{% endif %}{% if q %} · búsqueda «{{ q }}»{% endif %}</p></div>
+<div class="pagina-cab" id="cat-inicio">
+  <div><h1>Catálogo de <span class="marca-texto">refrigerados y congelados</span></h1><p class="sub" id="cat-contador" aria-live="polite">{{ filas|length }} producto{{ filas|length|pluralize }}{% if perfil %} · Lista: {{ perfil.lista_precio.nombre }}{% endif %}{% if q %} · búsqueda «{{ q }}»{% endif %}</p></div>
   {% if menu.cliente and perfil.codigo == "B2B" %}<div class="acciones"><form method="post" action="/carrito/repetir/">{% csrf_token %}<button class="btn-sec">Repetir mi último pedido</button></form></div>{% endif %}
 </div>
 {% endblock %}
 {% block contenido %}
 <div class="cat-layout">
   <details class="filtros" id="filtros-det" open>
-    <summary>Filtros{% if filtrado %} <span class="chip asignado sin-punto">activos</span>{% endif %}</summary>
-    <form class="filtros-cuerpo" method="get" action="/catalogo/">
+    <summary><span>Filtros <span class="chip asignado sin-punto" id="filtros-resumen" {% if not filtrado %}hidden{% endif %}></span></span><span class="filtros-hint">Tocar para {% if filtrado %}cambiar{% else %}filtrar{% endif %}</span></summary>
+    <form class="filtros-cuerpo" id="form-filtros" method="get" action="/catalogo/" role="search" aria-label="Filtros del catálogo">
     <h2>Buscar</h2>
-    <input type="search" name="q" value="{{ q }}" placeholder="Nombre o SKU" aria-label="Buscar">
+    <input type="search" name="q" value="{{ q }}" placeholder="Nombre o SKU" aria-label="Buscar en el catálogo" autocomplete="off">
     <h2>Categoría</h2>
     <label><input type="radio" name="categoria" value="" {% if not cat %}checked{% endif %}> Todas</label>
     {% for c in categorias %}<label><input type="radio" name="categoria" value="{{ c.pk }}" {% if cat == c.pk|stringformat:"s" %}checked{% endif %}> {{ c.nombre }}</label>{% endfor %}
@@ -21,19 +22,19 @@
     {% for r in rangos %}<label><input type="radio" name="temperatura" value="{{ r.pk }}" {% if temp == r.pk|stringformat:"s" %}checked{% endif %}> {{ r.nombre }} ({{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C)</label>{% endfor %}
     <h2>Disponibilidad</h2>
     <label><input type="checkbox" name="stock" value="1" {% if solo_stock %}checked{% endif %}> Solo con stock</label>
-    <button>Aplicar filtros</button>
-    {% if filtrado %}<p style="margin:10px 0 0;text-align:center"><a href="/catalogo/">Limpiar filtros</a></p>{% endif %}
+    <noscript><button>Aplicar filtros</button></noscript>
+    <p class="filtros-limpiar"><a href="/catalogo/" id="filtros-limpiar" data-limpiar {% if not filtrado %}hidden{% endif %}>Limpiar filtros</a></p>
+    <button type="button" class="filtros-ver" id="filtros-ver" data-cerrar-filtros>Ver {{ filas|length }} producto{{ filas|length|pluralize }}</button>
     </form>
   </details>
-  <div class="productos" id="productos">
+  <div>
+    <div class="cat-chips" id="cat-chips" aria-label="Filtros activos" hidden></div>
+    <p class="solo-lector" id="cat-vivo" role="status" aria-live="polite"></p>
+    <div class="productos" id="productos">
     {% for f in filas %}{% include "catalogo/_tarjeta.html" %}
-    {% empty %}<div class="vacio-grande">{% include "componentes/vacio.html" with ico="lupa" %}<b>No encontramos productos con esos filtros</b>Pruebe con otra palabra o quite algún filtro.<p style="margin-top:14px"><a class="btn btn-sec" href="/catalogo/">Ver todo el catálogo</a></p></div>{% endfor %}
+    {% empty %}<div class="vacio-grande">{% include "componentes/vacio.html" with ico="lupa" %}<b>No encontramos productos con esos filtros</b>Pruebe con otra palabra o quite algún filtro.<p style="margin-top:14px"><a class="btn btn-sec" href="/catalogo/" data-limpiar>Ver todo el catálogo</a></p></div>{% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}
-{% block scripts %}
-<script>
-  /* en móvil los filtros parten cerrados (se despliegan con el botón «Filtros»), salvo que haya alguno activo */
-  (function () { var d = document.getElementById("filtros-det"); if (d && matchMedia("(max-width: 860px)").matches && !{{ filtrado|yesno:"true,false" }}) d.removeAttribute("open"); })();
-</script>
-{% endblock %}
+{% block scripts %}<script src="{% static 'js/catalogo.js' %}"></script>{% endblock %}

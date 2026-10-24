@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
   {% include "componentes/tema_head.html" %}
+  <meta name="theme-color" content="#143A7B">
   <meta name="color-scheme" content="light dark">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M6 11h12v9H6zM18 14h5l3 3v3h-8z' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="{% static 'img/cofrial-favicon.ico' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'img/cofrial-camion.png' %}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
   <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
@@ -17,7 +19,7 @@
 {% with ruta=request.path %}
 <header class="tb">
   <div class="tb-fila">
-    <a class="tb-marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>COFRIAL</a>
+    <a class="tb-marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span><span class="marca-texto-logo">COFRIAL</span></a>
     <form class="tb-buscar" action="/catalogo/" method="get" role="search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos o SKU" aria-label="Buscar productos">
     </form>
@@ -45,7 +47,7 @@
   {% block contenido %}{% endblock %}
 </main>
 <footer class="t-pie"><div class="t-pie-fila">
-  <div><b>Cofrial SpA</b> · Frigorífico y distribución en cadena de frío · La Araucanía</div>
+  <div class="t-pie-logo"><span class="logo-chip"><img src="{% static 'img/cofrial-logo.png' %}" alt="Cofrial, distribución y cadena de frío" width="170" height="44"></span><small>Frigorífico y distribución en cadena de frío · La Araucanía</small></div>
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
   <div>Prototipo académico INACAP Temuco</div></div></footer>
 {% endwith %}

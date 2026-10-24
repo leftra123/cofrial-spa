@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
   {% include "componentes/tema_head.html" %}
+  <meta name="theme-color" content="#143A7B">
   <meta name="color-scheme" content="light dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M6 11h12v9H6zM18 14h5l3 3v3h-8z' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="{% static 'img/cofrial-favicon.ico' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'img/cofrial-camion.png' %}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
   {% block cabeza %}{% endblock %}
@@ -17,12 +19,12 @@
 <a class="salto" href="#contenido">Saltar al contenido</a>
 {% with ruta=request.path %}
 <div class="barra-movil">
-  <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>Cofrial</a>
+  <a class="marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span>Cofrial</a>
   <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú</button></span>
 </div>
 <div class="app">
   <aside class="lateral" id="lateral">
-    <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span><span>Cofrial SpA<small>Cadena de frío</small></span></a>
+    <a class="marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span><span>Cofrial SpA<small>Cadena de frío</small></span></a>
     <nav class="nav" aria-label="Principal">
       <a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio</a>
       <div class="nav-etiqueta">Tienda</div>

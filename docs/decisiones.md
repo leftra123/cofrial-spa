@@ -86,3 +86,8 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 - **Leaflet** va autoalojado en `static/vendor/leaflet/` (1.9.4, sin el mapa de código fuente) y axios se reemplazó por `fetch` (seguimiento y flota). Ya no hay recursos de terceros salvo los mosaicos de OpenStreetMap.
 - **Huella en los estáticos:** `CompressedManifestStaticFilesStorage` (nombres con hash y caché larga) cuando `DJANGO_DEBUG=0` y fuera de las pruebas; el `collectstatic` del Dockerfile genera el manifiesto.
 - Corregido el scroll horizontal a 375 px en el CRM y el modo demostración.
+
+## Dirección visual «Termómetro» y Fase 1: portada (24-oct-2026)
+- Eric eligió la dirección A de `docs/maquetas-frontend/`: fondo claro, tinta marino, fuente Schibsted Grotesk variable (autoalojada, reemplaza a Inter), líneas en vez de tarjetas con sombra, y el lima solo como acento de marca (subrayado de la navegación). La portada muestra los dos rangos de conservación sobre un solo eje (−25 a +4 °C), «Cómo comprar» en dos columnas y las categorías con foto.
+- Tokens: `cofrial.css` mantiene los nombres de variables y cambia sus valores (`--texto #0B2350`, `--fondo #F7F9FC`, `--borde #D5E1EE`); el modo oscuro no cambia.
+- La tarjeta «lectura en vivo» de la maqueta (temperatura de un camión) no está en la portada real porque la vista no entrega esa temperatura; hoy muestra la cantidad de camiones y la última lectura. Mostrar la temperatura exigiría agregar un dato al contexto de `vistas.inicio` (cambio de backend, pendiente de aprobación).

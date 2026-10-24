@@ -232,7 +232,7 @@ def main():
         st, html, _ = sesiones["vendedora"].pedir("/crm/requerimientos/")
         sin = html.count("sin clasificar")
         if sin:
-            marca("ok", f"Hay {sin} requerimiento(s) sin clasificar con el botón «Clasificar con IA» (listo para la demo en vivo)")
+            marca("ok", f"Hay {sin} requerimiento(s) sin clasificar con el botón \"Clasificar con IA\" (listo para la demo en vivo)")
         else:
             marca("aviso", "No queda ningún requerimiento sin clasificar: la demostración en vivo de la IA necesita uno")
     if sesiones["vendedora"]:
@@ -244,8 +244,8 @@ def main():
         st, html, _ = sesiones["ana"].pedir("/soporte/", {"csrfmiddlewaretoken": t, "asunto": "Verificación automática",
                                                           "descripcion": "La carga llegó con la temperatura muy alta y rechazamos las cajas."})
         seg = time.time() - t1
-        m = re.search(r"la derivamos a «([^»]+)»", html)
-        chk(m, f"La IA clasificó el reclamo de prueba como «{m.group(1)}» en {seg:.1f} s" if m else "La IA clasificó el reclamo de prueba",
+        m = re.search(r"la derivamos a (?:\"|&quot;)([^\"&]+)(?:\"|&quot;)", html)
+        chk(m, f"La IA clasificó el reclamo de prueba como \"{m.group(1)}\" en {seg:.1f} s" if m else "La IA clasificó el reclamo de prueba",
             "quedó sin clasificar: revisar las claves de IA (manage.py probar_ia)")
     elif "--ia" not in sys.argv:
         marca("info", "Prueba de IA omitida (crearía un requerimiento). Para incluirla: python3 aws/verificar.py --ia")

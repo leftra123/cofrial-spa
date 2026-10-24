@@ -17,7 +17,7 @@
 
 <div class="seccion"><h2>Mapa y rutas sugeridas</h2></div>
 <div class="tarjeta-ui">
-  <div id="mapa-flota" class="mapa" role="img" aria-label="Mapa de la flota y rutas de entrega"></div>
+  <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
   <p class="frio" style="margin:8px 0 0">Bodega = frigorífico central · camión (rojo y latiendo si tiene ruptura de frío) · números = orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
   <div id="rutas-sugeridas"></div>
 </div>
@@ -82,9 +82,9 @@
   (function () {
     var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
     var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
-    L.marker(base, {icon: CofrialMapa.base()}).addTo(m).bindPopup(d.base.nombre);
+    L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
     d.camiones.forEach(function (c) {
-      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id)}).addTo(m).bindPopup(c.id + " · " + c.patente);
+      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
     });
     var todos = [base];
     d.viajes.forEach(function (v, i) {
@@ -96,7 +96,7 @@
         var orden = r.orden || pts.map(function (_, k) { return k; }), lista = [];
         v.paradas.forEach(function (p, k) {
           var n = orden[k + 1];                                   // posición de la parada en el recorrido (la base es 0)
-          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color)}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
+          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
           lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + ")</span></li>";
         });
         document.getElementById("rutas-sugeridas").insertAdjacentHTML("beforeend",

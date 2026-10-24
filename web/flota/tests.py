@@ -190,3 +190,18 @@ class ArmarDespachoTests(TestCase):
         pagina = self.client.get("/flota/despachar/")
         self.assertNotContains(pagina, 'value="CAM-01"')       # CAM-01 y CAM-02 tienen viaje en curso en la demostración
         self.assertContains(pagina, 'value="CAM-03"')
+
+
+class AccesibilidadMapaTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_mapas_son_regiones_y_los_marcadores_tienen_nombre(self):
+        self.client.login(username="despacho@cofrial.cl", password="demo-cofrial-2026")
+        for ruta, contenedor in (("/flota/", 'id="mapa-flota"'), ("/flota/despachar/", 'id="mapa-despacho"')):
+            html = self.client.get(ruta).content.decode()
+            etiqueta = html[html.index(contenedor):].split(">")[0]
+            self.assertIn('role="region"', etiqueta)               # un contenedor con controles dentro no puede ser role="img"
+            self.assertNotIn('role="img"', etiqueta)
+            self.assertIn("title:", html)                          # los marcadores se crean con título (nombre accesible)

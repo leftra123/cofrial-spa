@@ -1,6 +1,8 @@
 /* Cofrial SpA · microinteracciones de la tienda (sin dependencias). Si falla, los formularios siguen funcionando. */
 (function () {
-  document.querySelectorAll(".cant").forEach(function (c) {
+  function iniciarCant(raiz) {
+  (raiz || document).querySelectorAll(".cant").forEach(function (c) {
+    if (c.dataset.listo) return; c.dataset.listo = "1";
     var i = c.querySelector("input"), menos = c.querySelector("[data-menos]"), mas = c.querySelector("[data-mas]");
     if (!i || !menos || !mas) return;
     var max = parseInt(i.max, 10) || 9999, min = parseInt(i.min, 10);
@@ -11,6 +13,9 @@
     i.addEventListener("change", function () { poner(parseInt(i.value, 10) || min); });
     poner(parseInt(i.value, 10) || min);
   });
+  }
+  iniciarCant(document);
+  window.CofrialTienda = {iniciarCant: iniciarCant};
   /* al enviar un formulario con botón principal: estado de carga y sin doble clic */
   document.querySelectorAll("form[data-carga]").forEach(function (f) {
     f.addEventListener("submit", function () {

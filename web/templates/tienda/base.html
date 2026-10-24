@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
   {% include "componentes/tema_head.html" %}
+  <meta name="theme-color" content="#143A7B">
   <meta name="color-scheme" content="light dark">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M6 11h12v9H6zM18 14h5l3 3v3h-8z' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="{% static 'img/cofrial-favicon.ico' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'img/cofrial-camion.png' %}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
   <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
@@ -17,8 +19,8 @@
 {% with ruta=request.path %}
 <header class="tb">
   <div class="tb-fila">
-    <a class="tb-marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>COFRIAL</a>
-    <form class="tb-buscar" action="/catalogo/" method="get" role="search">
+    <a class="tb-marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span><span class="marca-texto-logo">COFRIAL</span></a>
+    <form class="tb-buscar" action="/catalogo/" method="get" role="search" aria-label="Buscador del sitio">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos o SKU" aria-label="Buscar productos">
     </form>
     <nav class="tb-nav" aria-label="Principal">
@@ -30,6 +32,13 @@
       {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito{% if carrito_n %}<span class="tb-n" aria-label="{{ carrito_n }} productos">{{ carrito_n }}</span>{% endif %}</a>{% endif %}
     </nav>
     <div class="tb-cuenta">
+      {% if menu.cliente %}<div class="campana" id="campana">
+        <button type="button" class="tema-btn campana-btn" id="campana-btn" aria-label="Avisos de tus pedidos" aria-expanded="false" aria-controls="campana-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/></svg><span class="campana-n" id="campana-n" hidden>0</span></button>
+        <div class="campana-panel" id="campana-panel" role="region" aria-label="Avisos" hidden>
+          <div class="campana-cab"><b>Avisos</b></div>
+          <ul id="campana-lista"><li class="campana-vacio">Sin avisos por ahora. Te avisamos cuando tu pedido salga, esté cerca y llegue.</li></ul>
+        </div>
+      </div>{% endif %}
       {% include "componentes/tema_btn.html" %}
       {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }}"><span>{{ cliente_tienda.nombre }}</span><b class="perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}">{{ cliente_tienda.tipo_cliente.codigo }}</b></span>{% endif %}
       {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{% if menu.crm %}/crm/{% elif menu.flota %}/flota/{% else %}/admin/{% endif %}">Panel interno</a>{% endif %}
@@ -47,12 +56,14 @@
   {% block contenido %}{% endblock %}
 </main>
 <footer class="t-pie"><div class="t-pie-fila">
-  <div><b>Cofrial SpA</b> · Frigorífico y distribución en cadena de frío · La Araucanía</div>
+  <div class="t-pie-logo"><span class="logo-chip"><img src="{% static 'img/cofrial-logo.png' %}" alt="Cofrial, distribución y cadena de frío" width="170" height="44"></span><small>Frigorífico y distribución en cadena de frío · La Araucanía</small></div>
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
   <div>Prototipo académico INACAP Temuco</div></div></footer>
 {% endwith %}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/tienda.js' %}"></script>
+{% if menu.cliente %}<script src="{% static 'js/campana.js' %}"></script>{% endif %}
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}
 </body>
 </html>

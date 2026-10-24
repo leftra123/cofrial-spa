@@ -80,7 +80,7 @@ def mover_prospecto(usuario, prospecto_id, etapa_id, motivo="", rut=""):
         raise ErrorDeNegocio("Tu rol no puede modificar prospectos.")
     destino = next((e for e in transiciones_de(prospecto) if e.pk == int(etapa_id)), None)
     if destino is None:
-        raise ErrorDeNegocio(f"No se puede pasar de «{prospecto.etapa.nombre}» a esa etapa; el embudo no permite saltos.")
+        raise ErrorDeNegocio(f"No se puede pasar de \"{prospecto.etapa.nombre}\" a esa etapa; el embudo no permite saltos.")
     ahora = timezone.now()
     if destino.es_final and not destino.es_ganada:                      # Perdido
         if not motivo.strip():

@@ -11,4 +11,7 @@
       });
     });
   })();
+  document.querySelectorAll(".tabla-caja").forEach(function (t) {
+    if (t.scrollWidth > t.clientWidth + 1) { t.tabIndex = 0; t.setAttribute("role", "region"); t.setAttribute("aria-label", "Tabla con desplazamiento horizontal"); }
+  });
 </script>

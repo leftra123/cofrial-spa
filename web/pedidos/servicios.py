@@ -133,7 +133,7 @@ def cancelar(orden, como="cliente"):
     limite = 1 if como == "cliente" else 3
     if orden.estado_orden.es_final or orden.estado_orden.orden_flujo > limite:
         quien = "el cliente" if como == "cliente" else "el vendedor"
-        raise ErrorDeNegocio(f"La orden está «{orden.estado_orden.nombre}» y {quien} ya no puede cancelarla.")
+        raise ErrorDeNegocio(f"La orden está \"{orden.estado_orden.nombre}\" y {quien} ya no puede cancelarla.")
     for item in orden.ordenitem_set.all():
         Producto.objects.filter(pk=item.producto_id).update(stock_disponible=F("stock_disponible") + item.cantidad)
     orden.estado_orden = EstadoOrden.objects.get(nombre="Cancelada")
@@ -146,7 +146,7 @@ def avanzar(orden):
     """Pasa la orden al siguiente estado del flujo (Figura de estados). «Despachada» exige un despacho asignado."""
     orden = Orden.objects.select_for_update().select_related("estado_orden").get(pk=orden.pk)
     if orden.estado_orden.es_final:
-        raise ErrorDeNegocio(f"La orden ya está «{orden.estado_orden.nombre}».")
+        raise ErrorDeNegocio(f"La orden ya está \"{orden.estado_orden.nombre}\".")
     siguiente = EstadoOrden.objects.filter(orden_flujo__gt=orden.estado_orden.orden_flujo, es_final=False).first() \
         or EstadoOrden.objects.get(nombre="Entregada")
     if siguiente.nombre == "Despachada" and orden.despacho_id is None:
@@ -201,4 +201,77 @@ def seguimiento(orden):
         "destino": None if orden.direccion.lat is None else {"lat": orden.direccion.lat, "long": orden.direccion.long, "direccion": str(orden.direccion)},
         "hubo_ruptura": any(l.alerta_ruptura_frio for l in lecturas),
         "serie": [{"t": l.registrado_en.isoformat(), "temp": l.temp_camara} for l in lecturas][-120:],
+        "salida_en": orden.despacho.salida_en.isoformat() if orden.despacho.salida_en else None,
+        "llegada_en": orden.despacho.llegada_en.isoformat() if orden.despacho.llegada_en else None,
+        **_llegada(orden, ultima),
     }
+
+
+# ---------- llegada estimada y avisos (campanita) ----------
+VELOCIDAD_URBANA_KMH = 30     # promedio realista de reparto en ciudad
+FACTOR_CALLES = 1.3           # la ruta por calles es más larga que la línea recta
+CERCA_KM = 2
+
+
+def _km(lat1, lon1, lat2, lon2):
+    from math import asin, cos, radians, sin, sqrt
+    a = sin(radians(lat2 - lat1) / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(radians(lon2 - lon1) / 2) ** 2
+    return 12742 * asin(sqrt(a))
+
+
+def _redondear5(momento):
+    from datetime import timedelta
+    return momento.replace(second=0, microsecond=0) - timedelta(minutes=momento.minute % 5)
+
+
+def _llegada(orden, ultima):
+    """Distancia que falta y ventana estimada de llegada («entre las 15:10 y las 15:30»). Solo mientras el camión va en camino."""
+    from datetime import timedelta
+    from django.utils import timezone
+    vacio = {"km_restantes": None, "eta": None, "cerca": False}
+    d = orden.despacho
+    if ultima is None or orden.direccion.lat is None or d.salida_en is None or d.llegada_en is not None:
+        return vacio
+    if timezone.now() - ultima.registrado_en > timedelta(minutes=10):      # sin señal reciente no se inventa una hora
+        return vacio
+    km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * FACTOR_CALLES
+    minutos = km / VELOCIDAD_URBANA_KMH * 60
+    centro = timezone.now() + timedelta(minutes=minutos)
+    return {"km_restantes": round(km, 1), "cerca": km <= CERCA_KM,
+            "eta": {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),
+                    "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}}
+
+
+def avisos_de_llegada(cliente):
+    """Avisos para la campanita del cliente, calculados desde el estado de sus órdenes (no se guardan): salió, cerca y llegó.
+    Cada aviso tiene un id estable para que el navegador sepa cuáles ya vio."""
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.utils.timezone import localtime
+    from flota.models import Telemetria
+
+    hace_un_dia = timezone.now() - timedelta(hours=24)
+    salida = []
+    for o in ordenes_de(cliente).select_related("despacho__camion", "direccion", "estado_orden"):
+        d = o.despacho
+        if d is None or d.salida_en is None:
+            continue
+        if d.llegada_en is not None and d.llegada_en < hace_un_dia:
+            continue
+        hora = lambda x: localtime(x).strftime("%H:%M")
+        salida.append({"id": f"{o.orden_id}-salio", "orden_id": o.orden_id, "tipo": "salio", "cuando": d.salida_en.isoformat(),
+                       "texto": f"Tu pedido N.º {o.orden_id} salió a las {hora(d.salida_en)}."})
+        if d.llegada_en is not None:
+            salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": d.llegada_en.isoformat(),
+                           "texto": f"Tu pedido N.º {o.orden_id} llegó a las {hora(d.llegada_en)}."})
+            continue
+        ultima = Telemetria.objects.filter(camion=d.camion, registrado_en__gte=d.salida_en).order_by("-registrado_en").first()
+        info = _llegada(o, ultima)
+        if info["eta"]:
+            desde, hasta = (localtime(timezone.datetime.fromisoformat(info["eta"][k])).strftime("%H:%M") for k in ("desde", "hasta"))
+            salida.append({"id": f"{o.orden_id}-ventana", "orden_id": o.orden_id, "tipo": "ventana", "cuando": ultima.registrado_en.isoformat(),
+                           "texto": f"Recibirás tu pedido N.º {o.orden_id} entre las {desde} y las {hasta}."})
+        if info["cerca"]:
+            salida.append({"id": f"{o.orden_id}-cerca", "orden_id": o.orden_id, "tipo": "cerca", "cuando": ultima.registrado_en.isoformat(),
+                           "texto": f"El camión de tu pedido N.º {o.orden_id} está a menos de {CERCA_KM} km."})
+    return sorted(salida, key=lambda a: a["cuando"], reverse=True)

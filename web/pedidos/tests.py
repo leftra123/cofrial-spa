@@ -159,3 +159,32 @@ class CompraSimultanea(TransactionTestCase):
         [h.join() for h in hilos]
         self.assertEqual(sorted(resultados), ["ok", "sin stock"])
         self.assertEqual(Producto.objects.get(pk=producto.pk).stock_disponible, 0)
+
+
+class AvisosDeLaCampanita(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_solo_clientes_con_sesion(self):
+        self.assertEqual(self.client.get("/api/avisos/").status_code, 403)
+
+    def test_cada_cliente_ve_solo_lo_suyo(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        from pedidos.models import Orden
+        orden = Orden.objects.exclude(despacho=None).first()
+        if orden is None:
+            self.skipTest("la demostración no trae órdenes despachadas")
+        Orden.objects.filter(pk=orden.pk).update()
+        d = orden.despacho
+        type(d).objects.filter(pk=d.pk).update(salida_en=timezone.now() - timedelta(minutes=5), llegada_en=None)
+        duenio = orden.direccion.cliente
+        usuario = duenio.usuario if hasattr(duenio, "usuario") else None
+        ajeno = Cliente.objects.exclude(pk=duenio.pk).first()
+        self.client.force_login(ajeno.usuario)
+        self.assertFalse([a for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.orden_id])
+        if usuario:
+            self.client.force_login(usuario)
+            tipos = {a["tipo"] for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.orden_id}
+            self.assertIn("salio", tipos)

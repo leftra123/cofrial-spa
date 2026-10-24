@@ -80,7 +80,7 @@ def confirmar(request, cliente):
         _mostrar_errores(request, e)
         return redirect("carrito")
     messages.success(request, f"Orden {orden.orden_id} recibida.")
-    return redirect("orden", orden_id=orden.orden_id)
+    return redirect(f"/pedidos/{orden.orden_id}/?nueva=1")
 
 
 @solo_clientes
@@ -135,9 +135,18 @@ def soporte(request, cliente):
         try:
             r = crm.crear_requerimiento(cliente, request.POST.get("asunto", ""), request.POST.get("descripcion", ""), orden=orden)
             messages.success(request, "Recibimos tu consulta. Te responderemos a la brevedad." if r.estado != "clasificado"
-                             else f"Recibimos tu consulta y la derivamos a «{r.categoria_requerimiento}».")
+                             else f"Recibimos tu consulta y la derivamos a \"{r.categoria_requerimiento}\".")
             return redirect("soporte")
         except s.ErrorDeNegocio as e:
             _mostrar_errores(request, e)
     return render(request, "pedidos/soporte.html", {
         "orden": orden, "requerimientos": Requerimiento.objects.filter(cliente=cliente).select_related("categoria_requerimiento").order_by("-creado_en")})
+
+
+def api_avisos(request):
+    """Avisos de la campanita: solo de las órdenes del cliente que inició sesión."""
+    from django.http import JsonResponse
+    cliente = s.cliente_de(request.user) if request.user.is_authenticated else None
+    if cliente is None:
+        return JsonResponse({"detail": "Inicia sesión con una cuenta de cliente."}, status=403)
+    return JsonResponse({"avisos": s.avisos_de_llegada(cliente)}, json_dumps_params={"ensure_ascii": False})

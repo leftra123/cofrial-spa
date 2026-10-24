@@ -30,7 +30,7 @@ class RegistroB2CForm(forms.Form):
     def clean_email(self):
         email = self.cleaned_data["email"].lower()
         if get_user_model().objects.filter(username__iexact=email).exists():
-            raise forms.ValidationError("Ya existe una cuenta con ese correo. Ingresa desde «Ingresar».")
+            raise forms.ValidationError("Ya existe una cuenta con ese correo. Ingresa desde \"Ingresar\".")
         return email
 
     def clean(self):

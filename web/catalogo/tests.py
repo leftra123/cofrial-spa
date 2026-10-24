@@ -152,6 +152,25 @@ class ImagenPropiaTests(TestCase):
             self.assertContains(r, "generada con IA")
 
 
+class ApiProductos(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_ficha_por_sku_sin_precios(self):
+        r = self.client.get("/api/productos/vac-lom-5k/")
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["sku"], "VAC-LOM-5K")
+        self.assertEqual(d["categoria"], "Carnes")
+        self.assertEqual(d["conservacion"]["temp_max_c"], 4.0)
+        self.assertNotIn("precio", r.content.decode().lower())
+
+    def test_sku_inexistente_da_404_y_el_listado_trae_todos(self):
+        self.assertEqual(self.client.get("/api/productos/NO-EXISTE/").status_code, 404)
+        self.assertEqual(len(self.client.get("/api/productos/").json()["productos"]), 20)
+
+
 class AvisoStockTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -245,7 +264,7 @@ class PortadaYCategoriasTests(TestCase):
         r = self.client.get("/")
         self.assertContains(r, "con-foto")
         self.assertContains(r, "static/img/portada.jpg")
-        for slug in ("carnicos-refrigerados", "aves", "congelados", "lacteos-y-embutidos"):
+        for slug in ("carnes", "aves", "congelados", "lacteos-y-embutidos"):
             self.assertContains(r, f"/static/productos/categorias/{slug}.jpg")
 
 

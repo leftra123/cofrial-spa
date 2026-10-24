@@ -107,7 +107,7 @@ def prospecto_mover(request, pk):
     _prospecto(request, pk)
     try:
         nuevo = s.mover_prospecto(request.user, pk, request.POST.get("etapa") or 0, request.POST.get("motivo", ""), request.POST.get("rut", ""))
-        messages.success(request, f"Prospecto en «{nuevo.etapa.nombre}».")
+        messages.success(request, f"Prospecto en \"{nuevo.etapa.nombre}\".")
         if nuevo.etapa.es_ganada:
             return redirect("crm_cliente", pk=nuevo.cliente_id)
     except ERRORES as e:
@@ -199,7 +199,7 @@ def requerimiento_ia(request, pk):
     try:
         r = s.reintentar_ia(request.user, pk)
         if r.estado == "clasificado":
-            messages.success(request, f"La IA lo clasificó como «{r.categoria_requerimiento}» (confianza {r.confianza_ia}).")
+            messages.success(request, f"La IA lo clasificó como \"{r.categoria_requerimiento}\" (confianza {r.confianza_ia}).")
         elif getattr(r, "ia_no_disponible", False):
             messages.warning(request, "La IA no está disponible ahora (revisa la clave o la conexión). El requerimiento sigue sin clasificar: clasifícalo a mano.")
         else:

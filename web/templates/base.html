@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Cofrial SpA{% endblock %}</title>
   {% include "componentes/tema_head.html" %}
+  <meta name="theme-color" content="#143A7B">
   <meta name="color-scheme" content="light dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M6 11h12v9H6zM18 14h5l3 3v3h-8z' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="{% static 'img/cofrial-favicon.ico' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'img/cofrial-camion.png' %}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
   {% block cabeza %}{% endblock %}
@@ -16,13 +18,13 @@
 <body>
 <a class="salto" href="#contenido">Saltar al contenido</a>
 {% with ruta=request.path %}
-<div class="barra-movil">
-  <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span>Cofrial</a>
+<header class="barra-movil">
+  <a class="marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span>Cofrial</a>
   <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú</button></span>
-</div>
+</header>
 <div class="app">
   <aside class="lateral" id="lateral">
-    <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span><span>Cofrial SpA<small>Cadena de frío</small></span></a>
+    <a class="marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span><span>Cofrial SpA<small>Cadena de frío</small></span></a>
     <nav class="nav" aria-label="Principal">
       <a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio</a>
       <a href="/guia/" {% if "/guia/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>Guía de flujos</a>
@@ -35,6 +37,7 @@
       <div class="nav-etiqueta">Operación</div>
       {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% include "componentes/ico_camion.html" %}Flota</a>{% endif %}
       {% if menu.crm %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>CRM</a>{% endif %}
+      {% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
       {% if menu.admin %}<a href="/admin/"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Administración</a>{% endif %}
       {% endif %}
     </nav>

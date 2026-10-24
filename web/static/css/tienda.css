@@ -560,6 +560,23 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 @media (min-width: 861px) { .tb-buscar { flex: 1 1 190px; max-width: 240px; } .tb-perfil b { margin-left: 0; } .tb-nav a { padding: 8px; } .tb-perfil { max-width: 130px; } }
 @media (min-width: 861px) and (max-width: 1100px) { .tb-nav a { padding: 8px 6px; font-size: .92rem; } .tb-buscar { max-width: 170px; } }
 
+/* ---------- seguimiento, mapa y campanita (dirección «Termómetro») ---------- */
+body.tienda .tarjeta-ui { border-radius: 18px; box-shadow: none; }
+body.tienda .tarjeta-ui > h2 { font-size: 1.2rem; letter-spacing: -.02em; }
+.seg-grid { gap: 24px; }
+.seg-datos { gap: 0; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
+.seg-datos div { background: none; border-radius: 0; padding: 12px 16px; }
+.seg-datos div + div { border-left: 1px solid var(--borde); }
+.seg-datos span { text-transform: none; letter-spacing: 0; font-size: .82rem; font-weight: 500; }
+.seg-datos b { font-size: 1.3rem; letter-spacing: -.02em; }
+.temp-grande b { font-size: 3.6rem; letter-spacing: -.04em; }
+body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
+.campana-panel { border-radius: 18px; box-shadow: 0 16px 40px rgba(11, 35, 80, .18); }
+.campana-cab { font-size: 1rem; padding: 14px 18px; }
+.campana-tipo { text-transform: none; letter-spacing: 0; font-size: .74rem; }
+.campana-item a { padding: 14px 18px; }
+@media (max-width: 480px) { .seg-datos { grid-template-columns: 1fr 1fr; } .seg-datos div:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--borde); } .temp-grande b { font-size: 2.8rem; } .seg-datos b { font-size: 1.1rem; } }
+
 /* ---------- portada v2: foto de la cámara a todo el hero, poco texto ---------- */
 .portada-hero { position: relative; display: block; isolation: isolate; overflow: hidden; border-radius: 24px; background: #0B2A6F; min-height: clamp(420px, 56vw, 560px); padding: 0; margin-top: 8px; }
 .portada-hero .hero-fondo, .portada-hero .camion-deco { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; object-position: 70% 50%; border-radius: 0; background: none; padding: 0; }

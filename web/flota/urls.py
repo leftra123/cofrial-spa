@@ -5,6 +5,7 @@ from . import api, views
 urlpatterns = [
     path("", views.panel, name="flota"),
     path("despachar/", views.despachar, name="despachar"),
+    path("viajes/<int:despacho_id>/cerrar/", views.cerrar_despacho, name="cerrar_despacho"),
     path("despachar/ubicar/<int:direccion_id>/", views.ubicar_direccion, name="ubicar_direccion"),
 ]
 api_urlpatterns = [

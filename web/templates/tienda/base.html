@@ -44,6 +44,7 @@
       {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }}"><span>{{ cliente_tienda.nombre }}</span><b class="perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}">{{ cliente_tienda.tipo_cliente.codigo }}</b></span>{% endif %}
       {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{% if menu.crm %}/crm/{% elif menu.flota %}/flota/{% else %}/admin/{% endif %}">Panel interno</a>{% endif %}
       {% if user.is_authenticated %}
+        <a class="tb-ingresar" href="/cuenta/clave/">Mi clave</a>
         <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Salir</button></form>
       {% else %}
         <a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>

@@ -134,3 +134,7 @@ LOGGING = {
     },
     "root": {"handlers": ["consola"], "level": "WARNING"},
 }
+
+# Velocidad media de reparto y factor de calles: los usan la hora de llegada de la tienda y el simulador IoT (mismas variables).
+VELOCIDAD_MEDIA_KMH = float(os.environ.get("VELOCIDAD_MEDIA_KMH") or 50)
+FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES") or 1.3)

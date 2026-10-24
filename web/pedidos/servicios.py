@@ -236,8 +236,8 @@ def seguimiento(orden):
 
 
 # ---------- llegada estimada y avisos (campanita) ----------
-VELOCIDAD_URBANA_KMH = 30     # promedio realista de reparto en ciudad
-FACTOR_CALLES = 1.3           # la ruta por calles es más larga que la línea recta
+# La velocidad y el factor de calles salen de la configuración (VELOCIDAD_MEDIA_KMH y FACTOR_CALLES) y el simulador IoT usa las mismas
+# variables: así la hora de llegada que ve el cliente coincide con el movimiento del camión.
 CERCA_KM = 2
 
 
@@ -262,8 +262,9 @@ def _llegada(orden, ultima):
         return vacio
     if timezone.now() - ultima.registrado_en > timedelta(minutes=10):      # sin señal reciente no se inventa una hora
         return vacio
-    km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * FACTOR_CALLES
-    minutos = km / VELOCIDAD_URBANA_KMH * 60
+    from django.conf import settings
+    km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
+    minutos = km / settings.VELOCIDAD_MEDIA_KMH * 60
     centro = timezone.now() + timedelta(minutes=minutos)
     return {"km_restantes": round(km, 1), "cerca": km <= CERCA_KM,
             "eta": {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),

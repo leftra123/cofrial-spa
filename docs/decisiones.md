@@ -15,7 +15,6 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Por confirmar |
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por confirmar |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por confirmar |
-| D-09 | Cuentas de clientes | Inicio de sesión propio sobre la tabla `usuario` (PBKDF2 de Django, límite de intentos, sesión renovada al entrar); registro público solo B2C | `django.contrib.auth` (`auth_user`) | **Adoptada** el 20-oct (prototipo). Mantiene las 25 tablas del MER; si se quiere el panel de administración de Django como CRM, habrá que migrar a `auth_user` |
 
 > El modelo de datos (25 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
 
@@ -35,7 +34,7 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 **D-04 Simulador IoT: Python en Docker (15-oct-2026).** Consecuencia de D-01: Python es el lenguaje común y los contenedores usan una imagen ligera. Puntaje 4,90 frente a 4,40 de Node/TypeScript; ver Tabla 5 de `informe/08-herramientas.md`.
 
 ## Estado de la implementación
-El scaffold está en `backend/` (Django 5.2, `psycopg` 3 y `python-dotenv`; configuración por variables de entorno, ver `.env.example`). Aún no hay modelos: el esquema vive en `informe/modelo/esquema.sql`.
+La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 
 > Sincronizado con `informe/03-arquitectura-cloud.md` y `informe/08-herramientas.md` (Tablas 4 y 5: Django 4,75; Python 4,90). Los puntajes son un borrador que Sergio debe validar, sobre todo C3 (facilidad de aprendizaje).
 
@@ -50,7 +49,7 @@ El scaffold está en `backend/` (Django 5.2, `psycopg` 3 y `python-dotenv`; conf
 - **Qué se agregó (en `web/`):** `djangorestframework` con dos endpoints JSON de solo lectura: `GET /api/flota/` (camiones, última lectura de telemetría y resumen; roles admin, gerencia y despachador) y `GET /api/pedidos/` (órdenes del cliente autenticado). Usan la misma sesión del sitio, exigen sesión iniciada y rechazan escritura (405).
 - **Uso:** la pantalla `/flota/` consulta la API con **axios** (cargado por CDN, sin `node_modules`) cada 5 s, el mismo intervalo del simulador, y refresca los números sin recargar. Si la API falla, la página conserva los últimos datos.
 - **Por qué:** D-01 dejó a DRF como alternativa en empate técnico y anotó que la API "se puede exponer con Django REST Framework sin rehacer el modelo". Se hizo así: el modelo no cambia. La lógica de armado de datos quedó en `web/flota/servicios.py`, compartida por la pantalla y la API.
-- **Dos aplicaciones en el repositorio:** `backend/` (scaffold y portal de otras sesiones) y `web/` (CRM, flota, rediseño y pruebas) conviven hasta que el equipo decida cuál queda. Para correr `web/` con el simulador y Grafana: `docker compose -f docker-compose.web.yml --env-file .env up`, copiando antes `.env.web.example` a `.env`.
+- **Una sola aplicación:** `web/` (se eliminó el scaffold `backend/`). Para correrla con el simulador y Grafana: `cp .env.example .env` y `docker compose up -d --build`.
 
 
 ## IA y despliegue (22-oct-2026)

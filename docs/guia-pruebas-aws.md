@@ -6,11 +6,11 @@ Para quien reciba el traspaso (Sergio) y para ensayar la defensa. Cada paso dice
 
 | Qué | Dirección |
 |---|---|
-| Aplicación | http://34.204.121.79 |
-| Estado de salud | http://34.204.121.79/salud/ (debe responder `{"estado": "ok"}`) |
-| Tablero de BI (Grafana) | http://34.204.121.79:3000 (se ve sin cuenta; para editar: usuario `admin` y la clave de Grafana) |
+| Aplicación | http://54.82.100.161 |
+| Estado de salud | http://54.82.100.161/salud/ (debe responder `{"estado": "ok"}`) |
+| Tablero de BI (Grafana) | http://54.82.100.161:3000 (se ve sin cuenta; para editar: usuario `admin` y la clave de Grafana) |
 
-La IP es elástica: no cambia al reiniciar el laboratorio. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
+La IP es elástica: no cambia al reiniciar el laboratorio, **pero sí cambia si se destruyen y se vuelven a crear los recursos** (así pasó el 24-oct-2026: era 34.204.121.79 y ahora es 54.82.100.161). La dirección vigente siempre está en `aws/.estado/ip.txt` y la muestra `bash aws/provision.sh estado`; `aws/verificar.py` la lee de ahí solo. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
 
 ## Usuarios de prueba
 

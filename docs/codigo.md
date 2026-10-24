@@ -14,7 +14,7 @@ Esqueleto funcional, probado en local con Docker. Sigue el diseño del informe (
 
 ## Dónde está en línea
 
-Instalación en AWS (laboratorio de Eric): aplicación http://34.204.121.79, salud http://34.204.121.79/salud/ y tablero de BI http://34.204.121.79:3000. La IP es elástica; el detalle y los usuarios de prueba están en `docs/guia-pruebas-aws.md`. Si el laboratorio está apagado, las direcciones no responden.
+Instalación en AWS (laboratorio de Eric): aplicación http://54.82.100.161, salud http://54.82.100.161/salud/ y tablero de BI http://54.82.100.161:3000. La IP es elástica (no cambia al reiniciar el laboratorio, pero sí al destruir y recrear los recursos: la vigente está en `aws/.estado/ip.txt` o con `bash aws/provision.sh estado`); el detalle y los usuarios de prueba están en `docs/guia-pruebas-aws.md`. Si el laboratorio está apagado, las direcciones no responden.
 
 ## Cómo se levanta en un computador del equipo
 

@@ -452,6 +452,22 @@ class AsistenteDeIA(TestCase):
                 self.assertEqual(r.json()["origen"], "error")                                           # mensaje seguro, sin datos ni excepción
                 self.assertEqual(self.client.get("/catalogo/").status_code, 200)
 
+    def test_el_contexto_separa_la_temperatura_actual_de_una_alerta_pasada(self):
+        """Antes «dentro_del_rango» se calculaba con la alerta de toda la última hora y el asistente decía «fuera de rango» con 2,0 °C."""
+        from datetime import timedelta
+        from django.utils import timezone
+        from flota.models import Telemetria
+        from pedidos.models import Orden
+        orden = Orden.objects.filter(direccion__cliente__usuario__username="abastecimiento@hospital.test").exclude(despacho=None).first()
+        d = orden.despacho
+        type(d).objects.filter(pk=d.pk).update(salida_en=timezone.now() - timedelta(minutes=30), llegada_en=None)
+        Telemetria.objects.create(camion=d.camion, temp_camara=9.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=True)
+        Telemetria.objects.create(camion=d.camion, temp_camara=2.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=False)
+        self.client.login(username="abastecimiento@hospital.test", password=self.CLAVE)
+        self._preguntar(f"¿Cómo va mi pedido {orden.orden_id}?")
+        self.assertIn('"temperatura_actual_en_rango": true', self.prompts[-1])
+        self.assertIn('"hubo_ruptura_de_frio_en_la_ultima_hora": true', self.prompts[-1])
+
     def test_anonimo_no_ve_pedidos(self):
         self._preguntar("¿Dónde está mi pedido 1?")
         self.assertIn("no ha iniciado sesión", self.prompts[-1])

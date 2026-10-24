@@ -33,6 +33,9 @@ services:
       IA_PROVEEDORES: ${IA_PROVEEDORES:-}
     ports: ["80:8000"]
     restart: unless-stopped
+    logging:                                  # los registros (incluidos los tracebacks) se leen con `docker logs`; con rotación para no llenar el disco
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
 
   grafana:
     image: grafana/grafana:11.6.0

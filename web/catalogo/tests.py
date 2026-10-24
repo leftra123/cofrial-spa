@@ -420,7 +420,7 @@ class AsistenteDeIA(TestCase):
 
     def test_no_se_registra_el_texto_del_cliente(self):
         self.client.login(username="ana@correo.test", password=self.CLAVE)
-        with self.assertLogs("catalogo.asistente", level="INFO") as registro:
+        with self.assertLogs("cofrial.asistente", level="INFO") as registro:
             self._preguntar("precio del lomo vetado secreto-XYZ")
         self.assertNotIn("secreto-XYZ", "\n".join(registro.output))
         self.assertNotIn("Ana", "\n".join(registro.output))
@@ -451,6 +451,56 @@ class AsistenteDeIA(TestCase):
                 self.assertEqual(r.status_code, 200)
                 self.assertEqual(r.json()["origen"], "error")                                           # mensaje seguro, sin datos ni excepción
                 self.assertEqual(self.client.get("/catalogo/").status_code, 200)
+
+    def test_todo_precio_lleva_su_base_de_iva_segun_el_perfil(self):
+        """Si el modelo da el precio sin su base, el servidor lo reemplaza por su plantilla (con los montos del contexto)."""
+        import json
+        from unittest.mock import patch
+        sin_base = json.dumps({"respuesta": "La Pechuga de pavo 5 kg cuesta $34.990.", "fuera_de_alcance": False})
+        con_base = json.dumps({"respuesta": "La Pechuga de pavo 5 kg cuesta $34.990 con IVA incluido.", "fuera_de_alcance": False})
+        self.client.login(username="ana@correo.test", password=self.CLAVE)
+        with patch("crm.ia._llamar", return_value=sin_base):
+            r = self.client.post("/api/asistente/", json.dumps({"mensaje": "precio de la pechuga de pavo"}), content_type="application/json").json()
+        self.assertEqual(r["respuesta"], "Pechuga de pavo 5 kg: $34.990 con IVA incluido.")
+        with patch("crm.ia._llamar", return_value=con_base):
+            self.assertEqual(self.client.post("/api/asistente/", json.dumps({"mensaje": "precio de la pechuga de pavo"}), content_type="application/json").json()["respuesta"],
+                             "La Pechuga de pavo 5 kg cuesta $34.990 con IVA incluido.")                          # con su base se deja como la escribió el modelo
+        self.client.login(username="abastecimiento@hospital.test", password=self.CLAVE)
+        with patch("crm.ia._llamar", return_value=json.dumps({"respuesta": "Cuesta $28.990 neto.", "fuera_de_alcance": False})):
+            r = self.client.post("/api/asistente/", json.dumps({"mensaje": "precio de la pechuga de pavo"}), content_type="application/json").json()
+        self.assertEqual(r["respuesta"], "Pechuga de pavo 5 kg: $28.990 neto + IVA ($5.508) = $34.498 con IVA.")
+        self.client.logout()
+        with patch("crm.ia._llamar", return_value=sin_base):
+            r = self.client.post("/api/asistente/", json.dumps({"mensaje": "precio de la pechuga de pavo"}), content_type="application/json").json()
+        self.assertEqual(r["respuesta"], "Pechuga de pavo 5 kg: $34.990, precio público con IVA incluido.")
+
+    def test_el_estado_del_pedido_va_en_masculino(self):
+        from catalogo.asistente import _concordar, estado_de_pedido
+        from pedidos.models import EstadoOrden
+        for e in EstadoOrden.objects.all():
+            palabra = estado_de_pedido(e.nombre)
+            self.assertNotRegex(palabra, r"(ada)$", e.nombre)                                         # ni «despachada» ni «entregada»
+            self.assertEqual(_concordar(f"Tu pedido 6 está {palabra}."), f"Tu pedido 6 está {palabra}.")
+        self.assertEqual(_concordar("Tu pedido 6 está despachada."), "Tu pedido 6 está despachado.")
+        self.assertEqual(_concordar("Tu pedido N.º 3 se encuentra Entregada y salió ayer."), "Tu pedido N.º 3 se encuentra Entregado y salió ayer.")
+        self.assertEqual(_concordar("Tu orden 6 está despachada."), "Tu orden 6 está despachada.")         # «orden» sí es femenino
+
+    def test_la_respuesta_informa_el_proveedor_y_los_milisegundos(self):
+        import json
+        from unittest.mock import patch
+        from crm import ia
+        self.client.login(username="ana@correo.test", password=self.CLAVE)
+
+        def groq(prompt, plazo=None, orden=None):
+            ia._hilo.modelo = "Groq openai/gpt-oss-20b"
+            return json.dumps({"respuesta": "La Pechuga de pavo 5 kg cuesta $34.990 con IVA incluido.", "fuera_de_alcance": False})
+        with patch("crm.ia._llamar", side_effect=groq), self.assertLogs("cofrial.asistente", level="INFO") as registro:
+            r = self.client.post("/api/asistente/", json.dumps({"mensaje": "precio de la pechuga de pavo"}), content_type="application/json").json()
+        self.assertEqual(r["proveedor"], "groq")
+        self.assertIsInstance(r["ms"], int)
+        self.assertIn("proveedor=groq", "\n".join(registro.output))
+        self.assertNotIn("pechuga", "\n".join(registro.output).lower())                                    # solo el dato técnico, nunca el texto
+        self.assertEqual(self._preguntar("¿Quién ganó el mundial?").json()["proveedor"], "regla")
 
     def test_anonimo_no_ve_pedidos(self):
         self._preguntar("¿Dónde está mi pedido 1?")

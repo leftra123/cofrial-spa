@@ -4,32 +4,25 @@
 {% block contenido %}
 <div class="portada">
 <section class="portada-hero{% if portada %} con-foto{% endif %}" aria-labelledby="hero-titulo">
-  <div>
-    <h1 id="hero-titulo">Carnes y refrigerados que llegan a la temperatura correcta</h1>
-    <p class="baja">Compre con su lista de precios y siga cada pedido con la temperatura de la cámara y la posición del camión, hasta su puerta.</p>
+  {% if portada %}{% foto "img/portada.jpg" "hero-fondo" "" "(min-width: 1240px) 1192px, 100vw" 1672 470 True %}
+  {% else %}<img class="camion-deco" src="{% static 'img/marca/camion-mapa.png' %}" alt="" width="300" height="188">{% endif %}
+  <div class="hero-txt">
+    <h1 id="hero-titulo">Carnes y refrigerados, en frío hasta su puerta</h1>
+    <p class="baja">Compre con su lista de precios y siga el camión en vivo.</p>
     <form class="buscar-grande" action="/catalogo/" method="get" role="search" aria-label="Buscador de la portada">
       <input type="search" name="q" placeholder="Busque un producto" aria-label="Buscar productos">
       <button class="btn">Buscar</button>
     </form>
     <p class="seguir">¿Ya hizo un pedido? <a href="/seguimiento/">Siga su entrega</a></p>
-
-    <div class="escala" role="group" aria-label="Rangos de temperatura de conservación">
-      <p class="escala-cab"><b>Dos rangos de conservación</b>, ambos monitoreados en cada camión</p>
-      <div class="regla" aria-hidden="true"><div class="eje"></div><span class="banda cong"></span><span class="banda ref"></span></div>
-      <div class="marcas" aria-hidden="true"><span style="left:0">−25 °C</span><span style="left:24.1%">−18</span><span style="left:86.2%">0</span><span style="left:100%">+4 °C</span></div>
-      <div class="rotulos">
-        <div><b>Congelado</b><span>−25 a −18 °C</span></div>
-        <div><b>Refrigerado</b><span>0 a 4 °C</span></div>
-      </div>
-    </div>
   </div>
-
-  <div class="portada-visual">
-    {% if portada %}{% foto "img/portada.jpg" "hero-fondo" "Cámara de frío con estanterías de producto" "(min-width: 860px) 560px, 100vw" 1672 470 True %}
-    {% else %}<img class="camion-deco" src="{% static 'img/marca/camion-mapa.png' %}" alt="" width="300" height="188">{% endif %}
-    {% if hace_seg is not None %}<div class="lectura" role="status"><b><i class="pulso"></i>{{ n_camiones }} {% if n_camiones == 1 %}camión{% else %}camiones{% endif %} con sensor</b><span>Última lectura hace {{ hace_seg }} s</span></div>{% endif %}
-  </div>
+  {% if hace_seg is not None %}<div class="lectura" role="status"><b><i class="pulso"></i>{{ n_camiones }} {% if n_camiones == 1 %}camión{% else %}camiones{% endif %} con sensor</b><span>Última lectura hace {{ hace_seg }} s</span></div>{% endif %}
 </section>
+
+<div class="franja" role="group" aria-label="Rangos de temperatura de conservación">
+  <span class="franja-r"><b>Congelado</b> −25 a −18 °C</span>
+  <div class="regla" aria-hidden="true"><div class="eje"></div><span class="banda cong"></span><span class="banda ref"></span></div>
+  <span class="franja-r"><b>Refrigerado</b> 0 a 4 °C</span>
+</div>
 
 <section class="portada-perfiles" aria-label="Cómo desea comprar"><div class="interior">
   <div class="perfil">

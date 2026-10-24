@@ -7,7 +7,7 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
 | EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80) y Grafana (3000) |
-| EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 3 contenedores de camiones |
+| EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
 | RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, Single-AZ | Base `cofrial` |
 
 ## Opción rápida: script de aprovisionamiento
@@ -72,7 +72,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 - [ ] `http://IP-WEB/salud/` responde `{"estado": "ok"}`.
 - [ ] Entrar con `abastecimiento@hospital.test` (B2B) y con `ana@correo.test` (B2C): precios distintos en el catálogo, carrito y orden generada.
 - [ ] En el CRM (`vendedora@cofrial.cl`) aparece el pedido web y el embudo.
-- [ ] `docker compose -f aws/docker-compose.iot.yml logs -f` muestra una inserción cada 5 s por camión; en `/flota/` las tarjetas cambian solas.
+- [ ] `docker compose -f aws/docker-compose.iot.yml logs -f` muestra una inserción cada 5 s por camión (50 camiones, en 5 contenedores); en `/flota/` las tarjetas cambian solas.
 - [ ] `http://IP-WEB:3000` muestra el tablero con ventas por canal, alertas y mapa.
 - [ ] IA: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` responde «IA operativa». Enviar una consulta desde **Soporte** y verla clasificada en `/crm/requerimientos/`.
 - [ ] IA: `... exec web python manage.py evaluar_ia` da más de 85 % (meta del informe).

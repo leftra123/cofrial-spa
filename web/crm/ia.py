@@ -9,11 +9,19 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 import urllib.error
 import urllib.request
 
 log = logging.getLogger("crm.ia")
+
+
+_hilo = threading.local()          # modelo que respondió en ESTE hilo (ultimo_modelo es global y con varios hilos se puede cruzar)
+
+
+def modelo_del_hilo():
+    return getattr(_hilo, "modelo", None)
 
 
 class ErrorIA(Exception):
@@ -83,7 +91,7 @@ def _gemini(prompt, plazo_total):
                           {"model": modelo, "input": prompt, "generation_config": {"thinking_level": "low", "temperature": 0}},
                           {"x-goog-api-key": clave}, restante)
             texto = _texto_de_interaccion(datos)
-            ultimo_modelo = "Gemini " + modelo
+            ultimo_modelo = _hilo.modelo = "Gemini " + modelo
             return texto
         except ErrorIA as e:
             errores.append(f"{modelo}: {e}")
@@ -119,7 +127,7 @@ def _groq(prompt, plazo_total):
             texto = datos["choices"][0]["message"]["content"]
             if not texto or not texto.strip():
                 raise ErrorIA("Groq respondió sin texto")
-            ultimo_modelo = "Groq " + modelo
+            ultimo_modelo = _hilo.modelo = "Groq " + modelo
             return texto
         except (KeyError, IndexError, TypeError):
             errores.append(f"{modelo}: respuesta sin texto")

@@ -79,7 +79,7 @@ class ReglasDelCrm(TestCase):
 
     def test_rn13_alerta_de_frio_marca_las_ordenes_del_viaje(self):
         hospital = Cliente.objects.get(rut="61.973.200-4")
-        orden = Orden.objects.get(direccion__cliente=hospital)
+        orden = Orden.objects.get(direccion__cliente=hospital, numero_oc="OC-2026-0457")      # el pedido en ruta (los otros son historial entregado)
         antes = s.ordenes_de_cliente(hospital)[0].alertas_frio
         despacho = orden.despacho
         Telemetria.objects.create(camion_id=despacho.camion_id, temp_camara=9.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=True)

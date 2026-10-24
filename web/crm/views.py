@@ -10,7 +10,8 @@ from django.views.decorators.http import require_POST
 from catalogo.models import Producto
 from cofrial import entradas
 from clientes.models import Vendedor
-from pedidos import servicios as pedidos
+from pedidos import documentos, servicios as pedidos
+from pedidos.models import Pago
 
 from . import ia, servicios as s
 from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto, Requerimiento
@@ -155,8 +156,10 @@ def _cliente(request, pk):
 @con_rol(*COMERCIAL)
 def cliente_ficha(request, pk):
     c = _cliente(request, pk)
+    docs = documentos.documentos_de_cliente(c)
     return render(request, "crm/cliente.html", _contexto(
-        request, c=c, ordenes=s.ordenes_de_cliente(c), direcciones=c.direccion_set.select_related("comuna"),
+        request, c=c, ordenes=s.ordenes_de_cliente(c), documentos=docs, medios=[m for m in Pago.MEDIOS if m[0] != "devolucion"],
+        saldo_total=sum(d.saldo for d in docs if d.saldo and d.saldo > 0), direcciones=c.direccion_set.select_related("comuna"),
         interacciones=c.interaccion_set.select_related("vendedor").order_by("-registrada_en"),
         productos=Producto.objects.filter(activo=True, stock_disponible__gt=0).order_by("nombre"),
         pide_oc=c.tipo_cliente.codigo == "B2B"))
@@ -264,3 +267,49 @@ def demanda(request):
     """Productos que los clientes esperan (avisos de stock pendientes): oportunidad de venta y guía para reponer."""
     from catalogo import avisos
     return render(request, "crm/demanda.html", _contexto(request, filas=avisos.demanda_en_espera()))
+
+
+@con_rol(*COMERCIAL)
+def cobranza(request):
+    """Qué se entregó y no se facturó, qué facturas están por cobrar y cuáles vencieron (RN-22)."""
+    return render(request, "crm/cobranza.html", _contexto(request, cob=s.cobranza(request.user), medios=[m for m in Pago.MEDIOS if m[0] != "devolucion"]))
+
+
+def _volver(request, defecto="crm_cobranza"):
+    destino = request.POST.get("volver", "")
+    return redirect(destino if destino.startswith("/crm/") and not destino.startswith("//") else defecto)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def orden_facturar(request, orden_id):
+    try:
+        f = s.facturar(request.user, orden_id)
+        messages.success(request, f"Factura N.º {f.folio} emitida; vence el {f.vence_en:%d/%m/%Y}.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return _volver(request)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def documento_pago(request, documento_id):
+    try:
+        monto = int(request.POST.get("monto") or 0)
+        s.registrar_pago(request.user, documento_id, monto, request.POST.get("medio", ""), request.POST.get("referencia", ""))
+        messages.success(request, "Pago registrado.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return _volver(request)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def documento_nota_credito(request, documento_id):
+    try:
+        monto = int(request.POST.get("monto") or 0)
+        n = s.emitir_nota_credito(request.user, documento_id, monto, request.POST.get("motivo", ""))
+        messages.success(request, f"Nota de crédito N.º {n.folio} emitida por ${n.monto_clp:,}.".replace(",", "."))
+    except ERRORES as e:
+        _avisar(request, e)
+    return _volver(request)

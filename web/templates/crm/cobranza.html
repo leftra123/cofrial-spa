@@ -1,0 +1,28 @@
+{% extends "crm/base.html" %}
+{% block titulo %}Cobranza | Cofrial SpA{% endblock %}
+{% block crm %}
+<div class="pagina-cab">
+  <div><h1>Cobranza</h1><p class="sub">Qué entregamos, qué ya se facturó y qué falta por cobrar{% if rol == "vendedor" %} en tu cartera{% endif %}.</p></div>
+</div>
+<div class="rejilla">
+  <div class="kpi-card"><div class="etiqueta">Entregado sin facturar</div><div class="valor">{{ cob.monto_sin_facturar|clp }}</div><div class="detalle">{{ cob.sin_facturar|length }} orden{{ cob.sin_facturar|length|pluralize:"es" }} (IVA incluido)</div></div>
+  <div class="kpi-card acento"><div class="etiqueta">Facturas por cobrar</div><div class="valor">{{ cob.por_cobrar|clp }}</div><div class="detalle">{{ cob.facturas|length }} factura{{ cob.facturas|length|pluralize }} con saldo</div></div>
+  <div class="kpi-card{% if cob.n_vencidas %} critico{% endif %}"><div class="etiqueta">Vencido</div><div class="valor">{{ cob.vencido|clp }}</div><div class="detalle">{{ cob.n_vencidas }} factura{{ cob.n_vencidas|pluralize }} sobre su plazo</div></div>
+</div>
+
+<div class="seccion"><h2>Entregado, sin facturar</h2></div>
+<div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Cliente</th><th>OC</th><th>Plazo</th><th class="num">Monto con IVA</th><th></th></tr></thead><tbody>
+{% for o in cob.sin_facturar %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td><td><a href="/crm/clientes/{{ o.direccion.cliente_id }}/">{{ o.direccion.cliente.nombre }}</a></td><td>{{ o.numero_oc|default:"–" }}</td><td>{{ o.direccion.cliente.tipo_cliente.dias_credito }} días</td><td class="num">{{ o.monto|clp }}</td>
+  <td>{% if puede_editar %}<form class="en-linea" method="post" action="/crm/ordenes/{{ o.orden_id }}/factura/">{% csrf_token %}<button>Emitir factura</button></form>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="6" class="vacio">Todo lo entregado ya está facturado.</td></tr>{% endfor %}
+</tbody></table></div>
+
+<div class="seccion"><h2>Facturas por cobrar</h2></div>
+<div class="tabla-caja"><table><thead><tr><th>Factura</th><th>Cliente</th><th>Orden</th><th>Vence</th><th>Estado</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
+{% for f in cob.facturas %}<tr><td class="id-orden">N.º {{ f.folio }}</td><td><a href="/crm/clientes/{{ f.orden.direccion.cliente_id }}/">{{ f.orden.direccion.cliente.nombre }}</a></td><td>N.º {{ f.orden_id }}</td>
+  <td>{{ f.vence_en|date:"d/m/Y" }}{% if f.dias_atraso %} <span class="frio">({{ f.dias_atraso }} día{{ f.dias_atraso|pluralize }} de atraso)</span>{% endif %}</td>
+  <td>{% include "componentes/chip_pago.html" with estado=f.estado_pago %}</td><td class="num">{{ f.saldo|clp }}</td>
+  <td>{% if puede_editar %}{% include "crm/_acciones_documento.html" with d=f volver="/crm/cobranza/" %}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="7" class="vacio">No hay facturas con saldo pendiente.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

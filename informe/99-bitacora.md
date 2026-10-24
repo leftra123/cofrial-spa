@@ -55,3 +55,9 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Pruebas de seguridad y caídas controladas (`cofrial/tests_seguridad.py`): entradas hostiles (ids no numéricos, bytes NUL, cantidades enormes y textos más largos que la columna) responden 400 o un aviso y no 500; si la base cae, 503 con reintento.
 - Límite de intentos (decisión del equipo): 10 claves malas bloquean esa cuenta 15 minutos y no hay límite por IP, porque en la defensa toda la sala sale por una sola IP pública. Un barrido de rutas inexistentes recibe 429 recién pasados 60 «no encontrado» en 10 minutos. Todo se ajusta por variables de entorno (`aws/.env.aws.example`).
 - Gerencia ve la flota y la pantalla de despacho, pero recibe 403 al armar un despacho o ubicar una dirección (Tabla 2 de `04d-crm.md`). Las cuentas del equipo reciben un 403 claro si intentan comprar, cancelar o abrir un reclamo como cliente.
+
+## 2026-10-24 (documentos y cobranza; integrado a `main` el 25-oct)
+- Se modela y se implementa el ciclo documental de una orden: guía de despacho, boleta (B2C, pagada al comprar), factura a 30 días (B2B), pagos, notas de crédito y cobranza en el CRM (RN-17 a RN-22). El modelo pasa a 27 tablas; `modelo.py` regenera el esquema, el diagrama y el diccionario, y el esquema carga sin errores en PostgreSQL junto con los datos de prueba.
+- Al regenerar el diccionario se detectó que `oc_pendiente` y la referencia WEB-año-número solo estaban escritos a mano en `04b`; se agregaron a `modelo.py` para que no se pierdan.
+- La figura del MER se regeneró con las 27 tablas. Pendiente: rearmar el Word de entrega (`informe/exportar/`), que aún cuenta 25 tablas.
+- Al integrarlo sobre `main` (25-oct) la migración pasa a `pedidos/0006_documentos_pagos` (después de `0004_ciclo_entrega` y `0005_estados_ciclo_entrega`) y las reglas se renumeran a RN-17 a RN-22, porque RN-16 ya es la separación térmica del portal. La B2C con carrito mixto recibe una boleta por cada orden.

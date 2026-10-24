@@ -48,12 +48,13 @@ class AccesoAnonimoTests(BaseSeguridad):
     PRIVADAS_GET = ["/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
-                    "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/"]
+                    "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/",
+                    "/crm/cobranza/"]
     PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
                      "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/limpiar/",
-                     "/pedidos/1/oc/"]
+                     "/pedidos/1/oc/", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
         for url in self.PRIVADAS_GET:
@@ -89,7 +90,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                 ruta = (str(p.pattern) + str(q.pattern)) if sub is not None else str(p.pattern)
                 if ruta.startswith(("admin", "static", "api/")) or ruta in publicas:
                     continue
-                generica = ruta.replace("<int:pk>", "1").replace("<int:orden_id>", "1").replace("<int:direccion_id>", "1").replace("<int:despacho_id>", "1").strip("/")
+                generica = ruta.replace("<int:pk>", "1").replace("<int:orden_id>", "1").replace("<int:direccion_id>", "1").replace("<int:despacho_id>", "1").replace("<int:documento_id>", "1").strip("/")
                 if generica not in cubiertas:
                     pendientes.append(ruta)
         self.assertEqual(pendientes, [], "Rutas sin prueba de acceso anónimo")

@@ -1,0 +1,16 @@
+{% comment %}Registrar un pago o emitir una nota de crédito sobre un documento. Recibe `d` (con saldo), `medios` y `volver` (ruta del CRM a la que regresar).{% endcomment %}
+{% if d.saldo > 0 %}
+<details class="acc-doc"><summary>Registrar pago</summary>
+  <form class="en-linea" method="post" action="/crm/documentos/{{ d.documento_id }}/pago/">{% csrf_token %}<input type="hidden" name="volver" value="{{ volver }}">
+    <input type="number" name="monto" min="1" max="{{ d.saldo }}" value="{{ d.saldo }}" required aria-label="Monto del pago">
+    <select name="medio" aria-label="Medio de pago">{% for v, n in medios %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select>
+    <input name="referencia" maxlength="60" placeholder="N.º de transferencia" aria-label="Referencia del pago"> <button>Registrar</button></form>
+</details>
+{% endif %}
+{% if d.estado_pago != "anulado" %}
+<details class="acc-doc"><summary>Nota de crédito</summary>
+  <form class="en-linea" method="post" action="/crm/documentos/{{ d.documento_id }}/nota-credito/">{% csrf_token %}<input type="hidden" name="volver" value="{{ volver }}">
+    <input type="number" name="monto" min="1" max="{{ d.monto_clp }}" value="{{ d.monto_clp }}" required aria-label="Monto a rebajar">
+    <input name="motivo" maxlength="200" placeholder="Motivo (p. ej. cadena de frío rota)" size="30" required aria-label="Motivo de la nota de crédito"> <button class="btn-sec">Emitir</button></form>
+</details>
+{% endif %}

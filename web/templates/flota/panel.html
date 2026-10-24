@@ -90,6 +90,7 @@
       marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
     });
     var todos = [base];
+    d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });          // el encuadre incluye a los camiones, no solo la bodega y las paradas
     d.viajes.forEach(function (v, i) {
       if (!v.paradas.length) return;
       var color = colores[i % colores.length], pts = [base].concat(v.paradas.map(function (p) { return [p.lat, p.long]; }));
@@ -106,7 +107,7 @@
           "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b>, ruta sugerida: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.join("") + "</ol>");
       });
     });
-    if (todos.length > 1) m.fitBounds(todos, {padding: [40, 40]});
+    if (todos.length > 1) m.fitBounds(todos, {paddingTopLeft: [44, 56], paddingBottomRight: [44, 64], maxZoom: 15});   // margen para el camión (64x40) y su código; sin acercarse de más
     window.moverCamion = function (id, lat, lon, alerta) {
       if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.camion(alerta, id)); }
     };

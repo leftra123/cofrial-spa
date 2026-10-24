@@ -321,3 +321,31 @@ html.filtros-vivos .filtros noscript { display: none; }
 .seg-datos b.cerca { background: var(--lima); color: var(--lima-fg); padding: 0 .3em; border-radius: 3px; }
 .seg-llego { background: var(--entregado-bg); color: var(--entregado-fg); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 1.05rem; border-left: 5px solid var(--ok); }
 @media (max-width: 480px) { .seg-datos { grid-template-columns: 1fr 1fr; } .seg-datos div:last-child { grid-column: 1 / -1; } }
+/* aviso de stock */
+.aviso-stock { margin: 8px 0 0; font-size: .85rem; color: var(--texto-2); }
+.aviso-stock label { display: block; font-weight: 500; margin-bottom: 4px; }
+.aviso-stock .aviso-fila { display: flex; gap: 6px; align-items: center; }
+.aviso-stock input[type=number] { width: 76px; }
+.aviso-stock.hecho { background: var(--acento-suave); border-radius: 8px; padding: 8px 10px; }
+
+/* portada con fotografía (static/img/portada.jpg) y fotos de categoría */
+.t-hero.con-foto { background: linear-gradient(100deg, rgba(8, 28, 74, .94) 0%, rgba(8, 28, 74, .78) 42%, rgba(8, 28, 74, .25) 100%), var(--portada) center / cover no-repeat, #0B2A6F; }
+.t-hero.con-foto::before, .t-hero.con-foto .copo { display: none; }
+.t-cat .cat-foto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; margin-bottom: 10px; display: block; background: var(--fondo); }
+
+/* guía de flujos */
+.guia-estado { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+.guia-estado span { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 999px; padding: 6px 14px; font-size: .88rem; color: var(--texto-2); }
+.guia-estado b { color: var(--acento); font-size: 1.05rem; margin-right: 2px; }
+.guia-flujos { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+.flujo { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; box-shadow: var(--sombra); }
+.flujo header { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.flujo header h2 { font-size: 1.1rem; }
+.flujo header p { margin: 2px 0 0; color: var(--texto-3); font-size: .88rem; }
+.flujo-n { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--acento); color: #fff; display: grid; place-items: center; font-weight: 700; }
+.pasos-guia { margin: 0; padding: 0; list-style: none; counter-reset: paso; }
+.pasos-guia li { position: relative; padding: 0 0 14px 36px; counter-increment: paso; color: var(--texto-2); }
+.pasos-guia li::before { content: counter(paso); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--acento-suave); color: var(--acento); font-weight: 700; font-size: .8rem; display: grid; place-items: center; }
+.pasos-guia li:not(:last-child)::after { content: ""; position: absolute; left: 11.5px; top: 26px; bottom: 2px; width: 1px; background: var(--borde-fuerte); }
+.pasos-guia b { color: var(--texto); }
+.nota-guia { margin: 4px 0 0; padding: 10px 12px; background: var(--acento-suave); border-radius: 10px; font-size: .85rem; color: var(--texto-2); }

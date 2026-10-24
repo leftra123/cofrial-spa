@@ -20,11 +20,11 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 |---|---|---|
 | `abastecimiento@hospital.test` | Cliente institucional (B2B), Hospital Regional de Temuco | Lista de precios institucional, orden de compra obligatoria, pedidos |
 | `ana@correo.test` | Cliente público (B2C), Ana Pérez | Precio público, Soporte con IA |
-| `vendedora@cofrial.test` | Vendedora (cartera: Hospital) | CRM, embudo, ficha de cliente; no ve la cartera ajena |
-| `vendedor2@cofrial.test` | Vendedor (cartera: Supermercados del Sur) | Permisos entre vendedores |
-| `gerente@cofrial.test` | Gerencia | Lee todo, no modifica |
-| `despachador@cofrial.test` | Despachador | Solo alertas de frío y flota |
-| `admin` | Administrador | Todo, incluida la flota y `/admin/` |
+| `vendedora@cofrial.cl` | Vendedora (cartera: Hospital) | CRM, embudo, ficha de cliente; no ve la cartera ajena |
+| `vendedor2@cofrial.cl` | Vendedor (cartera: Supermercados del Sur) | Permisos entre vendedores |
+| `gerencia@cofrial.cl` | Gerencia | Lee todo, no modifica |
+| `despacho@cofrial.cl` | Despachador | Solo alertas de frío y flota |
+| `admin@cofrial.cl` | Administrador | Todo, incluida la flota y `/admin/` |
 
 ## Paso 0: encender y verificar (siempre, antes de probar a mano)
 
@@ -35,7 +35,7 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 
 Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la dirección (`python3 aws/verificar.py http://IP`) y la clave de demostración (variable `DEMO_PASSWORD`).
 
-**Supermercados del Sur** es un cliente del CRM **sin cuenta de acceso** (solo tiene correo de contacto): se ve desde el CRM con `vendedor2@` o `admin`; su pedido va en el camión CAM-02 y es el cliente del requerimiento de demostración.
+**Supermercados del Sur** es un cliente del CRM **sin cuenta de acceso** (solo tiene correo de contacto): se ve desde el CRM con `vendedor2@cofrial.cl` o `admin@cofrial.cl`; su pedido va en el camión CAM-02 y es el cliente del requerimiento de demostración.
 
 ## Pruebas, en este orden
 
@@ -52,17 +52,17 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 8. En "Mis pedidos" deben aparecer las órdenes del cliente con sus estados y las pestañas con contador. Cancelar una orden recién creada y comprobar que el stock se repone (el catálogo vuelve a mostrarlo).
 
 **C. CRM (9 a 13)** *(D2)*
-9. Entrar como `vendedora@cofrial.test`. En `/crm/clientes/` abrir el Hospital: **debe verse la orden web recién creada** en su ficha.
+9. Entrar como `vendedora@cofrial.cl`. En `/crm/clientes/` abrir el Hospital: **debe verse la orden web recién creada** en su ficha.
 10. Crear un prospecto nuevo (`/crm/prospectos/nuevo/`). Debe quedar en la primera etapa del embudo.
 11. Intentar pasarlo a "Contactado" sin registrar una interacción: **debe rechazarlo**. Registrar una interacción y repetir: ahora sí.
-12. Entrar como `vendedor2@cofrial.test`: no debe ver la ficha del Hospital ni el prospecto de la otra vendedora (404).
-13. Entrar como `gerente@cofrial.test`: ve el panel con ventas por canal, pero **no puede** crear prospectos (403 con la pantalla de "sin acceso").
+12. Entrar como `vendedor2@cofrial.cl`: no debe ver la ficha del Hospital ni el prospecto de la otra vendedora (404).
+13. Entrar como `gerencia@cofrial.cl`: ve el panel con ventas por canal, pero **no puede** crear prospectos (403 con la pantalla de "sin acceso").
 
 **D. Cadena de frío e IoT (14 a 17)** *(D3, D4)*
-14. Entrar como `admin` y abrir `/flota/`: tres camiones con temperatura, combustible y última lectura.
+14. Entrar como `admin@cofrial.cl` y abrir `/flota/`: tres camiones con temperatura, combustible y última lectura.
 15. Dejar la pantalla abierta 15 segundos: **la hora de "Última lectura" y la temperatura deben cambiar solas** (llegan lecturas cada 5 segundos). Aparece "En vivo · cada 5 s".
-16. Si algún camión muestra **"Ruptura de frío"**, abrir `/crm/alertas/` como `despachador@cofrial.test`: debe listar los pedidos afectados. (La ruptura es aleatoria y poco frecuente; si no ocurre, no es un fallo.)
-17. Como `admin`, abrir `/api/flota/`: debe devolver JSON con los camiones y la última lectura (campos `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`).
+16. Si algún camión muestra **"Ruptura de frío"**, abrir `/crm/alertas/` como `despacho@cofrial.cl`: debe listar los pedidos afectados. (La ruptura es aleatoria y poco frecuente; si no ocurre, no es un fallo.)
+17. Como `admin@cofrial.cl`, abrir `/api/flota/`: debe devolver JSON con los camiones y la última lectura (campos `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`).
 
 **E. Tablero de BI (18 a 19)** *(D4)*
 18. Abrir Grafana (`:3000`). **Esperar hasta 15 segundos la primera vez.** Deben verse: ventas del período, pedidos, alertas, ventas por canal, temperatura por camión y el mapa de la flota.
@@ -70,10 +70,10 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 
 **F. IA (20 a 22)** *(D5)*
 20. Entrar como `ana@correo.test`, ir a **Soporte** y enviar: asunto "Pedido llegó caliente", texto "La carga llegó con la temperatura muy alta y rechazamos las cajas". Tarda unos 6 segundos. Debe decir que la derivó a **«Reclamo por temperatura»**.
-21. Entrar como `vendedora@cofrial.test` y abrir `/crm/requerimientos/`: el requerimiento aparece **clasificado**, con la categoría y el distintivo "IA 0,9x" o "IA 1,00".
+21. Entrar como `vendedora@cofrial.cl` y abrir `/crm/requerimientos/`: el requerimiento aparece **clasificado**, con la categoría y el distintivo "IA 0,9x" o "IA 1,00".
 22. **No tocar** el requerimiento "Mi pedido llegó tibio" (cliente Supermercados del Sur): está **sin clasificar a propósito**, para clasificarlo en vivo con **"Clasificar con IA"** durante la defensa. Si ya se clasificó por error, enviar uno parecido desde Soporte con otro cliente.
 
-22b. **Panel de IA (para entender y mostrar la IA).** Como `vendedora@cofrial.test`, abrir la pestaña **IA** del CRM (`/crm/ia/`). Debe verse: el flujo en 4 pasos; el estado con **Gemini** y **Groq** como «Clave configurada» (las claves nunca se muestran); y el resumen de lo que clasificó la IA, las personas y lo que quedó dudoso. En **Probar la IA ahora**, pulsar «Probar con la IA»: aparecen **dos filas** (Gemini y Groq) con la categoría, la confianza, el modelo y los segundos que tardó cada uno. Probar también con un mensaje ambiguo (por ejemplo «Hola, necesito hablar con alguien») y ver cómo baja la confianza. «Ver exactamente lo que se le envía a la IA» muestra el texto enviado. La prueba **no crea** requerimientos. En `/admin/`, Requerimientos: elegir uno y usar la acción «Clasificar con IA los requerimientos seleccionados»; la columna «Clasificado por» dice IA, Manual, IA dudó o Nadie aún.
+22b. **Panel de IA (para entender y mostrar la IA).** Como `vendedora@cofrial.cl`, abrir la pestaña **IA** del CRM (`/crm/ia/`). Debe verse: el flujo en 4 pasos; el estado con **Gemini** y **Groq** como «Clave configurada» (las claves nunca se muestran); y el resumen de lo que clasificó la IA, las personas y lo que quedó dudoso. En **Probar la IA ahora**, pulsar «Probar con la IA»: aparecen **dos filas** (Gemini y Groq) con la categoría, la confianza, el modelo y los segundos que tardó cada uno. Probar también con un mensaje ambiguo (por ejemplo «Hola, necesito hablar con alguien») y ver cómo baja la confianza. «Ver exactamente lo que se le envía a la IA» muestra el texto enviado. La prueba **no crea** requerimientos. En `/admin/`, Requerimientos: elegir uno y usar la acción «Clasificar con IA los requerimientos seleccionados»; la columna «Clasificado por» dice IA, Manual, IA dudó o Nadie aún.
 
 **G. Permisos y errores (23 a 24)**
 23. Como cliente (`ana@`), abrir `/crm/` y `/flota/`: pantalla de "No puedes ver esta sección" con el menú del sitio (403), no una página en blanco. El menú del cliente no muestra CRM, Flota ni Administración.

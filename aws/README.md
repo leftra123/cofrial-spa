@@ -71,7 +71,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 
 - [ ] `http://IP-WEB/salud/` responde `{"estado": "ok"}`.
 - [ ] Entrar con `abastecimiento@hospital.test` (B2B) y con `ana@correo.test` (B2C): precios distintos en el catálogo, carrito y orden generada.
-- [ ] En el CRM (`vendedora@cofrial.test`) aparece el pedido web y el embudo.
+- [ ] En el CRM (`vendedora@cofrial.cl`) aparece el pedido web y el embudo.
 - [ ] `docker compose -f aws/docker-compose.iot.yml logs -f` muestra una inserción cada 5 s por camión; en `/flota/` las tarjetas cambian solas.
 - [ ] `http://IP-WEB:3000` muestra el tablero con ventas por canal, alertas y mapa.
 - [ ] IA: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` responde «IA operativa». Enviar una consulta desde **Soporte** y verla clasificada en `/crm/requerimientos/`.

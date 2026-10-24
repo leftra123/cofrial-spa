@@ -1,0 +1,64 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Guía de flujos | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab"><div><h1>Cómo funciona Cofrial, paso a paso</h1><p class="sub">Cuatro flujos para recorrer el sistema completo. Cada paso tiene su enlace y se indica con qué perfil hacerlo.</p></div></div>
+{% endblock %}
+{% block contenido %}
+<div class="guia-estado" role="status" aria-label="Estado actual del sistema">
+  <span><b>{{ estado.por_despachar }}</b> pedido{{ estado.por_despachar|pluralize }} esperando camión</span>
+  <span><b>{{ estado.camiones_libres }}</b> camión{{ estado.camiones_libres|pluralize:",es" }} libre{{ estado.camiones_libres|pluralize }}</span>
+  <span><b>{{ estado.en_ruta }}</b> viaje{{ estado.en_ruta|pluralize }} en ruta</span>
+  <span><b>{{ estado.sin_stock }}</b> producto{{ estado.sin_stock|pluralize }} sin stock</span>
+  <span><b>{{ estado.avisos }}</b> aviso{{ estado.avisos|pluralize }} de stock en espera</span>
+</div>
+
+<div class="guia-flujos">
+
+  <section class="flujo" id="compra">
+    <header><span class="flujo-n">1</span><div><h2>Un cliente compra y sigue su pedido</h2><p>Perfil: <b>cliente</b> (institucional o particular)</p></div></header>
+    <ol class="pasos-guia">
+      <li><b>Ingresa</b> con su cuenta. Un cliente particular nuevo puede <a href="/cuenta/registro/">crear la suya</a> en un minuto.</li>
+      <li>En el <a href="/catalogo/">catálogo</a> filtra o busca y pulsa <b>Agregar</b>. El precio cambia según su perfil.</li>
+      <li>En el <a href="/carrito/">carrito</a> elige la dirección (la institución indica su orden de compra) y pulsa <b>Generar orden</b>.</li>
+      <li>El pedido queda <b>Recibida</b>. Pasa al flujo 2 para que salga en un camión.</li>
+      <li>En <a href="/seguimiento/">Seguir mi pedido</a> ve el camión en el mapa, la ruta que le falta y la temperatura de la cámara. Si algo sale mal, <b>Reportar un problema</b>.</li>
+    </ol>
+  </section>
+
+  <section class="flujo" id="despacho">
+    <header><span class="flujo-n">2</span><div><h2>Despacho arma un viaje con la mejor ruta</h2><p>Perfil: <b>despacho</b> (o gerencia o administrador)</p></div></header>
+    <ol class="pasos-guia">
+      <li>Ingresa y abre la <a href="/flota/">flota</a>: ve los camiones, su temperatura y el mapa.</li>
+      <li>Pulsa <a href="/flota/despachar/"><b>Armar despacho</b></a>. Aparecen los pedidos sin camión y los camiones libres.</li>
+      <li>Elige el <b>camión</b> y marca <b>dos o más pedidos</b>: el mapa traza la ruta más corta y numera el orden de entrega.</li>
+      <li>Pulsa <b>Despachar y salir ahora</b>. Los pedidos pasan a <b>Despachada</b>.</li>
+      <li>De vuelta en la flota se ve el viaje con su ruta sugerida. Cada cliente ve su camión en su pedido (flujo 1, paso 5).</li>
+    </ol>
+    <p class="nota-guia">Regla de la cadena de frío: no se mezclan refrigerado y congelado en un mismo camión.</p>
+  </section>
+
+  <section class="flujo" id="ventas">
+    <header><span class="flujo-n">3</span><div><h2>Ventas atiende un reclamo con inteligencia artificial</h2><p>Perfil: <b>vendedor</b> (o gerencia o administrador)</p></div></header>
+    <ol class="pasos-guia">
+      <li>Un cliente envía una consulta en <a href="/soporte/">Soporte</a> (o desde un pedido con «Reportar un problema»).</li>
+      <li>En el CRM, <a href="/crm/requerimientos/">Requerimientos</a> muestra quién la clasificó: la IA, una persona o nadie todavía.</li>
+      <li>En un requerimiento sin clasificar, usa <b>Clasificar con IA</b>: la categoría y la confianza aparecen en segundos.</li>
+      <li>La pestaña <a href="/crm/ia/">IA</a> permite probar un mensaje en vivo y ver lo que recibe cada proveedor (Gemini y Groq).</li>
+      <li>Para vender más, el <a href="/crm/embudo/">embudo</a> sigue a los prospectos y <a href="/crm/demanda/">Demanda en espera</a> muestra qué productos esperan los clientes.</li>
+    </ol>
+  </section>
+
+  <section class="flujo" id="stock">
+    <header><span class="flujo-n">4</span><div><h2>Un producto sin stock y el aviso al cliente</h2><p>Perfiles: <b>cliente</b> y <b>vendedor</b></p></div></header>
+    <ol class="pasos-guia">
+      <li>El cliente abre un producto sin stock (por ejemplo, los camarones) en el <a href="/catalogo/">catálogo</a>.</li>
+      <li>Escribe cuántas unidades necesita y pulsa <b>Avisarme</b>.</li>
+      <li>El equipo ve esa demanda en el CRM, en <a href="/crm/demanda/">Demanda en espera</a>, y repone el stock.</li>
+      <li>Cuando hay stock suficiente, el cliente ve un contador en <a href="/avisos/">Avisos</a> y compra desde ahí.</li>
+    </ol>
+  </section>
+</div>
+
+<div class="seccion"><h2>Tablero de negocio en vivo</h2></div>
+<div class="tarjeta-ui"><p style="margin:0">Grafana cruza las ventas por canal con las alertas de ruptura de frío y se actualiza solo cada pocos segundos. Se abre en el puerto 3000 de este mismo servidor, sin iniciar sesión.</p></div>
+{% endblock %}

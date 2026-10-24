@@ -13,7 +13,7 @@ INSERT INTO precio_producto (lista_precio_id, producto_id, precio_clp) VALUES
   (2, 1, 45990), (2, 2, 34990), (2, 3, 25990);
 INSERT INTO tipo_cliente (codigo, nombre, lista_precio_id) VALUES ('B2B', 'Institucional', 1), ('B2C', 'Público general', 2);
 INSERT INTO usuario (email, password_hash, rol) VALUES
-  ('vendedora@cofrial.test', 'hash-de-prueba', 'vendedor'),
+  ('vendedora@cofrial.cl', 'hash-de-prueba', 'vendedor'),
   ('abastecimiento@hospital.test', 'hash-de-prueba', 'cliente'),
   ('ana@correo.test', 'hash-de-prueba', 'cliente');
 INSERT INTO vendedor (usuario_id, nombre, telefono) VALUES (1, 'María Paz Soto', '+56912345678');

@@ -1,0 +1,29 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Mis avisos | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab"><div><h1>Mis avisos de stock</h1><p class="sub">Productos que esperas. Te mostramos aquí cuando haya la cantidad que pediste.</p></div>
+  <div class="acciones"><a class="btn btn-sec" href="/catalogo/">Ver catálogo</a></div></div>
+{% endblock %}
+{% block contenido %}
+<div class="tabla-caja">
+<table>
+  <thead><tr><th>Producto</th><th class="num">Pediste al menos</th><th class="num">Hay ahora</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+  {% for a in avisos %}
+    <tr>
+      <td><a href="{% url 'producto' a.producto.producto_id %}"><b>{{ a.producto.nombre }}</b></a><br><span class="frio">{{ a.producto.sku }} · desde el {{ a.creado_en|date:"d/m/Y" }}</span></td>
+      <td class="num">{{ a.cantidad_minima }}</td>
+      <td class="num">{{ a.producto.stock_disponible }}</td>
+      <td>{% if a.disponible %}<span class="chip entregado">Ya disponible</span>{% else %}<span class="chip pendiente">Esperando stock</span>{% endif %}</td>
+      <td class="num">
+        {% if a.disponible %}<a class="btn" href="{% url 'producto' a.producto.producto_id %}">Comprar ahora</a>{% endif %}
+        <form class="en-linea" method="post" action="/avisos/{{ a.aviso_id }}/quitar/">{% csrf_token %}<button class="btn-sec">Quitar</button></form>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="vacio">No tienes avisos. Cuando un producto esté sin stock, podrás pedir que te avisemos desde el catálogo.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

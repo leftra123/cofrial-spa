@@ -37,9 +37,9 @@ class CuentasTests(TestCase):
 
     def test_cliente_b2b_con_direccion_y_vendedor(self):
         self.crear("compras@hotel.test", rol="cliente-b2b", nombre="Hotel Villarrica", rut="76.111.222-3", direccion="Av. Pedro de Valdivia 100",
-                   vendedor="vendedora@cofrial.test")
+                   vendedor="vendedora@cofrial.cl")
         c = Cliente.objects.get(rut="76.111.222-3")
-        self.assertEqual((c.tipo_cliente.codigo, c.vendedor.usuario.username, c.direccion_set.count()), ("B2B", "vendedora@cofrial.test", 1))
+        self.assertEqual((c.tipo_cliente.codigo, c.vendedor.usuario.username, c.direccion_set.count()), ("B2B", "vendedora@cofrial.cl", 1))
         self.assertIsNone(crm.rol(c.usuario))                       # un cliente no entra al CRM
         self.assertEqual(pedidos.cliente_de(c.usuario), c)           # pero sí compra en el portal
         self.assertTrue(self.entra("compras@hotel.test"))
@@ -51,7 +51,7 @@ class CuentasTests(TestCase):
     def test_errores_claros_y_sin_efectos_a_medias(self):
         usuarios = get_user_model().objects.count()
         with self.assertRaisesMessage(CommandError, "ya existe"):
-            self.crear("admin", rol="admin")
+            self.crear("admin@cofrial.cl", rol="admin")
         with self.assertRaisesMessage(CommandError, "necesita --nombre, --rut y --direccion"):
             self.crear("x@t.test", rol="cliente-b2c", nombre="X")
         with self.assertRaisesMessage(CommandError, "comuna"):
@@ -67,7 +67,7 @@ class CuentasTests(TestCase):
     def test_cambiar_clave_demo_permite_entrar_con_la_nueva_y_no_con_la_vieja(self):
         with patch.dict("os.environ", {"DEMO_PASSWORD": CLAVE_NUEVA}):
             call_command("cambiar_clave_demo")
-        for u in ("admin", "ana@correo.test", "vendedora@cofrial.test", "despachador@cofrial.test"):
+        for u in ("admin@cofrial.cl", "ana@correo.test", "vendedora@cofrial.cl", "despacho@cofrial.cl"):
             self.assertTrue(self.entra(u), u)
         self.assertFalse(self.entra("ana@correo.test", clave="demo-cofrial-2026"))
 
@@ -86,8 +86,8 @@ class CuentasTests(TestCase):
                 call_command("cambiar_clave_demo")
             self.assertTrue(self.entra("ana@correo.test", clave="demo-cofrial-2026"))      # no cambió nada al rechazarla
             call_command("cambiar_clave_demo", "--permitir-clave-debil")
-        for u in ("admin", "ana@correo.test", "abastecimiento@hospital.test", "vendedora@cofrial.test", "vendedor2@cofrial.test",
-                  "gerente@cofrial.test", "despachador@cofrial.test"):
+        for u in ("admin@cofrial.cl", "ana@correo.test", "abastecimiento@hospital.test", "vendedora@cofrial.cl", "vendedor2@cofrial.cl",
+                  "gerencia@cofrial.cl", "despacho@cofrial.cl"):
             self.assertTrue(self.entra(u, clave="123456"), u)
 
 
@@ -134,7 +134,7 @@ class RegistroB2CTests(TestCase):
         from django.contrib.auth import get_user_model
         U = get_user_model()
         U.objects.filter(username="ana@correo.test").first().set_password("x-clave-larga-77") or None
-        for usuario, destino in [("ana@correo.test", "/catalogo/"), ("vendedora@cofrial.test", "/crm/")]:
+        for usuario, destino in [("ana@correo.test", "/catalogo/"), ("vendedora@cofrial.cl", "/crm/")]:
             u = U.objects.get(username=usuario)
             u.set_password("x-clave-larga-77")
             u.save()

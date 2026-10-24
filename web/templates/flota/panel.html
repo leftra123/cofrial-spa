@@ -4,7 +4,7 @@
 {% block cabecera %}
 <div class="pagina-cab">
   <div><h1>Flota</h1><p class="sub">Estado de cada camión según su última lectura de telemetría.</p></div>
-  <div class="acciones"><span class="muted" id="en-vivo" hidden>En vivo · cada 5 s</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a></div>
+  <div class="acciones"><span class="muted" id="en-vivo" hidden>En vivo · cada 5 s</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a><a class="btn" href="/flota/despachar/">Armar despacho</a></div>
 </div>
 {% endblock %}
 {% block contenido %}
@@ -18,7 +18,7 @@
 <div class="seccion"><h2>Mapa y rutas sugeridas</h2></div>
 <div class="tarjeta-ui">
   <div id="mapa-flota" class="mapa" role="img" aria-label="Mapa de la flota y rutas de entrega"></div>
-  <p class="frio" style="margin:8px 0 0">B = frigorífico central · C = camión (rojo si tiene ruptura de frío) · números = orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
+  <p class="frio" style="margin:8px 0 0">Bodega = frigorífico central · camión (rojo y latiendo si tiene ruptura de frío) · números = orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
   <div id="rutas-sugeridas"></div>
 </div>
 
@@ -82,9 +82,9 @@
   (function () {
     var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
     var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
-    L.marker(base, {icon: CofrialMapa.pin("B", "#111827")}).addTo(m).bindPopup(d.base.nombre);
+    L.marker(base, {icon: CofrialMapa.base()}).addTo(m).bindPopup(d.base.nombre);
     d.camiones.forEach(function (c) {
-      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.pin("C", c.alerta ? "#DC2626" : "#1D4ED8")}).addTo(m).bindPopup(c.id + " · " + c.patente);
+      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id)}).addTo(m).bindPopup(c.id + " · " + c.patente);
     });
     var todos = [base];
     d.viajes.forEach(function (v, i) {
@@ -105,7 +105,7 @@
     });
     if (todos.length > 1) m.fitBounds(todos, {padding: [40, 40]});
     window.moverCamion = function (id, lat, lon, alerta) {
-      if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.pin("C", alerta ? "#DC2626" : "#1D4ED8")); }
+      if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.camion(alerta, id)); }
     };
   })();
 </script>

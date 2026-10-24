@@ -2,8 +2,8 @@
 {% load static %}
 {% block titulo %}Cofrial SpA | Carnes y refrigerados{% endblock %}
 {% block contenido %}
-<section class="t-hero" aria-labelledby="hero-titulo">
-  <img class="camion-deco" src="{% static 'img/cofrial-camion.png' %}" alt="" width="300" height="178">
+<section class="t-hero{% if portada %} con-foto{% endif %}" aria-labelledby="hero-titulo"{% if portada %} style="--portada: url('{% static 'img/portada.jpg' %}')"{% endif %}>
+  {% if not portada %}<img class="camion-deco" src="{% static 'img/cofrial-camion.png' %}" alt="" width="300" height="178">{% endif %}
   <span class="etiqueta-hero">Cadena de frío de punta a punta</span>
   <h1 id="hero-titulo">Carnes y refrigerados con la <span class="marca-texto">temperatura bajo control</span></h1>
   <p>Del frigorífico a su puerta, sin romper la cadena de frío. Compre con su lista de precios y siga cada pedido con la temperatura de la cámara y la posición del camión.</p>
@@ -47,6 +47,6 @@
 
 <div class="seccion"><h2>Explore por categoría</h2><a class="mas" href="/catalogo/">Ver todo el catálogo →</a></div>
 <div class="t-cats">
-  {% for c in categorias %}<a class="t-cat" href="/catalogo/?categoria={{ c.pk }}">{% include "tienda/ilustracion.html" with categoria=c.nombre %}{{ c.nombre }}</a>{% endfor %}
+  {% for c in categorias %}<a class="t-cat" href="/catalogo/?categoria={{ c.pk }}">{% if c.imagen %}<img class="cat-foto" src="{% static c.imagen %}" alt="" loading="lazy">{% else %}{% include "tienda/ilustracion.html" with categoria=c.nombre %}{% endif %}{{ c.nombre }}</a>{% endfor %}
 </div>
 {% endblock %}

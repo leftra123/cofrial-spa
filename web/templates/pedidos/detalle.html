@@ -126,9 +126,9 @@
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
           mapa = CofrialMapa.crear("mapa", cam, 14);
-          marcador = L.marker(cam, {icon: CofrialMapa.pin("C", "#143A7B")}).addTo(mapa).bindPopup("Camión " + s.camion_id);
-          if (dest) L.marker(dest, {icon: CofrialMapa.pin("D", "#16A34A")}).addTo(mapa).bindPopup(s.destino.direccion);
-        } else { marcador.setLatLng(cam); }
+          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id)}).addTo(mapa).bindPopup("Camión " + s.camion_id);
+          if (dest) L.marker(dest, {icon: CofrialMapa.destino()}).addTo(mapa).bindPopup(s.destino.direccion);
+        } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id)); }
         if (dest && Date.now() - ultimaRuta > 20000) {       // la ruta se recalcula cada 20 s para no abusar del servicio gratuito
           ultimaRuta = Date.now();
           CofrialMapa.ruta([cam, dest], false).then(function (r) {

@@ -235,3 +235,10 @@ def ia_panel(request):
 @con_rol(*TODOS)
 def alertas(request):
     return render(request, "crm/alertas.html", _contexto(request, ordenes=s.ordenes_afectadas(request.user)))
+
+
+@con_rol(*TODOS)
+def demanda(request):
+    """Productos que los clientes esperan (avisos de stock pendientes): oportunidad de venta y guía para reponer."""
+    from catalogo import avisos
+    return render(request, "crm/demanda.html", _contexto(request, filas=avisos.demanda_en_espera()))

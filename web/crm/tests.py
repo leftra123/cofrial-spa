@@ -16,10 +16,10 @@ class ReglasDelCrm(TestCase):
         call_command("cargar_demo", verbosity=0)
         from django.contrib.auth import get_user_model
         U = get_user_model()
-        cls.maria = U.objects.get(username="vendedora@cofrial.test")
-        cls.pedro = U.objects.get(username="vendedor2@cofrial.test")
-        cls.gerente = U.objects.get(username="gerente@cofrial.test")
-        cls.despachador = U.objects.get(username="despachador@cofrial.test")
+        cls.maria = U.objects.get(username="vendedora@cofrial.cl")
+        cls.pedro = U.objects.get(username="vendedor2@cofrial.cl")
+        cls.gerente = U.objects.get(username="gerencia@cofrial.cl")
+        cls.despachador = U.objects.get(username="despacho@cofrial.cl")
         cls.ana_user = U.objects.get(username="ana@correo.test")
 
     def etapa(self, nombre):
@@ -119,27 +119,27 @@ class AccesoWeb(TestCase):
         self.assertEqual(self.client.get("/crm/").status_code, 403)
 
     def test_vendedor_no_ve_la_ficha_de_otro_vendedor(self):
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         sur = Cliente.objects.get(rut="76.543.210-K")
         self.assertEqual(self.client.get(f"/crm/clientes/{sur.pk}/").status_code, 404)
         hospital = Cliente.objects.get(rut="61.973.200-4")
         self.assertContains(self.client.get(f"/crm/clientes/{hospital.pk}/"), "Hospital Regional")
 
     def test_despachador_solo_ve_alertas(self):
-        self.entrar("despachador@cofrial.test")
+        self.entrar("despacho@cofrial.cl")
         self.assertEqual(self.client.get("/crm/clientes/").status_code, 403)
         self.assertEqual(self.client.get("/crm/alertas/").status_code, 200)
         self.assertRedirects(self.client.get("/crm/"), "/crm/alertas/")
 
     def test_flujo_del_vendedor_en_el_navegador(self):
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         r = self.client.post("/crm/prospectos/nuevo/", {"nombre_contacto": "Sofía Paz", "empresa": "Residencial Sur", "email": "sofia@res.test", "origen": "referido", "monto": "2500000"}, follow=True)
         self.assertContains(r, "Residencial Sur")
         self.assertContains(self.client.get("/crm/embudo/"), "Residencial Sur")
         self.assertContains(self.client.get("/crm/"), "oportunidades abiertas")
 
     def test_gerencia_ve_todo_pero_no_modifica(self):
-        self.entrar("gerente@cofrial.test")
+        self.entrar("gerencia@cofrial.cl")
         self.assertContains(self.client.get("/crm/embudo/"), "Casino Escolar")
         p = Prospecto.objects.get(nombre_contacto="Jorge Rivas")
         self.client.post(f"/crm/prospectos/{p.pk}/interaccion/", {"tipo": "nota", "detalle": "intento"})
@@ -234,24 +234,24 @@ class ClasificacionIA(TestCase):
 
     def test_soporte_exige_cuenta_de_cliente(self):
         self.assertEqual(self.client.get("/soporte/").status_code, 302)
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         self.assertEqual(self.client.get("/soporte/").status_code, 302)
 
     def test_vendedor_reintenta_con_ia_pero_gerencia_no(self):
         from unittest.mock import patch
         r = self._req()
         with patch("crm.ia._llamar", return_value='{"categoria": "Reclamo por temperatura", "confianza": 0.9}'):
-            self.entrar("gerente@cofrial.test")
+            self.entrar("gerencia@cofrial.cl")
             self.client.post(f"/crm/requerimientos/{r.pk}/ia/")
             r.refresh_from_db(); self.assertEqual(r.estado, "sin_clasificar")
-            self.entrar("vendedora@cofrial.test")
+            self.entrar("vendedora@cofrial.cl")
             self.client.post(f"/crm/requerimientos/{r.pk}/ia/")
             r.refresh_from_db(); self.assertEqual(r.estado, "clasificado")
 
     def test_el_aviso_distingue_ia_caida_de_confianza_baja(self):
         from unittest.mock import patch
         from crm import ia
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         with patch("crm.ia._llamar", side_effect=ia.ErrorIA("sin red")):
             r = self.client.post(f"/crm/requerimientos/{self._req().pk}/ia/", follow=True)
         self.assertContains(r, "no está disponible")
@@ -426,8 +426,8 @@ class PanelIA(TestCase):
         self.assertTrue(self.client.login(username=usuario, password=CLAVE))
 
     def test_acceso_por_rol(self):
-        for usuario, esperado in (("vendedora@cofrial.test", 200), ("gerente@cofrial.test", 200), ("admin", 200),
-                                  ("despachador@cofrial.test", 403), ("ana@correo.test", 403)):
+        for usuario, esperado in (("vendedora@cofrial.cl", 200), ("gerencia@cofrial.cl", 200), ("admin@cofrial.cl", 200),
+                                  ("despacho@cofrial.cl", 403), ("ana@correo.test", 403)):
             self.entrar(usuario)
             self.assertEqual(self.client.get("/crm/ia/").status_code, esperado, usuario)
         self.client.logout()
@@ -435,7 +435,7 @@ class PanelIA(TestCase):
 
     def test_muestra_el_estado_pero_nunca_las_claves(self):
         from unittest.mock import patch
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         with patch.dict("os.environ", {"GEMINI_API_KEY": "SECRETA-GEMINI-123", "GROQ_API_KEY": "SECRETA-GROQ-456"}):
             r = self.client.get("/crm/ia/")
         self.assertContains(r, "Clave configurada")
@@ -449,7 +449,7 @@ class PanelIA(TestCase):
         from unittest.mock import patch
         from crm import ia
         from crm.models import Requerimiento
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         antes = Requerimiento.objects.count()
         with patch("crm.ia._gemini", return_value='{"categoria": "Facturación", "confianza": 0.91}'), \
                 patch("crm.ia._groq", side_effect=ia.ErrorIA("HTTP 503")):
@@ -464,7 +464,7 @@ class PanelIA(TestCase):
         self.assertEqual(Requerimiento.objects.count(), antes)
 
     def test_mensaje_vacio_avisa(self):
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         self.assertContains(self.client.post("/crm/ia/", {"asunto": "x", "descripcion": "  "}), "Escribe un mensaje")
 
     def test_el_resumen_distingue_ia_manual_y_duda(self):
@@ -475,7 +475,7 @@ class PanelIA(TestCase):
         Requerimiento.objects.create(asunto="b", descripcion="d", categoria_requerimiento=cat, estado="clasificado")
         Requerimiento.objects.create(asunto="c", descripcion="d", confianza_ia=0.4)
         Requerimiento.objects.create(asunto="d", descripcion="d")
-        self.entrar("vendedora@cofrial.test")
+        self.entrar("vendedora@cofrial.cl")
         resumen = self.client.get("/crm/ia/").context["resumen"]
         self.assertEqual(resumen, {"total": 4, "por_ia": 1, "ia_dudo": 1, "manual": 1, "sin_clasificar": 2})
         lista = self.client.get("/crm/requerimientos/")
@@ -486,7 +486,7 @@ class PanelIA(TestCase):
         from unittest.mock import patch
         from crm.models import Requerimiento
         r = Requerimiento.objects.create(asunto="Pedido tibio", descripcion="La carga llegó tibia")
-        self.entrar("admin")
+        self.entrar("admin@cofrial.cl")
         with patch("crm.ia._llamar", return_value='{"categoria": "Reclamo por temperatura", "confianza": 0.95}'):
             resp = self.client.post("/admin/crm/requerimiento/", {"action": "clasificar_con_ia", "_selected_action": [r.pk]}, follow=True)
         self.assertContains(resp, "1 clasificado")

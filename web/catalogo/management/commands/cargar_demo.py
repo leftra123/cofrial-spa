@@ -71,6 +71,12 @@ class Command(BaseCommand):
     def handle(self, *args, **opciones):
         clave = os.environ.get("DEMO_PASSWORD", "demo-cofrial-2026")
         Usuario = get_user_model()
+        # cuentas del personal con correos simples @cofrial.cl; si existen con el nombre anterior se renombran (conservan sus datos)
+        for viejo, nuevo in (("admin", "admin@cofrial.cl"), ("vendedora@cofrial.test", "vendedora@cofrial.cl"),
+                             ("vendedor2@cofrial.test", "vendedor2@cofrial.cl"), ("gerente@cofrial.test", "gerencia@cofrial.cl"),
+                             ("despachador@cofrial.test", "despacho@cofrial.cl")):
+            if not Usuario.objects.filter(username=nuevo).exists():
+                Usuario.objects.filter(username=viejo).update(username=nuevo, email=nuevo)
 
         region, _ = Region.objects.get_or_create(nombre="La Araucanía")
         temuco, _ = Comuna.objects.get_or_create(region=region, nombre="Temuco")
@@ -112,7 +118,7 @@ class Command(BaseCommand):
             Camion.objects.get_or_create(camion_id=camion_id, defaults=dict(patente=patente, capacidad_kg=capacidad, rango_temperatura=rangos[rango]))
 
         grupo_vendedores, _ = Group.objects.get_or_create(name="vendedores")
-        u_vend, nuevo = Usuario.objects.get_or_create(username="vendedora@cofrial.test", defaults=dict(email="vendedora@cofrial.test", is_staff=True))
+        u_vend, nuevo = Usuario.objects.get_or_create(username="vendedora@cofrial.cl", defaults=dict(email="vendedora@cofrial.cl", is_staff=True))
         if nuevo:
             u_vend.set_password(clave)
             u_vend.save()
@@ -134,13 +140,13 @@ class Command(BaseCommand):
         # segunda vendedora, gerencia y despachador: sirven para mostrar los permisos por rol (RN-09)
         grupo_gerencia, _ = Group.objects.get_or_create(name="gerencia")
         grupo_despacho, _ = Group.objects.get_or_create(name="despachadores")
-        for username, grupo in (("gerente@cofrial.test", grupo_gerencia), ("despachador@cofrial.test", grupo_despacho)):
+        for username, grupo in (("gerencia@cofrial.cl", grupo_gerencia), ("despacho@cofrial.cl", grupo_despacho)):
             u, nuevo = Usuario.objects.get_or_create(username=username, defaults=dict(email=username, is_staff=True))
             if nuevo:
                 u.set_password(clave)
                 u.save()
             u.groups.add(grupo)
-        u2, nuevo = Usuario.objects.get_or_create(username="vendedor2@cofrial.test", defaults=dict(email="vendedor2@cofrial.test", is_staff=True))
+        u2, nuevo = Usuario.objects.get_or_create(username="vendedor2@cofrial.cl", defaults=dict(email="vendedor2@cofrial.cl", is_staff=True))
         if nuevo:
             u2.set_password(clave)
             u2.save()
@@ -189,6 +195,6 @@ class Command(BaseCommand):
             orden.save(update_fields=["despacho"])
             pedidos.avanzar(orden)
 
-        if not Usuario.objects.filter(username="admin").exists():
-            Usuario.objects.create_superuser("admin", "admin@cofrial.test", clave)
+        if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
+            Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave)
         self.stdout.write(self.style.SUCCESS("Datos de demostración listos (usuarios de prueba: contraseña en DEMO_PASSWORD)."))

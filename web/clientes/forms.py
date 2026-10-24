@@ -51,5 +51,5 @@ class RegistroB2CForm(forms.Form):
         c = Cliente.objects.create(usuario=u, tipo_cliente=TipoCliente.objects.get(codigo="B2C"), rut=d["rut"],
                                    nombre=d["nombre"], email=d["email"], telefono=d["telefono"])
         dir_ = Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)
-        geo.ubicar(dir_)
+        self.ubicada = geo.ubicar(dir_)
         return u

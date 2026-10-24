@@ -176,61 +176,42 @@ erDiagram
 ```
 <!-- FIN:diagrama -->
 
-PRODUCTO ──┬─→ CATEGORIA (N:1)
-           ├─→ LISTA_PRECIO (1:N)
-           └─→ ORDEN_ITEM (1:N)
-
-CATEGORIA ←── PRODUCTO (N:1)
+</details>
 
 ## Telemetría IoT: nombres exactos exigidos por la pauta
 
-PRECIO_PRODUCTO ──→ PRODUCTO (N:1)
+**Tabla 1**
+*Correspondencia entre la pauta y la tabla `telemetria`*
 
-ORDEN ──┬─→ CLIENTE (N:1)
-        ├─→ ORDEN_ITEM (1:N)
-        ├─→ ESTADO_ORDEN (N:1)
-        └─→ CAMION (N:1) [asignado cuando sale a ruta]
+| Campo exigido | Tipo exigido | Columna | Tipo en PostgreSQL | Control |
+|---|---|---|---|---|
+| `camion_id` | String | `camion_id` | varchar(20), FK a `camion` | No se acepta un camión inexistente |
+| `temp_camara` | Float | `temp_camara` | double precision | Obligatorio |
+| `lat` | Coordenada | `lat` | double precision | Entre -90 y 90 |
+| `long` | Coordenada | `"long"` | double precision | Entre -180 y 180; va entre comillas porque LONG es palabra reservada |
+| `combustible_pct` | Integer | `combustible_pct` | integer | Entre 0 y 100 |
+| `alerta_ruptura_frio` | Boolean | `alerta_ruptura_frio` | boolean | Verdadero si `temp_camara` sale del rango del camión |
 
-ORDEN_ITEM ──┬─→ PRODUCTO (N:1)
-             ├─→ LISTA_PRECIO (N:1)
-             └─→ ORDEN (N:1)
+*Nota.* Elaboración propia. Se agregan `telemetria_id` (clave) y `registrado_en` (momento de la lectura), necesarios para las series de tiempo. Una restricción impide dos lecturas del mismo camión en el mismo instante.
 
-ESTADO_ORDEN ←── ORDEN (N:1)
+## Normalización
 
-VENDEDOR ──┬─→ OPORTUNIDAD (1:N)
-           └─→ INTERACCION (1:N)
+La normalización sigue el modelo relacional propuesto por Codd (1970): cada tabla se revisa contra la primera, segunda y tercera forma normal, y luego contra la forma de Boyce-Codd.
 
-OPORTUNIDAD ──┬─→ CLIENTE (N:1)
-              ├─→ VENDEDOR (N:1)
-              ├─→ ETAPA_PIPELINE (N:1)
-              └─→ INTERACCION (1:N)
+### Resultado por forma normal
 
-INTERACCION ──┬─→ OPORTUNIDAD (N:1)
-              └─→ VENDEDOR (N:1)
+- **Primera forma normal (1FN).** Todos los campos son atómicos y no hay grupos repetitivos: los productos de un carrito o de una orden están en tablas de líneas (`carrito_item`, `orden_item`), no en columnas como `producto1`, `producto2`. Cada tabla tiene clave primaria.
+- **Segunda forma normal (2FN).** Solo tres tablas tienen clave compuesta: `precio_producto`, `carrito_item` y `orden_item`. En ellas, cada atributo depende de la clave completa: el precio depende de la lista y del producto a la vez, la cantidad del carrito depende del carrito y del producto. Las demás tablas tienen clave de una columna, por lo que no pueden tener dependencias parciales.
+- **Tercera forma normal (3FN).** No hay atributos que dependan de otro atributo que no sea clave. Las decisiones que lo logran:
+  - La región no se guarda en la dirección: está en `comuna`, y la dirección apunta a la comuna.
+  - La lista de precios no se guarda en el cliente: está en `tipo_cliente`.
+  - El rango de temperatura no se guarda en el producto ni en el camión: está en `rango_temperatura`, al que apuntan `categoria` y `camion`.
+  - **El cliente de una orden no se guarda en la orden:** se obtiene por su dirección de entrega, porque cada dirección pertenece a un cliente. Guardarlo habría creado una dependencia transitiva. La vista `v_orden` lo expone sin repetirlo.
+  - El canal (B2B o B2C) y el total de la orden tampoco se guardan: se calculan con `v_orden` y `v_orden_total`.
+  - El estado de un despacho no se guarda: se deduce de `salida_en` y `llegada_en`.
+- **Forma normal de Boyce-Codd (BCNF).** En todas las tablas, cada determinante es clave candidata (por ejemplo, `camion_id` y `patente` en `camion`; `cliente_id` y `rut` en `cliente`), por lo que el modelo cumple además esta forma, más estricta que la 3FN.
 
-CAMION ──┬─→ TELEMETRIA (1:N)
-         └─→ ORDEN (1:N) [entregas]
-
-TELEMETRIA ──→ CAMION (N:1)
-            └─→ alerta_ruptura_frio: boolean (derivada: temp_camara > rango)
-```
-
-### Diagrama ER profesional (14 entidades)
-
-**[GENERA AQUÍ CON DRAW.IO + TU SKILL DE INFORME]**
-
-Entidades a dibujar (relaciones en el ASCII arriba):
-- CLIENTE (central) ↔ DIRECCION, ORDEN, OPORTUNIDAD
-- PRODUCTO ↔ CATEGORIA, LISTA_PRECIO, ORDEN_ITEM
-- ORDEN ↔ CLIENTE, ORDEN_ITEM, ESTADO_ORDEN, CAMION (NEW)
-- VENDEDOR ↔ OPORTUNIDAD, INTERACCION
-- OPORTUNIDAD ↔ CLIENTE, VENDEDOR, ETAPA_PIPELINE, INTERACCION
-- CAMION ↔ TELEMETRIA, ORDEN
-- Todas las claves foráneas (FK) explícitas
-
-Exportar a: `informe/img/modelo-er-3fn.png`
-
----
+### Verificación tabla por tabla
 
 **Tabla 2**
 *Dependencias funcionales y resultado de la verificación en 3FN*
@@ -389,15 +370,14 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
 |---|---|---|---|---|---|
-| orden_id | INT | SÍ | — | No | Identificador único |
-| cliente_id | INT | — | SÍ (CLIENTE) | No | Quién compra |
-| camion_id | VARCHAR(20) | — | SÍ (CAMION) | Sí | Qué vehículo entrega (asignado cuando sale) |
-| estado_orden_id | INT | — | SÍ (ESTADO_ORDEN) | No | Estado actual (Nueva, Preparando, En tránsito, Entregada) |
-| fecha_creacion | TIMESTAMP | — | — | No | Cuándo se generó la orden |
-| fecha_entrega_requerida | DATE | — | — | No | Cuándo lo necesita el cliente |
-| tiempo_salida | TIMESTAMP | — | — | Sí | Cuándo salió del almacén (NULL si pendiente) |
-| fecha_entrega_real | DATE | — | — | Sí | Cuándo se entregó (NULL si pendiente) |
-| notas | TEXT | — | — | Sí | Observaciones especiales |
+| `producto_id` | integer | No | PK | Identificador del producto. | 101 |
+| `sku` | varchar(30) | No | UK | Código interno único del producto. | VAC-LOM-5K |
+| `nombre` | varchar(120) | No | — | Nombre comercial. | Lomo vetado de vacuno 5 kg |
+| `descripcion` | text | Sí | — | Descripción para el catálogo. | Corte envasado al vacío |
+| `categoria_id` | integer | No | FK → categoria | Categoría del producto. | 1 |
+| `unidad_medida` | varchar(10) | No | — | Unidad en que se vende. | caja |
+| `stock_disponible` | integer | No | — | Unidades disponibles en bodega. Se descuenta al generar una orden. | 120 |
+| `activo` | boolean | No | — | Si se muestra en el catálogo. | true |
 
 *Restricciones adicionales:* `unidad_medida IN ('kg','un','caja')`; `stock_disponible >= 0`.
 
@@ -450,34 +430,14 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `estado` | varchar(12) | No | — | Estado del carrito. | abierto |
 | `creado_en` | timestamptz | No | — | Fecha y hora de creación. | 2026-10-12 10:05:00-03 |
 
-### CATEGORIA
-| Campo | Tipo | PK | FK | Nulo | Descripción |
-|---|---|---|---|---|---|
-| categoria_id | INT | SÍ | — | No | Identificador único |
-| nombre | VARCHAR(100) | — | — | No | Ej. "Carnes rojas", "Aves", "Productos procesados" |
-| descripcion | TEXT | — | — | Sí | Detalles de la categoría |
+*Restricciones adicionales:* `estado IN ('abierto','convertido','abandonado')`.
 
-### DIRECCION
-| Campo | Tipo | PK | FK | Nulo | Descripción |
-|---|---|---|---|---|---|
-| direccion_id | INT | SÍ | — | No | Identificador único |
-| cliente_id | INT | — | SÍ (CLIENTE) | No | A quién pertenece |
-| calle | VARCHAR(150) | — | — | No | Dirección completa o domicilio |
-| numero | VARCHAR(10) | — | — | Sí | Número de calle |
-| ciudad | VARCHAR(100) | — | — | No | Localidad (Temuco, Villarrica, etc.) |
-| region | VARCHAR(100) | — | — | No | Región administrativa |
-| codigo_postal | VARCHAR(10) | — | — | Sí | Código postal |
-| es_principal | BOOLEAN | — | — | No | Dirección de entrega por defecto (default: false) |
+*Nota.* Elaboración propia.
 
-### ESTADO_ORDEN
-| Campo | Tipo | PK | FK | Nulo | Descripción |
-|---|---|---|---|---|---|
-| estado_orden_id | INT | SÍ | — | No | Identificador único |
-| nombre | VARCHAR(50) | — | — | No | "Nueva", "Preparando", "En tránsito", "Entregada", "Cancelada" |
-| secuencia | INT | — | — | No | Orden en el flujo (1, 2, 3, ...) |
+**Tabla D10**  
+*`carrito_item`: Productos y cantidades dentro de un carrito. El precio no se guarda: se calcula con la lista del cliente.*
 
-### CAMION
-| Campo | Tipo | PK | FK | Nulo | Descripción |
+| Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
 |---|---|---|---|---|---|
 | `carrito_id` | integer | No | PK, FK → carrito | Carrito. | 55 |
 | `producto_id` | integer | No | PK, FK → producto | Producto. | 101 |

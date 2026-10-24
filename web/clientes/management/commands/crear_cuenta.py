@@ -2,7 +2,7 @@
 
     python manage.py crear_cuenta jefa@cofrial.test --rol vendedor --nombre "Camila Soto"
     python manage.py crear_cuenta compras@hotel.test --rol cliente-b2b --nombre "Hotel Villarrica" --rut 76.111.222-3 \
-        --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.test
+        --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.cl
     python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana Díaz" --rut 11.222.333-4 --direccion "Calle 1 123"
 
 Roles: cliente-b2b, cliente-b2c, vendedor, gerencia, despachador, admin. Para automatizar (por ejemplo en pruebas) la clave

@@ -82,7 +82,7 @@ class Sesion:
     def entrar(self, usuario):
         t = self.token("/cuenta/entrar/")
         st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": CLAVE, "next": "/"})
-        return st == 200 and "Cerrar sesión" in html
+        return st == 200 and "/cuenta/salir/" in html          # el formulario de salida solo aparece con sesión iniciada
 
     def json(self, ruta):
         st, cuerpo, _ = self.pedir(ruta)
@@ -127,8 +127,8 @@ def consulta_grafana(sql):
 
 
 USUARIOS = {"hospital": "abastecimiento@hospital.test", "ana": "ana@correo.test",
-            "vendedora": "vendedora@cofrial.test", "vendedor2": "vendedor2@cofrial.test", "gerente": "gerente@cofrial.test",
-            "despachador": "despachador@cofrial.test", "admin": "admin"}
+            "vendedora": "vendedora@cofrial.cl", "vendedor2": "vendedor2@cofrial.cl", "gerente": "gerencia@cofrial.cl",
+            "despachador": "despacho@cofrial.cl", "admin": "admin@cofrial.cl"}
 
 
 def main():

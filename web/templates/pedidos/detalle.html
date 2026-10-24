@@ -39,7 +39,7 @@
 <div class="seg-grid" id="seg" data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     <h2>Dónde va su pedido</h2>
-    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} <span id="seg-hace" class="solo-lector">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span> · se actualiza solo</p>
+    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} <span id="seg-hace" class="solo-lector">{% if seg.ultima and seg.ultima.hace_seg > 300 %}sin señal reciente{% elif seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span> · se actualiza solo</p>
     <div class="seg-llego" id="seg-llego" hidden><b>Tu pedido llegó</b> <span id="seg-llego-hora"></span></div>
     <div class="seg-datos">
       <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
@@ -51,7 +51,7 @@
       <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
     </div>
     <p class="ruta-info" id="ruta-info" aria-live="polite"></p>
-    <ul class="leyenda"><li><span class="pt" style="background:#143A7B" aria-hidden="true">C</span>Camión</li><li><span class="pt" style="background:#16A34A" aria-hidden="true">D</span>Su dirección</li><li><span class="pt" style="background:#143A7B;border-radius:2px;height:4px;width:22px" aria-hidden="true"></span>Ruta</li></ul>
+    <ul class="leyenda" id="leyenda-pedido" aria-label="Leyenda del mapa"></ul>
   </div>
   <div class="tarjeta-ui">
     <h2>Temperatura de la cámara</h2>
@@ -92,6 +92,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
+<script src="{% static 'js/leyenda.js' %}"></script>
+<script>CofrialLeyenda("leyenda-pedido", ["camion", "destino", "ruta"]);</script>
 <script>
 (function () {
   var raiz = document.getElementById("seg"), min = parseFloat(raiz.dataset.min), max = parseFloat(raiz.dataset.max);
@@ -110,7 +112,7 @@
   var ultimaSenal = null;
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
   function quitarSk(id, texto) { var e = document.getElementById(id); e.textContent = texto; e.classList.remove("skeleton"); }
-  function haceTxt(seg) { return seg < 60 ? "hace " + seg + " s" : "hace " + Math.floor(seg / 60) + " min"; }
+  function haceTxt(s) { var t = s < 60 ? s + " s" : s < 3600 ? Math.floor(s / 60) + " min" : s < 86400 ? Math.floor(s / 3600) + " h" : Math.floor(s / 86400) + " d"; return (s > 300 ? "Sin señal reciente · " : "") + "hace " + t; }
   function ponerFacts(s, estado) {
     quitarSk("seg-salio", s.salida_en ? hora(s.salida_en) : "Aún no sale");
     var llego = !!s.llegada_en || estado === "Entregada";
@@ -128,7 +130,7 @@
     if (u) {
       var tt = document.getElementById("seg-temp"); tt.textContent = u.temp_camara.toFixed(1).replace(".", ","); tt.classList.remove("skeleton");
       document.getElementById("mapa-vacio").hidden = true;
-      document.getElementById("seg-hace").textContent = "última posición hace " + u.hace_seg + " s";
+      document.getElementById("seg-hace").textContent = u.hace_seg > 300 ? "sin señal reciente" : "última posición hace " + u.hace_seg + " s";
       var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "alerta" : "entregado");
       if (window.L) {
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;

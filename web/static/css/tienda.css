@@ -349,3 +349,15 @@ html.filtros-vivos .filtros noscript { display: none; }
 .pasos-guia li:not(:last-child)::after { content: ""; position: absolute; left: 11.5px; top: 26px; bottom: 2px; width: 1px; background: var(--borde-fuerte); }
 .pasos-guia b { color: var(--texto); }
 .nota-guia { margin: 4px 0 0; padding: 10px 12px; background: var(--acento-suave); border-radius: 10px; font-size: .85rem; color: var(--texto-2); }
+
+/* carrito en la fila de arriba (solo móvil) y encabezado compacto */
+.tb-carro-movil { display: none; position: relative; }
+.tb-carro-movil:hover { text-decoration: none; }
+@media (max-width: 860px) {
+  .tb { position: static; }                          /* en móvil el encabezado de 3 filas no se queda pegado: ocupaba el 20 % de la pantalla */
+  .tb-carro-movil { display: inline-flex; align-items: center; justify-content: center; }
+  .tb-nav .tb-carro { display: none; }
+  .filtros { top: 8px; max-height: calc(100vh - 24px); }
+  .prod-badges .chip { font-size: .62rem; padding: 2px 7px; }
+}
+@media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }

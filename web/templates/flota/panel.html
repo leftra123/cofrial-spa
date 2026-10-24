@@ -18,7 +18,8 @@
 <div class="seccion"><h2>Mapa y rutas sugeridas</h2></div>
 <div class="tarjeta-ui">
   <div id="mapa-flota" class="mapa" role="img" aria-label="Mapa de la flota y rutas de entrega"></div>
-  <p class="frio" style="margin:8px 0 0">Bodega = frigorífico central · camión (rojo y latiendo si tiene ruptura de frío) · números = orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
+  <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
+  <p class="frio" style="margin:8px 0 0">Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
   <div id="rutas-sugeridas"></div>
 </div>
 
@@ -78,6 +79,8 @@
 {{ mapa|json_script:"datos-mapa" }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
+<script src="{% static 'js/leyenda.js' %}"></script>
+<script>CofrialLeyenda("leyenda-flota", ["camion", "alerta", "base", "destino"]);</script>
 <script>
   (function () {
     var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];

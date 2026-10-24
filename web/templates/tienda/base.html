@@ -39,6 +39,7 @@
           <ul id="campana-lista"><li class="campana-vacio">Sin avisos por ahora. Te avisamos cuando tu pedido salga, esté cerca y llegue.</li></ul>
         </div>
       </div>{% endif %}
+      {% if menu.cliente %}<a class="tema-btn tb-carro-movil" href="/carrito/" aria-label="Carrito{% if carrito_n %}, {{ carrito_n }} producto{{ carrito_n|pluralize }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>{% if carrito_n %}<span class="campana-n">{{ carrito_n }}</span>{% endif %}</a>{% endif %}
       {% include "componentes/tema_btn.html" %}
       {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }}"><span>{{ cliente_tienda.nombre }}</span><b class="perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}">{{ cliente_tienda.tipo_cliente.codigo }}</b></span>{% endif %}
       {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{% if menu.crm %}/crm/{% elif menu.flota %}/flota/{% else %}/admin/{% endif %}">Panel interno</a>{% endif %}

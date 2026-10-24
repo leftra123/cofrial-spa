@@ -55,7 +55,7 @@
 (function () {
   var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
   var m = CofrialMapa.crear("mapa-despacho", base, 13), capa = L.layerGroup().addTo(m), version = 0;
-  L.marker(base, {icon: CofrialMapa.pin("B", "#111827")}).addTo(m).bindPopup(d.base.nombre);
+  L.marker(base, {icon: CofrialMapa.base()}).addTo(m).bindPopup(d.base.nombre);
   var resumen = document.getElementById("resumen-ruta"), lista = document.getElementById("lista-ruta");
   function marcados() { return Array.prototype.filter.call(document.querySelectorAll("input[name=ordenes]"), function (c) { return c.checked; }); }
   function recalcular() {

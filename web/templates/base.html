@@ -25,6 +25,7 @@
     <a class="marca" href="/"><span class="marca-logo">{% include "componentes/ico_camion.html" %}</span><span>Cofrial SpA<small>Cadena de frío</small></span></a>
     <nav class="nav" aria-label="Principal">
       <a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio</a>
+      <a href="/guia/" {% if "/guia/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>Guía de flujos</a>
       <div class="nav-etiqueta">Tienda</div>
       <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Catálogo</a>
       {% if menu.cliente %}<a href="/carrito/" {% if "/carrito/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito</a>{% endif %}

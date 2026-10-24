@@ -247,3 +247,22 @@ class PortadaYCategoriasTests(TestCase):
         self.assertContains(r, "static/img/portada.jpg")
         for slug in ("carnicos-refrigerados", "aves", "congelados", "lacteos-y-embutidos"):
             self.assertContains(r, f"/static/productos/categorias/{slug}.jpg")
+
+
+class GuiaYMapaTests(TestCase):
+    def test_guia_publica_con_los_cuatro_flujos_y_el_estado(self):
+        call_command("cargar_demo", verbosity=0)
+        r = self.client.get("/guia/")
+        self.assertEqual(r.status_code, 200)
+        for texto in ("Un cliente compra y sigue su pedido", "Despacho arma un viaje", "Ventas atiende un reclamo", "Un producto sin stock",
+                      "esperando camión", "/flota/despachar/", "/crm/demanda/"):
+            self.assertContains(r, texto)
+        self.assertNotContains(r, "123456")                     # la guía no publica claves
+
+    def test_el_mapa_dibuja_camion_destino_y_bodega(self):
+        import re
+        from pathlib import Path
+        js = (Path(__file__).resolve().parent.parent / "static" / "js" / "mapa.js").read_text()
+        for funcion in ("camion", "destino", "base"):
+            self.assertIn(f"function {funcion}(", js)
+        self.assertRegex(js, r"return \{[^}]*camion: camion[^}]*destino: destino[^}]*base: base")

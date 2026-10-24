@@ -17,6 +17,7 @@ def salud(request):
 
 urlpatterns = [
     path("", vistas.inicio, name="inicio"),
+    path("guia/", vistas.guia, name="guia"),
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),
     path("flota/", include("flota.urls")),

@@ -429,3 +429,12 @@ td.celda-acciones select { max-width: 100%; }
 /* mapa de flota más alto para ver las rutas completas */
 #mapa-flota { height: 420px; }
 @media (max-width: 860px) { #mapa-flota { height: 320px; } }
+
+/* camión, destino y bodega del mapa */
+.pin-camion, .pin-destino, .pin-base { background: none; border: 0; }
+.pin-camion svg { filter: drop-shadow(0 2px 3px rgba(15, 23, 42, .35)); display: block; margin: 0 auto; }
+.pin-camion .pin-etq { display: block; width: max-content; margin: 1px auto 0; padding: 0 7px; border-radius: 999px; background: #fff; color: #0F172A; font-size: .66rem; line-height: 16px; box-shadow: 0 1px 3px rgba(15, 23, 42, .3); }
+.pin-camion.alerta svg { animation: pulso-camion 1.4s ease-in-out infinite; }
+@keyframes pulso-camion { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .pin-camion.alerta svg { animation: none; } }
+.pin-destino svg, .pin-base svg { filter: drop-shadow(0 2px 3px rgba(15, 23, 42, .35)); display: block; }

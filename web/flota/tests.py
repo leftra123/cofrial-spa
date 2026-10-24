@@ -287,3 +287,18 @@ class ModoDemostracion(TestCase):
         Telemetria.objects.filter(forzada=True).update(registrado_en=timezone.now() - timedelta(seconds=60))
         Telemetria.objects.create(camion_id="CAM-01", temp_camara=2.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=False)
         self.assertFalse(next(x for x in estado_flota()[0] if x["camion"].pk == "CAM-01")["alerta"])
+
+
+class AccesibilidadMapaTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_mapas_son_regiones_y_los_marcadores_tienen_nombre(self):
+        self.client.login(username="despacho@cofrial.cl", password="demo-cofrial-2026")
+        for ruta, contenedor in (("/flota/", 'id="mapa-flota"'), ("/flota/despachar/", 'id="mapa-despacho"')):
+            html = self.client.get(ruta).content.decode()
+            etiqueta = html[html.index(contenedor):].split(">")[0]
+            self.assertIn('role="region"', etiqueta)               # un contenedor con controles dentro no puede ser role="img"
+            self.assertNotIn('role="img"', etiqueta)
+            self.assertIn("title:", html)                          # los marcadores se crean con título (nombre accesible)

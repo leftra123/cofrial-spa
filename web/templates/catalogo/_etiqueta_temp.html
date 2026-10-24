@@ -1,0 +1,5 @@
+{# Etiqueta de conservación: ícono + rango. Variable: r (RangoTemperatura). El nombre completo va en el título y para lectores de pantalla. #}
+<span class="etq-temp {% if r.nombre == "Congelado" %}congelado{% else %}refrigerado{% endif %}" title="{{ r.nombre }}: {{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C">
+  {% if r.nombre == "Congelado" %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9M9 4.5l3 2.2 3-2.2M9 19.5l3-2.2 3 2.2"/></svg>{% else %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14.5V5a2 2 0 014 0v9.5a4 4 0 11-4 0z"/><path d="M12 9v7"/></svg>{% endif %}
+  <span class="etq-rango">{{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C</span><span class="solo-lector"> ({{ r.nombre }})</span>
+</span>

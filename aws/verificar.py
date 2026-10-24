@@ -128,7 +128,8 @@ def consulta_grafana(sql):
 
 USUARIOS = {"hospital": "abastecimiento@hospital.test", "ana": "ana@correo.test",
             "vendedora": "vendedora@cofrial.cl", "vendedor2": "vendedor2@cofrial.cl", "gerente": "gerencia@cofrial.cl",
-            "despachador": "despacho@cofrial.cl", "admin": "admin@cofrial.cl"}
+            "despachador": "despacho@cofrial.cl", "admin": "admin@cofrial.cl",
+            "felipe": "felipe@cofrial.cl", "sergio": "sergio@cofrial.cl", "eric": "eric@cofrial.cl"}
 
 
 def main():

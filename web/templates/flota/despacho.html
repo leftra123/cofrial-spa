@@ -39,7 +39,7 @@
   <div>
     <div class="seccion"><h2>Ruta sugerida</h2></div>
     <div class="tarjeta-ui">
-      <div id="mapa-despacho" class="mapa" role="img" aria-label="Vista previa de la ruta del despacho"></div>
+      <div id="mapa-despacho" class="mapa" role="region" aria-label="Vista previa de la ruta del despacho"></div>
       <p class="ruta-info" id="resumen-ruta">Marca pedidos para ver la ruta.</p>
       <ol class="ruta-lista" id="lista-ruta"></ol>
     </div>
@@ -55,7 +55,7 @@
 (function () {
   var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
   var m = CofrialMapa.crear("mapa-despacho", base, 13), capa = L.layerGroup().addTo(m), version = 0;
-  L.marker(base, {icon: CofrialMapa.base()}).addTo(m).bindPopup(d.base.nombre);
+  L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
   var resumen = document.getElementById("resumen-ruta"), lista = document.getElementById("lista-ruta");
   function marcados() { return Array.prototype.filter.call(document.querySelectorAll("input[name=ordenes]"), function (c) { return c.checked; }); }
   function recalcular() {
@@ -71,7 +71,7 @@
       var orden = r.orden || pts.map(function (_, k) { return k; }), filas = [];
       paradas.forEach(function (x, k) {
         var n = orden[k + 1];
-        L.marker([x.p.lat, x.p.long], {icon: CofrialMapa.pin(n, "#1D4ED8")}).addTo(capa).bindPopup(x.p.cliente + "<br>" + x.p.direccion);
+        L.marker([x.p.lat, x.p.long], {icon: CofrialMapa.pin(n, "#1D4ED8"), title: "Parada " + n + ": " + x.p.cliente, alt: "Parada " + n}).addTo(capa).bindPopup(x.p.cliente + "<br>" + x.p.direccion);
         filas[n - 1] = "<li><b>" + x.p.cliente + "</b> · " + x.p.direccion + " <span class='frio'>(orden N.º " + x.id + ")</span></li>";
       });
       lista.innerHTML = filas.join("");

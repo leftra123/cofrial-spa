@@ -2,6 +2,11 @@
    Solo presentación: ningún selector depende de la lógica de negocio. Colores, radios y sombras viven en variables;
    el modo oscuro (según el sistema o el botón de la barra) solo redefine las variables. */
 
+/* Inter variable autoalojada (subconjunto latino, WOFF2). La "Inter Fallback" iguala las métricas de Arial para que el cambio de fuente no mueva el diseño. */
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("../fonts/inter-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter Fallback"; src: local("Arial"); size-adjust: 107.4%; ascent-override: 90.2%; descent-override: 22.5%; line-gap-override: 0%; }
+
 :root {
   --fondo: #F4F6FA;
   --fondo-2: #EAEEF5;
@@ -69,7 +74,7 @@
 html { color-scheme: light; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--fondo); color: var(--texto);
-  font: 15px/1.55 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.55 Inter, "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
 a { color: var(--acento); text-decoration: none; }
@@ -136,6 +141,8 @@ img, svg { max-width: 100%; }
 .rejilla.modulos { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .rejilla.vehiculos { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .rejilla > .tarjeta-ui { margin-top: 0; }
+.rejilla > * { min-width: 0; }
+select { max-width: 100%; }
 
 /* KPI */
 .kpi-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); padding: 18px 20px 16px; position: relative; overflow: hidden; }
@@ -246,7 +253,7 @@ td select { padding: 6px 8px; max-width: 220px; }
 @keyframes entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
 /* ---------- pestañas de sección (CRM) ---------- */
-.subnav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 26px; padding: 5px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; width: fit-content; max-width: 100%; box-shadow: var(--sombra); }
+.subnav { position: relative; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 26px; padding: 5px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; width: fit-content; max-width: 100%; box-shadow: var(--sombra); }
 .subnav a { padding: 7px 14px; border-radius: 8px; color: var(--texto-2); font-weight: 500; font-size: .92rem; transition: background .12s; }
 .subnav a:hover { background: var(--fondo); text-decoration: none; color: var(--texto); }
 .subnav a.activo { background: var(--acento); color: var(--acento-fg); }

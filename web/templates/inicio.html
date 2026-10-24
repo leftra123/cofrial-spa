@@ -1,8 +1,9 @@
 {% extends "tienda/base.html" %}
-{% load static %}
+{% load static imagenes %}
 {% block titulo %}Cofrial SpA | Carnes y refrigerados{% endblock %}
 {% block contenido %}
-<section class="t-hero{% if portada %} con-foto{% endif %}" aria-labelledby="hero-titulo"{% if portada %} style="--portada: url('{% static 'img/portada.jpg' %}')"{% endif %}>
+<section class="t-hero{% if portada %} con-foto{% endif %}" aria-labelledby="hero-titulo">
+  {% if portada %}{% foto "img/portada.jpg" "hero-fondo" "" "(min-width: 900px) 1200px, 100vw" 1672 470 True %}{% endif %}
   {% if not portada %}<img class="camion-deco" src="{% static 'img/cofrial-camion.png' %}" alt="" width="300" height="178">{% endif %}
   <span class="etiqueta-hero">Cadena de frío de punta a punta</span>
   <h1 id="hero-titulo">Carnes y refrigerados con la <span class="marca-texto">temperatura bajo control</span></h1>
@@ -47,6 +48,6 @@
 
 <div class="seccion"><h2>Explore por categoría</h2><a class="mas" href="/catalogo/">Ver todo el catálogo →</a></div>
 <div class="t-cats">
-  {% for c in categorias %}<a class="t-cat" href="/catalogo/?categoria={{ c.pk }}">{% if c.imagen %}<img class="cat-foto" src="{% static c.imagen %}" alt="" loading="lazy">{% else %}{% include "tienda/ilustracion.html" with categoria=c.nombre %}{% endif %}{{ c.nombre }}</a>{% endfor %}
+  {% for c in categorias %}<a class="t-cat" href="/catalogo/?categoria={{ c.pk }}">{% if c.imagen %}{% foto c.imagen "cat-foto" "" "(min-width: 900px) 280px, 46vw" 406 362 %}{% else %}{% include "tienda/ilustracion.html" with categoria=c.nombre %}{% endif %}{{ c.nombre }}</a>{% endfor %}
 </div>
 {% endblock %}

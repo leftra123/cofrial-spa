@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block titulo %}Armar despacho | Cofrial SpA{% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
   <div><h1>Armar despacho</h1><p class="sub">Elige el camión y los pedidos del viaje. El mapa propone el mejor orden de entrega antes de salir.</p></div>
@@ -49,7 +49,7 @@
 {% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script>
 (function () {

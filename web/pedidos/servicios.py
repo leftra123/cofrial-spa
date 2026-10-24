@@ -191,6 +191,8 @@ def seguimiento(orden):
     desde = timezone.now() - timedelta(minutes=60)
     lecturas = list(Telemetria.objects.filter(camion=camion, registrado_en__gte=desde).order_by("registrado_en"))
     ultima = (lecturas[-1] if lecturas else Telemetria.objects.filter(camion=camion).order_by("-registrado_en").first())
+    from flota.vigente import ultima_vigente
+    ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada
     rango = camion.rango_temperatura
     return {
         "camion_id": camion.camion_id, "patente": camion.patente,

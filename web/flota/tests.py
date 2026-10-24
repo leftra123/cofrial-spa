@@ -261,3 +261,29 @@ class ModoDemostracion(TestCase):
         self.client.force_login(orden.direccion.cliente.usuario)
         tipos = {a["tipo"] for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.orden_id}
         self.assertIn("frio", tipos)
+
+    def test_la_flota_sigue_en_alerta_aunque_el_simulador_inserte_una_lectura_normal(self):
+        from datetime import timedelta
+        from flota.servicios import estado_flota
+        self._admin()
+        self.client.post("/demo/pulso/", {"camion": "CAM-01", "confirmar": "1"})
+        # el simulador inserta una lectura normal después de la forzada: antes la flota alternaba entre alerta y normal
+        Telemetria.objects.create(camion_id="CAM-01", temp_camara=2.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=False)
+        tarjetas, resumen = estado_flota()
+        t = next(x for x in tarjetas if x["camion"].pk == "CAM-01")
+        self.assertTrue(t["alerta"])
+        self.assertGreater(t["lectura"].temp_camara, 4)
+        self.assertEqual(t["lectura"].combustible_pct, 50)                                   # posición y combustible: los de la lectura real
+        self.assertEqual(self.client.get("/api/flota/").json()["camiones"][0]["camion_id"], "CAM-01")
+        # al apagar vuelve a la normalidad
+        self.client.post("/demo/apagar/", {"camion": "CAM-01"})
+        self.assertFalse(next(x for x in estado_flota()[0] if x["camion"].pk == "CAM-01")["alerta"])
+
+    def test_una_forzada_vieja_ya_no_cuenta(self):
+        from datetime import timedelta
+        from flota.servicios import estado_flota
+        self._admin()
+        self.client.post("/demo/pulso/", {"camion": "CAM-01", "confirmar": "1"})
+        Telemetria.objects.filter(forzada=True).update(registrado_en=timezone.now() - timedelta(seconds=60))
+        Telemetria.objects.create(camion_id="CAM-01", temp_camara=2.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=False)
+        self.assertFalse(next(x for x in estado_flota()[0] if x["camion"].pk == "CAM-01")["alerta"])

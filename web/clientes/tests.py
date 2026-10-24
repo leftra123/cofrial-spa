@@ -141,3 +141,26 @@ class RegistroB2CTests(TestCase):
             r = self.client.post("/cuenta/entrar/", {"username": usuario, "password": "x-clave-larga-77"})
             self.assertRedirects(r, destino, fetch_redirect_response=False)
             self.client.logout()
+
+
+class CuentasDelEquipoTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_felipe_sergio_y_eric_existen_con_su_perfil(self):
+        U = get_user_model()
+        felipe = Cliente.objects.get(usuario__username="felipe@cofrial.cl")
+        sergio = Cliente.objects.get(usuario__username="sergio@cofrial.cl")
+        self.assertEqual((felipe.nombre, felipe.tipo_cliente.codigo), ("Felipe Henríquez", "B2B"))
+        self.assertEqual((sergio.nombre, sergio.tipo_cliente.codigo), ("Sergio Vásquez", "B2C"))
+        for c in (felipe, sergio):
+            d = c.direccion_set.get(es_principal=True)
+            self.assertIsNotNone(d.lat)                              # direcciones ubicadas: se pueden despachar con ruta
+        self.assertEqual(crm.rol(U.objects.get(username="eric@cofrial.cl")), "admin")
+
+    def test_cargar_demo_no_duplica_las_cuentas_del_equipo(self):
+        n = Cliente.objects.count()
+        call_command("cargar_demo", verbosity=0)
+        self.assertEqual(Cliente.objects.count(), n)
+        self.assertEqual(get_user_model().objects.filter(username__in=["felipe@cofrial.cl", "sergio@cofrial.cl", "eric@cofrial.cl"]).count(), 3)

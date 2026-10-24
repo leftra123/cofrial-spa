@@ -57,6 +57,9 @@ Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los no
 
 | Cuenta | Rol |
 |---|---|
+| `eric@cofrial.cl` | Administrador (Eric): despacha en la demostración |
+| `felipe@cofrial.cl` | Cliente institucional B2B (Felipe Henríquez) |
+| `sergio@cofrial.cl` | Cliente particular B2C (Sergio Vásquez) |
 | `admin@cofrial.cl` | Administrador |
 | `gerencia@cofrial.cl` | Gerencia |
 | `vendedora@cofrial.cl` | Vendedora (María Paz Soto) |

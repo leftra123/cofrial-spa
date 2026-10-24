@@ -161,6 +161,21 @@ class Command(BaseCommand):
                                 ("Av. Alemania 0671", -38.73265, -72.61016)]:
             Direccion.objects.filter(calle_numero=calle, lat__isnull=True).update(lat=lat, long=lon)
 
+        # cuentas del equipo y del profesor para la demostración en vivo (correos simples @cofrial.cl):
+        # Felipe compra como institución, Sergio como particular y Eric despacha con acceso de administrador
+        for username, nombre, rut, tipo, vendedor_, calle, lat, lon in (
+                ("felipe@cofrial.cl", "Felipe Henríquez", "20.111.222-2", tipo_b2b, None, "Av. Alemania 0222", -38.73292, -72.61651),
+                ("sergio@cofrial.cl", "Sergio Vásquez", "19.876.543-0", tipo_b2c, None, "Av. Caupolicán 0500", -38.73336, -72.58870)):
+            u, nuevo = Usuario.objects.get_or_create(username=username, defaults=dict(email=username))
+            if nuevo:
+                u.set_password(clave)
+                u.save()
+            cliente, _ = Cliente.objects.get_or_create(rut=rut, defaults=dict(usuario=u, tipo_cliente=tipo, vendedor=vendedor_, nombre=nombre, email=username))
+            if not cliente.direccion_set.exists():
+                Direccion.objects.create(cliente=cliente, calle_numero=calle, comuna=temuco, es_principal=True, lat=lat, long=lon)
+        if not Usuario.objects.filter(username="eric@cofrial.cl").exists():
+            Usuario.objects.create_superuser("eric@cofrial.cl", "eric@cofrial.cl", clave)
+
         etapas = {e.nombre: e for e in EtapaPipeline.objects.all()}
         for nombre, empresa, email, etapa, monto, v in [
             ("Jorge Rivas", "Casino Escolar Lautaro", "jorge@casino.test", "Prospecto", 4500000, vendedora),

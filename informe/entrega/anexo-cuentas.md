@@ -5,6 +5,9 @@ Para que el equipo y quienes evalúen puedan probar el prototipo en línea sin t
 
 | Cuenta | Rol | Qué permite probar |
 |---|---|---|
+| `eric@cofrial.cl` | Administrador (equipo) | Todo el sistema; en la demostración arma el despacho y revisa la ruta |
+| `felipe@cofrial.cl` | Cliente institucional (B2B) | Compra con la lista institucional en neto, orden de compra y IVA desglosado |
+| `sergio@cofrial.cl` | Cliente particular (B2C) | Compra con precios al público y sigue su pedido en el mapa |
 | `admin@cofrial.cl` | Administrador | Todo el sistema, incluida la administración de datos (`/admin/`) |
 | `gerencia@cofrial.cl` | Gerencia | CRM de todos los vendedores, indicadores, flota y alertas de frío |
 | `vendedora@cofrial.cl` | Vendedora | Embudo comercial, clientes y requerimientos propios |

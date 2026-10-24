@@ -20,7 +20,7 @@
 {% for d in destinos %}
 <form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/mover/" style="margin-bottom:10px;display:flex">{% csrf_token %}<input type="hidden" name="etapa" value="{{ d.pk }}">
   {% if d.es_ganada %}<input name="rut" placeholder="RUT de la empresa" required> {% elif d.es_final %}<input name="motivo" placeholder="Motivo de la pérdida" required> {% endif %}
-  <button class="{% if d.es_final and not d.es_ganada %}btn-peligro{% endif %}">Pasar a «{{ d.nombre }}»</button></form>
+  <button class="{% if d.es_final and not d.es_ganada %}btn-peligro{% endif %}">Pasar a "{{ d.nombre }}"</button></form>
 {% endfor %}</div>{% endif %}
 <div class="seccion"><h2>Interacciones</h2></div>
 {% if puede_editar %}<div class="tarjeta-ui" style="margin-bottom:16px"><form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/">{% csrf_token %}

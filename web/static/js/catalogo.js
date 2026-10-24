@@ -1,6 +1,6 @@
 /* Cofrial SpA · filtros del catálogo en vivo. Al cambiar un filtro (o tras una breve pausa al escribir) se pide el catálogo
    con los mismos parámetros que usaría el formulario y se reemplazan solo los resultados y el contador: sin recargar la página.
-   Sin JavaScript el formulario sigue funcionando con su botón «Aplicar filtros». */
+   Sin JavaScript el formulario sigue funcionando con su botón "Aplicar filtros". */
 (function () {
   var form = document.getElementById("form-filtros"), cont = document.getElementById("productos");
   if (!form || !cont || !window.fetch || !window.URLSearchParams) return;
@@ -8,12 +8,12 @@
       resumen = document.getElementById("filtros-resumen"), limpiar = document.getElementById("filtros-limpiar"),
       detalle = document.getElementById("filtros-det"), q = form.elements.q, vivo = document.getElementById("cat-vivo");
   var temporizador = null, control = null, pausa = 350;
-  document.documentElement.classList.add("filtros-vivos");   // oculta «Aplicar filtros» (con JS no hace falta)
+  document.documentElement.classList.add("filtros-vivos");   // oculta "Aplicar filtros" (con JS no hace falta)
 
   function etiqueta(el) { var l = el.closest("label"); return l ? l.textContent.replace(/\s+/g, " ").trim() : ""; }
   function activos() {
     var a = [], txt = q.value.trim();
-    if (txt) a.push({tipo: "q", texto: "«" + txt + "»"});
+    if (txt) a.push({tipo: "q", texto: "\"" + txt + "\""});
     var c = form.querySelector('input[name="categoria"]:checked'); if (c && c.value) a.push({tipo: "categoria", texto: etiqueta(c)});
     var t = form.querySelector('input[name="temperatura"]:checked'); if (t && t.value) a.push({tipo: "temperatura", texto: etiqueta(t).replace(/\s*\(.*\)$/, "")});
     var s = form.elements.stock; if (s && s.checked) a.push({tipo: "stock", texto: "Solo con stock"});

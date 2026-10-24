@@ -431,10 +431,8 @@ td.celda-acciones select { max-width: 100%; }
 
 /* ---------- identidad de marca: lima como acento ---------- */
 /* destacador sobre una frase clave (texto siempre azul marino sobre lima: contraste ~9:1) */
-.marca-texto { background: linear-gradient(transparent 58%, var(--lima) 58%, var(--lima) 92%, transparent 92%); color: inherit; padding: 0 .12em; margin: 0 -.12em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-:root[data-tema="oscuro"] .marca-texto { background: linear-gradient(transparent 58%, rgba(189, 230, 58, .55) 58%, rgba(189, 230, 58, .55) 92%, transparent 92%); }
-@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .marca-texto { background: linear-gradient(transparent 58%, rgba(189, 230, 58, .55) 58%, rgba(189, 230, 58, .55) 92%, transparent 92%); } }
-.hero .marca-texto, .t-hero .marca-texto { background: linear-gradient(transparent 80%, var(--lima) 80%, var(--lima) 96%, transparent 96%); }
+.marca-texto { background: var(--lima); color: var(--lima-fg); font-weight: 700; padding: .04em .3em; margin: 0 -.05em; border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.hero .marca-texto, .t-hero .marca-texto { background: var(--lima); color: var(--lima-fg); }
 .linea-lima { display: block; height: 4px; width: 72px; border-radius: 4px; background: var(--lima); margin: 12px 0 0; }
 .pagina-cab h1 + .linea-lima { margin-top: 10px; }
 .logo-chip { display: inline-block; background: #fff; border-radius: 12px; padding: 8px 14px; line-height: 0; }

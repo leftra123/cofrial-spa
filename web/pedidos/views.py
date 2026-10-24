@@ -135,7 +135,7 @@ def soporte(request, cliente):
         try:
             r = crm.crear_requerimiento(cliente, request.POST.get("asunto", ""), request.POST.get("descripcion", ""), orden=orden)
             messages.success(request, "Recibimos tu consulta. Te responderemos a la brevedad." if r.estado != "clasificado"
-                             else f"Recibimos tu consulta y la derivamos a «{r.categoria_requerimiento}».")
+                             else f"Recibimos tu consulta y la derivamos a \"{r.categoria_requerimiento}\".")
             return redirect("soporte")
         except s.ErrorDeNegocio as e:
             _mostrar_errores(request, e)

@@ -131,7 +131,7 @@ def cancelar(orden, como="cliente"):
     limite = 1 if como == "cliente" else 3
     if orden.estado_orden.es_final or orden.estado_orden.orden_flujo > limite:
         quien = "el cliente" if como == "cliente" else "el vendedor"
-        raise ErrorDeNegocio(f"La orden está «{orden.estado_orden.nombre}» y {quien} ya no puede cancelarla.")
+        raise ErrorDeNegocio(f"La orden está \"{orden.estado_orden.nombre}\" y {quien} ya no puede cancelarla.")
     for item in orden.ordenitem_set.all():
         Producto.objects.filter(pk=item.producto_id).update(stock_disponible=F("stock_disponible") + item.cantidad)
     orden.estado_orden = EstadoOrden.objects.get(nombre="Cancelada")
@@ -144,7 +144,7 @@ def avanzar(orden):
     """Pasa la orden al siguiente estado del flujo (Figura de estados). «Despachada» exige un despacho asignado."""
     orden = Orden.objects.select_for_update().select_related("estado_orden").get(pk=orden.pk)
     if orden.estado_orden.es_final:
-        raise ErrorDeNegocio(f"La orden ya está «{orden.estado_orden.nombre}».")
+        raise ErrorDeNegocio(f"La orden ya está \"{orden.estado_orden.nombre}\".")
     siguiente = EstadoOrden.objects.filter(orden_flujo__gt=orden.estado_orden.orden_flujo, es_final=False).first() \
         or EstadoOrden.objects.get(nombre="Entregada")
     if siguiente.nombre == "Despachada" and orden.despacho_id is None:

@@ -486,3 +486,7 @@ td.celda-acciones select { max-width: 100%; }
   .tabla-cards tbody tr:has(td[colspan]) > *, .tabla-cards tbody tr.fila-total > * { width: auto; padding: 0; text-align: right; }
   .tabla-cards tr.fila-total { font-size: 1.05rem; }
 }
+
+/* íconos de las leyendas de los mapas */
+.leyenda .ley-ico { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; }
+.leyenda .ley-ico svg { width: 38px; height: auto; max-height: 32px; display: block; }

@@ -88,8 +88,5 @@
   });
   /* en móvil los filtros parten cerrados; la barra de filtros queda pegada bajo el encabezado, que puede cambiar de alto */
   if (detalle && matchMedia("(max-width: 860px)").matches && !activos().length) detalle.removeAttribute("open");
-  var tb = document.querySelector(".tb");
-  function medir() { if (tb) document.documentElement.style.setProperty("--tb-alto", tb.offsetHeight + "px"); }
-  medir(); window.addEventListener("resize", medir); if (window.ResizeObserver && tb) new ResizeObserver(medir).observe(tb);
   pintarEstado();
 })();

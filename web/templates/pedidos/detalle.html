@@ -31,7 +31,13 @@
 <div class="seg-grid" id="seg" data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     <h2>Dónde va su pedido</h2>
-    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} · <span id="seg-hace">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span></p>
+    <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} <span id="seg-hace" class="solo-lector">{% if seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span> · se actualiza solo</p>
+    <div class="seg-llego" id="seg-llego" hidden><b>Tu pedido llegó</b> <span id="seg-llego-hora"></span></div>
+    <div class="seg-datos">
+      <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
+      <div><span>Llega entre</span><b id="seg-eta" class="skeleton">00:00 y 00:00</b></div>
+      <div><span>Última señal</span><b id="seg-senal" class="skeleton">hace 0 s</b></div>
+    </div>
     <div style="position:relative">
       <div id="mapa" class="mapa alto" role="img" aria-label="Posición del camión y ruta a su dirección"></div>
       <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
@@ -85,7 +91,7 @@
   function pintarSerie(serie) {
     var svg = document.getElementById("spark");
     var vacio = document.getElementById("spark-vacio");
-    svg.hidden = !serie.length; vacio.hidden = serie.length > 0;
+    if (serie.length) svg.removeAttribute("hidden"); else svg.setAttribute("hidden", ""); vacio.hidden = serie.length > 0;
     if (!serie.length) { svg.innerHTML = ""; return; }
     var t = serie.map(function (p) { return p.temp; });
     var lo = Math.min.apply(null, t.concat([min])) - 1, hi = Math.max.apply(null, t.concat([max])) + 1;
@@ -93,6 +99,21 @@
     var pts = serie.map(function (p, i) { return (serie.length === 1 ? 150 : i / (serie.length - 1) * 300).toFixed(1) + "," + y(p.temp).toFixed(1); }).join(" ");
     svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#16A34A" fill-opacity=".16"/><polyline points="' + pts + '" fill="none" stroke="#143A7B" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   }
+  var ultimaSenal = null;
+  function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
+  function quitarSk(id, texto) { var e = document.getElementById(id); e.textContent = texto; e.classList.remove("skeleton"); }
+  function haceTxt(seg) { return seg < 60 ? "hace " + seg + " s" : "hace " + Math.floor(seg / 60) + " min"; }
+  function ponerFacts(s, estado) {
+    quitarSk("seg-salio", s.salida_en ? hora(s.salida_en) : "Aún no sale");
+    var llego = !!s.llegada_en || estado === "Entregada";
+    document.getElementById("seg-llego").hidden = !llego;
+    if (llego && s.llegada_en) document.getElementById("seg-llego-hora").textContent = "a las " + hora(s.llegada_en);
+    quitarSk("seg-eta", llego ? "Ya llegó" : s.eta ? hora(s.eta.desde) + " y " + hora(s.eta.hasta) : s.salida_en ? "Calculando…" : "Cuando salga");
+    document.getElementById("seg-eta").classList.toggle("cerca", !!s.cerca && !llego);
+    if (s.ultima) { ultimaSenal = Date.now() - s.ultima.hace_seg * 1000; mostrarSenal(); } else quitarSk("seg-senal", "Sin señal aún");
+  }
+  function mostrarSenal() { if (ultimaSenal) quitarSk("seg-senal", haceTxt(Math.max(0, Math.round((Date.now() - ultimaSenal) / 1000)))); }
+  setInterval(mostrarSenal, 1000);
   function pintar(d) {
     var s = d.seguimiento; if (!s) return;
     var u = s.ultima;
@@ -114,11 +135,12 @@
             if (linea) mapa.removeLayer(linea);
             linea = L.polyline(r.linea, {color: "#143A7B", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
             if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30]}); encuadrado = true; }
-            document.getElementById("ruta-info").textContent = "Faltan " + CofrialMapa.texto(r) + " hasta " + s.destino.direccion;
+            document.getElementById("ruta-info").textContent = (r.metros == null ? "Ruta aproximada" : "Faltan " + (r.metros / 1000).toFixed(1).replace(".", ",") + " km") + " hasta " + s.destino.direccion;
           });
         }
       }
     }
+    ponerFacts(s, d.estado);
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;
     pintarSerie(s.serie || []);
   }

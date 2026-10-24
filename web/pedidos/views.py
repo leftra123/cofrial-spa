@@ -141,3 +141,12 @@ def soporte(request, cliente):
             _mostrar_errores(request, e)
     return render(request, "pedidos/soporte.html", {
         "orden": orden, "requerimientos": Requerimiento.objects.filter(cliente=cliente).select_related("categoria_requerimiento").order_by("-creado_en")})
+
+
+def api_avisos(request):
+    """Avisos de la campanita: solo de las órdenes del cliente que inició sesión."""
+    from django.http import JsonResponse
+    cliente = s.cliente_de(request.user) if request.user.is_authenticated else None
+    if cliente is None:
+        return JsonResponse({"detail": "Inicia sesión con una cuenta de cliente."}, status=403)
+    return JsonResponse({"avisos": s.avisos(cliente)}, json_dumps_params={"ensure_ascii": False})

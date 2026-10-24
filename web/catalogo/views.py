@@ -94,3 +94,24 @@ def detalle(request, producto_id):
     fila = _fila(p, _precios(perfil))
     similares = [_fila(s, _precios(perfil)) for s in Producto.objects.filter(activo=True, categoria=p.categoria).exclude(pk=p.pk).order_by("nombre")[:4]]
     return render(request, "catalogo/detalle.html", {"fila": fila, "perfil": perfil, "similares": similares})
+
+
+def _ficha(p):
+    r = p.categoria.rango_temperatura
+    return {"sku": p.sku, "nombre": p.nombre, "descripcion": p.descripcion, "categoria": p.categoria.nombre,
+            "unidad": p.get_unidad_medida_display(), "disponible": p.stock_disponible > 0,
+            "conservacion": {"rango": r.nombre, "temp_min_c": float(r.temp_min_c), "temp_max_c": float(r.temp_max_c)}}
+
+
+def api_productos(request, sku=None):
+    """Características de los productos por SKU, solo lectura y sin precios (dependen del perfil del cliente). Pensada para apps que consultan el SKU."""
+    from django.http import Http404, JsonResponse
+    base = Producto.objects.filter(activo=True).select_related("categoria__rango_temperatura")
+    if sku is None:
+        return JsonResponse({"productos": [_ficha(p) for p in base.order_by("sku")]}, json_dumps_params={"ensure_ascii": False})
+    p = base.filter(sku__iexact=sku).first()
+    if p is None:
+        raise Http404("SKU no encontrado")
+    r = JsonResponse(_ficha(p), json_dumps_params={"ensure_ascii": False})
+    r["Access-Control-Allow-Origin"] = "*"
+    return r

@@ -289,3 +289,35 @@ html.filtros-vivos .filtros noscript { display: none; }
   .prod-comprar .btn { font-size: .85rem; padding: 10px 8px; }
   .prod-sku { font-size: .7rem; }
 }
+
+/* ---------- campanita y avisos ---------- */
+.campana { position: relative; }
+.campana-btn { position: relative; }
+.campana-n { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--lima); color: var(--lima-fg); font-size: .7rem; font-weight: 800; line-height: 18px; text-align: center; border: 2px solid var(--tarjeta); }
+.campana-panel { position: absolute; right: 0; top: calc(100% + 10px); width: min(360px, calc(100vw - 32px)); background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra-alta); z-index: 40; overflow: hidden; }
+.campana-cab { padding: 12px 16px; border-bottom: 1px solid var(--borde); }
+.campana-panel ul { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
+.campana-vacio { padding: 22px 16px; color: var(--texto-3); font-size: .9rem; text-align: center; }
+.campana-item a { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 12px 16px; border-bottom: 1px solid var(--borde); color: var(--texto); }
+.campana-item:last-child a { border-bottom: 0; }
+.campana-item a:hover { background: var(--hover-fila); text-decoration: none; }
+.campana-item.nuevo a { background: var(--lima-suave); }
+.campana-txt { font-size: .9rem; }
+.campana-item time { font-size: .75rem; color: var(--texto-3); white-space: nowrap; }
+.campana-tipo { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; background: var(--transito-bg); color: var(--transito-fg); }
+.campana-tipo.t-llego { background: var(--entregado-bg); color: var(--entregado-fg); }
+.campana-tipo.t-cerca { background: var(--pendiente-bg); color: var(--pendiente-fg); }
+.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.toast { background: var(--acento); color: var(--acento-fg); border-left: 5px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }
+.toast a { color: inherit; font-weight: 600; }
+.toast.sale { opacity: 0; transform: translateX(20px); }
+@media (max-width: 860px) { .campana-panel { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; } }
+
+/* datos del viaje sobre el mapa */
+.seg-datos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 14px; }
+.seg-datos div { background: var(--fondo); border-radius: 12px; padding: 10px 14px; }
+.seg-datos span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-3); font-weight: 600; }
+.seg-datos b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.seg-datos b.cerca { background: var(--lima); color: var(--lima-fg); padding: 0 .3em; border-radius: 3px; }
+.seg-llego { background: var(--entregado-bg); color: var(--entregado-fg); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 1.05rem; border-left: 5px solid var(--ok); }
+@media (max-width: 480px) { .seg-datos { grid-template-columns: 1fr 1fr; } .seg-datos div:last-child { grid-column: 1 / -1; } }

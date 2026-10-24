@@ -16,15 +16,15 @@ from pedidos import servicios as pedidos
 from pedidos.models import EstadoOrden, Orden
 
 PRODUCTOS = [
-    ("VAC-LOM-5K", "Lomo vetado de vacuno 5 kg", "Cárnicos refrigerados", "caja", 120, 38990, 45990),
-    ("POL-PEC-10K", "Pechuga de pollo 10 kg", "Cárnicos refrigerados", "caja", 80, 29990, 34990),
-    ("CER-COS-5K", "Costillar de cerdo 5 kg", "Cárnicos refrigerados", "caja", 60, 31990, 37990),
+    ("VAC-LOM-5K", "Lomo vetado de vacuno 5 kg", "Carnes", "caja", 120, 38990, 45990),
+    ("POL-PEC-10K", "Pechuga de pollo 10 kg", "Carnes", "caja", 80, 29990, 34990),
+    ("CER-COS-5K", "Costillar de cerdo 5 kg", "Carnes", "caja", 60, 31990, 37990),
     ("MAR-CON-2K", "Mariscos congelados 2 kg", "Congelados", "caja", 60, 21990, 25990),
     ("PES-FIL-3K", "Filete de salmón congelado 3 kg", "Congelados", "caja", 45, 27990, 32990),
-    ("VAC-POS-5K", "Posta rosada de vacuno 5 kg", "Cárnicos refrigerados", "caja", 90, 33990, 39990),
-    ("VAC-MOL-5K", "Carne molida de vacuno 5 kg", "Cárnicos refrigerados", "caja", 150, 23990, 28990),
-    ("CER-LOM-4K", "Lomo de cerdo 4 kg", "Cárnicos refrigerados", "caja", 70, 26990, 31990),
-    ("COR-PIE-6K", "Pierna de cordero 6 kg", "Cárnicos refrigerados", "caja", 8, 52990, 61990),
+    ("VAC-POS-5K", "Posta rosada de vacuno 5 kg", "Carnes", "caja", 90, 33990, 39990),
+    ("VAC-MOL-5K", "Carne molida de vacuno 5 kg", "Carnes", "caja", 150, 23990, 28990),
+    ("CER-LOM-4K", "Lomo de cerdo 4 kg", "Carnes", "caja", 70, 26990, 31990),
+    ("COR-PIE-6K", "Pierna de cordero 6 kg", "Carnes", "caja", 8, 52990, 61990),
     ("POL-TRU-8K", "Trutros de pollo 8 kg", "Aves", "caja", 110, 17990, 21990),
     ("POL-ENT-10K", "Pollo entero 10 kg", "Aves", "caja", 130, 19990, 24990),
     ("PAV-PEC-5K", "Pechuga de pavo 5 kg", "Aves", "caja", 55, 28990, 34990),
@@ -79,7 +79,7 @@ class Command(BaseCommand):
         refrigerado, _ = RangoTemperatura.objects.get_or_create(nombre="Refrigerado", defaults=dict(temp_min_c=Decimal("0.0"), temp_max_c=Decimal("4.0")))
         congelado, _ = RangoTemperatura.objects.get_or_create(nombre="Congelado", defaults=dict(temp_min_c=Decimal("-25.0"), temp_max_c=Decimal("-18.0")))
         categorias = {
-            "Cárnicos refrigerados": Categoria.objects.get_or_create(nombre="Cárnicos refrigerados", defaults=dict(rango_temperatura=refrigerado))[0],
+            "Carnes": Categoria.objects.get_or_create(nombre="Carnes", defaults=dict(rango_temperatura=refrigerado))[0],
             "Congelados": Categoria.objects.get_or_create(nombre="Congelados", defaults=dict(rango_temperatura=congelado))[0],
             "Aves": Categoria.objects.get_or_create(nombre="Aves", defaults=dict(rango_temperatura=refrigerado))[0],
             "Lácteos y embutidos": Categoria.objects.get_or_create(nombre="Lácteos y embutidos", defaults=dict(rango_temperatura=refrigerado))[0],
@@ -93,7 +93,7 @@ class Command(BaseCommand):
             cambios = {}
             if not p.descripcion and sku in DESCRIPCIONES:
                 cambios["descripcion"] = DESCRIPCIONES[sku]
-            if p.categoria_id != categorias[cat].pk and cat == "Aves":     # la pechuga ya existía como «Cárnicos refrigerados»
+            if p.categoria_id != categorias[cat].pk and cat == "Aves":     # la pechuga ya existía como «Carnes»
                 cambios["categoria"] = categorias[cat]
             if cambios:
                 Producto.objects.filter(pk=p.pk).update(**cambios)

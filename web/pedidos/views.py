@@ -149,4 +149,4 @@ def api_avisos(request):
     cliente = s.cliente_de(request.user) if request.user.is_authenticated else None
     if cliente is None:
         return JsonResponse({"detail": "Inicia sesión con una cuenta de cliente."}, status=403)
-    return JsonResponse({"avisos": s.avisos(cliente)}, json_dumps_params={"ensure_ascii": False})
+    return JsonResponse({"avisos": s.avisos_de_llegada(cliente)}, json_dumps_params={"ensure_ascii": False})

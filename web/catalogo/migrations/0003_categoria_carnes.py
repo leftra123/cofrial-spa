@@ -13,5 +13,5 @@ def deshacer(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("catalogo", "0001_initial")]
+    dependencies = [("catalogo", "0002_aviso_stock")]
     operations = [migrations.RunPython(renombrar, deshacer)]

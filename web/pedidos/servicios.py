@@ -242,7 +242,7 @@ def _llegada(orden, ultima):
                     "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}}
 
 
-def avisos(cliente):
+def avisos_de_llegada(cliente):
     """Avisos para la campanita del cliente, calculados desde el estado de sus órdenes (no se guardan): salió, cerca y llegó.
     Cada aviso tiene un id estable para que el navegador sepa cuáles ya vio."""
     from datetime import timedelta

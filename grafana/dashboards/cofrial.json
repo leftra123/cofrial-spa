@@ -7,7 +7,7 @@
  ],
  "timezone": "browser",
  "schemaVersion": 39,
- "version": 1,
+ "version": 3,
  "refresh": "5s",
  "time": {
   "from": "now-6h",
@@ -24,7 +24,20 @@
  "panels": [
   {
    "id": 1,
-   "title": "Ventas del período (CLP)",
+   "type": "row",
+   "title": "1 · Resumen del período: cuánto vendimos y cuánto está en riesgo (el selector de tiempo de arriba a la derecha define el período)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "title": "Ventas (CLP)",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -32,7 +45,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 0,
+    "y": 1,
     "w": 4,
     "h": 4
    },
@@ -49,7 +62,7 @@
      "rawSql": "SELECT coalesce(sum(t.total_clp),0) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
     }
    ],
-   "description": "",
+   "description": "Suma de todas las órdenes creadas en el período, B2B y B2C, sin las canceladas.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -80,8 +93,8 @@
    }
   },
   {
-   "id": 2,
-   "title": "Pedidos del período",
+   "id": 3,
+   "title": "Pedidos",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -89,7 +102,7 @@
    },
    "gridPos": {
     "x": 4,
-    "y": 0,
+    "y": 1,
     "w": 4,
     "h": 4
    },
@@ -106,7 +119,7 @@
      "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
     }
    ],
-   "description": "",
+   "description": "Cantidad de órdenes creadas en el período, sin las canceladas.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -136,8 +149,8 @@
    }
   },
   {
-   "id": 3,
-   "title": "Lecturas con alerta de frío",
+   "id": 4,
+   "title": "Alertas (período)",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -145,7 +158,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 0,
+    "y": 1,
     "w": 4,
     "h": 4
    },
@@ -162,7 +175,7 @@
      "rawSql": "SELECT count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en)"
     }
    ],
-   "description": "",
+   "description": "Cuántas veces un camión reportó la cámara fuera de su rango de temperatura durante el período. Cada camión reporta cada 5 s, así que una sola falla suma varias lecturas.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -196,8 +209,8 @@
    }
   },
   {
-   "id": 4,
-   "title": "Camiones en alerta ahora",
+   "id": 5,
+   "title": "En alerta AHORA",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -205,7 +218,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 0,
+    "y": 1,
     "w": 4,
     "h": 4
    },
@@ -256,8 +269,8 @@
    }
   },
   {
-   "id": 5,
-   "title": "Pedidos afectados por ruptura de frío",
+   "id": 6,
+   "title": "Pedidos afectados",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -265,7 +278,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 0,
+    "y": 1,
     "w": 4,
     "h": 4
    },
@@ -316,7 +329,7 @@
    }
   },
   {
-   "id": 6,
+   "id": 7,
    "title": "Ventas en riesgo (CLP)",
    "type": "stat",
    "datasource": {
@@ -325,7 +338,7 @@
    },
    "gridPos": {
     "x": 20,
-    "y": 0,
+    "y": 1,
     "w": 4,
     "h": 4
    },
@@ -377,7 +390,20 @@
    }
   },
   {
-   "id": 7,
+   "id": 8,
+   "type": "row",
+   "title": "2 · El cruce que pide la pauta: ventas por canal junto a las alertas de ruptura de frío",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 9,
    "title": "Ventas vs alertas de frío en el tiempo",
    "type": "timeseries",
    "datasource": {
@@ -386,7 +412,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 4,
+    "y": 6,
     "w": 16,
     "h": 9
    },
@@ -414,7 +440,7 @@
      "rawSql": "SELECT $__timeGroupAlias(registrado_en,'10m'), 'Alertas de frío' AS metric, count(*) AS value FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 1"
     }
    ],
-   "description": "Cruce pedido por la pauta: las ventas de cada canal junto a las alertas de ruptura de frío, en la misma línea de tiempo.",
+   "description": "Barras = ventas en pesos por canal (eje izquierdo). Línea roja = cantidad de lecturas de alerta de frío (eje derecho). Sirve para ver si los problemas de frío ocurren cuando más se vende.",
    "fieldConfig": {
     "defaults": {
      "custom": {
@@ -473,7 +499,7 @@
    }
   },
   {
-   "id": 8,
+   "id": 10,
    "title": "Ventas por canal",
    "type": "piechart",
    "datasource": {
@@ -482,7 +508,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 4,
+    "y": 6,
     "w": 8,
     "h": 9
    },
@@ -499,7 +525,7 @@
      "rawSql": "SELECT o.canal AS canal, sum(t.total_clp) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY 1"
     }
    ],
-   "description": "",
+   "description": "Cuánto del total vendido vino de cada canal: B2B (instituciones con lista de precios) y B2C (público general).",
    "fieldConfig": {
     "defaults": {
      "unit": "prefix:$"
@@ -526,18 +552,153 @@
    }
   },
   {
-   "id": 9,
-   "title": "Temperatura de cámara por camión (°C)",
-   "type": "timeseries",
+   "id": 11,
+   "type": "row",
+   "title": "3 · Flota en vivo: 50 camiones, centro en INACAP Temuco (se actualiza cada 5 s)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 15,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 12,
+   "title": "Posición actual de la flota",
+   "type": "geomap",
    "datasource": {
     "type": "postgres",
     "uid": "cofrial-pg"
    },
    "gridPos": {
     "x": 0,
-    "y": 13,
-    "w": 16,
-    "h": 9
+    "y": 16,
+    "w": 14,
+    "h": 13
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC"
+    }
+   ],
+   "description": "Última posición de cada camión que reportó en los últimos 2 minutos. Verde = temperatura normal, rojo = ruptura de frío. Los camiones cercanos al centro hacen reparto urbano en Temuco; los lejanos van o vuelven de ciudades de La Araucanía. Pasa el mouse sobre un camión para ver su temperatura.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "Normal",
+         "color": "green",
+         "index": 0
+        },
+        "1": {
+         "text": "Ruptura de frío",
+         "color": "red",
+         "index": 1
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "view": {
+     "id": "coords",
+     "lat": -38.8,
+     "lon": -72.55,
+     "zoom": 9
+    },
+    "controls": {
+     "showZoom": true,
+     "mouseWheelZoom": true
+    },
+    "basemap": {
+     "type": "osm-standard",
+     "name": "Mapa"
+    },
+    "layers": [
+     {
+      "type": "markers",
+      "name": "Camiones",
+      "config": {
+       "showLegend": false,
+       "style": {
+        "size": {
+         "fixed": 9,
+         "min": 2,
+         "max": 15
+        },
+        "color": {
+         "field": "estado",
+         "fixed": "dark-green"
+        },
+        "symbol": {
+         "mode": "fixed",
+         "fixed": "img/icons/marker/circle.svg"
+        },
+        "text": {
+         "mode": "field",
+         "field": "camion_id",
+         "fixed": ""
+        },
+        "textConfig": {
+         "fontSize": 10,
+         "offsetY": -12
+        }
+       }
+      },
+      "location": {
+       "mode": "coords",
+       "latitude": "lat",
+       "longitude": "long"
+      },
+      "tooltip": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 13,
+   "title": "Temperatura de cámara (camiones elegidos arriba)",
+   "type": "timeseries",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 14,
+    "y": 16,
+    "w": 10,
+    "h": 7
    },
    "targets": [
     {
@@ -549,10 +710,10 @@
      "format": "time_series",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) ORDER BY 1"
+     "rawSql": "SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1"
     }
    ],
-   "description": "",
+   "description": "Una línea por camión elegido en el selector «Camión» de la parte superior (por defecto CAM-01 a CAM-03). Una subida brusca fuera del rango del camión es una ruptura de frío.",
    "fieldConfig": {
     "defaults": {
      "unit": "celsius",
@@ -574,18 +735,18 @@
    }
   },
   {
-   "id": 10,
-   "title": "Posición actual de la flota",
-   "type": "geomap",
+   "id": 14,
+   "title": "Camiones con más alertas de frío (período)",
+   "type": "bargauge",
    "datasource": {
     "type": "postgres",
     "uid": "cofrial-pg"
    },
    "gridPos": {
-    "x": 16,
-    "y": 13,
-    "w": 8,
-    "h": 9
+    "x": 14,
+    "y": 23,
+    "w": 10,
+    "h": 6
    },
    "targets": [
     {
@@ -597,10 +758,10 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, alerta_ruptura_frio FROM telemetria ORDER BY camion_id, registrado_en DESC"
+     "rawSql": "SELECT camion_id AS camion, count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 2 DESC LIMIT 10"
     }
    ],
-   "description": "",
+   "description": "Los 10 camiones con más lecturas fuera de rango. Con una flota de 50 sirve para saber a cuáles revisar primero.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -610,84 +771,49 @@
       "mode": "absolute",
       "steps": [
        {
-        "color": "blue",
+        "color": "orange",
         "value": null
        },
        {
-        "color": "green",
-        "value": -10
-       },
-       {
-        "color": "orange",
-        "value": 4
-       },
-       {
         "color": "red",
-        "value": 8
+        "value": 10
        }
       ]
-     }
+     },
+     "min": 0,
+     "noValue": "Ningún camión con alertas en el período"
     },
     "overrides": []
    },
    "options": {
-    "view": {
-     "id": "coords",
-     "lat": -38.7459,
-     "lon": -72.6,
-     "zoom": 11
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true,
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": true,
+     "fields": "/^alertas$/"
     },
-    "controls": {
-     "showZoom": true,
-     "mouseWheelZoom": true
-    },
-    "basemap": {
-     "type": "osm-standard",
-     "name": "Mapa"
-    },
-    "layers": [
-     {
-      "type": "markers",
-      "name": "Camiones",
-      "config": {
-       "showLegend": true,
-       "style": {
-        "size": {
-         "fixed": 9,
-         "min": 2,
-         "max": 15
-        },
-        "color": {
-         "field": "temp_camara",
-         "fixed": "dark-green"
-        },
-        "symbol": {
-         "mode": "fixed",
-         "fixed": "img/icons/marker/circle.svg"
-        },
-        "text": {
-         "mode": "field",
-         "field": "camion_id",
-         "fixed": ""
-        },
-        "textConfig": {
-         "fontSize": 12,
-         "offsetY": -12
-        }
-       }
-      },
-      "location": {
-       "mode": "coords",
-       "latitude": "lat",
-       "longitude": "long"
-      },
-      "tooltip": true
-     }
-    ]
+    "namePlacement": "left"
    }
   },
   {
-   "id": 11,
+   "id": 15,
+   "type": "row",
+   "title": "4 · Detalle: qué pedidos se vieron afectados por una ruptura de frío (para llamar al cliente)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 29,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 16,
    "title": "Pedidos afectados por ruptura de frío",
    "type": "table",
    "datasource": {
@@ -696,7 +822,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 22,
+    "y": 30,
     "w": 24,
     "h": 7
    },
@@ -713,12 +839,13 @@
      "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", t.total_clp AS \"Monto (CLP)\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now())\nWHERE d.salida_en IS NOT NULL GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
     }
    ],
-   "description": "",
+   "description": "Órdenes despachadas cuyo camión reportó temperatura fuera de rango mientras iba en ruta. Más lecturas con alerta = más tiempo expuesto al calor.",
    "fieldConfig": {
     "defaults": {
      "custom": {
       "align": "auto"
-     }
+     },
+     "noValue": "Sin pedidos afectados: ninguna ruptura de frío durante un viaje con pedidos"
     },
     "overrides": [
      {
@@ -774,7 +901,35 @@
   "list": []
  },
  "templating": {
-  "list": []
+  "list": [
+   {
+    "name": "camion",
+    "label": "Camión",
+    "type": "query",
+    "datasource": {
+     "type": "postgres",
+     "uid": "cofrial-pg"
+    },
+    "query": "SELECT camion_id FROM camion ORDER BY 1",
+    "refresh": 1,
+    "multi": true,
+    "includeAll": false,
+    "current": {
+     "selected": true,
+     "text": [
+      "CAM-01",
+      "CAM-02",
+      "CAM-03"
+     ],
+     "value": [
+      "CAM-01",
+      "CAM-02",
+      "CAM-03"
+     ]
+    },
+    "sort": 1
+   }
+  ]
  },
  "description": "Tablero en vivo: ventas por canal cruzadas con las alertas de ruptura de frío de la flota."
 }

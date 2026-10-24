@@ -80,9 +80,9 @@
 
 ### 5. IoT: nodo EC2 dedicado con Docker
 
-**Decisión.** Una EC2 aparte donde Docker Compose levanta un contenedor por camión (o por grupo de camiones), cada uno insertando telemetría en RDS.
+**Decisión.** Una EC2 aparte donde Docker Compose levanta cinco contenedores de diez camiones cada uno (los 50 camiones del caso), cada uno insertando telemetría en RDS con una sola conexión por contenedor.
 
-**Qué se gana.** Aislamiento de fallas y de carga: 50 contenedores generando datos no compiten por CPU y memoria con la web durante la demostración. Además `sg-iot` puede ser mucho más restrictivo que `sg-web`. La pauta exige este nodo dedicado.
+**Qué se gana.** Aislamiento de fallas y de carga: cinco contenedores generando datos de 50 camiones no compiten por CPU y memoria con la web durante la demostración. Además `sg-iot` puede ser mucho más restrictivo que `sg-web`. La pauta exige este nodo dedicado.
 
 **Qué se cede.** Una instancia más que consume créditos (aporta 2 vCPU de los 32 permitidos) y otra máquina que levantar tras cada reinicio del laboratorio.
 

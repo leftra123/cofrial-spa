@@ -448,6 +448,8 @@ td.celda-acciones select { max-width: 100%; }
 /* camión, destino y bodega del mapa */
 .pin-camion, .pin-destino, .pin-base { background: none; border: 0; }
 .pin-camion svg, .pin-camion img { filter: drop-shadow(0 2px 3px rgba(15, 23, 42, .35)); display: block; margin: 0 auto; max-width: none; }
+.mapa.zoom-lejos .pin-camion img { transform: scale(.4); transform-origin: 46px 48px; }   /* con la flota completa a la vista, los camiones se achican para no taparse */
+.mapa.zoom-lejos .pin-camion .pin-etq { display: none; }
 .pin-camion .pin-etq { display: block; width: max-content; margin: 1px auto 0; padding: 0 7px; border-radius: 999px; background: #fff; color: #0F172A; font-size: .66rem; line-height: 16px; box-shadow: 0 1px 3px rgba(15, 23, 42, .3); }
 .pin-camion.alerta svg, .pin-camion.alerta img { animation: pulso-camion 1.4s ease-in-out infinite; }
 @keyframes pulso-camion { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }

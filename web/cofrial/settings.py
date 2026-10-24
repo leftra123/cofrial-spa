@@ -95,5 +95,5 @@ LOGIN_REDIRECT_URL = "/catalogo/"
 LOGOUT_REDIRECT_URL = "/"
 
 # Mapa y rutas (OpenStreetMap, sin clave). La base es el punto de salida de los camiones, el mismo donde parte el simulador IoT.
-BASE_LOGISTICA = {"nombre": "Frigorífico central, Temuco", "lat": -38.7359, "long": -72.5904}
+BASE_LOGISTICA = {"nombre": "Frigorífico central, Temuco", "lat": -38.7330, "long": -72.6040}   # referencia: INACAP Temuco
 GEOCODIFICAR = os.environ.get("GEOCODIFICAR", "1") == "1" and "test" not in sys.argv

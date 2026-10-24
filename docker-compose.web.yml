@@ -1,4 +1,4 @@
-# Entorno local completo (base, web y camiones) para desarrollar y probar antes de subir a AWS.
+# Entorno local completo (base, web y la flota de 50 camiones simulados) para desarrollar y probar antes de subir a AWS.
 # En AWS se separa: web en una EC2, simulador en otra y la base en RDS (ver docs/decisiones.md).
 x-bd: &bd
   DB_HOST: db
@@ -42,17 +42,16 @@ services:
       db: {condition: service_healthy}
     restart: unless-stopped
 
-  camion-01: &camion
+  # La flota de 50 camiones se reparte en 5 contenedores de 10 (CAM-01 a CAM-10, CAM-11 a CAM-20, ...)
+  flota-1: &flota
     build: ./iot
-    environment: {<<: *bd, CAMION_ID: CAM-01, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}"}
+    environment: &flota-env {<<: *bd, PRIMER_CAMION: "1", NUM_CAMIONES: "10", INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.001}"}
     depends_on: [web]
     restart: unless-stopped
-  camion-02:
-    <<: *camion
-    environment: {<<: *bd, CAMION_ID: CAM-02, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}"}
-  camion-03:
-    <<: *camion
-    environment: {<<: *bd, CAMION_ID: CAM-03, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}"}
+  flota-2: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "11"}}
+  flota-3: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "21"}}
+  flota-4: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "31"}}
+  flota-5: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "41"}}
 
   grafana:
     image: grafana/grafana:11.6.0

@@ -15,7 +15,7 @@
   <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
 </div>
 
-<div class="seccion"><h2>Mapa y rutas sugeridas</h2></div>
+<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
 <div class="tarjeta-ui">
   <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
   <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
@@ -107,6 +107,15 @@
       });
     });
     if (todos.length > 1) m.fitBounds(todos, {padding: [40, 40]});
+    var puntosRutas = todos.slice();
+    function ajustarIconos() { document.getElementById("mapa-flota").classList.toggle("zoom-lejos", m.getZoom() <= 11); }
+    m.on("zoomend", ajustarIconos); ajustarIconos();
+    document.getElementById("ver-flota").addEventListener("click", function () {      // toda la flota, incluidos los camiones en viajes lejanos
+      var pts = [base].concat(d.camiones.map(function (c) { return [c.lat, c.long]; }));
+      Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].getLatLng()); });
+      m.fitBounds(pts, {padding: [30, 30]});
+    });
+    document.getElementById("ver-rutas").addEventListener("click", function () { m.fitBounds(puntosRutas.length > 1 ? puntosRutas : [base], {padding: [40, 40], maxZoom: 14}); });
     window.moverCamion = function (id, lat, lon, alerta) {
       if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.camion(alerta, id)); }
     };

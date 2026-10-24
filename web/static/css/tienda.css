@@ -36,10 +36,6 @@ body.tienda { background: var(--fondo); }
 .t-pie nav { display: flex; gap: 18px; flex-wrap: wrap; }
 .t-pie nav a { color: var(--texto-2); }
 
-  background: radial-gradient(900px 400px at 85% -10%, rgba(189, 230, 58, .22), transparent 60%), linear-gradient(135deg, #0B2350 0%, #143A7B 100%);
-  box-shadow: 0 20px 50px rgba(11, 35, 80, .28); }
-  background-image: radial-gradient(rgba(255, 255, 255, .22) 1px, transparent 1.4px); background-size: 22px 22px;
-  -webkit-mask-image: linear-gradient(110deg, transparent 35%, #000); mask-image: linear-gradient(110deg, transparent 35%, #000); }
 
 /* ---------- catálogo ---------- */
 .cat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 28px; align-items: start; }

@@ -1,12 +1,12 @@
 {% extends "tienda/base.html" %}
-{% load static %}
+{% load static imagenes %}
 {% block titulo %}{{ fila.p.nombre }} | Cofrial SpA{% endblock %}
 {% block contenido %}
 {% with f=fila p=fila.p %}
 <nav class="migas" aria-label="Ruta de navegación"><a href="/catalogo/">Catálogo</a> <span aria-hidden="true">/</span> <a href="/catalogo/?categoria={{ p.categoria_id }}">{{ p.categoria.nombre }}</a> <span aria-hidden="true">/</span> <span aria-current="page">{{ p.nombre }}</span></nav>
 <div class="det">
   <div>
-    <div class="prod-img">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ p.nombre }}">{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
+    <div class="prod-img">{% if f.foto %}{% foto f.foto "foto" p.nombre "(min-width: 900px) 520px, 94vw" 800 800 True %}{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
     {% if f.ilustracion_ia %}<p class="credito">Ilustración referencial del producto.</p>{% endif %}
     {% if f.credito.propia %}<p class="credito">Imagen referencial del producto.</p>{% elif f.credito %}<p class="credito">Foto referencial: {{ f.credito.autor|truncatechars:60 }}, {{ f.credito.licencia }}, vía <a href="{{ f.credito.pagina }}" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>{% endif %}
   </div>
@@ -18,7 +18,8 @@
     <div class="det-precio">{% if f.precio %}<b data-precio-valor>{{ f.precio|clp }}</b><small>{% if perfil.codigo == "B2B" %}Precio institucional (neto), más IVA{% else %}Precio por {{ p.get_unidad_medida_display|lower }}, IVA incluido{% endif %}</small>{% else %}<span class="frio" style="font-size:1rem">Sin precio en su lista</span>{% endif %}</div>
     <dl>
       <dt>Categoría</dt><dd>{{ p.categoria.nombre }}</dd>
-      <dt>Conservación</dt><dd>{{ p.categoria.rango_temperatura.nombre }}: {{ p.categoria.rango_temperatura.temp_min_c|floatformat:"-1" }} a {{ p.categoria.rango_temperatura.temp_max_c|floatformat:"-1" }} °C</dd>
+      <dt>Conservación</dt><dd>{{ p.categoria.rango_temperatura.nombre }}: {{ p.categoria.rango_temperatura.temp_min_c|floatformat:"-1" }} a {{ p.categoria.rango_temperatura.temp_max_c|floatformat:"-1" }} °C
+        <span class="mini-escala {% if p.categoria.rango_temperatura.nombre == "Congelado" %}es-cong{% else %}es-ref{% endif %}" aria-hidden="true"><i class="eje"></i><i class="b-cong"></i><i class="b-ref"></i><em>−25</em><em>+4 °C</em></span></dd>
       <dt>Formato de venta</dt><dd>{{ p.get_unidad_medida_display }}</dd>
       <dt>Disponible</dt><dd>{{ p.stock_disponible }}</dd>
     </dl>
@@ -47,7 +48,8 @@
 </div>
 {% endwith %}
 {% if similares %}
-<div class="seccion"><h2>Más de {{ fila.p.categoria.nombre }}</h2></div>
+<div class="seccion seccion-similares"><h2>Más de {{ fila.p.categoria.nombre }}</h2></div>
 <div class="productos">{% for f in similares %}{% include "catalogo/_tarjeta.html" %}{% endfor %}</div>
 {% endif %}
 {% endblock %}
+{% block asistente %}{% include "componentes/asistente.html" with producto_id=fila.p.producto_id pagina="producto" %}{% endblock %}

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta A · Termómetro | Cofrial SpA</title>
+<meta name="color-scheme" content="light dark">
+<link rel="preload" href="fonts/schibsted.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Schibsted Grotesk"; src: url("fonts/schibsted.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+
+/* ---------- tokens ---------- */
+:root {
+  --tinta: #0B2350;        /* texto y titulares */
+  --marino: #143A7B;       /* botones, enlaces */
+  --marino-h: #0F2D61;
+  --hielo: #EDF3F9;        /* fondo de fotos y zonas de datos */
+  --escarcha: #D5E1EE;     /* líneas */
+  --papel: #FFFFFF;
+  --pagina: #F7F9FC;
+  --lima: #BDE63A;         /* solo marca: el indicador de temperatura */
+  --lima-tinta: #0B1A33;
+  --texto-2: #43546C;
+  --ok: #17703F;
+  --poco: #8A4B00;
+  --agotado: #8A2020;
+  --f: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* escala de espaciado (4 px) */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px; --s9: 112px;
+  --r-1: 6px; --r-2: 10px; --r-3: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --tinta: #EAF1FB; --marino: #BDE63A; --marino-h: #D2F25E; --hielo: #14213B; --escarcha: #243656; --papel: #0E1830; --pagina: #0A1224;
+    --texto-2: #A9B7CC; --ok: #6FD39A; --poco: #F2B25A; --agotado: #F19A9A; --lima-tinta: #0B1A33;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 400 16px/1.55 var(--f); color: var(--tinta); background: var(--pagina) }
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--lima); outline-offset: 3px; border-radius: 4px; }
+.salto { position: absolute; left: -999px; } .salto:focus { left: 8px; top: 8px; background: var(--papel); padding: 8px 12px; z-index: 9; }
+.contenedor { width: min(1200px, 100% - 2 * var(--s5)); margin-inline: auto; }
+
+/* ---------- barra ---------- */
+.barra { background: var(--papel); border-bottom: 1px solid var(--escarcha); position: sticky; top: 0; z-index: 5; }
+.barra .contenedor { display: flex; align-items: center; gap: var(--s5); min-height: 68px; }
+.barra .logo img { height: 30px; width: auto; }
+.buscar { flex: 1; max-width: 360px; position: relative; }
+.buscar input { width: 100%; height: 42px; border: 1px solid var(--escarcha); background: var(--hielo); border-radius: 999px; padding: 0 var(--s4) 0 42px; font: inherit; font-size: .94rem; color: var(--tinta); }
+.buscar svg { position: absolute; left: 14px; top: 12px; width: 18px; height: 18px; stroke: var(--texto-2); fill: none; stroke-width: 2; }
+.barra nav { display: flex; gap: var(--s5); margin-left: auto; font-weight: 500; font-size: .95rem; }
+.barra nav a { text-decoration: none; color: var(--texto-2); padding: var(--s2) 0; border-bottom: 2px solid transparent; }
+.barra nav a:hover, .barra nav a[aria-current] { color: var(--tinta); border-color: var(--lima); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 var(--s5); border-radius: var(--r-2); background: var(--marino); color: #fff; font: inherit; font-weight: 650; border: 0; text-decoration: none; cursor: pointer; transition: background .15s; }
+.btn:hover { background: var(--marino-h); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .btn { color: var(--lima-tinta); } }
+.btn.sec { background: transparent; color: var(--tinta); box-shadow: inset 0 0 0 1.5px var(--escarcha); }
+.btn.sec:hover { background: var(--hielo); }
+
+/* ---------- portada ---------- */
+.hero { padding: var(--s8) 0 var(--s7); }
+.hero .contenedor { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: var(--s8); align-items: center; }
+.hero h1 { font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.02; letter-spacing: -.035em; font-weight: 750; margin: 0 0 var(--s5); max-width: 15ch; text-wrap: balance; }
+.hero p.baja { font-size: 1.1rem; color: var(--texto-2); max-width: 46ch; margin: 0 0 var(--s6); }
+.hero form { display: flex; gap: var(--s2); max-width: 480px; }
+.hero form input { flex: 1; min-width: 0; height: 52px; border-radius: var(--r-2); border: 1.5px solid var(--escarcha); background: var(--papel); padding: 0 var(--s4); font: inherit; color: var(--tinta); }
+.hero form .btn { min-height: 52px; }
+.hero .seguir { margin: var(--s4) 0 0; font-size: .94rem; color: var(--texto-2); }
+.hero .seguir a { color: var(--tinta); font-weight: 600; text-underline-offset: 3px; }
+
+/* escala térmica: lo memorable de esta dirección */
+.escala { margin-top: var(--s7); }
+.escala-cab { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s4); font-size: .9rem; color: var(--texto-2); margin-bottom: var(--s5); }
+.escala-cab b { color: var(--tinta); font-weight: 650; }
+.regla { position: relative; height: 44px; }
+.regla .eje { position: absolute; left: 0; right: 0; top: 20px; height: 4px; background: var(--escarcha); border-radius: 4px; }
+.regla .banda { position: absolute; top: 14px; height: 16px; border-radius: 4px; background: var(--marino); opacity: .9; text-decoration: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .regla .banda { background: #2E5AA8; } }
+.regla .banda.cong { left: 0%; width: 24.1%; }       /* −25 a −18 sobre un eje de −25 a +4 (29 grados) */
+.regla .banda.ref { left: 86.2%; width: 13.8%; }      /* 0 a +4 */
+.regla .aguja { position: absolute; top: 4px; width: 0; left: 91.4%; }
+.regla .aguja::before { content: ""; position: absolute; left: -2px; top: 0; width: 4px; height: 36px; background: var(--lima); border-radius: 2px; box-shadow: 0 0 0 2px var(--papel); }
+.regla .aguja span { position: absolute; right: -6px; top: -26px; white-space: nowrap; font-size: .8rem; font-weight: 700; background: var(--lima); color: var(--lima-tinta); padding: 1px 8px; border-radius: 99px; }
+.marcas { position: relative; height: 20px; font-size: .8rem; color: var(--texto-2); margin-top: var(--s1); }
+.marcas span { white-space: nowrap; position: absolute; transform: translateX(-50%); } .marcas span:first-child { transform: none; } .marcas span:last-child { transform: translateX(-100%); }
+.rotulos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5); margin-top: var(--s4); font-size: .92rem; }
+.rotulos a { text-decoration: none; display: block; padding-top: var(--s3); border-top: 1.5px solid var(--escarcha); }
+.rotulos a:hover { border-color: var(--lima); }
+.rotulos b { display: block; font-size: 1rem; }
+.rotulos span { color: var(--texto-2); }
+
+.visual { position: relative; }
+.visual img.f { width: 100%; aspect-ratio: 5 / 4; object-fit: cover; border-radius: var(--r-3); background: var(--hielo); }
+.lectura { position: absolute; left: calc(-1 * var(--s6)); bottom: var(--s6); background: var(--papel); border: 1px solid var(--escarcha); border-radius: var(--r-2); padding: var(--s3) var(--s4); display: grid; grid-template-columns: auto 1fr; gap: 2px var(--s4); align-items: center; box-shadow: 0 10px 30px rgba(11, 35, 80, .16); }
+.lectura .t { grid-row: span 2; font-size: 2.1rem; font-weight: 750; letter-spacing: -.03em; line-height: 1; }
+.lectura .t small { font-size: 1rem; font-weight: 600; color: var(--texto-2); margin-left: 2px; }
+.lectura b { font-size: .88rem; }
+.lectura span { font-size: .8rem; color: var(--texto-2); }
+.lectura .pulso { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px; animation: late 2.4s ease-out infinite; }
+@keyframes late { 0% { box-shadow: 0 0 0 0 rgba(23, 112, 63, .5); } 80%, 100% { box-shadow: 0 0 0 8px rgba(23, 112, 63, 0); } }
+
+/* ---------- cómo comprar ---------- */
+.perfiles { border-block: 1px solid var(--escarcha); background: var(--papel); }
+.perfiles .contenedor { display: grid; grid-template-columns: 1fr 1fr; }
+.perfil { padding: var(--s7) var(--s6) var(--s7) 0; }
+.perfil + .perfil { padding: var(--s7) 0 var(--s7) var(--s6); border-left: 1px solid var(--escarcha); }
+.perfil h2 { font-size: 1.5rem; letter-spacing: -.02em; margin: 0 0 var(--s2); }
+.perfil p { color: var(--texto-2); max-width: 44ch; margin: 0 0 var(--s5); }
+.perfil .acc { display: flex; gap: var(--s3); flex-wrap: wrap; }
+
+/* ---------- catálogo (fila de muestra) ---------- */
+.seccion { padding: var(--s8) 0; }
+.seccion-cab { display: flex; justify-content: space-between; align-items: end; gap: var(--s4); margin-bottom: var(--s6); }
+.seccion-cab h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.03em; line-height: 1.1; margin: 0; }
+.seccion-cab a { font-weight: 600; text-underline-offset: 3px; white-space: nowrap; }
+.rejilla { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s5); }
+
+/* tarjeta: ficha de producto */
+.ficha { position: relative; background: var(--papel); border: 1px solid var(--escarcha); border-radius: var(--r-3); overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
+.ficha:hover { border-color: var(--marino); transform: translateY(-2px); }
+.ficha .foto { position: relative; background: var(--hielo); aspect-ratio: 1 / 1; }
+.ficha .foto img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .ficha .foto img { mix-blend-mode: normal; } :root:not([data-tema="claro"]) .ficha .foto { background: #E9EEF5; } }
+.ficha.agotado .foto img { filter: grayscale(1); opacity: .55; }
+.rango { position: absolute; left: var(--s3); top: var(--s3); z-index: 1; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 99px; padding: 5px 12px 5px 10px; font-size: .78rem; font-weight: 650; color: #0B2350; }
+.rango i { position: relative; width: 34px; height: 4px; border-radius: 3px; background: #D5E1EE; }
+.rango i::after { content: ""; position: absolute; top: -2px; height: 8px; border-radius: 3px; background: #143A7B; }
+.rango.ref i::after { left: 60%; width: 40%; }
+.rango.cong i::after { left: 0; width: 28%; }
+.ficha .cuerpo { padding: var(--s4) var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s2); flex: 1; }
+.ficha .cat { font-size: .82rem; color: var(--texto-2); }
+.ficha h3 { font-size: 1.08rem; line-height: 1.25; letter-spacing: -.01em; margin: 0; font-weight: 650; }
+.ficha h3 a { text-decoration: none; } .ficha h3 a::after { content: ""; position: absolute; inset: 0; }
+.stock { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 550; }
+.stock::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.stock.ok { color: var(--ok); } .stock.poco { color: var(--poco); } .stock.no { color: var(--agotado); }
+.precio { margin-top: auto; padding-top: var(--s3); display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; }
+.precio b { font-size: 1.75rem; font-weight: 750; letter-spacing: -.035em; line-height: 1; }
+.precio small { font-size: .82rem; color: var(--texto-2); }
+.ficha .btn { position: relative; z-index: 1; margin-top: var(--s3); min-height: 46px; width: 100%; }
+.ficha .btn.off { background: var(--hielo); color: var(--texto-2); cursor: not-allowed; }
+
+/* ---------- pie ---------- */
+.pie { border-top: 1px solid var(--escarcha); background: var(--papel); padding: var(--s6) 0; font-size: .9rem; color: var(--texto-2); }
+.pie .contenedor { display: flex; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; align-items: center; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1060px) { .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hero .contenedor { gap: var(--s6); } }
+@media (max-width: 860px) {
+  .barra .contenedor { gap: var(--s3); } .barra nav { display: none; } .buscar { max-width: none; }
+  .hero { padding: var(--s6) 0 var(--s7); }
+  .hero .contenedor { grid-template-columns: 1fr; }
+  .visual { order: -1; } .visual img.f { aspect-ratio: 16 / 10; }
+  .lectura { left: var(--s3); bottom: var(--s3); }
+  .perfiles .contenedor { grid-template-columns: 1fr; }
+  .perfil, .perfil + .perfil { padding: var(--s6) 0; border-left: 0; } .perfil + .perfil { border-top: 1px solid var(--escarcha); }
+  .seccion { padding: var(--s7) 0; }
+}
+@media (max-width: 520px) {
+  .rejilla { gap: var(--s3); }
+  .ficha .cuerpo { padding: var(--s3) var(--s3) var(--s4); } .ficha h3 { font-size: .98rem; } .precio b { font-size: 1.4rem; }
+  .ficha .btn { font-size: .85rem; padding: 0 var(--s2); }
+  .rotulos { grid-template-columns: 1fr; } .escala-cab { flex-direction: column; gap: 2px; }
+  .hero form { flex-direction: column; } .hero form input { flex: none; } .seccion-cab { flex-direction: column; align-items: start; gap: var(--s2); } .rango { font-size: .72rem; } .rango i { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<a class="salto" href="#contenido">Saltar al contenido</a>
+
+<header class="barra">
+  <div class="contenedor">
+    <a class="logo" href="#" aria-label="Cofrial, inicio"><img src="/web/static/img/cofrial-logo.png" alt="Cofrial" width="116" height="30"></a>
+    <form class="buscar" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" placeholder="Buscar productos o SKU" aria-label="Buscar productos"></form>
+    <nav aria-label="Principal"><a href="#" aria-current="page">Inicio</a><a href="#">Catálogo</a><a href="#">Seguir mi pedido</a><a href="#">Guía</a></nav>
+    <a class="btn" href="#">Ingresar</a>
+  </div>
+</header>
+
+<main id="contenido">
+<section class="hero" aria-labelledby="h1">
+  <div class="contenedor">
+    <div>
+      <h1 id="h1">Carnes y refrigerados que llegan a la temperatura correcta</h1>
+      <p class="baja">Compre con su lista de precios y siga cada pedido con la temperatura de la cámara y la posición del camión, hasta su puerta.</p>
+      <form role="search" aria-label="Buscador de la portada"><input type="search" placeholder="Busque un producto" aria-label="Buscar productos"><button class="btn">Buscar</button></form>
+      <p class="seguir">¿Ya hizo un pedido? <a href="#">Siga su entrega</a></p>
+
+      <div class="escala" role="group" aria-label="Rangos de temperatura de conservación">
+        <div class="escala-cab"><b>Dos rangos, ambos monitoreados</b><span>Cámara de Temuco ahora: 2,1 °C</span></div>
+        <div class="regla" aria-hidden="true">
+          <div class="eje"></div>
+          <span class="banda cong"></span><span class="banda ref"></span>
+          <div class="aguja"><span>2,1 °C</span></div>
+        </div>
+        <div class="marcas" aria-hidden="true"><span style="left:0">−25 °C</span><span style="left:24.1%">−18</span><span style="left:86.2%">0</span><span style="left:100%">+4 °C</span></div>
+        <div class="rotulos">
+          <a href="#"><b>Congelado</b><span>−25 a −18 °C · 8 productos</span></a>
+          <a href="#"><b>Refrigerado</b><span>0 a 4 °C · 12 productos</span></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual">
+      <picture><source type="image/avif" srcset="/web/static/img/portada-800.avif 800w, /web/static/img/portada-1672.avif 1672w" sizes="(min-width: 860px) 560px, 100vw"><img class="f" src="/web/static/img/portada.jpg" alt="Cámara de frío con estanterías de producto congelado" width="1672" height="470" fetchpriority="high" style="object-position: 62% 50%"></picture>
+      <div class="lectura" role="status" aria-label="Lectura en vivo de un camión">
+        <span class="t">2,4<small>°C</small></span>
+        <b><i class="pulso"></i>CAM-02 en ruta</b>
+        <span>Temuco a Villarrica · hace 4 s</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="perfiles" aria-label="Cómo desea comprar">
+  <div class="contenedor">
+    <div class="perfil">
+      <h2>Soy una institución</h2>
+      <p>Hospitales, hoteles, casinos y supermercados: lista de precios institucional (neto), orden de compra y repetir su último pedido en un clic.</p>
+      <div class="acc"><a class="btn" href="#">Ingresar con la cuenta de la empresa</a></div>
+    </div>
+    <div class="perfil">
+      <h2>Soy cliente particular</h2>
+      <p>Revise el catálogo sin cuenta. Cree la suya en un minuto para comprar y seguir su pedido.</p>
+      <div class="acc"><a class="btn" href="#">Ver catálogo</a><a class="btn sec" href="#">Crear mi cuenta</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="seccion" aria-labelledby="h-prod">
+  <div class="contenedor">
+    <div class="seccion-cab"><h2 id="h-prod">Lo que más piden esta semana</h2><a href="#">Ver el catálogo completo</a></div>
+    <div class="rejilla">
+
+      <article class="ficha" data-sku="PAV-PEC-5K" data-precio="34990">
+        <div class="foto"><span class="rango ref"><i></i>0 a 4 °C</span>
+          <picture><source type="image/avif" srcset="/web/static/productos/propias/PAV-PEC-5K-400.avif 400w, /web/static/productos/propias/PAV-PEC-5K-800.avif 800w" sizes="(min-width: 1060px) 280px, 46vw"><img src="/web/static/productos/propias/PAV-PEC-5K.jpg" alt="" width="800" height="800"></picture></div>
+        <div class="cuerpo"><span class="cat">Aves</span><h3><a href="#">Pechuga de pavo 5 kg</a></h3><span class="stock ok">En stock</span>
+          <div class="precio"><b>$34.990</b><small>por caja</small></div><a class="btn" href="#">Ingresar para comprar</a></div>
+      </article>
+
+      <article class="ficha" data-sku="VAC-LOM-5K" data-precio="45990">
+        <div class="foto"><span class="rango ref"><i></i>0 a 4 °C</span>
+          <picture><source type="image/avif" srcset="/web/static/productos/propias/VAC-LOM-5K-400.avif 400w, /web/static/productos/propias/VAC-LOM-5K-800.avif 800w" sizes="(min-width: 1060px) 280px, 46vw"><img src="/web/static/productos/propias/VAC-LOM-5K.jpg" alt="" width="800" height="800" loading="lazy"></picture></div>
+        <div class="cuerpo"><span class="cat">Cárnicos refrigerados</span><h3><a href="#">Lomo vetado de vacuno 5 kg</a></h3><span class="stock ok">En stock</span>
+          <div class="precio"><b>$45.990</b><small>por caja</small></div><a class="btn" href="#">Ingresar para comprar</a></div>
+      </article>
+
+      <article class="ficha" data-sku="PES-FIL-3K" data-precio="32990">
+        <div class="foto"><span class="rango cong"><i></i>−25 a −18 °C</span>
+          <picture><source type="image/avif" srcset="/web/static/productos/propias/PES-FIL-3K-400.avif 400w, /web/static/productos/propias/PES-FIL-3K-800.avif 800w" sizes="(min-width: 1060px) 280px, 46vw"><img src="/web/static/productos/propias/PES-FIL-3K.jpg" alt="" width="800" height="800" loading="lazy"></picture></div>
+        <div class="cuerpo"><span class="cat">Congelados</span><h3><a href="#">Filete de salmón congelado 3 kg</a></h3><span class="stock poco">Quedan 12</span>
+          <div class="precio"><b>$32.990</b><small>por caja</small></div><a class="btn" href="#">Ingresar para comprar</a></div>
+      </article>
+
+      <article class="ficha agotado" data-sku="MAR-CAM-1K" data-precio="14990">
+        <div class="foto"><span class="rango cong"><i></i>−25 a −18 °C</span>
+          <picture><source type="image/avif" srcset="/web/static/productos/propias/MAR-CAM-1K-400.avif 400w, /web/static/productos/propias/MAR-CAM-1K-800.avif 800w" sizes="(min-width: 1060px) 280px, 46vw"><img src="/web/static/productos/propias/MAR-CAM-1K.jpg" alt="" width="800" height="800" loading="lazy"></picture></div>
+        <div class="cuerpo"><span class="cat">Congelados</span><h3><a href="#">Camarones congelados 1 kg</a></h3><span class="stock no">Sin stock</span>
+          <div class="precio"><b>$14.990</b><small>por caja</small></div><span class="btn off" aria-disabled="true">Avisarme cuando llegue</span></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="pie"><div class="contenedor"><img src="/web/static/img/cofrial-logo.png" alt="Cofrial" width="116" height="30" style="height:26px;width:auto"><span>Frigorífico y distribución en cadena de frío · La Araucanía</span><span>Prototipo académico INACAP Temuco</span></div></footer>
+</body>
+</html>

@@ -64,6 +64,7 @@ DATABASES = {"default": {
     "HOST": entorno("DB_HOST", "localhost"),
     "PORT": entorno("DB_PORT", "5432"),
     "CONN_MAX_AGE": 60,
+    "CONN_HEALTH_CHECKS": True,                  # comprueba que la conexión persistente siga viva antes de reutilizarla (RDS puede cerrarla)
     "OPTIONS": {"sslmode": entorno("DB_SSLMODE", "prefer")},     # contra RDS: DB_SSLMODE=require
 }}
 
@@ -79,9 +80,13 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Archivos con huella en el nombre (cofrial.3f9a1c.css) y caché larga: WhiteNoise los sirve como inmutables. Las pruebas
+# y el modo de desarrollo usan nombres planos porque no hay collectstatic previo.
+_CON_HUELLA = not DEBUG and "test" not in sys.argv
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if _CON_HUELLA
+                    else "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 # API JSON de solo lectura: misma sesión del sitio, sin navegador de la API y siempre con sesión iniciada.
 REST_FRAMEWORK = {
@@ -98,6 +103,9 @@ LOGOUT_REDIRECT_URL = "/"
 # que lo quita en las peticiones a otro sitio y OSM responde «403 Access blocked». Con esta política se envía solo el origen (sin ruta ni datos).
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
+# Asistente de IA de la tienda (ASISTENTE_ACTIVO=0 lo apaga sin tocar el resto).
+ASISTENTE_ACTIVO = os.environ.get("ASISTENTE_ACTIVO", "1") == "1"
+
 # Mosaicos del mapa. Por defecto, OpenStreetMap (uso liviano, con Referer y atribución). Para otro proveedor, definir las variables
 # MAP_TILE_URL y MAP_TILE_ATTRIBUTION (y MAP_TILE_SUBDOMAINS / MAP_TILE_MAX_ZOOM si hace falta); las claves del proveedor, si las pide, van en la propia URL.
 MAPA_TILES = {
@@ -110,3 +118,18 @@ MAPA_TILES = {
 # Mapa y rutas (OpenStreetMap, sin clave). La base es el punto de salida de los camiones, el mismo donde parte el simulador IoT.
 BASE_LOGISTICA = {"nombre": "Frigorífico central, Temuco", "lat": -38.7359, "long": -72.5904}
 GEOCODIFICAR = os.environ.get("GEOCODIFICAR", "1") == "1" and "test" not in sys.argv
+
+
+# Registro de errores: con DEBUG apagado Django no imprime los 500 en la consola (solo los manda por correo, que no está configurado),
+# así que `docker logs` no mostraba ningún traceback. Todo va a la salida estándar, que es lo que lee Docker.
+LOGGING = {
+    "version": 1, "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"consola": {"class": "logging.StreamHandler", "formatter": "simple"}},
+    "loggers": {
+        "django.request": {"handlers": ["consola"], "level": "WARNING", "propagate": False},
+        "django.db.backends": {"handlers": ["consola"], "level": "ERROR", "propagate": False},
+        "cofrial": {"handlers": ["consola"], "level": "INFO", "propagate": False},
+    },
+    "root": {"handlers": ["consola"], "level": "WARNING"},
+}

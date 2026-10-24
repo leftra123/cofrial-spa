@@ -15,7 +15,7 @@ def _grafana(request):
 
 def menu(request):
     u = request.user
-    tiles = {"mapa_tiles": settings.MAPA_TILES}
+    tiles = {"mapa_tiles": settings.MAPA_TILES, "asistente_activo": settings.ASISTENTE_ACTIVO}
     if not u.is_authenticated:
         return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "demo": False}, "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "grafana_url": "", **tiles}
     rol = crm.rol(u)

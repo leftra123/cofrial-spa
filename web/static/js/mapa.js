@@ -13,8 +13,43 @@ window.CofrialMapa = (function () {
     L.tileLayer(MOSAICOS.url, {
       maxZoom: MOSAICOS.maxZoom, subdomains: MOSAICOS.subdomains, attribution: MOSAICOS.attribution,
       referrerPolicy: "strict-origin-when-cross-origin"}).addTo(m);          // OSM exige el Referer: sin él responde «403 Access blocked»
+    m.on("moveend zoomend layeradd", function () { agendarSeparacion(m); });
     return m;
   }
+
+  /* Camiones cercanos: cada ícono pesa 64x58 px, así que dos camiones a pocos metros se taparían. Tras cada movimiento se reparten en pantalla
+     (solo el dibujo, nunca la posición real) y se dejan debajo de las paradas y la bodega para no taparlas. */
+  var HUECOS = [[0, 0], [72, 0], [-72, 0], [0, -62], [0, 62], [72, -62], [-72, -62], [72, 62], [-72, 62]];
+  var pendiente = new WeakSet();
+  function separarCamiones(m) {
+    var camiones = [];
+    m.eachLayer(function (l) {
+      var o = l.options && l.options.icon && l.options.icon.options;
+      if (l._icon && o && (o.className || "").indexOf("pin-camion") >= 0) camiones.push(l);
+    });
+    camiones.sort(function (a, b) { return String(a._icon.textContent).localeCompare(String(b._icon.textContent)); });
+    var colocados = [];
+    camiones.forEach(function (l) {
+      var p = m.latLngToContainerPoint(l.getLatLng()), o = l.options.icon.options, elegido = HUECOS[0];
+      for (var h = 0; h < HUECOS.length; h++) {
+        var x = p.x + HUECOS[h][0], y = p.y + HUECOS[h][1];
+        if (!colocados.some(function (c) { return Math.abs(c[0] - x) < 68 && Math.abs(c[1] - y) < 58; })) { elegido = HUECOS[h]; break; }
+      }
+      colocados.push([p.x + elegido[0], p.y + elegido[1]]);
+      l._icon.style.marginLeft = (-o.iconAnchor[0] + elegido[0]) + "px";
+      l._icon.style.marginTop = (-o.iconAnchor[1] + elegido[1]) + "px";
+      l.setZIndexOffset((o.className.indexOf("alerta") >= 0 ? -500 : -1000));
+    });
+  }
+  function agendarSeparacion(m) {
+    if (pendiente.has(m)) return;
+    pendiente.add(m);
+    requestAnimationFrame(function () { pendiente.delete(m); separarCamiones(m); });
+  }
+  ["setIcon", "setLatLng"].forEach(function (nombre) {          // la flota refresca posición y color cada 5 s: se vuelve a separar
+    var original = L.Marker.prototype[nombre];
+    L.Marker.prototype[nombre] = function () { var r = original.apply(this, arguments); if (this._map) agendarSeparacion(this._map); return r; };
+  });
 
   /* Pin redondo con texto (número de parada, "C" de camión, "B" de base). */
   function pin(texto, color) {
@@ -29,8 +64,8 @@ window.CofrialMapa = (function () {
     return t ? t.getAttribute("src").replace(/js\/mapa\.js.*$/, "img/marca/") : "/static/img/marca/";
   })();
   function camion(alerta, etiqueta) {
-    var img = '<img src="' + BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png") + '" width="92" height="58" alt="" draggable="false">';
-    return L.divIcon({className: "pin-camion" + (alerta ? " alerta" : ""), iconSize: [92, 78], iconAnchor: [46, 48], popupAnchor: [0, -44],
+    var img = '<img src="' + BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png") + '" width="64" height="40" alt="" draggable="false">';
+    return L.divIcon({className: "pin-camion" + (alerta ? " alerta" : ""), iconSize: [64, 58], iconAnchor: [32, 32], popupAnchor: [0, -30],
       html: img + (etiqueta ? '<b class="pin-etq">' + etiqueta + "</b>" : "")});
   }
 

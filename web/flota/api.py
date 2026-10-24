@@ -58,7 +58,7 @@ class PedidosAPI(APIView):
         if cliente is None:
             return Response({"detail": "Tu cuenta no está asociada a un cliente."}, status=403)
         datos = [{"orden_id": o.orden_id, "estado": o.estado_orden.nombre, "creada_en": o.creada_en,
-                  "numero_oc": o.numero_oc, "total_clp": pedidos.total_orden(o)}
+                  "numero_oc": o.numero_oc, "oc_pendiente": o.oc_pendiente, "total_clp": pedidos.total_orden(o)}
                  for o in pedidos.ordenes_de(cliente)]
         return Response({"cliente": cliente.nombre, "ordenes": datos})
 

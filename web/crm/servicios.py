@@ -234,6 +234,7 @@ def indicadores(usuario):
         "conversion": round(100 * ganados / n_cerrados) if n_cerrados else None,
         "ventas_por_canal": sorted(por_canal.items()),
         "pedidos_afectados": len(ordenes_afectadas(usuario)),
+        "oc_pendientes": ordenes.filter(oc_pendiente=True).count(),
         "requerimientos_pendientes": Requerimiento.objects.filter(estado="sin_clasificar").count(),
         "por_etapa": list(abiertos.values("etapa__nombre", "etapa__orden_etapa").annotate(n=Count("pk"), monto=Sum("monto_estimado_clp")).order_by("etapa__orden_etapa")),
     }

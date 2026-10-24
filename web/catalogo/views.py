@@ -170,3 +170,30 @@ def api_productos(request, sku=None):
     r = JsonResponse(_ficha(p), json_dumps_params={"ensure_ascii": False})
     r["Access-Control-Allow-Origin"] = "*"
     return r
+
+
+def api_asistente(request):
+    """Asistente de IA de la tienda (ver catalogo/asistente.py): solo lectura, el contexto se arma en el servidor con los datos de ESTA sesión."""
+    from django.conf import settings
+    from django.http import Http404, JsonResponse
+    from . import asistente
+    if request.method != "POST" or not settings.ASISTENTE_ACTIVO:
+        raise Http404
+    try:
+        datos = json.loads(request.body or b"{}")
+        datos = datos if isinstance(datos, dict) else {}
+    except ValueError:
+        datos = {}
+
+    def entero(v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+    clave = f"u{request.user.pk}" if request.user.is_authenticated else "ip" + request.META.get("REMOTE_ADDR", "?")
+    try:
+        r = asistente.responder(datos.get("mensaje"), _cliente(request), lista_del_visitante(request), clave,
+                                producto_id=entero(datos.get("producto_id")), orden_id=entero(datos.get("orden_id")))
+    except asistente.Rechazo as e:
+        return JsonResponse({"respuesta": e.texto, "acciones": [], "origen": "regla"}, status=e.estado, json_dumps_params={"ensure_ascii": False})
+    return JsonResponse(r, json_dumps_params={"ensure_ascii": False})

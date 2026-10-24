@@ -30,6 +30,16 @@ def _mostrar_errores(request, error):
         messages.error(request, m)
 
 
+def _respuesta_json(request, cliente):
+    """Mismo resultado que la redirección, en JSON: los mensajes (que así no reaparecen en la página siguiente) y cuántos productos hay en el carrito."""
+    from django.contrib.messages import get_messages
+    from django.http import JsonResponse
+    from .models import CarritoItem
+    mensajes = [{"tipo": m.level_tag, "texto": str(m)} for m in get_messages(request)]
+    n = sum(CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto").values_list("cantidad", flat=True))
+    return JsonResponse({"ok": not any(m["tipo"] == "error" for m in mensajes), "mensajes": mensajes, "carrito_n": n}, json_dumps_params={"ensure_ascii": False})
+
+
 @require_POST
 @solo_clientes
 def agregar(request, cliente):
@@ -38,6 +48,8 @@ def agregar(request, cliente):
         messages.success(request, "Producto agregado al carrito.")
     except (s.ErrorDeNegocio, ValueError) as e:
         _mostrar_errores(request, e) if isinstance(e, s.ErrorDeNegocio) else messages.error(request, "Cantidad no válida.")
+    if request.headers.get("X-Requested-With") == "fetch":         # mejora progresiva: la tienda agrega sin recargar; sin JavaScript sigue la redirección de siempre
+        return _respuesta_json(request, cliente)
     return redirect(request.POST.get("volver") or "catalogo")
 
 
@@ -112,6 +124,18 @@ def detalle(request, cliente, orden_id):
         "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
         "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
+
+
+@require_POST
+@solo_clientes
+def registrar_oc(request, cliente, orden_id):
+    """El cliente institucional agrega su orden de compra a un pedido que quedó «OC pendiente»."""
+    try:
+        s.registrar_oc(cliente, orden_id, request.POST.get("numero_oc", ""))
+        messages.success(request, "Registramos tu orden de compra. Gracias.")
+    except s.ErrorDeNegocio as e:
+        _mostrar_errores(request, e)
+    return redirect("orden", orden_id=orden_id)
 
 
 @require_POST

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta B · Ruta | Cofrial SpA</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Archivo"; src: url("fonts/archivo.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+
+/* ---------- tokens ---------- */
+:root {
+  --fondo: #07142F;        /* marino profundo: la noche de la ruta */
+  --panel: #0C1D40;
+  --linea: #1D3262;
+  --texto: #EAF1FB;
+  --texto-2: #A3B5D0;
+  --marino: #143A7B;
+  --lima: #BDE63A;         /* librea del camión: precios, acción principal y la ruta */
+  --lima-h: #D2F25E;
+  --lima-tinta: #0B1A33;
+  --blanco-foto: #EEF3F8;  /* fondo común de las fotos de producto */
+  --ok: #6FD39A; --poco: #F2B25A; --agotado: #F19A9A;
+  --f: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px; --s9: 112px;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema="oscuro"]) { --fondo: #F4F7FB; --panel: #FFFFFF; --linea: #CBD8E8; --texto: #0B2350; --texto-2: #43546C; --marino: #143A7B; --ok: #17703F; --poco: #8A4B00; --agotado: #8A2020; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 400 16px/1.55 var(--f); font-stretch: 100%; color: var(--texto); background: var(--fondo); font-feature-settings: "tnum" 1; }
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--lima); outline-offset: 3px; }
+.salto { position: absolute; left: -999px; } .salto:focus { left: 8px; top: 8px; background: var(--lima); color: var(--lima-tinta); padding: 8px 12px; z-index: 9; }
+.contenedor { width: min(1280px, 100% - 2 * var(--s5)); margin-inline: auto; }
+.cond { font-stretch: 62%; font-weight: 800; letter-spacing: -.01em; }
+
+/* ---------- barra ---------- */
+.barra { position: absolute; inset: 0 0 auto 0; z-index: 5; }
+.barra .contenedor { display: flex; align-items: center; gap: var(--s5); min-height: 76px; }
+.chip-logo { background: #fff; border-radius: 10px; padding: 7px 12px; display: inline-flex; }
+.chip-logo img { height: 24px; width: auto; }
+.barra nav { display: flex; gap: var(--s6); margin-left: auto; font-weight: 600; font-size: .95rem; }
+.barra nav a { text-decoration: none; opacity: .86; padding: var(--s2) 0; } .barra nav a:hover { opacity: 1; text-decoration: underline; text-decoration-color: var(--lima); text-underline-offset: 6px; text-decoration-thickness: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 var(--s5); background: var(--lima); color: var(--lima-tinta); font: inherit; font-weight: 700; border: 0; border-radius: 4px; text-decoration: none; cursor: pointer; transition: background .15s; }
+.btn:hover { background: var(--lima-h); }
+.btn.sec { background: transparent; color: var(--texto); box-shadow: inset 0 0 0 1.5px var(--linea); } .btn.sec:hover { background: var(--panel); }
+.btn.chico { min-height: 40px; padding: 0 var(--s4); }
+
+/* ---------- portada ---------- */
+.hero { position: relative; min-height: min(880px, 100svh); display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; isolation: isolate; }
+.hero picture, .hero .fondo { position: absolute; inset: 0; z-index: -2; }
+.hero .fondo { width: 100%; height: 100%; object-fit: cover; object-position: 70% 50%; filter: saturate(.8); }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, var(--fondo) 0%, rgba(7, 20, 47, .88) 38%, rgba(7, 20, 47, .35) 100%), linear-gradient(0deg, var(--fondo) 0%, transparent 38%); }
+@media (prefers-color-scheme: light) { :root:not([data-tema="oscuro"]) .hero::before { background: linear-gradient(90deg, rgba(7, 20, 47, .96) 0%, rgba(7, 20, 47, .85) 40%, rgba(7, 20, 47, .3) 100%), linear-gradient(0deg, var(--fondo) 0%, transparent 25%); } :root:not([data-tema="oscuro"]) .hero .txt { color: #EAF1FB; } }
+.hero .txt { padding-top: 150px; color: #EAF1FB; }
+.hero h1 { font-size: clamp(3.4rem, 10.5vw, 9.6rem); line-height: .88; margin: 0 0 var(--s5); max-width: 11ch; text-wrap: balance; text-transform: uppercase; }
+.hero .baja { font-size: clamp(1.05rem, 1.6vw, 1.3rem); max-width: 40ch; color: #C4D2E8; margin: 0 0 var(--s6); }
+.hero form { display: flex; max-width: 520px; background: #fff; border-radius: 6px; padding: 5px; gap: 6px; }
+.hero form input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0 var(--s4); font: inherit; color: #0B1A33; min-height: 46px; }
+.hero form input::placeholder { color: #55637A; }
+.hero form input:focus-visible { outline: none; }
+.hero form:focus-within { outline: 3px solid var(--lima); outline-offset: 2px; }
+.hero .seguir { margin: var(--s4) 0 0; color: #C4D2E8; font-size: .95rem; }
+.hero .seguir a { color: #fff; font-weight: 700; text-underline-offset: 4px; text-decoration-color: var(--lima); text-decoration-thickness: 2px; }
+
+/* la ruta: el momento que se mueve, una sola vez al cargar */
+.ruta { margin-top: var(--s8); padding: var(--s6) 0 var(--s7); color: #EAF1FB; }
+.ruta-pista { position: relative; height: 52px; }
+.ruta-linea { position: absolute; left: 0; right: 0; bottom: 4px; height: 6px; background: repeating-linear-gradient(90deg, var(--lima) 0 28px, transparent 28px 44px); opacity: .9; }
+.ruta-camion { position: absolute; bottom: 0; left: 0; width: 80px; animation: ruta-avanza 7s cubic-bezier(.45, .05, .25, 1) .4s forwards; }
+.ruta-camion img { width: 80px; height: auto; transform: scaleX(-1); }
+@keyframes ruta-avanza { to { left: calc(62% - 40px); } }
+.paradas { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4); margin-top: var(--s4); }
+.parada b { display: block; font-size: 1.6rem; font-stretch: 62%; font-weight: 800; line-height: 1.1; }
+.parada span { color: #B4C4DC; font-size: .88rem; }
+.parada:nth-child(2) b { color: var(--lima); }
+.parada:last-child { text-align: right; }
+
+/* ---------- cómo comprar ---------- */
+.perfiles { background: var(--lima); color: var(--lima-tinta); }
+.perfiles .contenedor { display: grid; grid-template-columns: 1fr 1fr; }
+.perfil { padding: var(--s7) var(--s6) var(--s7) 0; }
+.perfil + .perfil { padding: var(--s7) 0 var(--s7) var(--s6); border-left: 2px solid rgba(11, 26, 51, .25); }
+.perfil h2 { font-size: clamp(2rem, 3.6vw, 3.2rem); line-height: .95; margin: 0 0 var(--s3); text-transform: uppercase; }
+.perfil p { max-width: 42ch; margin: 0 0 var(--s5); font-weight: 500; }
+.perfil .acc { display: flex; gap: var(--s3); flex-wrap: wrap; }
+.perfiles .btn { background: var(--lima-tinta); color: #fff; } .perfiles .btn:hover { background: #12306A; }
+.perfiles .btn.sec { background: transparent; color: var(--lima-tinta); box-shadow: inset 0 0 0 2px var(--lima-tinta); } .perfiles .btn.sec:hover { background: rgba(11, 26, 51, .1); }
+
+/* ---------- catálogo: grilla tipo manifiesto, sin tarjetas flotantes ---------- */
+.seccion { padding: var(--s8) 0 var(--s9); }
+.seccion-cab { display: flex; justify-content: space-between; align-items: end; gap: var(--s4); margin-bottom: var(--s6); }
+.seccion-cab h2 { font-size: clamp(2.2rem, 5vw, 4.2rem); line-height: .92; margin: 0; text-transform: uppercase; }
+.seccion-cab a { font-weight: 700; text-underline-offset: 5px; text-decoration-color: var(--lima); text-decoration-thickness: 2px; white-space: nowrap; }
+.manifiesto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--linea); border-left: 1px solid var(--linea); }
+.celda { position: relative; border-right: 1px solid var(--linea); border-bottom: 1px solid var(--linea); display: flex; flex-direction: column; background: var(--panel); transition: background .15s; }
+.celda:hover { background: color-mix(in srgb, var(--panel), var(--lima) 6%); }
+.celda .tope { display: flex; justify-content: space-between; align-items: baseline; padding: var(--s3) var(--s4) 0; font-size: .8rem; color: var(--texto-2); }
+.celda .temp { font-size: clamp(2.8rem, 4.6vw, 4.4rem); line-height: .9; padding: var(--s1) var(--s4) 0; color: transparent; -webkit-text-stroke: 1.5px var(--lima); }
+.celda .temp small { font-size: .38em; -webkit-text-stroke-width: 1px; }
+.celda.cong .temp { -webkit-text-stroke-color: #7DD3FC; }
+.celda .foto { margin: var(--s3) var(--s4) 0; background: var(--blanco-foto); aspect-ratio: 1 / 1; }
+.celda .foto img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.celda.agotado .foto img { filter: grayscale(1); opacity: .5; }
+.celda .cuerpo { padding: var(--s4); display: flex; flex-direction: column; gap: var(--s2); flex: 1; }
+.celda h3 { font-size: 1.15rem; line-height: 1.2; margin: 0; font-weight: 700; }
+.celda h3 a { text-decoration: none; } .celda h3 a::after { content: ""; position: absolute; inset: 0; }
+.stock { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 600; }
+.stock::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.stock.ok { color: var(--ok); } .stock.poco { color: var(--poco); } .stock.no { color: var(--agotado); }
+.precio { margin-top: auto; padding-top: var(--s3); display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; }
+.precio b { font-size: 2.3rem; line-height: 1; font-stretch: 75%; font-weight: 800; color: var(--lima); letter-spacing: -.01em; }
+@media (prefers-color-scheme: light) { :root:not([data-tema="oscuro"]) .precio b { color: var(--marino); } }
+.precio small { color: var(--texto-2); font-size: .82rem; }
+.celda .btn { position: relative; z-index: 1; margin-top: var(--s3); width: 100%; }
+.celda .btn.off { background: transparent; color: var(--texto-2); box-shadow: inset 0 0 0 1.5px var(--linea); cursor: not-allowed; }
+
+.pie { border-top: 1px solid var(--linea); padding: var(--s6) 0; font-size: .9rem; color: var(--texto-2); }
+.pie .contenedor { display: flex; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; align-items: center; }
+.pie .chip-logo img { height: 20px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1060px) { .manifiesto { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) {
+  .barra nav { display: none; } .barra .btn { margin-left: auto; }
+  .hero { min-height: 0; } .hero .txt { padding-top: 110px; }
+  .perfiles .contenedor { grid-template-columns: 1fr; }
+  .perfil, .perfil + .perfil { padding: var(--s6) 0; border-left: 0; } .perfil + .perfil { border-top: 2px solid rgba(11, 26, 51, .25); }
+  .seccion { padding: var(--s7) 0; }
+  .ruta { margin-top: var(--s7); }
+}
+@media (max-width: 520px) {
+  .hero h1 { font-size: 3.5rem; } .hero form input { flex: none; } .seccion-cab { flex-direction: column; align-items: start; gap: var(--s3); } .celda .tope span:last-child { display: none; }
+  .hero form { flex-direction: column; background: transparent; padding: 0; gap: var(--s2); } .hero form input { background: #fff; border-radius: 6px; } .hero form .btn { width: 100%; }
+  .paradas b { font-size: 1.15rem; } .paradas span { font-size: .78rem; }
+  .ruta-camion { width: 56px; } .ruta-camion img { width: 56px; }
+  .celda .tope { padding: var(--s2) var(--s3) 0; } .celda .temp { padding: 0 var(--s3); font-size: 2.4rem; } .celda .foto { margin: var(--s2) var(--s3) 0; }
+  .celda .cuerpo { padding: var(--s3); } .celda h3 { font-size: .98rem; } .precio b { font-size: 1.7rem; } .celda .btn { font-size: .82rem; padding: 0 var(--s2); min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .ruta-camion { animation: none; left: calc(62% - 40px); } *, *::before, *::after { transition: none !important; } }
+</style>
+</head>
+<body>
+<a class="salto" href="#contenido">Saltar al contenido</a>
+
+<main id="contenido">
+<section class="hero" aria-labelledby="h1">
+  <header class="barra">
+    <div class="contenedor">
+      <a class="chip-logo" href="#" aria-label="Cofrial, inicio"><img src="/web/static/img/cofrial-logo.png" alt="Cofrial" width="93" height="24"></a>
+      <nav aria-label="Principal" style="color:#EAF1FB"><a href="#">Catálogo</a><a href="#">Seguir mi pedido</a><a href="#">Guía</a><a href="#">Soporte</a></nav>
+      <a class="btn chico" href="#">Ingresar</a>
+    </div>
+  </header>
+  <picture><source type="image/avif" srcset="/web/static/img/portada-800.avif 800w, /web/static/img/portada-1672.avif 1672w" sizes="100vw"><img class="fondo" src="/web/static/img/portada.jpg" alt="" width="1672" height="470" fetchpriority="high"></picture>
+
+  <div class="contenedor txt">
+    <h1 id="h1" class="cond">Del frío a su puerta, sin soltar el grado</h1>
+    <p class="baja">Carnes y refrigerados con su lista de precios. Siga cada pedido con la temperatura de la cámara y la posición del camión.</p>
+    <form role="search" aria-label="Buscador de la portada"><input type="search" placeholder="Busque un producto" aria-label="Buscar productos"><button class="btn">Buscar</button></form>
+    <p class="seguir">¿Ya hizo un pedido? <a href="#">Siga su entrega</a></p>
+  </div>
+
+  <div class="contenedor ruta" role="img" aria-label="Un camión sale del frigorífico de Temuco: cámara a menos 21 grados, en ruta a 2,4 grados, y llega a la puerta del cliente">
+    <div class="ruta-pista" aria-hidden="true"><div class="ruta-linea"></div><div class="ruta-camion"><img src="/web/static/img/cofrial-camion.png" alt="" width="512" height="304"></div></div>
+    <div class="paradas" aria-hidden="true">
+      <div class="parada"><b>−21 °C</b><span>Frigorífico, Temuco</span></div>
+      <div class="parada"><b>2,4 °C</b><span>En ruta, lectura hace 4 s</span></div>
+      <div class="parada"><b>Su puerta</b><span>Sin cortar la cadena de frío</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="perfiles" aria-label="Cómo desea comprar">
+  <div class="contenedor">
+    <div class="perfil">
+      <h2 class="cond">Soy una institución</h2>
+      <p>Hospitales, hoteles, casinos y supermercados: lista de precios institucional (neto), orden de compra y repetir su último pedido en un clic.</p>
+      <div class="acc"><a class="btn" href="#">Ingresar con la cuenta de la empresa</a></div>
+    </div>
+    <div class="perfil">
+      <h2 class="cond">Soy cliente particular</h2>
+      <p>Revise el catálogo sin cuenta. Cree la suya en un minuto para comprar y seguir su pedido.</p>
+      <div class="acc"><a class="btn" href="#">Ver catálogo</a><a class="btn sec" href="#">Crear mi cuenta</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="seccion" aria-labelledby="h-prod">
+  <div class="contenedor">
+    <div class="seccion-cab"><h2 id="h-prod" class="cond">Lo que más piden esta semana</h2><a href="#">Ver el catálogo completo</a></div>
+    <div class="manifiesto">
+
+      <article class="celda ref" data-sku="PAV-PEC-5K" data-precio="34990">
+        <div class="tope"><span>Aves</span><span>PAV-PEC-5K</span></div>
+        <div class="temp cond" aria-label="Se conserva de 0 a 4 grados">0–4<small>°C</small></div>
+        <div class="foto"><picture><source type="image/avif" srcset="/web/static/productos/propias/PAV-PEC-5K-400.avif 400w, /web/static/productos/propias/PAV-PEC-5K-800.avif 800w" sizes="(min-width: 1060px) 270px, 44vw"><img src="/web/static/productos/propias/PAV-PEC-5K.jpg" alt="" width="800" height="800"></picture></div>
+        <div class="cuerpo"><h3><a href="#">Pechuga de pavo 5 kg</a></h3><span class="stock ok">En stock</span>
+          <div class="precio"><b>$34.990</b><small>por caja</small></div><a class="btn" href="#">Ingresar para comprar</a></div>
+      </article>
+
+      <article class="celda ref" data-sku="VAC-LOM-5K" data-precio="45990">
+        <div class="tope"><span>Cárnicos refrigerados</span><span>VAC-LOM-5K</span></div>
+        <div class="temp cond" aria-label="Se conserva de 0 a 4 grados">0–4<small>°C</small></div>
+        <div class="foto"><picture><source type="image/avif" srcset="/web/static/productos/propias/VAC-LOM-5K-400.avif 400w, /web/static/productos/propias/VAC-LOM-5K-800.avif 800w" sizes="(min-width: 1060px) 270px, 44vw"><img src="/web/static/productos/propias/VAC-LOM-5K.jpg" alt="" width="800" height="800" loading="lazy"></picture></div>
+        <div class="cuerpo"><h3><a href="#">Lomo vetado de vacuno 5 kg</a></h3><span class="stock ok">En stock</span>
+          <div class="precio"><b>$45.990</b><small>por caja</small></div><a class="btn" href="#">Ingresar para comprar</a></div>
+      </article>
+
+      <article class="celda cong" data-sku="PES-FIL-3K" data-precio="32990">
+        <div class="tope"><span>Congelados</span><span>PES-FIL-3K</span></div>
+        <div class="temp cond" aria-label="Se conserva de menos 25 a menos 18 grados">−18<small>°C</small></div>
+        <div class="foto"><picture><source type="image/avif" srcset="/web/static/productos/propias/PES-FIL-3K-400.avif 400w, /web/static/productos/propias/PES-FIL-3K-800.avif 800w" sizes="(min-width: 1060px) 270px, 44vw"><img src="/web/static/productos/propias/PES-FIL-3K.jpg" alt="" width="800" height="800" loading="lazy"></picture></div>
+        <div class="cuerpo"><h3><a href="#">Filete de salmón congelado 3 kg</a></h3><span class="stock poco">Quedan 12</span>
+          <div class="precio"><b>$32.990</b><small>por caja</small></div><a class="btn" href="#">Ingresar para comprar</a></div>
+      </article>
+
+      <article class="celda cong agotado" data-sku="MAR-CAM-1K" data-precio="14990">
+        <div class="tope"><span>Congelados</span><span>MAR-CAM-1K</span></div>
+        <div class="temp cond" aria-label="Se conserva de menos 25 a menos 18 grados">−18<small>°C</small></div>
+        <div class="foto"><picture><source type="image/avif" srcset="/web/static/productos/propias/MAR-CAM-1K-400.avif 400w, /web/static/productos/propias/MAR-CAM-1K-800.avif 800w" sizes="(min-width: 1060px) 270px, 44vw"><img src="/web/static/productos/propias/MAR-CAM-1K.jpg" alt="" width="800" height="800" loading="lazy"></picture></div>
+        <div class="cuerpo"><h3><a href="#">Camarones congelados 1 kg</a></h3><span class="stock no">Sin stock</span>
+          <div class="precio"><b>$14.990</b><small>por caja</small></div><span class="btn off" aria-disabled="true">Avisarme cuando llegue</span></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="pie"><div class="contenedor"><a class="chip-logo" href="#"><img src="/web/static/img/cofrial-logo.png" alt="Cofrial" width="77" height="20"></a><span>Frigorífico y distribución en cadena de frío · La Araucanía</span><span>Prototipo académico INACAP Temuco</span></div></footer>
+</body>
+</html>

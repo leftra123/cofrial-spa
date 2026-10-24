@@ -219,10 +219,10 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT count(*) AS camiones FROM (SELECT DISTINCT ON (camion_id) alerta_ruptura_frio FROM telemetria ORDER BY camion_id, registrado_en DESC) u WHERE alerta_ruptura_frio"
+     "rawSql": "SELECT count(DISTINCT camion_id) AS camiones FROM telemetria WHERE alerta_ruptura_frio AND registrado_en >= now() - interval '30 seconds'"
     }
    ],
-   "description": "",
+   "description": "Camiones con alguna lectura fuera de rango en los últimos 30 segundos (así no parpadea cuando entra una lectura normal entre dos de alerta).",
    "fieldConfig": {
     "defaults": {
      "color": {

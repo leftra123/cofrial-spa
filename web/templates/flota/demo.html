@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block titulo %}Modo demostración | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab">
+  <div><h1>Modo <span class="marca-texto">demostración</span></h1><p class="sub">Fuerza una ruptura de frío en un camión para mostrarla en vivo. Solo para administradores.</p></div>
+  <div class="acciones"><span class="chip cancelado sin-punto">Rol: {{ rol }}</span></div>
+</div>
+{% endblock %}
+{% block contenido %}
+<div class="rejilla dos">
+  <section class="tarjeta-ui" aria-labelledby="d-t1">
+    <h2 id="d-t1">1. Forzar una ruptura de frío</h2>
+    <p class="muted">Mientras esta página esté abierta y la ruptura activa, se registra una lectura con la temperatura fuera de rango cada 4 segundos. Dura como máximo {{ duracion }} segundos y se detiene sola si cierras la página. No modifica las lecturas reales del simulador.</p>
+    <label for="camion">Camión</label>
+    <select id="camion">{% for c in camiones %}<option value="{{ c.camion_id }}">{{ c.camion_id }} · {{ c.patente }} ({{ c.rango_temperatura.nombre }}, hasta {{ c.rango_temperatura.temp_max_c|floatformat:"-1" }} °C)</option>{% endfor %}</select>
+    <div class="acciones" style="margin-top:16px">
+      <button type="button" class="btn-peligro" id="iniciar">Forzar ruptura de frío</button>
+      <button type="button" class="btn-sec" id="apagar" disabled>Apagar</button>
+    </div>
+    <div class="demo-estado" id="estado" role="status" aria-live="polite">Apagado. No se está forzando nada.</div>
+  </section>
+  <section class="tarjeta-ui" aria-labelledby="d-t2">
+    <h2 id="d-t2">2. Dónde se ve</h2>
+    <ul class="demo-lista">
+      <li><b>Campanita del cliente:</b> si el camión lleva un pedido en ruta, su dueño recibe "Detectamos una variación de temperatura…" (se actualiza cada 15 s).</li>
+      <li><b>Alertas del CRM:</b> <a href="/crm/alertas/" target="_blank" rel="noopener">pedidos afectados por una ruptura de frío</a> y el KPI del <a href="/crm/" target="_blank" rel="noopener">panel</a>.</li>
+      <li><b>Flota:</b> <a href="/flota/" target="_blank" rel="noopener">el camión pasa a rojo</a> y su ícono late en el mapa.</li>
+      {% if grafana_url %}<li><b>Panel BI:</b> <a href="{{ grafana_url }}" target="_blank" rel="noopener">Grafana</a> (alertas, ventas en riesgo y temperatura por camión; se actualiza cada 5 s).</li>{% endif %}
+    </ul>
+    <h2 style="margin-top:18px">3. Limpiar</h2>
+    <p class="muted">Borra solo las lecturas creadas desde esta pantalla (<b id="n-forzadas">{{ forzadas }}</b> ahora). La telemetría real no se toca.</p>
+    <button type="button" class="btn-sec" id="limpiar">Borrar lecturas forzadas</button>
+  </section>
+</div>
+<dialog id="dlg" class="dialogo" aria-labelledby="dlg-t">
+  <form method="dialog">
+    <h2 id="dlg-t">¿Forzar una ruptura de frío?</h2>
+    <p id="dlg-txt"></p>
+    <div class="acciones" style="justify-content:flex-end"><button value="no" class="btn-sec">Cancelar</button><button value="si" class="btn-peligro" id="dlg-si">Sí, continuar</button></div>
+  </form>
+</dialog>
+{% csrf_token %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var csrf = document.querySelector("[name=csrfmiddlewaretoken]").value, estado = document.getElementById("estado"),
+      sel = document.getElementById("camion"), bi = document.getElementById("iniciar"), ba = document.getElementById("apagar"),
+      dlg = document.getElementById("dlg"), timer = null;
+  function post(url, datos) {
+    var f = new URLSearchParams(datos); return fetch(url, {method: "POST", credentials: "same-origin", headers: {"X-CSRFToken": csrf}, body: f}).then(function (r) { return r.json().then(function (j) { j._ok = r.ok; return j; }); });
+  }
+  function pantalla(activa, msg) { bi.disabled = activa; ba.disabled = !activa; sel.disabled = activa; estado.textContent = msg; estado.classList.toggle("activa", activa); }
+  function pulsar(confirmar) {
+    return post("/demo/pulso/", {camion: sel.value, confirmar: confirmar ? "1" : "0"}).then(function (r) {
+      if (!r._ok) { detener(); pantalla(false, r.detail || "No se pudo forzar."); return; }
+      document.getElementById("n-forzadas").textContent = r.forzadas;
+      if (!r.activa) { detener(); pantalla(false, r.detail || "Terminó el tiempo máximo. La ruptura se apagó."); return; }
+      pantalla(true, "Ruptura FORZADA en " + sel.value + ": " + String(r.temp).replace(".", ",") + " °C. Se apaga sola en " + r.restante_s + " s.");
+    }).catch(function () { detener(); pantalla(false, "Sin conexión con el servidor; la ruptura se detuvo."); });
+  }
+  function detener() { clearInterval(timer); timer = null; }
+  bi.addEventListener("click", function () {
+    document.getElementById("dlg-txt").textContent = "Se registrará una temperatura fuera de rango en " + sel.value + " durante hasta {{ duracion }} segundos. Los clientes con pedidos en ese camión verán el aviso. ¿Continuar?";
+    dlg.returnValue = ""; dlg.showModal();
+  });
+  dlg.addEventListener("close", function () {
+    if (dlg.returnValue !== "si") return;
+    pulsar(true).then(function () { if (!timer && ba.disabled === false) timer = setInterval(function () { pulsar(false); }, 4000); });
+  });
+  ba.addEventListener("click", function () {
+    detener(); post("/demo/apagar/", {camion: sel.value}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Apagado. El camión vuelve a mostrar una temperatura normal."); });
+  });
+  document.getElementById("limpiar").addEventListener("click", function () {
+    if (!confirm("¿Borrar las lecturas forzadas? La telemetría real no se toca.")) return;
+    detener(); post("/demo/limpiar/", {confirmar: "1"}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Lecturas forzadas borradas (" + r.borradas + ")."); });
+  });
+})();
+</script>
+{% endblock %}

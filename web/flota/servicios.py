@@ -6,12 +6,13 @@ from pedidos import servicios as pedidos_servicios
 from pedidos.models import Orden
 
 from .models import Camion, Despacho, Telemetria
+from .vigente import ultimas_vigentes
 
 
 def estado_flota():
     camiones = list(Camion.objects.select_related("rango_temperatura").order_by("camion_id"))
     # DISTINCT ON de PostgreSQL: la última lectura de cada camión en una sola consulta.
-    ultimas = {t.camion_id: t for t in Telemetria.objects.order_by("camion_id", "-registrado_en").distinct("camion_id")}
+    ultimas = ultimas_vigentes()
     viajes = {d.camion_id: d for d in Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).order_by("salida_en")}
     ordenes = {}
     for o in (Orden.objects.filter(despacho__in=viajes.values())

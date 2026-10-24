@@ -191,6 +191,8 @@ def seguimiento(orden):
     desde = timezone.now() - timedelta(minutes=60)
     lecturas = list(Telemetria.objects.filter(camion=camion, registrado_en__gte=desde).order_by("registrado_en"))
     ultima = (lecturas[-1] if lecturas else Telemetria.objects.filter(camion=camion).order_by("-registrado_en").first())
+    from flota.vigente import ultima_vigente
+    ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada
     rango = camion.rango_temperatura
     return {
         "camion_id": camion.camion_id, "patente": camion.patente,
@@ -266,6 +268,9 @@ def avisos_de_llegada(cliente):
                            "texto": f"Tu pedido N.º {o.orden_id} llegó a las {hora(d.llegada_en)}."})
             continue
         ultima = Telemetria.objects.filter(camion=d.camion, registrado_en__gte=d.salida_en).order_by("-registrado_en").first()
+        if Telemetria.objects.filter(camion=d.camion, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
+            salida.append({"id": f"{o.orden_id}-frio", "orden_id": o.orden_id, "tipo": "frio", "cuando": (ultima.registrado_en if ultima else d.salida_en).isoformat(),
+                           "texto": f"Detectamos una variación de temperatura en el camión de tu pedido N.º {o.orden_id}. Ya la estamos revisando."})
         info = _llegada(o, ultima)
         if info["eta"]:
             desde, hasta = (localtime(timezone.datetime.fromisoformat(info["eta"][k])).strftime("%H:%M") for k in ("desde", "hasta"))

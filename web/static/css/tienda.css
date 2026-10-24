@@ -373,3 +373,6 @@ html.filtros-vivos .filtros noscript { display: none; }
   .prod-badges .chip { font-size: .62rem; padding: 2px 7px; }
 }
 @media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }
+
+.campana-tipo.t-frio { background: var(--alerta-bg); color: var(--alerta-fg); }
+.toast.t-frio { background: #991B1B; color: #fff; border-left-color: #FCA5A5; }

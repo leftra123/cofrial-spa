@@ -562,3 +562,8 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 @media (max-width: 520px) { .linea { grid-template-columns: 64px minmax(0, 1fr); } .linea-img { width: 64px; height: 64px; } .linea-total { grid-column: 2; text-align: left; } .resumen { padding: 20px; } }
 @media (min-width: 861px) { .tb-buscar { flex: 1 1 190px; max-width: 240px; } .tb-perfil b { margin-left: 0; } .tb-nav a { padding: 8px; } .tb-perfil { max-width: 130px; } }
 @media (min-width: 861px) and (max-width: 1100px) { .tb-nav a { padding: 8px 6px; font-size: .92rem; } .tb-buscar { max-width: 170px; } }
+
+/* orden de compra pendiente */
+.ayuda { font-size: .82rem; color: var(--texto-3); margin: 4px 0 0; max-width: 520px; }
+.oc-registro dd form { margin: 0; }
+.oc-registro input { max-width: 200px; }

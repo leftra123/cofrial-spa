@@ -83,9 +83,8 @@ def total(filas):
 @transaction.atomic
 def generar_orden(cliente, direccion_id, numero_oc=""):
     """Convierte el carrito en una orden. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción."""
-    numero_oc = (numero_oc or "").strip()
-    if cliente.tipo_cliente.codigo == "B2B" and not numero_oc:      # RN-05
-        raise ErrorDeNegocio("Los clientes institucionales deben indicar su número de orden de compra.")
+    numero_oc = (numero_oc or "").strip()[:30]
+    pendiente = cliente.tipo_cliente.codigo == "B2B" and not numero_oc      # RN-05: sin OC la orden se crea igual, marcada «OC pendiente»
     direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()    # RN-04
     if direccion is None:
         raise ErrorDeNegocio("Elige una dirección de entrega que pertenezca a tu cuenta.")
@@ -106,14 +105,41 @@ def generar_orden(cliente, direccion_id, numero_oc=""):
     if sin_precio:
         raise ErrorDeNegocio("Productos sin precio en tu lista: " + ", ".join(sin_precio) + ".")
 
-    orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc,
+    orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente,
                                  estado_orden=EstadoOrden.objects.get(orden_flujo=1))
+    if pendiente:
+        orden.numero_oc = referencia_web(orden)
+        orden.save(update_fields=["numero_oc"])
     for i in items:
         OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
                                  precio_unitario_clp=precios[i.producto_id])        # RN-06: precio congelado
         Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
     carrito.estado = "convertido"                                                  # RN-03
     carrito.save(update_fields=["estado"])
+    return orden
+
+
+def referencia_web(orden):
+    """Referencia propia de Cofrial para una orden institucional sin OC: WEB-<año>-<n.º de orden con ceros>."""
+    return f"WEB-{orden.creada_en.year}-{orden.orden_id:04d}"
+
+
+def registrar_oc(cliente, orden_id, numero_oc):
+    """El cliente institucional agrega la OC real a una orden que quedó «OC pendiente»; reemplaza la referencia web."""
+    numero_oc = (numero_oc or "").strip()
+    if not numero_oc:
+        raise ErrorDeNegocio("Escribe el número de tu orden de compra.")
+    if len(numero_oc) > 30:
+        raise ErrorDeNegocio("El número de orden de compra admite hasta 30 caracteres.")
+    orden = ordenes_de(cliente).filter(pk=orden_id).first()
+    if orden is None:
+        raise ErrorDeNegocio("Orden no encontrada.")
+    if not orden.oc_pendiente:
+        raise ErrorDeNegocio("Esta orden ya tiene su orden de compra.")
+    if orden.estado_orden.es_final:
+        raise ErrorDeNegocio(f"La orden ya está «{orden.estado_orden.nombre}»; no se puede modificar.")
+    orden.numero_oc, orden.oc_pendiente = numero_oc, False
+    orden.save(update_fields=["numero_oc", "oc_pendiente"])
     return orden
 
 

@@ -12,7 +12,7 @@ services:
   web:
     build: ../web
     # migrate y datos de demostración son idempotentes; preparar_bi crea el usuario de solo lectura de Grafana en RDS
-    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py cambiar_clave_demo --si-hay-clave $${DEMO_CLAVE_DEBIL:+--permitir-clave-debil} && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -"
+    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -"
     environment:
       <<: *bd
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
@@ -22,7 +22,7 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
       DJANGO_CSRF_ORIGINS: ${DJANGO_CSRF_ORIGINS:-}
       DEMO_PASSWORD: ${DEMO_PASSWORD:?define DEMO_PASSWORD en .env}
-      DEMO_CLAVE_DEBIL: ${DEMO_CLAVE_DEBIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?define GRAFANA_DB_PASSWORD en .env}
       MAP_TILE_URL: ${MAP_TILE_URL:-}
       MAP_TILE_ATTRIBUTION: ${MAP_TILE_ATTRIBUTION:-}

@@ -68,7 +68,7 @@ Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los no
 | `abastecimiento@hospital.test` | Cliente institucional B2B (Hospital Regional de Temuco) |
 | `ana@correo.test` | Cliente particular B2C (Ana Pérez) |
 
-Todas comparten `DEMO_PASSWORD`; en AWS vale `123456` (con `DEMO_CLAVE_DEBIL=1`). *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
+Las claves se fijan solo al crear cada cuenta (`DEMO_PASSWORD`; las administradoras, `ADMIN_PASSWORD`) y no se pisan al reiniciar; cada persona la cambia en `/cuenta/clave/` y el administrador desde `/admin/`. Detalle en `docs/cuentas-y-permisos.md`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
 
 **Rotar la clave de demostración** (por ejemplo, tras compartirla por error):
 1. Editar `DEMO_PASSWORD` en `aws/.estado/secretos.env` (mínimo 8 caracteres, no una clave común).

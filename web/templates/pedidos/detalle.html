@@ -11,7 +11,7 @@
   </div>
 </div>
 {% endblock %}
-{% block cabeza %}{% if seg %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endif %}{% endblock %}
+{% block cabeza %}{% if seg %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endif %}{% endblock %}
 {% block contenido %}
 {% if request.GET.nueva and orden.estado_orden.orden_flujo <= 2 %}
 <section class="confirmacion" aria-labelledby="conf-t">
@@ -89,8 +89,7 @@
 {% endblock %}
 {% block scripts %}
 {% if seg %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
 <script>CofrialLeyenda("leyenda-pedido", ["camion", "destino", "ruta"]);</script>
@@ -154,7 +153,7 @@
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;
     pintarSerie(s.serie || []);
   }
-  function cargar() { axios.get(raiz.dataset.url, {headers: {"Accept": "application/json"}}).then(function (r) { pintar(r.data); }).catch(function () {}); }
+  function cargar() { fetch(raiz.dataset.url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(pintar).catch(function () {}); }
   cargar(); setInterval(cargar, 5000);
 })();
 </script>

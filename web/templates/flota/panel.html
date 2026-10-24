@@ -74,10 +74,10 @@
 </div>
 {% endif %}
 {% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
 <script>CofrialLeyenda("leyenda-flota", ["camion", "alerta", "base", "destino"]);</script>
@@ -112,12 +112,11 @@
     };
   })();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
 <script>
   /* Refresco en vivo: consulta /api/flota/ cada 5 s (el simulador inserta una lectura por camión en ese intervalo)
      y actualiza solo los números. Si la API falla, la página sigue mostrando los últimos datos. */
   (function () {
-    if (!window.axios) return;
+    if (!window.fetch) return;
     var marca = document.getElementById("en-vivo");
     function pon(el, txt, malo) { if (el) { el.textContent = txt; if (malo !== undefined) el.classList.toggle("mal", malo); } }
     function pintar(d) {
@@ -136,7 +135,7 @@
       if (marca) marca.hidden = false;
     }
     function actualizar() {
-      axios.get("/api/flota/", {headers: {"Accept": "application/json"}}).then(function (r) { pintar(r.data); }).catch(function () { if (marca) marca.hidden = true; });
+      fetch("/api/flota/", {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(pintar).catch(function () { if (marca) marca.hidden = true; });
     }
     setInterval(actualizar, 5000);
   })();

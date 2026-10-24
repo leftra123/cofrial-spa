@@ -96,6 +96,7 @@ body.tienda { background: var(--fondo); }
 .prod.agotado .prod-img img, .prod.agotado .prod-img .ilus { filter: grayscale(.8); opacity: .7; }
 .prod-img { background: var(--fondo); padding: 0; display: block; position: relative; overflow: hidden; }
 .prod-img .ilus { width: 100%; height: 160px; padding: 12px; }
+.prod-img picture { display: contents; }
 .prod-img .foto { width: 100%; height: 170px; object-fit: cover; display: block; transition: transform .35s; background: var(--fondo-2); border-radius: 0; }
 .prod:hover .prod-img .foto { transform: scale(1.04); }
 .prod-img .foto.ia { object-fit: contain; background: #F8FAFC; padding: 10px; }
@@ -329,7 +330,11 @@ html.filtros-vivos .filtros noscript { display: none; }
 .aviso-stock.hecho { background: var(--acento-suave); border-radius: 8px; padding: 8px 10px; }
 
 /* portada con fotografía (static/img/portada.jpg) y fotos de categoría */
-.t-hero.con-foto { background: linear-gradient(100deg, rgba(8, 28, 74, .94) 0%, rgba(8, 28, 74, .78) 42%, rgba(8, 28, 74, .25) 100%), var(--portada) center / cover no-repeat, #0B2A6F; }
+.t-hero.con-foto { background: #0B2A6F; }
+.t-hero.con-foto picture { display: contents; }
+.t-hero .hero-fondo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.t-hero.con-foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(8, 28, 74, .94) 0%, rgba(8, 28, 74, .78) 42%, rgba(8, 28, 74, .25) 100%); }
+.t-hero.con-foto > :not(picture) { z-index: 1; }
 .t-hero.con-foto::before, .t-hero.con-foto .copo { display: none; }
 .t-cat .cat-foto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; margin-bottom: 10px; display: block; background: var(--fondo); }
 

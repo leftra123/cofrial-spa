@@ -79,9 +79,13 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Archivos con huella en el nombre (cofrial.3f9a1c.css) y caché larga: WhiteNoise los sirve como inmutables. Las pruebas
+# y el modo de desarrollo usan nombres planos porque no hay collectstatic previo.
+_CON_HUELLA = not DEBUG and "test" not in sys.argv
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if _CON_HUELLA
+                    else "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 # API JSON de solo lectura: misma sesión del sitio, sin navegador de la API y siempre con sesión iniciada.
 REST_FRAMEWORK = {

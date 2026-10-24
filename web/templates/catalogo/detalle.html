@@ -1,12 +1,12 @@
 {% extends "tienda/base.html" %}
-{% load static %}
+{% load static imagenes %}
 {% block titulo %}{{ fila.p.nombre }} | Cofrial SpA{% endblock %}
 {% block contenido %}
 {% with f=fila p=fila.p %}
 <nav class="migas" aria-label="Ruta de navegación"><a href="/catalogo/">Catálogo</a> <span aria-hidden="true">/</span> <a href="/catalogo/?categoria={{ p.categoria_id }}">{{ p.categoria.nombre }}</a> <span aria-hidden="true">/</span> <span aria-current="page">{{ p.nombre }}</span></nav>
 <div class="det">
   <div>
-    <div class="prod-img">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ p.nombre }}">{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
+    <div class="prod-img">{% if f.foto %}{% foto f.foto "foto" p.nombre "(min-width: 900px) 520px, 94vw" 800 800 True %}{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
     {% if f.ilustracion_ia %}<p class="credito">Ilustración referencial del producto.</p>{% endif %}
     {% if f.credito.propia %}<p class="credito">Imagen referencial del producto.</p>{% elif f.credito %}<p class="credito">Foto referencial: {{ f.credito.autor|truncatechars:60 }}, {{ f.credito.licencia }}, vía <a href="{{ f.credito.pagina }}" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>{% endif %}
   </div>

@@ -450,3 +450,32 @@ html.filtros-vivos .filtros noscript { display: none; }
   .etq-temp { font-size: .7rem; padding: 4px 9px 4px 8px; } .etq-temp::before { display: none; }
 }
 .prod-comprar { flex-wrap: wrap; }
+
+/* ---------- detalle de producto (dirección «Termómetro») ---------- */
+.det { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 8px 0 0; gap: clamp(28px, 5vw, 64px); grid-template-columns: minmax(280px, 540px) 1fr; align-items: start; }
+.det .prod-img { border-radius: 18px; background: var(--fondo-2); aspect-ratio: 1 / 1; }
+.det .prod-img .foto, .det .prod-img .ilus { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.det .prod-img .foto.ia { object-fit: contain; padding: 18px; mix-blend-mode: normal; }
+:root[data-tema="oscuro"] .det .prod-img { background: #E9EEF5; } :root[data-tema="oscuro"] .det .prod-img .foto { mix-blend-mode: normal; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .det .prod-img { background: #E9EEF5; } :root:not([data-tema="claro"]) .det .prod-img .foto { mix-blend-mode: normal; } }
+.det h1 { font-size: clamp(1.9rem, 3.6vw, 2.8rem); line-height: 1.05; letter-spacing: -.035em; font-weight: 750; margin: 8px 0 12px; text-wrap: balance; }
+.det-precio { font-size: clamp(2.2rem, 4vw, 3rem); letter-spacing: -.04em; line-height: 1; font-variant-numeric: normal; margin-top: 22px; }
+.det-precio small { margin-top: 8px; font-size: .9rem; }
+.det dl { grid-template-columns: 160px 1fr; gap: 0; padding: 0; margin: 24px 0; border: 0; }
+.det dt, .det dd { padding: 12px 0; border-top: 1px solid var(--borde); }
+.det dl > :nth-last-child(-n+2) { border-bottom: 1px solid var(--borde); }
+.mini-escala { position: relative; display: block; width: 190px; height: 30px; margin-top: 8px; }
+.mini-escala i { position: absolute; display: block; }
+.mini-escala .eje { left: 0; right: 0; top: 6px; height: 4px; border-radius: 4px; background: var(--borde); }
+.mini-escala .b-cong { left: 0; width: 24.1%; top: 2px; height: 12px; border-radius: 3px; background: var(--borde-fuerte); }
+.mini-escala .b-ref { left: 86.2%; width: 13.8%; top: 2px; height: 12px; border-radius: 3px; background: var(--borde-fuerte); }
+.mini-escala.es-cong .b-cong, .mini-escala.es-ref .b-ref { background: var(--acento); }
+:root[data-tema="oscuro"] .mini-escala.es-cong .b-cong, :root[data-tema="oscuro"] .mini-escala.es-ref .b-ref { background: #2E5AA8; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .mini-escala.es-cong .b-cong, :root:not([data-tema="claro"]) .mini-escala.es-ref .b-ref { background: #2E5AA8; } }
+.mini-escala em { position: absolute; top: 15px; font-style: normal; font-size: .72rem; color: var(--texto-3); font-weight: 500; }
+.mini-escala em:first-of-type { left: 0; } .mini-escala em:last-of-type { right: 0; }
+.det-compra { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px; padding: 20px; }
+.det-compra .btn, .det-compra .agregar { min-height: 52px; padding: 0 24px; }
+.det-garantias { margin-top: 20px; }
+.seccion-similares h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); letter-spacing: -.03em; }
+@media (max-width: 860px) { .det { grid-template-columns: 1fr; } .det dl { grid-template-columns: 130px 1fr; } }

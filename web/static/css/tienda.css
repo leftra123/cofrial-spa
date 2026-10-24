@@ -579,3 +579,23 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .campana-tipo { text-transform: none; letter-spacing: 0; font-size: .74rem; }
 .campana-item a { padding: 14px 18px; }
 @media (max-width: 480px) { .seg-datos { grid-template-columns: 1fr 1fr; } .seg-datos div:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--borde); } .temp-grande b { font-size: 2.8rem; } .seg-datos b { font-size: 1.1rem; } }
+
+/* ---------- carrito: rangos de conservación; seguimiento: gráfico de temperatura con ejes ---------- */
+.camaras { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.camara { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: .92rem; color: var(--texto-2); }
+.camara b { color: var(--texto); }
+.cam-marca { width: 34px; height: 6px; border-radius: 3px; }
+.camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde) 60%, var(--acento) 60%); }
+.camara.cong .cam-marca { background: linear-gradient(90deg, var(--acento) 28%, var(--borde) 28%); }
+:root[data-tema="oscuro"] .camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde-fuerte) 60%, #2E5AA8 60%); } :root[data-tema="oscuro"] .camara.cong .cam-marca { background: linear-gradient(90deg, #2E5AA8 28%, var(--borde-fuerte) 28%); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde-fuerte) 60%, #2E5AA8 60%); } :root:not([data-tema="claro"]) .camara.cong .cam-marca { background: linear-gradient(90deg, #2E5AA8 28%, var(--borde-fuerte) 28%); } }
+.cam-n { font-size: .82rem; color: var(--texto-3); }
+.camaras-nota { margin: 0 0 14px; font-size: .84rem; color: var(--texto-2); }
+.grafico { position: relative; }
+.spark { height: 190px; }
+.spark-vacio { height: 190px; }
+.gy { position: absolute; right: 6px; transform: translateY(-50%); font-size: .72rem; font-weight: 600; color: #14532D; background: rgba(255, 255, 255, .85); border-radius: 4px; padding: 0 4px; pointer-events: none; }
+.grafico-x { display: flex; justify-content: space-between; font-size: .78rem; color: var(--texto-3); margin-top: 4px; }
+.spark-stats { margin: 8px 0 0; font-size: .86rem; color: var(--texto-2); }
+.conf-datos { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin: 0 0 16px; font-size: .95rem; color: var(--texto-2); }
+.conf-datos b { color: var(--texto); font-weight: 650; }

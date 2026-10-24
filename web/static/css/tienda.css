@@ -381,3 +381,15 @@ html.filtros-vivos .filtros noscript { display: none; }
 
 .campana-tipo.t-frio { background: var(--alerta-bg); color: var(--alerta-fg); }
 .toast.t-frio { background: #991B1B; color: #fff; border-left-color: #FCA5A5; }
+
+.linea-img img.ia { object-fit: contain; background: #F8FAFC; padding: 4px; }
+
+/* carga suave al agregar y actualizar el carrito: transiciones cortas, sin rebotes */
+.tb-n.pop, .campana-n.pop { animation: contador-pop 200ms ease-out; }
+@keyframes contador-pop { from { transform: scale(1.35); } to { transform: scale(1); } }
+.agregar, .linea-form .btn-sec { transition: background-color 150ms ease, border-color 150ms ease, transform 100ms ease; }
+.linea { transition: opacity 200ms ease; }
+.linea.cargando { opacity: .6; pointer-events: none; }
+button[aria-busy="true"] { cursor: progress; }
+button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
+.toast.t-error { background: #991B1B; color: #fff; border-left-color: #FCA5A5; }

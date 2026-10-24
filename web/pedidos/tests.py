@@ -188,3 +188,41 @@ class AvisosDeLaCampanita(TestCase):
             self.client.force_login(usuario)
             tipos = {a["tipo"] for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.orden_id}
             self.assertIn("salio", tipos)
+
+
+class AgregarSinRecargar(TestCase):
+    """Con el encabezado de la tienda, «Agregar» responde JSON (sin redirección); sin él, todo sigue igual que antes."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def setUp(self):
+        self.client.login(username="ana@correo.test", password=CLAVE)
+        self.lomo = Producto.objects.get(sku="VAC-LOM-5K")
+
+    def test_json_con_mensajes_y_contador(self):
+        r = self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 2}, headers={"X-Requested-With": "fetch"})
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertTrue(d["ok"])
+        self.assertEqual(d["carrito_n"], 2)
+        self.assertEqual(d["mensajes"][0]["tipo"], "success")
+        self.assertNotContains(self.client.get("/catalogo/"), "Producto agregado al carrito")      # el mensaje no reaparece en la página siguiente
+
+    def test_error_de_negocio_vuelve_como_json_con_ok_falso(self):
+        r = self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 0}, headers={"X-Requested-With": "fetch"})
+        d = r.json()
+        self.assertFalse(d["ok"])
+        self.assertEqual(d["mensajes"][0]["tipo"], "error")
+
+    def test_sin_el_encabezado_sigue_redirigiendo(self):
+        r = self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 1, "volver": "/catalogo/"})
+        self.assertRedirects(r, "/catalogo/", fetch_redirect_response=False)
+
+    def test_la_miniatura_del_carrito_usa_la_imagen_del_producto(self):
+        self.client.post("/carrito/agregar/", {"producto": self.lomo.pk, "cantidad": 1})
+        html = self.client.get("/carrito/").content.decode()
+        linea = html[html.index('class="linea-img"'):].split("</a>")[0]
+        self.assertIn("productos/", linea)                                   # foto propia, de Commons o ilustración de IA...
+        self.assertNotIn('class="ilus"', linea)                              # ...y no el dibujo genérico de la categoría

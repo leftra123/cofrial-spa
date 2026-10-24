@@ -36,3 +36,10 @@ def con_iva(valor):
 def get_item(diccionario, clave):
     """Valor de un diccionario por clave dentro de una plantilla ({{ d|get_item:k }})."""
     return (diccionario or {}).get(clave)
+
+
+@register.simple_tag
+def imagen_producto(producto):
+    """Imagen de un producto con la misma prioridad que el catálogo: propia, foto de Commons, ilustración de IA; solo si no hay nada, la de su categoría."""
+    from catalogo.views import _fila
+    return _fila(producto, {})

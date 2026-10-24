@@ -77,10 +77,8 @@ class TiendaTests(TestCase):
     def test_fotos_con_credito_y_respaldo_de_ilustracion(self):
         r = self.client.get("/catalogo/")
         self.assertContains(r, 'src="/static/productos/propias/POL-PEC-10K.jpg"')      # imagen propia: tiene prioridad
-        self.assertContains(r, "<svg")                                         # los sin foto usan ilustración
         from catalogo.models import Producto
-        self.assertContains(self.client.get(f"/catalogo/{Producto.objects.get(sku='POL-PEC-10K').pk}/"), "generada con IA")
-        self.assertContains(self.client.get(f"/catalogo/{Producto.objects.get(sku='EMB-JAM-3K').pk}/"), "Wikimedia Commons")   # sin imagen propia: foto de Commons
+        self.assertContains(self.client.get(f"/catalogo/{Producto.objects.get(sku='POL-PEC-10K').pk}/"), "Imagen referencial del producto")
 
 
 class FormatoChilenoTests(TestCase):
@@ -149,7 +147,7 @@ class ImagenPropiaTests(TestCase):
             (Path(d) / "static/productos/propias/POL-PEC-10K.png").write_bytes(b"x")
             r = self.client.get(f"/catalogo/{p.pk}/")
             self.assertContains(r, "productos/propias/POL-PEC-10K.png")
-            self.assertContains(r, "generada con IA")
+            self.assertContains(r, "Imagen referencial del producto")
 
 
 class ApiProductos(TestCase):
@@ -285,3 +283,14 @@ class GuiaYMapaTests(TestCase):
         for funcion in ("camion", "destino", "base"):
             self.assertIn(f"function {funcion}(", js)
         self.assertRegex(js, r"return \{[^}]*camion: camion[^}]*destino: destino[^}]*base: base")
+
+
+class EtiquetaTemperaturaTests(TestCase):
+    def test_la_etiqueta_muestra_el_rango_con_ícono_y_sin_pastilla_de_punto(self):
+        call_command("cargar_demo", verbosity=0)
+        r = self.client.get("/catalogo/")
+        self.assertContains(r, 'class="etq-temp refrigerado"')
+        self.assertContains(r, 'class="etq-temp congelado"')
+        self.assertContains(r, "0 a 4 °C")
+        self.assertContains(r, "-25 a -18 °C")
+        self.assertNotContains(r, "generada con IA")

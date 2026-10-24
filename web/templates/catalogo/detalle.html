@@ -7,8 +7,8 @@
 <div class="det">
   <div>
     <div class="prod-img">{% if f.foto %}<img class="foto" src="{% static f.foto %}" alt="{{ p.nombre }}">{% elif f.ilustracion_ia %}<img class="foto ia" src="{% static f.ilustracion_ia %}" alt="{{ p.nombre }}">{% else %}{% include "tienda/ilustracion.html" with categoria=p.categoria.nombre %}{% endif %}</div>
-    {% if f.ilustracion_ia %}<p class="credito">Ilustración generada con IA ({{ f.modelo_ia }}).</p>{% endif %}
-    {% if f.credito.propia %}<p class="credito">Imagen referencial generada con IA.</p>{% elif f.credito %}<p class="credito">Foto referencial: {{ f.credito.autor|truncatechars:60 }}, {{ f.credito.licencia }}, vía <a href="{{ f.credito.pagina }}" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>{% endif %}
+    {% if f.ilustracion_ia %}<p class="credito">Ilustración referencial del producto.</p>{% endif %}
+    {% if f.credito.propia %}<p class="credito">Imagen referencial del producto.</p>{% elif f.credito %}<p class="credito">Foto referencial: {{ f.credito.autor|truncatechars:60 }}, {{ f.credito.licencia }}, vía <a href="{{ f.credito.pagina }}" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>{% endif %}
   </div>
   <div>
     <span class="prod-sku">{{ p.categoria.nombre }} · {{ p.sku }}</span>

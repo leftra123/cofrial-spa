@@ -16,7 +16,7 @@
   <h2 class="solo-lector">Productos en tu carrito</h2>
   {% for f in filas %}
     <article class="linea">
-      <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "tienda/ilustracion.html" with categoria=f.producto.categoria.nombre %}</a>
+      <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "catalogo/_miniatura.html" with producto=f.producto %}</a>
       <div class="linea-info"><h3><a href="{% url 'producto' f.producto.producto_id %}" style="color:var(--texto)">{{ f.producto.nombre }}</a></h3>
         <span class="frio">{{ f.precio|clp }} c/u</span>
         {% if not f.hay_stock %}<span class="alerta" style="margin-top:6px">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</div>

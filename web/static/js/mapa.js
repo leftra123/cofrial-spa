@@ -2,11 +2,17 @@
    Si OSRM no responde, el mapa sigue mostrando los puntos y se dibuja una línea recta entre ellos. */
 window.CofrialMapa = (function () {
   var OSRM = "https://router.project-osrm.org";
+  /* Mosaicos: vienen de las variables de entorno MAP_TILE_* (settings.MAPA_TILES) a través de la plantilla; por defecto, OpenStreetMap.
+     La atribución del proveedor se muestra siempre en el mapa (control de atribución de Leaflet). */
+  var MOSAICOS = {url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", maxZoom: 19, subdomains: "abc",
+                  attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>"};
+  try { var cfg = document.getElementById("mapa-tiles"); if (cfg) MOSAICOS = Object.assign(MOSAICOS, JSON.parse(cfg.textContent)); } catch (e) {}
 
   function crear(id, centro, zoom) {
     var m = L.map(id, {zoomControl: true, attributionControl: true}).setView(centro, zoom || 13);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>"}).addTo(m);
+    L.tileLayer(MOSAICOS.url, {
+      maxZoom: MOSAICOS.maxZoom, subdomains: MOSAICOS.subdomains, attribution: MOSAICOS.attribution,
+      referrerPolicy: "strict-origin-when-cross-origin"}).addTo(m);          // OSM exige el Referer: sin él responde «403 Access blocked»
     return m;
   }
 

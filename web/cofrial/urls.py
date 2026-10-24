@@ -34,6 +34,9 @@ urlpatterns = [
     path("", include("pedidos.urls")),
     path("cuenta/entrar/", vistas.Entrar.as_view(), name="entrar"),
     path("cuenta/registro/", vistas.registro, name="registro"),
+    path("cuenta/clave/", auth_views.PasswordChangeView.as_view(
+        template_name="cuenta/clave.html", success_url="/cuenta/clave/hecho/"), name="cambiar_clave"),
+    path("cuenta/clave/hecho/", auth_views.PasswordChangeDoneView.as_view(template_name="cuenta/clave_hecha.html"), name="clave_hecha"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
     path("salud/", salud),
     path("admin/", admin.site.urls),

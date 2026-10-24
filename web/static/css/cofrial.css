@@ -536,3 +536,5 @@ td.celda-acciones select { max-width: 100%; }
 .embudo .col, .embudo > * { border-radius: 18px; }
 .tabla-caja { position: relative; }
 .pagina-cab > div:first-child { flex: 1 1 320px; min-width: 0; }
+.cerrar-viaje { margin: 14px 0 0; }
+.cerrar-viaje button { width: 100%; }

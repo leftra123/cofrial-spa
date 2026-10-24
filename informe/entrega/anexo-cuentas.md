@@ -16,6 +16,6 @@ Para que el equipo y quienes evalúen puedan probar el prototipo en línea sin t
 | `abastecimiento@hospital.test` | Cliente institucional (B2B) | Lista de precios institucional en neto, orden de compra y repetir el último pedido |
 | `ana@correo.test` | Cliente particular (B2C) | Compra con precios al público, seguimiento del pedido y avisos de stock |
 
-*Nota.* La clave de todas las cuentas es `123456`. Un cliente particular nuevo puede crear su propia cuenta en la página de registro con su RUT, su correo y una dirección de entrega. Elaboración propia.
+*Nota.* Las claves se entregan por separado a cada integrante del equipo y cada cuenta puede cambiarla desde la opción «Cambiar mi clave»; el administrador también puede hacerlo desde el panel de administración. Un cliente particular nuevo puede crear su propia cuenta en la página de registro con su RUT, su correo y una dirección de entrega. Elaboración propia.
 
 Para recorrer el flujo completo, se sugiere comprar con la cuenta de un cliente, entrar como despachador para asignar el pedido a un camión y revisar la ruta sugerida, y volver a la cuenta del cliente para seguir el camión y su temperatura. Si un producto está sin stock, el cliente puede pedir un aviso para cuando haya al menos la cantidad que necesita, y el equipo comercial ve esa demanda en el CRM.

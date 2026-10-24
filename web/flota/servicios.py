@@ -56,6 +56,22 @@ def camiones_libres():
 
 
 @transaction.atomic
+def cerrar_despacho(despacho_id):
+    """Marca el viaje como llegado: fija `llegada_en` (el camión queda libre) y pasa a «Entregada» las órdenes que iban «Despachada»."""
+    despacho = Despacho.objects.select_for_update().filter(pk=despacho_id, salida_en__isnull=False, llegada_en__isnull=True).first()
+    if despacho is None:
+        raise pedidos_servicios.ErrorDeNegocio("Ese viaje no existe o ya está cerrado.")
+    despacho.llegada_en = timezone.now()
+    despacho.save(update_fields=["llegada_en"])
+    entregadas = 0
+    for o in Orden.objects.filter(despacho=despacho).select_related("estado_orden"):
+        if o.estado_orden.nombre == "Despachada":
+            pedidos_servicios.avanzar(o)
+            entregadas += 1
+    return despacho, entregadas
+
+
+@transaction.atomic
 def despachar(camion_id, orden_ids):
     """Crea el despacho con salida ahora, le asigna las órdenes y las lleva hasta «Despachada».
 

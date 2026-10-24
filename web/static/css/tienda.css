@@ -262,3 +262,8 @@ body.tienda { background: var(--fondo); }
 .aviso-stock .aviso-fila { display: flex; gap: 6px; align-items: center; }
 .aviso-stock input[type=number] { width: 76px; }
 .aviso-stock.hecho { background: var(--acento-suave); border-radius: 8px; padding: 8px 10px; }
+
+/* portada con fotografía (static/img/portada.jpg) y fotos de categoría */
+.t-hero.con-foto { background: linear-gradient(100deg, rgba(8, 28, 74, .94) 0%, rgba(8, 28, 74, .78) 42%, rgba(8, 28, 74, .25) 100%), var(--portada) center / cover no-repeat, #0B2A6F; }
+.t-hero.con-foto::before, .t-hero.con-foto .copo { display: none; }
+.t-cat .cat-foto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; margin-bottom: 10px; display: block; background: var(--fondo); }

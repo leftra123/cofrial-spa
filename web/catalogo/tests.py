@@ -237,3 +237,13 @@ class AvisoStockTests(TestCase):
         self.client.logout()
         self._entrar("ana@correo.test")
         self.assertEqual(self.client.get("/crm/demanda/").status_code, 403)
+
+
+class PortadaYCategoriasTests(TestCase):
+    def test_portada_y_fotos_de_categoria(self):
+        call_command("cargar_demo", verbosity=0)
+        r = self.client.get("/")
+        self.assertContains(r, "con-foto")
+        self.assertContains(r, "static/img/portada.jpg")
+        for slug in ("carnicos-refrigerados", "aves", "congelados", "lacteos-y-embutidos"):
+            self.assertContains(r, f"/static/productos/categorias/{slug}.jpg")

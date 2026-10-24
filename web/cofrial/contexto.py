@@ -1,4 +1,6 @@
 """Qué enlaces del menú puede usar la cuenta. Solo presentación: los permisos reales siguen en las vistas."""
+from django.conf import settings
+
 from catalogo import avisos
 from crm import servicios as crm
 from pedidos import servicios as pedidos
@@ -13,8 +15,9 @@ def _grafana(request):
 
 def menu(request):
     u = request.user
+    tiles = {"mapa_tiles": settings.MAPA_TILES}
     if not u.is_authenticated:
-        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "demo": False}, "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "grafana_url": ""}
+        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "demo": False}, "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "grafana_url": "", **tiles}
     rol = crm.rol(u)
     cliente = pedidos.cliente_de(u)
     n = 0
@@ -24,4 +27,4 @@ def menu(request):
                      "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_staff, "demo": u.is_superuser},
             "carrito_n": n, "cliente_tienda": cliente,
             "avisos_n": avisos.cuantos_disponibles(cliente) if cliente is not None else 0,
-            "grafana_url": _grafana(request) if rol is not None or u.is_staff else ""}
+            "grafana_url": _grafana(request) if rol is not None or u.is_staff else "", **tiles}

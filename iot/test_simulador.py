@@ -14,7 +14,8 @@ OTRA = (-38.7500, -72.6200)
 
 
 def viaje(*paradas):
-    c = sim.Camion(0, 5)
+    c = sim.Camion("CAM-01", 0, 5)
+    c.pos = sim.BASE                    # sale de la base: así el orden de visita no depende del recorrido de patrulla
     c.asignar(1, list(paradas))
     return c
 

@@ -185,7 +185,7 @@ def main():
     if sesiones["admin"]:
         st, d = sesiones["admin"].json("/api/flota/")
         n = len(d["camiones"]) if d else 0
-        if chk(st == 200 and n >= 3, f"La flota tiene {n} camiones", f"HTTP {st}"):
+        if chk(st == 200 and n >= 50, f"La flota tiene {n} camiones (se esperan 50)", f"HTTP {st}"):
             ahora = datetime.datetime.now(datetime.timezone.utc)
             edades, campos_ok, alertas = [], True, []
             for c in d["camiones"]:

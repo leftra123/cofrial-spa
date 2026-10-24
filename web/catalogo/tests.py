@@ -160,7 +160,7 @@ class ApiProductos(TestCase):
         self.assertEqual(r.status_code, 200)
         d = r.json()
         self.assertEqual(d["sku"], "VAC-LOM-5K")
-        self.assertEqual(d["categoria"], "Carnes")
+        self.assertEqual(d["categoria"], "Cárnicos refrigerados")
         self.assertEqual(d["conservacion"]["temp_max_c"], 4.0)
         self.assertNotIn("precio", r.content.decode().lower())
 
@@ -262,7 +262,7 @@ class PortadaYCategoriasTests(TestCase):
         r = self.client.get("/")
         self.assertContains(r, "con-foto")
         self.assertContains(r, "static/img/portada.jpg")
-        for slug in ("carnes", "aves", "congelados", "lacteos-y-embutidos"):
+        for slug in ("carnicos-refrigerados", "aves", "congelados", "lacteos-y-embutidos"):
             self.assertContains(r, f"/static/productos/categorias/{slug}.jpg")
 
 

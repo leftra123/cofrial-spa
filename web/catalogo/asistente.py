@@ -172,7 +172,8 @@ def _pedido(o, perfil):
         u = seg.get("ultima")
         if u:
             envio["temperatura_de_la_camara"] = f"{u['temp_camara']:.1f} °C"
-            envio["dentro_del_rango"] = not seg.get("hubo_ruptura")
+            envio["temperatura_actual_en_rango"] = not u["alerta_ruptura_frio"]                       # la última lectura
+            envio["hubo_ruptura_de_frio_en_la_ultima_hora"] = bool(seg.get("hubo_ruptura"))           # una alerta pasada no significa que ahora esté fuera de rango
         d["envio"] = envio
     return d
 

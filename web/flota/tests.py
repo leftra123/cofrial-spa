@@ -302,3 +302,12 @@ class AccesibilidadMapaTests(TestCase):
             self.assertIn('role="region"', etiqueta)               # un contenedor con controles dentro no puede ser role="img"
             self.assertNotIn('role="img"', etiqueta)
             self.assertIn("title:", html)                          # los marcadores se crean con título (nombre accesible)
+
+
+class EncuadreFlotaTests(TestCase):
+    def test_el_encuadre_del_mapa_incluye_a_los_camiones(self):
+        call_command("cargar_demo", verbosity=0)
+        self.client.login(username="despacho@cofrial.cl", password="demo-cofrial-2026")
+        html = self.client.get("/flota/").content.decode()
+        self.assertIn("d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });", html)
+        self.assertIn("maxZoom: 15", html)

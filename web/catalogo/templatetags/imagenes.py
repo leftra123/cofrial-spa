@@ -23,9 +23,3 @@ def foto(ruta, clase="foto", alt="", sizes="100vw", ancho=800, alto=800, priorid
     return {"src": static(ruta), "avif": ", ".join(_variantes(ruta)), "clase": clase, "alt": alt, "sizes": sizes,
             "ancho": ancho, "alto": alto, "prioridad": prioridad}
 
-
-@register.simple_tag
-def foto_sku(sku):
-    """Ruta estática de la foto propia de un SKU (static/productos/propias/<SKU>.jpg) o vacío si no existe; sirve donde la vista no entrega la foto (carrito)."""
-    ruta = f"productos/propias/{sku}.jpg"
-    return ruta if finders.find(ruta) else ""

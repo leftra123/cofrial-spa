@@ -48,15 +48,15 @@ services:
 
   camion-01: &camion
     build: ./iot
-    environment: {<<: *bd, CAMION_ID: CAM-01, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}"}
+    environment: {<<: *bd, CAMION_ID: CAM-01, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}", VELOCIDAD_KMH: "${VELOCIDAD_KMH:-120}"}
     depends_on: [web]
     restart: unless-stopped
   camion-02:
     <<: *camion
-    environment: {<<: *bd, CAMION_ID: CAM-02, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}"}
+    environment: {<<: *bd, CAMION_ID: CAM-02, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}", VELOCIDAD_KMH: "${VELOCIDAD_KMH:-120}"}
   camion-03:
     <<: *camion
-    environment: {<<: *bd, CAMION_ID: CAM-03, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}"}
+    environment: {<<: *bd, CAMION_ID: CAM-03, INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.01}", VELOCIDAD_KMH: "${VELOCIDAD_KMH:-120}"}
 
   grafana:
     image: grafana/grafana:11.6.0

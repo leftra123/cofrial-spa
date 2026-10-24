@@ -5,6 +5,7 @@ Toda la lógica vive aquí y no en las vistas, para que el portal, el CRM y las 
 from django.db import transaction
 from django.db.models import F
 
+from catalogo import avisos
 from catalogo.models import PrecioProducto, Producto
 from clientes.models import Cliente, Direccion
 
@@ -48,6 +49,7 @@ def agregar(cliente, producto_id, cantidad):
     if precio_de(cliente, producto.pk) is None:
         raise ErrorDeNegocio(f"{producto.nombre} no tiene precio en tu lista.")
     carrito = carrito_abierto(cliente)
+    avisos.marcar_atendidos(cliente, producto.pk)          # si esperaba este producto, el aviso ya cumplió su función
     item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
     if not creado:
         item.cantidad += cantidad

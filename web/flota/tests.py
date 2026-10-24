@@ -57,12 +57,12 @@ class ApiFlotaTests(TestCase):
         self.assertEqual(self.client.get("/api/pedidos/").status_code, 403)
 
     def test_cliente_y_vendedor_no_ven_la_flota(self):
-        for usuario in ("ana@correo.test", "vendedora@cofrial.test"):
+        for usuario in ("ana@correo.test", "vendedora@cofrial.cl"):
             self.entrar(usuario)
             self.assertEqual(self.client.get("/api/flota/").status_code, 403, usuario)
 
     def test_despachador_ve_flota_con_ultima_lectura_y_resumen(self):
-        self.entrar("despachador@cofrial.test")
+        self.entrar("despacho@cofrial.cl")
         r = self.client.get("/api/flota/")
         self.assertEqual(r.status_code, 200)
         datos = r.json()
@@ -73,7 +73,7 @@ class ApiFlotaTests(TestCase):
         self.assertIsNone({c["camion_id"]: c for c in datos["camiones"]}["CAM-03"]["ultima_lectura"])
 
     def test_la_api_es_de_solo_lectura(self):
-        self.entrar("despachador@cofrial.test")
+        self.entrar("despacho@cofrial.cl")
         self.assertEqual(self.client.post("/api/flota/", {}).status_code, 405)
 
     def test_pedidos_devuelve_solo_las_ordenes_del_cliente(self):
@@ -152,14 +152,14 @@ class ArmarDespachoTests(TestCase):
         ps.agregar(cliente, __import__("catalogo.models", fromlist=["x"]).Producto.objects.get(sku=sku).pk, cantidad)
         return ps.generar_orden(cliente, cliente.direccion_set.first().pk, "OC-T" if cliente.tipo_cliente.codigo == "B2B" else "")
 
-    def _entrar(self, usuario="despachador@cofrial.test"):
+    def _entrar(self, usuario="despacho@cofrial.cl"):
         self.client.login(username=usuario, password="demo-cofrial-2026")
 
     def test_solo_el_personal_de_despacho_entra(self):
         self.client.login(username="ana@correo.test", password="demo-cofrial-2026")
         self.assertEqual(self.client.get("/flota/despachar/").status_code, 403)
         self.client.logout()
-        self.client.login(username="vendedora@cofrial.test", password="demo-cofrial-2026")
+        self.client.login(username="vendedora@cofrial.cl", password="demo-cofrial-2026")
         self.assertEqual(self.client.get("/flota/despachar/").status_code, 403)
 
     def test_despacha_dos_pedidos_en_un_camion_y_quedan_despachados(self):
@@ -186,7 +186,7 @@ class ArmarDespachoTests(TestCase):
         self.assertContains(r, "CAM-03 es refrigerado")
 
     def test_camion_en_ruta_no_se_ofrece(self):
-        r = self.client.post("/cuenta/entrar/", {"username": "despachador@cofrial.test", "password": "demo-cofrial-2026"})
+        r = self.client.post("/cuenta/entrar/", {"username": "despacho@cofrial.cl", "password": "demo-cofrial-2026"})
         pagina = self.client.get("/flota/despachar/")
         self.assertNotContains(pagina, 'value="CAM-01"')       # CAM-01 y CAM-02 tienen viaje en curso en la demostración
         self.assertContains(pagina, 'value="CAM-03"')

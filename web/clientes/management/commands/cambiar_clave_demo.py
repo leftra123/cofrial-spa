@@ -14,8 +14,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
-DEMO_USUARIOS = ["admin", "abastecimiento@hospital.test", "ana@correo.test", "vendedora@cofrial.test", "vendedor2@cofrial.test",
-                 "gerente@cofrial.test", "despachador@cofrial.test"]
+DEMO_USUARIOS = ["admin@cofrial.cl", "abastecimiento@hospital.test", "ana@correo.test", "vendedora@cofrial.cl", "vendedor2@cofrial.cl",
+                 "gerencia@cofrial.cl", "despacho@cofrial.cl"]
 
 
 class Command(BaseCommand):

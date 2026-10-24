@@ -9,6 +9,7 @@
     <div class="prod-comprar">
       {% if not f.precio %}<span class="btn btn-sec btn-agotado" aria-disabled="true">Consulte a su ejecutivo</span>
       {% elif f.p.stock_disponible <= 0 %}<span class="btn btn-agotado" aria-disabled="true">Sin stock</span>
+      {% if menu.cliente %}{% include "catalogo/_aviso_stock.html" %}{% elif not user.is_authenticated %}<a class="ayuda-ingreso" href="/cuenta/entrar/?next=/catalogo/{{ f.p.producto_id }}/">Ingresa para pedir aviso</a>{% endif %}
       {% elif not user.is_authenticated %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/{{ f.p.producto_id }}/">Ingresar para comprar</a>
       {% elif menu.cliente %}
       <form method="post" action="/carrito/agregar/">{% csrf_token %}

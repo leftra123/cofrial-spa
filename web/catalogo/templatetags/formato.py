@@ -30,3 +30,9 @@ def iva(valor):
 @register.filter
 def con_iva(valor):
     return clp(round(float(valor or 0) * 1.19))
+
+
+@register.filter
+def get_item(diccionario, clave):
+    """Valor de un diccionario por clave dentro de una plantilla ({{ d|get_item:k }})."""
+    return (diccionario or {}).get(clave)

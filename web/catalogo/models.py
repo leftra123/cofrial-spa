@@ -71,3 +71,23 @@ class PrecioProducto(models.Model):
             models.UniqueConstraint(fields=["lista_precio", "producto"], name="uq_precio_lista_producto"),
             models.CheckConstraint(condition=Q(precio_clp__gt=0), name="precio_positivo"),
         ]
+
+
+class AvisoStock(models.Model):
+    """Un cliente pide que se le avise cuando haya al menos cierta cantidad de un producto sin stock suficiente.
+
+    No hay envío de correo: el aviso aparece en «Mis avisos» y en la barra de la tienda en cuanto el stock alcanza la cantidad
+    pedida, y el CRM lo ve como demanda en espera. Se da por atendido cuando el cliente agrega el producto al carrito."""
+    aviso_id = models.AutoField(primary_key=True)
+    cliente = models.ForeignKey("clientes.Cliente", on_delete=models.CASCADE)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    cantidad_minima = models.PositiveIntegerField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+    atendido_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "aviso_stock"
+        constraints = [
+            models.CheckConstraint(condition=Q(cantidad_minima__gte=1), name="aviso_cantidad_positiva"),
+            models.UniqueConstraint(fields=["cliente", "producto"], condition=Q(atendido_en__isnull=True), name="uq_aviso_pendiente"),
+        ]

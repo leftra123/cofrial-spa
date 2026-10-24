@@ -1,0 +1,11 @@
+{# Pide aviso cuando haya al menos X unidades. Variables: f (fila) y con_aviso ({producto_id: mínimo}). #}
+{% with pedido=con_aviso|get_item:f.p.producto_id %}
+{% if pedido %}<p class="aviso-stock hecho">Te avisaremos cuando haya al menos <b>{{ pedido }}</b>. <a href="/avisos/">Mis avisos</a></p>
+{% else %}
+<form class="aviso-stock" method="post" action="/avisos/pedir/">{% csrf_token %}
+  <input type="hidden" name="producto" value="{{ f.p.producto_id }}"><input type="hidden" name="volver" value="{{ request.get_full_path }}">
+  <label for="aviso-{{ f.p.producto_id }}">Avísame cuando haya al menos</label>
+  <span class="aviso-fila"><input id="aviso-{{ f.p.producto_id }}" type="number" name="cantidad" min="1" value="{{ f.p.stock_disponible|add:1 }}"><button class="btn-sec">Avisarme</button></span>
+</form>
+{% endif %}
+{% endwith %}

@@ -7,6 +7,7 @@
 </div>
 {% endblock %}
 {% block contenido %}
+{% if avisos_n %}<p class="aviso exito" role="status">Ya hay stock de {{ avisos_n }} producto{{ avisos_n|pluralize }} que esperabas. <a href="/avisos/">Ver mis avisos</a></p>{% endif %}
 <div class="cat-layout">
   <details class="filtros" id="filtros-det" open>
     <summary>Filtros{% if filtrado %} <span class="chip asignado sin-punto">activos</span>{% endif %}</summary>

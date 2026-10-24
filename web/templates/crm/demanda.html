@@ -1,0 +1,9 @@
+{% extends "crm/base.html" %}
+{% block crm %}
+<div class="pagina-cab"><div><h1>Demanda en espera</h1><p class="sub">Productos que los clientes pidieron que se les avise cuando haya stock. Sirve para reponer lo más pedido y para contactar a quien espera.</p></div></div>
+<div class="tabla-caja"><table><thead><tr><th>Producto</th><th class="num">Clientes esperando</th><th class="num">Unidades pedidas</th><th class="num">Stock actual</th><th>Estado</th></tr></thead><tbody>
+{% for f in filas %}<tr><td><b>{{ f.producto__nombre }}</b><br><span class="frio">{{ f.producto__sku }}</span></td><td class="num">{{ f.n_clientes }}</td><td class="num">{{ f.pedido }}</td><td class="num">{{ f.producto__stock_disponible }}</td>
+<td>{% if f.producto__stock_disponible >= f.pedido %}<span class="chip entregado">Alcanza para todos</span>{% elif f.producto__stock_disponible > 0 %}<span class="chip pendiente">Alcanza parcialmente</span>{% else %}<span class="chip alerta">Sin stock: reponer</span>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="5" class="vacio-caja">{% include "componentes/vacio.html" with ico="campana" %}<h2>Nadie espera productos</h2><p>Cuando un cliente pida un aviso de stock, aparecerá aquí.</p></td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

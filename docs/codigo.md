@@ -23,7 +23,7 @@ La web queda en `http://localhost:8000` (catálogo en `/catalogo/`, CRM en `/crm
 
 Pruebas (con la base encendida): `docker compose up -d db && docker compose run --rm --no-deps web python manage.py test --noinput`.
 
-La lógica de negocio está en `web/pedidos/servicios.py` y `web/crm/servicios.py`; las vistas solo llaman a esas funciones. Usuarios de demo: `ana@correo.test` (B2C), `abastecimiento@hospital.test` (B2B), `vendedora@cofrial.test`, `vendedor2@cofrial.test`, `gerente@cofrial.test`, `despachador@cofrial.test` y `admin`; la contraseña es `DEMO_PASSWORD` del `.env`.
+La lógica de negocio está en `web/pedidos/servicios.py` y `web/crm/servicios.py`; las vistas solo llaman a esas funciones. Usuarios de demo: `ana@correo.test` (B2C), `abastecimiento@hospital.test` (B2B), `vendedora@cofrial.cl`, `vendedor2@cofrial.cl`, `gerencia@cofrial.cl`, `despacho@cofrial.cl` y `admin`; la contraseña es `DEMO_PASSWORD` del `.env`.
 
 ## Qué está hecho y qué falta
 

@@ -441,6 +441,10 @@ function main() {
   agregar(tituloH1("Anexo A. Diccionario de datos"));
   agregar(parrafo("Cada tabla del modelo de datos se describe con sus campos, tipo, nulidad, clave, descripción y un ejemplo ficticio. Las tablas se agrupan por módulo."));
   renderBloques(anexoAB.filter(b => !(b.tipo === "h" && b.nivel === 2)), "04b-modelo-datos.md", 0, { diccionario: true });
+  const anexoCuentas = leerBloques(fs.readFileSync(path.join(RAIZ, "entrega/anexo-cuentas.md"), "utf-8")).bloques;
+  for (const b of anexoCuentas) if (b.tipo === "caption") asignar("entrega/anexo-cuentas.md", b.etiqueta, b.local);
+  agregar(tituloH1("Anexo B. Cuentas de prueba"));
+  renderBloques(anexoCuentas, "entrega/anexo-cuentas.md", 0);
   const doc = new Document({
     creator: "Eric Aguayo Quintriqueo y Sergio Vásquez Marimán",
     title: "Cofrial SpA: del caos operativo a la cadena de frío inteligente. Informe de ingeniería, Hito 1",

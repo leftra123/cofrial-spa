@@ -150,3 +150,90 @@ class ImagenPropiaTests(TestCase):
             r = self.client.get(f"/catalogo/{p.pk}/")
             self.assertContains(r, "productos/propias/POL-PEC-10K.png")
             self.assertContains(r, "generada con IA")
+
+
+class AvisoStockTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def _entrar(self, usuario="ana@correo.test"):
+        self.client.login(username=usuario, password="demo-cofrial-2026")
+
+    def _camarones(self):
+        from catalogo.models import Producto
+        return Producto.objects.get(sku="MAR-CAM-1K")          # sin stock en la demostración
+
+    def test_cliente_pide_aviso_y_se_ve_en_mis_avisos(self):
+        p = self._camarones()
+        self._entrar()
+        r = self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 5, "volver": "/catalogo/"}, follow=True)
+        self.assertContains(r, "te avisaremos cuando haya al menos 5")
+        pagina = self.client.get("/avisos/")
+        self.assertContains(pagina, "Esperando stock")
+        self.assertContains(pagina, p.nombre)
+
+    def test_pedir_dos_veces_actualiza_la_cantidad_sin_duplicar(self):
+        from catalogo.models import AvisoStock
+        p = self._camarones()
+        self._entrar()
+        self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 5})
+        self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 8})
+        self.assertEqual(AvisoStock.objects.filter(producto=p).count(), 1)
+        self.assertEqual(AvisoStock.objects.get(producto=p).cantidad_minima, 8)
+
+    def test_no_se_pide_aviso_si_ya_hay_stock_suficiente(self):
+        from catalogo.models import AvisoStock, Producto
+        p = Producto.objects.get(sku="POL-PEC-10K")
+        self._entrar()
+        r = self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 1}, follow=True)
+        self.assertContains(r, "Ya hay")
+        self.assertFalse(AvisoStock.objects.exists())
+
+    def test_cuando_llega_stock_aparece_como_disponible_y_avisa_en_la_barra(self):
+        p = self._camarones()
+        self._entrar()
+        self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 5})
+        self.assertNotContains(self.client.get("/catalogo/"), "Ya hay stock de")
+        p.stock_disponible = 7
+        p.save(update_fields=["stock_disponible"])
+        self.assertContains(self.client.get("/catalogo/"), "Ya hay stock de 1 producto")
+        self.assertContains(self.client.get("/avisos/"), "Ya disponible")
+
+    def test_agregar_al_carrito_da_el_aviso_por_atendido(self):
+        from catalogo.models import AvisoStock
+        p = self._camarones()
+        self._entrar()
+        self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 3})
+        p.stock_disponible = 10
+        p.save(update_fields=["stock_disponible"])
+        self.client.post("/carrito/agregar/", {"producto": p.pk, "cantidad": 3})
+        self.assertIsNotNone(AvisoStock.objects.get(producto=p).atendido_en)
+        self.assertNotContains(self.client.get("/avisos/"), "Esperando stock")
+
+    def test_un_cliente_no_ve_ni_quita_avisos_ajenos(self):
+        from catalogo.models import AvisoStock
+        p = self._camarones()
+        self._entrar("ana@correo.test")
+        self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 5})
+        aviso = AvisoStock.objects.get()
+        self.client.logout()
+        self._entrar("abastecimiento@hospital.test")
+        self.assertNotContains(self.client.get("/avisos/"), p.nombre)
+        self.client.post(f"/avisos/{aviso.pk}/quitar/")
+        self.assertTrue(AvisoStock.objects.filter(pk=aviso.pk).exists())
+
+    def test_visitante_es_enviado_a_ingresar_y_el_crm_ve_la_demanda(self):
+        p = self._camarones()
+        self.assertEqual(self.client.get("/avisos/").status_code, 302)
+        self.assertContains(self.client.get("/catalogo/"), "Ingresa para pedir aviso")
+        self._entrar()
+        self.client.post("/avisos/pedir/", {"producto": p.pk, "cantidad": 6})
+        self.client.logout()
+        self._entrar("vendedora@cofrial.cl")
+        r = self.client.get("/crm/demanda/")
+        self.assertContains(r, "Camarones")
+        self.assertContains(r, "Sin stock: reponer")
+        self.client.logout()
+        self._entrar("ana@correo.test")
+        self.assertEqual(self.client.get("/crm/demanda/").status_code, 403)

@@ -1,6 +1,6 @@
 # Credenciales y cuentas: cómo se crean, dónde viven y cómo se cambian
 
-> Regla de oro: **ninguna clave va a GitHub, Trello, el chat ni una captura de pantalla.** Para leer una clave, usar el panel Terminal (no una herramienta que devuelva su salida a otra persona o programa).
+> Regla de oro: **las claves de la infraestructura (AWS, base de datos, Grafana, Django y las APIs de IA) no van a GitHub, Trello, el chat ni una captura de pantalla.** Para leer una, usar el panel Terminal. **Excepción deliberada del prototipo académico:** las cuentas de demostración usan correos simples (`@cofrial.cl` para el personal) y una clave fácil, y se documentan en el Anexo B del informe, porque solo las usa el equipo y quienes evalúan, con datos ficticios.
 
 ## 1. Mapa de credenciales
 
@@ -44,7 +44,7 @@ python manage.py crear_cuenta gerencia2@cofrial.test --rol gerencia
 python manage.py crear_cuenta sergio --rol admin
 # Cliente institucional (B2B), con vendedor asignado
 python manage.py crear_cuenta compras@hotel.test --rol cliente-b2b --nombre "Hotel Villarrica" \
-    --rut 76.111.222-3 --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.test
+    --rut 76.111.222-3 --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.cl
 # Cliente público (B2C)
 python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana Díaz" --rut 11.222.333-4 --direccion "Calle 1 123"
 ```
@@ -53,7 +53,19 @@ La clave se **pide por teclado** (dos veces) y se valida (largo mínimo y no una
 
 ## 3. Cuentas de demostración y su clave
 
-Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`): `admin`, `abastecimiento@hospital.test`, `ana@correo.test`, `vendedora@cofrial.test`, `vendedor2@cofrial.test`, `gerente@cofrial.test` y `despachador@cofrial.test`. Todas comparten `DEMO_PASSWORD`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**.
+Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los nombres anteriores, las renombra sin perder sus datos.
+
+| Cuenta | Rol |
+|---|---|
+| `admin@cofrial.cl` | Administrador |
+| `gerencia@cofrial.cl` | Gerencia |
+| `vendedora@cofrial.cl` | Vendedora (María Paz Soto) |
+| `vendedor2@cofrial.cl` | Vendedor (Pedro Núñez) |
+| `despacho@cofrial.cl` | Despachador |
+| `abastecimiento@hospital.test` | Cliente institucional B2B (Hospital Regional de Temuco) |
+| `ana@correo.test` | Cliente particular B2C (Ana Pérez) |
+
+Todas comparten `DEMO_PASSWORD`; en AWS vale `123456` (con `DEMO_CLAVE_DEBIL=1`). *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
 
 **Rotar la clave de demostración** (por ejemplo, tras compartirla por error):
 1. Editar `DEMO_PASSWORD` en `aws/.estado/secretos.env` (mínimo 8 caracteres, no una clave común).

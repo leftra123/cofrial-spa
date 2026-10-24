@@ -255,3 +255,10 @@ body.tienda { background: var(--fondo); }
   .temp-grande b { font-size: 2.6rem; }
   .productos { grid-template-columns: 1fr 1fr; }
 }
+
+/* aviso de stock */
+.aviso-stock { margin: 8px 0 0; font-size: .85rem; color: var(--texto-2); }
+.aviso-stock label { display: block; font-weight: 500; margin-bottom: 4px; }
+.aviso-stock .aviso-fila { display: flex; gap: 6px; align-items: center; }
+.aviso-stock input[type=number] { width: 76px; }
+.aviso-stock.hecho { background: var(--acento-suave); border-radius: 8px; padding: 8px 10px; }

@@ -5,11 +5,15 @@ from pathlib import Path
 from django.conf import settings
 from django.db.models import Q
 from django.http import Http404
-from django.shortcuts import get_object_or_404, render
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente, TipoCliente
 
-from .models import Categoria, PrecioProducto, Producto, RangoTemperatura
+from . import avisos
+
+from .models import AvisoStock, Categoria, PrecioProducto, Producto, RangoTemperatura
 
 STOCK_BAJO = 20      # por debajo se avisa «Quedan pocas unidades»
 
@@ -74,6 +78,10 @@ def _fila(p, precios):
             "modelo_ia": _ilustraciones_ia().get(p.sku, {}).get("modelo")}
 
 
+def _cliente(request):
+    return Cliente.objects.select_related("tipo_cliente").filter(usuario=request.user).first() if request.user.is_authenticated else None
+
+
 def listado(request):
     perfil = lista_del_visitante(request)
     precios = _precios(perfil)
@@ -94,6 +102,7 @@ def listado(request):
     filas = [_fila(p, precios) for p in productos]
     return render(request, "catalogo/listado.html", {
         "filas": filas, "perfil": perfil, "q": q, "cat": cat, "temp": temp, "solo_stock": solo_stock,
+        "con_aviso": avisos.minimos_pendientes(_cliente(request)) if _cliente(request) else {},
         "categorias": Categoria.objects.order_by("nombre"), "rangos": RangoTemperatura.objects.order_by("-temp_min_c"),
         "filtrado": bool(q or cat or temp or solo_stock)})
 
@@ -103,4 +112,40 @@ def detalle(request, producto_id):
     perfil = lista_del_visitante(request)
     fila = _fila(p, _precios(perfil))
     similares = [_fila(s, _precios(perfil)) for s in Producto.objects.filter(activo=True, categoria=p.categoria).exclude(pk=p.pk).order_by("nombre")[:4]]
-    return render(request, "catalogo/detalle.html", {"fila": fila, "perfil": perfil, "similares": similares})
+    cliente = _cliente(request)
+    return render(request, "catalogo/detalle.html", {"fila": fila, "perfil": perfil, "similares": similares,
+                                                     "con_aviso": avisos.minimos_pendientes(cliente) if cliente else {}})
+
+
+@require_POST
+def pedir_aviso(request):
+    cliente = _cliente(request)
+    if cliente is None:
+        messages.error(request, "Ingresa con tu cuenta de cliente para pedir un aviso.")
+        return redirect("/cuenta/entrar/")
+    try:
+        a = avisos.pedir(cliente, int(request.POST.get("producto", 0)), int(request.POST.get("cantidad", 0)))
+        messages.success(request, f"Listo: te avisaremos cuando haya al menos {a.cantidad_minima} de {a.producto.nombre}.")
+    except (avisos.ErrorAviso, ValueError) as e:
+        messages.error(request, str(e) if isinstance(e, avisos.ErrorAviso) else "Indica una cantidad válida.")
+    destino = request.POST.get("volver") or "/avisos/"
+    return redirect(destino if destino.startswith("/") and not destino.startswith("//") else "/avisos/")
+
+
+def mis_avisos(request):
+    cliente = _cliente(request)
+    if cliente is None:
+        return redirect("/cuenta/entrar/?next=/avisos/")
+    lista = list(avisos.pendientes(cliente))
+    for a in lista:
+        a.disponible = a.producto.stock_disponible >= a.cantidad_minima
+    return render(request, "catalogo/avisos.html", {"avisos": lista})
+
+
+@require_POST
+def quitar_aviso(request, aviso_id):
+    cliente = _cliente(request)
+    if cliente is not None:
+        AvisoStock.objects.filter(pk=aviso_id, cliente=cliente, atendido_en__isnull=True).delete()
+        messages.success(request, "Quitamos el aviso.")
+    return redirect("/avisos/")

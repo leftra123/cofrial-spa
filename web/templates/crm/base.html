@@ -3,6 +3,7 @@
 {% with ruta=request.path %}
 <nav class="subnav" aria-label="Secciones del CRM">
   {% if rol != "despachador" %}<a href="/crm/" {% if ruta == "/crm/" %}class="activo" aria-current="page"{% endif %}>Panel</a><a href="/crm/embudo/" {% if "/crm/embudo" in ruta or "/crm/prospectos" in ruta %}class="activo"{% endif %}>Embudo</a><a href="/crm/clientes/" {% if "/crm/clientes" in ruta %}class="activo"{% endif %}>Clientes</a><a href="/crm/requerimientos/" {% if "/crm/requerimientos" in ruta %}class="activo"{% endif %}>Requerimientos</a><a href="/crm/ia/" {% if "/crm/ia" in ruta %}class="activo"{% endif %}>IA</a>{% endif %}
+  <a href="/crm/demanda/" {% if "/crm/demanda" in ruta %}class="activo"{% endif %}>Demanda en espera</a>
   <a href="/crm/alertas/" {% if "/crm/alertas" in ruta %}class="activo"{% endif %}>Alertas de frío</a><span class="chip cancelado rol">Rol: {{ rol }}</span>
 </nav>
 {% endwith %}

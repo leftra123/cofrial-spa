@@ -26,7 +26,7 @@
 
   <div class="portada-visual">
     {% if portada %}{% foto "img/portada.jpg" "hero-fondo" "Cámara de frío con estanterías de producto" "(min-width: 860px) 560px, 100vw" 1672 470 True %}
-    {% else %}<img class="camion-deco" src="{% static 'img/cofrial-camion.png' %}" alt="" width="300" height="178">{% endif %}
+    {% else %}<img class="camion-deco" src="{% static 'img/marca/camion-mapa.png' %}" alt="" width="300" height="188">{% endif %}
     {% if hace_seg is not None %}<div class="lectura" role="status"><b><i class="pulso"></i>{{ n_camiones }} {% if n_camiones == 1 %}camión{% else %}camiones{% endif %} con sensor</b><span>Última lectura hace {{ hace_seg }} s</span></div>{% endif %}
   </div>
 </section>

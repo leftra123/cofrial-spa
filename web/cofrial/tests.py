@@ -39,3 +39,30 @@ class EstabilidadTests(TestCase):
         self.assertEqual(r.status_code, 500)
         self.assertContains(r, "Tuvimos un problema", status_code=500)
         self.assertTrue(any("falla simulada" in linea or "Internal Server Error" in linea for linea in registro.output))
+
+
+class MarcaTests(TestCase):
+    """La marca oficial (logo horizontal, icono de la aplicación, favicons y camiones) y nada del logo anterior."""
+
+    def test_la_tienda_usa_los_archivos_de_marca(self):
+        html = self.client.get("/").content.decode()
+        self.assertIn("img/marca/logo-horizontal-900", html)
+        self.assertIn("img/marca/favicon-32", html)
+        self.assertIn("img/marca/favicon-180", html)
+        self.assertNotIn("cofrial-logo", html)
+
+    def test_el_panel_usa_el_icono_de_la_aplicacion(self):
+        from django.core.management import call_command
+        call_command("cargar_demo", verbosity=0)
+        self.client.login(username="despacho@cofrial.cl", password="demo-cofrial-2026")
+        self.assertIn("img/marca/icono-app", self.client.get("/flota/").content.decode())
+
+    def test_los_archivos_existen_y_la_insignia_no_trae_el_texto_de_inacap(self):
+        from pathlib import Path
+
+        import struct
+        base = Path(__file__).resolve().parent.parent / "static" / "img" / "marca"
+        for nombre in ("logo-horizontal-900.png", "icono-app.png", "favicon-32.png", "favicon-180.png", "camion-mapa.png", "camion-alerta.png", "insignia-vertical.png"):
+            self.assertTrue((base / nombre).exists(), nombre)
+        ancho, alto = struct.unpack(">II", (base / "insignia-vertical.png").read_bytes()[16:24])      # tamaño leído del encabezado PNG
+        self.assertAlmostEqual(alto / ancho, 1300 / 1600, places=2)          # recortada: sin la línea «INACAP Temuco - EVA2_3...»

@@ -425,7 +425,7 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 }
 
 /* barra superior: logotipo de imagen (sobre un chip blanco en modo oscuro, porque el azul no se lee sobre fondo oscuro) */
-.tb-marca img { height: 30px; width: auto; display: block; }
+.tb-marca img { height: 40px; width: auto; display: block; }
 :root[data-tema="oscuro"] .tb-marca { background: #fff; border-radius: 10px; padding: 5px 10px; }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tb-marca { background: #fff; border-radius: 10px; padding: 5px 10px; } }
 

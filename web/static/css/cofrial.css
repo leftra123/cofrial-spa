@@ -506,3 +506,6 @@ td.celda-acciones select { max-width: 100%; }
 .dialogo { border: 1px solid var(--borde); border-radius: var(--radio); padding: 24px; max-width: 460px; width: calc(100% - 32px); background: var(--tarjeta); color: var(--texto); box-shadow: var(--sombra-alta); }
 .dialogo::backdrop { background: rgba(15, 23, 42, .55); }
 .dialogo h2 { margin-bottom: 8px; }
+
+/* icono de la aplicación en el menú del panel interno */
+.marca-icono { width: 32px; height: 32px; border-radius: 8px; flex: none; display: block; }

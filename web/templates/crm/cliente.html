@@ -6,7 +6,7 @@
 </div>
 <div class="seccion" style="margin-top:0"><h2>Pedidos web</h2></div>
 <div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th>Camión</th><th class="num">Total</th><th></th></tr></thead><tbody>
-{% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td>{{ o.despacho.camion|default:"–" }}</td><td class="num">{{ o.total|clp }}</td>
+{% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}{% if o.oc_pendiente %} <span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td>{{ o.despacho.camion|default:"–" }}</td><td class="num">{{ o.total|clp }}</td>
   <td>{% if o.alertas_frio %}<span class="alerta">Alerta de frío: {{ o.alertas_frio }} lecturas fuera de rango</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="vacio">Sin pedidos.</td></tr>{% endfor %}
 </tbody></table></div>
 <div class="seccion"><h2>Interacciones</h2></div>
@@ -19,7 +19,7 @@
 <form method="post" action="/crm/clientes/{{ c.cliente_id }}/pedido/">{% csrf_token %}
   <div class="tabla-caja" style="box-shadow:none"><table><tbody>{% for p in productos %}<tr><td>{{ p.nombre }}</td><td class="frio">stock {{ p.stock_disponible }}</td><td class="num"><input type="number" name="q_{{ p.producto_id }}" min="0" max="{{ p.stock_disponible }}" aria-label="Cantidad de {{ p.nombre }}"></td></tr>{% endfor %}</tbody></table></div>
   <label>Dirección</label><select name="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}">{{ d }}</option>{% endfor %}</select>
-  {% if pide_oc %}<label>Número de orden de compra</label><input name="numero_oc" required>{% endif %}
+  {% if pide_oc %}<label>Número de orden de compra (si el cliente aún no la tiene, déjalo vacío: queda «OC pendiente»)</label><input name="numero_oc" maxlength="30">{% endif %}
   <label>¿Cómo llegó el pedido?</label><select name="tipo_interaccion"><option>llamada</option><option>correo</option></select>
   <label>Detalle de la interacción</label><input name="detalle_interaccion" required>
   <p style="margin-top:18px"><button>Crear pedido</button></p>

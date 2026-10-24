@@ -69,7 +69,8 @@
   <h2>Datos de la entrega</h2>
   <dl class="datos">
     <div><dt>Dirección</dt><dd>{{ orden.direccion }}</dd></div>
-    {% if orden.numero_oc %}<div><dt>Orden de compra</dt><dd>{{ orden.numero_oc }}</dd></div>{% endif %}
+    {% if orden.numero_oc %}<div><dt>Orden de compra</dt><dd>{{ orden.numero_oc }} {% if orden.oc_pendiente %}<span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</dd></div>{% endif %}
+    {% if orden.oc_pendiente and not orden.estado_orden.es_final %}<div class="oc-registro"><dt>Agregar mi orden de compra</dt><dd><form method="post" action="/pedidos/{{ orden.orden_id }}/oc/" class="en-linea">{% csrf_token %}<input name="numero_oc" maxlength="30" required aria-label="Número de orden de compra"> <button class="btn-sec">Guardar</button></form></dd></div>{% endif %}
     {% if orden.despacho %}<div><dt>Camión</dt><dd>{{ orden.despacho.camion }}</dd></div>{% endif %}
   </dl>
 </div>

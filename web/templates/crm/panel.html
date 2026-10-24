@@ -10,6 +10,7 @@
   <div class="kpi-card"><div class="etiqueta">Valor del embudo</div><div class="valor">{{ ind.valor_embudo|clp }}</div><div class="detalle">monto estimado</div></div>
   <div class="kpi-card"><div class="etiqueta">Conversión</div><div class="valor">{% if ind.conversion is None %}–{% else %}{{ ind.conversion }} %{% endif %}</div><div class="detalle">{{ ind.ganados }} ganados · {{ ind.perdidos }} perdidos</div></div>
   <div class="kpi-card critico"><div class="etiqueta">Pedidos con alerta de frío</div><div class="valor">{{ ind.pedidos_afectados }}</div><div class="detalle">ruptura durante el viaje</div></div>
+  <div class="kpi-card{% if ind.oc_pendientes %} aviso-kpi{% endif %}"><div class="etiqueta">Órdenes con OC pendiente</div><div class="valor">{{ ind.oc_pendientes }}</div><div class="detalle">clientes institucionales sin su orden de compra</div></div>
   <div class="kpi-card"><div class="etiqueta">Requerimientos por clasificar</div><div class="valor">{{ ind.requerimientos_pendientes }}</div><div class="detalle">pendientes de revisión</div></div>
 </div>
 <div class="rejilla dos" style="margin-top:20px">

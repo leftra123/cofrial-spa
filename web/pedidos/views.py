@@ -128,6 +128,18 @@ def detalle(request, cliente, orden_id):
 
 @require_POST
 @solo_clientes
+def registrar_oc(request, cliente, orden_id):
+    """El cliente institucional agrega su orden de compra a un pedido que quedó «OC pendiente»."""
+    try:
+        s.registrar_oc(cliente, orden_id, request.POST.get("numero_oc", ""))
+        messages.success(request, "Registramos tu orden de compra. Gracias.")
+    except s.ErrorDeNegocio as e:
+        _mostrar_errores(request, e)
+    return redirect("orden", orden_id=orden_id)
+
+
+@require_POST
+@solo_clientes
 def cancelar(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     try:

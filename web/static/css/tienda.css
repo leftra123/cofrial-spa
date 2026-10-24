@@ -589,3 +589,8 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 }
 .franja { margin-bottom: 40px; }
 @media (max-width: 520px) { .franja { margin-bottom: 28px; font-size: .86rem; } .franja-r b { display: block; margin: 0; } }
+
+/* orden de compra pendiente */
+.ayuda { font-size: .82rem; color: var(--texto-3); margin: 4px 0 0; max-width: 520px; }
+.oc-registro dd form { margin: 0; }
+.oc-registro input { max-width: 200px; }

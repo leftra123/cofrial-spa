@@ -15,6 +15,7 @@
 #   bash aws/provision.sh estado     # muestra si RDS y las EC2 están encendidas
 #   bash aws/provision.sh encender   # tras iniciar una sesión nueva del laboratorio: arranca RDS y las EC2
 #   bash aws/provision.sh recrear-web  # rota claves de IA: edita aws/.estado/secretos.env y recrea solo la EC2 web
+#   bash aws/provision.sh recrear-iot  # recrea solo la EC2 del simulador IoT con el código actual de main (la web y la RDS no se tocan)
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-east-1}"; export AWS_DEFAULT_REGION="$REGION"
@@ -91,10 +92,25 @@ fi
 # Termina la EC2 web y deja que el resto del script cree una nueva con las claves ACTUALES de aws/.estado/secretos.env
 # (GEMINI_API_KEY y GROQ_API_KEY). Sirve para rotar claves sin entrar por SSH. RDS, la red, la IP elástica y la EC2 del IoT
 # se conservan; la web queda sin servicio unos 8 minutos.
+# terminar_ec2 <nombre>: termina SOLO las instancias con esa etiqueta Name (la prueba aws/test_provision.sh la extrae de este archivo)
+terminar_ec2() {
+  local IDS
+  IDS=$(q ec2 describe-instances --filters "Name=tag:Name,Values=$1" "Name=instance-state-name,Values=pending,running,stopped,stopping" --query 'Reservations[].Instances[].InstanceId')
+  if [ -n "$IDS" ] && [ "$IDS" != "None" ]; then aws ec2 terminate-instances --instance-ids $IDS >/dev/null; aws ec2 wait instance-terminated --instance-ids $IDS; fi
+}
+
 if [ "${1:-}" = "recrear-web" ]; then
   log "Terminando la EC2 web para recrearla con las claves actuales"
-  IDS=$(q ec2 describe-instances --filters "Name=tag:Name,Values=${P}-ec2-web" "Name=instance-state-name,Values=pending,running,stopped,stopping" --query 'Reservations[].Instances[].InstanceId')
-  if [ -n "$IDS" ] && [ "$IDS" != "None" ]; then aws ec2 terminate-instances --instance-ids $IDS >/dev/null; aws ec2 wait instance-terminated --instance-ids $IDS; fi
+  terminar_ec2 "${P}-ec2-web"
+fi
+
+# ---------------------------------------------------------------- recrear-iot
+# Igual que recrear-web pero para la EC2 del simulador IoT: la termina y el resto del script (idempotente) crea una nueva, que construye
+# los contenedores de camiones con el código actual de main. NO toca la RDS, la EC2 web ni la IP elástica; la web sigue en servicio y la
+# telemetría se corta unos minutos. La IP pública de la EC2 IoT cambia, pero nada depende de ella (la RDS acepta por grupo de seguridad).
+if [ "${1:-}" = "recrear-iot" ]; then
+  log "Terminando la EC2 IoT para recrearla con el código actual (RDS, web e IP elástica se conservan)"
+  terminar_ec2 "${P}-ec2-iot"
 fi
 
 # ---------------------------------------------------------------- secretos generados (se guardan solo en aws/.estado)

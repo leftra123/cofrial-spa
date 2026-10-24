@@ -509,3 +509,6 @@ td.celda-acciones select { max-width: 100%; }
 
 /* icono de la aplicación en el menú del panel interno */
 .marca-icono { width: 32px; height: 32px; border-radius: 8px; flex: none; display: block; }
+
+.cerrar-viaje { margin: 14px 0 0; }
+.cerrar-viaje button { width: 100%; }

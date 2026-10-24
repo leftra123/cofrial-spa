@@ -69,6 +69,13 @@
       <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Orden N.º {{ o.orden_id }}</div></div>
       <span style="margin-left:auto">{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</span></div>
     {% endfor %}
+    {% if puede_cerrar %}
+    <form method="post" action="/flota/viajes/{{ x.viaje.despacho_id }}/cerrar/" class="cerrar-viaje"
+          onsubmit="return confirm('¿Marcar entregado y cerrar el despacho N.º {{ x.viaje.despacho_id }}? Los pedidos pasarán a «Entregada» y el camión {{ x.camion.camion_id }} quedará libre.')">
+      {% csrf_token %}<input type="hidden" name="confirmar" value="1">
+      <button class="btn-sec">Marcar entregado y cerrar despacho</button>
+    </form>
+    {% endif %}
   </article>
 {% endfor %}
 </div>

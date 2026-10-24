@@ -3,7 +3,8 @@ import os
 import unittest
 
 os.environ.setdefault("CAMION_ID", "CAM-01")
-os.environ["VELOCIDAD_KMH"] = "120"
+os.environ["VELOCIDAD_MEDIA_KMH"] = "120"      # rápido para que las pruebas sean cortas
+os.environ["FACTOR_CALLES"] = "1"
 os.environ["INTERVALO_SEG"] = "5"
 os.environ["DETENCION_LECTURAS"] = "3"
 import simulador as sim  # noqa: E402
@@ -42,7 +43,7 @@ class MovimientoTest(unittest.TestCase):
         while c.pos != CASA:
             c.posicion()
             lecturas += 1
-        self.assertEqual(lecturas, -(-d // (120 * 5 / 3600)))        # distancia / paso, redondeado hacia arriba
+        self.assertEqual(lecturas, -(-d // (sim.VELOCIDAD_MEDIA_KMH * 5 / 3600 / sim.FACTOR_CALLES)))     # distancia / paso, redondeado hacia arriba
 
     def test_orden_vecino_mas_cercano_y_detencion_intermedia(self):
         c = viaje(OTRA, CASA)                                        # CASA queda más cerca de la posición inicial
@@ -80,6 +81,25 @@ class MovimientoTest(unittest.TestCase):
         self.assertIsInstance(comb, int)
         self.assertIsInstance(alerta, bool)
         self.assertLess(abs(lat - c.pos[0]), 1e-5)
+
+
+class VelocidadCompartidaTest(unittest.TestCase):
+    def test_por_defecto_es_la_misma_que_usa_la_web(self):
+        """Sin variables, simulador y web usan 50 km/h y un factor de calles de 1,3 (la web: cofrial/settings.py)."""
+        import importlib
+        import subprocess
+        import sys
+        codigo = "import simulador as s; print(s.VELOCIDAD_MEDIA_KMH, s.FACTOR_CALLES)"
+        entorno = {k: v for k, v in os.environ.items() if k not in ("VELOCIDAD_MEDIA_KMH", "VELOCIDAD_KMH", "FACTOR_CALLES")}
+        r = subprocess.run([sys.executable, "-c", codigo], env=entorno, capture_output=True, text=True, cwd=os.path.dirname(__file__) or ".")
+        self.assertEqual(r.stdout.split(), ["50.0", "1.3"], r.stderr)
+
+    def test_el_tiempo_de_viaje_coincide_con_la_estimacion_de_la_web(self):
+        """Con 50 km/h y factor 1,3, recorrer km en línea recta toma lo mismo que la web estima para km * 1,3 a 50 km/h."""
+        km, v, f, intervalo = 3.0, 50.0, 1.3, 5.0
+        lecturas = km / (v * intervalo / 3600 / f)
+        minutos_web = km * f / v * 60
+        self.assertAlmostEqual(lecturas * intervalo / 60, minutos_web, places=6)
 
 
 if __name__ == "__main__":

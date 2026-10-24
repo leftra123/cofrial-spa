@@ -66,3 +66,31 @@ class MarcaTests(TestCase):
             self.assertTrue((base / nombre).exists(), nombre)
         ancho, alto = struct.unpack(">II", (base / "insignia-vertical.png").read_bytes()[16:24])      # tamaño leído del encabezado PNG
         self.assertAlmostEqual(alto / ancho, 1300 / 1600, places=2)          # recortada: sin la línea «INACAP Temuco - EVA2_3...»
+
+
+class VelocidadCompartidaWebTests(TestCase):
+    """La hora de llegada de la tienda usa las mismas variables que el simulador IoT (VELOCIDAD_MEDIA_KMH y FACTOR_CALLES)."""
+
+    def test_valores_por_defecto(self):
+        self.assertEqual(settings.VELOCIDAD_MEDIA_KMH, 50)
+        self.assertEqual(settings.FACTOR_CALLES, 1.3)
+
+    def test_la_llegada_estimada_depende_de_la_velocidad_configurada(self):
+        from types import SimpleNamespace
+
+        from django.core.management import call_command
+        from django.test import override_settings
+        from django.utils import timezone
+
+        from pedidos import servicios
+        from pedidos.models import Orden
+        call_command("cargar_demo", verbosity=0)
+        orden = Orden.objects.select_related("despacho", "direccion").get(numero_oc="OC-2026-0457")
+        # un camión a ~4 km de la dirección, con lectura de este mismo instante
+        ultima = SimpleNamespace(lat=orden.direccion.lat - 0.036, long=orden.direccion.long, registrado_en=timezone.now())
+        with override_settings(VELOCIDAD_MEDIA_KMH=10):
+            lento = servicios._llegada(orden, ultima)
+        with override_settings(VELOCIDAD_MEDIA_KMH=100):
+            rapido = servicios._llegada(orden, ultima)
+        self.assertEqual(lento["km_restantes"], rapido["km_restantes"])       # la distancia no cambia, solo la hora
+        self.assertGreater(lento["eta"]["hasta"], rapido["eta"]["hasta"])

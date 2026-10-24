@@ -66,6 +66,7 @@
     b.addEventListener("click", function () { var a = l.classList.toggle("abierto"); b.setAttribute("aria-expanded", a); });
   })();
 </script>
+{{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 {% block scripts %}{% endblock %}
 </body>

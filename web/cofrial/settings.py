@@ -94,6 +94,19 @@ LOGIN_URL = "/cuenta/entrar/"
 LOGIN_REDIRECT_URL = "/catalogo/"
 LOGOUT_REDIRECT_URL = "/"
 
+# Los mosaicos de OpenStreetMap exigen que el navegador envíe el Referer (su política de uso). Django envía por defecto «same-origin»,
+# que lo quita en las peticiones a otro sitio y OSM responde «403 Access blocked». Con esta política se envía solo el origen (sin ruta ni datos).
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+# Mosaicos del mapa. Por defecto, OpenStreetMap (uso liviano, con Referer y atribución). Para otro proveedor, definir las variables
+# MAP_TILE_URL y MAP_TILE_ATTRIBUTION (y MAP_TILE_SUBDOMAINS / MAP_TILE_MAX_ZOOM si hace falta); las claves del proveedor, si las pide, van en la propia URL.
+MAPA_TILES = {
+    "url": os.environ.get("MAP_TILE_URL") or "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "attribution": os.environ.get("MAP_TILE_ATTRIBUTION") or "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
+    "maxZoom": int(os.environ.get("MAP_TILE_MAX_ZOOM") or 19),
+    "subdomains": os.environ.get("MAP_TILE_SUBDOMAINS") or "abc",
+}
+
 # Mapa y rutas (OpenStreetMap, sin clave). La base es el punto de salida de los camiones, el mismo donde parte el simulador IoT.
 BASE_LOGISTICA = {"nombre": "Frigorífico central, Temuco", "lat": -38.7330, "long": -72.6040}   # referencia: INACAP Temuco
 GEOCODIFICAR = os.environ.get("GEOCODIFICAR", "1") == "1" and "test" not in sys.argv

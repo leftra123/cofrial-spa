@@ -61,6 +61,7 @@
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
   <div>Prototipo académico INACAP Temuco</div></div></footer>
 {% endwith %}
+{{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/tienda.js' %}"></script>
 {% if menu.cliente %}<script src="{% static 'js/campana.js' %}"></script>{% endif %}

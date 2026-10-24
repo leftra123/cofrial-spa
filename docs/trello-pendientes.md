@@ -38,7 +38,7 @@ Estado de cada tarjeta según lo verificado en `main`. Objetivo: que el tablero 
 
 ## 3. Tarjetas nuevas a crear
 
-1. **Decidir cuál es la app oficial: `backend/` o `web/`.** Conviven en `main` con modelos distintos. Fecha sugerida antes del 06-nov.
+1. ~~Decidir cuál es la app oficial~~ Resuelto: queda `web/`; se eliminó `backend/`.
 2. **Subir los 4 commits locales de Sergio y resolver conflictos en `informe/04a` y `04b`.** Están solo en la copia local de `main` (diagramas profesionales y el arreglo ORDEN-CAMION). Hay que decidir qué versión del informe gana.
 3. **Configurar `GROQ_API_KEY` como respaldo de la IA.** Dos de 20 consultas no tuvieron respuesta de Google; el respaldo sube la disponibilidad.
 4. **Respaldar `aws/.estado/secretos.env` fuera de la carpeta de trabajo.** Contiene las claves de la base, de Grafana y de demo.

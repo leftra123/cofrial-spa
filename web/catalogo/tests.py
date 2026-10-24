@@ -160,7 +160,7 @@ class ApiProductos(TestCase):
         self.assertEqual(r.status_code, 200)
         d = r.json()
         self.assertEqual(d["sku"], "VAC-LOM-5K")
-        self.assertEqual(d["categoria"], "Carnes")
+        self.assertEqual(d["categoria"], "Cárnicos refrigerados")
         self.assertEqual(d["conservacion"]["temp_max_c"], 4.0)
         self.assertNotIn("precio", r.content.decode().lower())
 
@@ -262,7 +262,7 @@ class PortadaYCategoriasTests(TestCase):
         r = self.client.get("/")
         self.assertContains(r, "con-foto")
         self.assertContains(r, "static/img/portada.jpg")
-        for slug in ("carnes", "aves", "congelados", "lacteos-y-embutidos"):
+        for slug in ("carnicos-refrigerados", "aves", "congelados", "lacteos-y-embutidos"):
             self.assertContains(r, f"/static/productos/categorias/{slug}.jpg")
 
 
@@ -294,3 +294,26 @@ class EtiquetaTemperaturaTests(TestCase):
         self.assertContains(r, "0 a 4 °C")
         self.assertContains(r, "-25 a -18 °C")
         self.assertNotContains(r, "generada con IA")
+
+
+class MosaicosDelMapa(TestCase):
+    """OpenStreetMap bloquea («403 Access blocked») las peticiones de mosaicos sin Referer: la web debe enviarlo y dejar el proveedor configurable."""
+
+    def test_la_politica_de_referer_envia_el_origen_a_otros_sitios(self):
+        self.assertEqual(self.client.get("/").headers["Referrer-Policy"], "strict-origin-when-cross-origin")
+
+    def test_la_pagina_entrega_la_configuracion_de_mosaicos_con_atribucion(self):
+        import json
+        import re
+        html = self.client.get("/").content.decode()
+        cfg = json.loads(re.search(r'<script id="mapa-tiles" type="application/json">(.*?)</script>', html, re.S).group(1))
+        self.assertEqual(cfg["url"], "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
+        self.assertIn("OpenStreetMap", cfg["attribution"])
+
+    def test_el_proveedor_se_puede_cambiar_por_configuracion(self):
+        import json
+        import re
+        from django.test import override_settings
+        with override_settings(MAPA_TILES={"url": "https://proveedor.test/{z}/{x}/{y}.png?key=K", "attribution": "&copy; OSM &copy; Proveedor", "maxZoom": 18, "subdomains": "abc"}):
+            html = self.client.get("/").content.decode()
+        self.assertIn("proveedor.test", html)

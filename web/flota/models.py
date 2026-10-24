@@ -49,6 +49,7 @@ class Telemetria(models.Model):
     combustible_pct = models.IntegerField()
     alerta_ruptura_frio = models.BooleanField()
     registrado_en = models.DateTimeField(auto_now_add=True)
+    forzada = models.BooleanField(default=False, db_default=False)    # lectura creada desde el modo demostración (el simulador no la envía)
 
     class Meta:
         db_table = "telemetria"

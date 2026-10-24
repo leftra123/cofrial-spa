@@ -8,7 +8,7 @@
   try { vistos = JSON.parse(localStorage.getItem(CLAVE) || "[]"); } catch (e) {}
   function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(vistos.slice(-200))); } catch (e) {} }
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
-  var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", llego: "Llegó"};
+  var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", llego: "Llegó", frio: "Temperatura"};
 
   function pintar() {
     var nuevos = actuales.filter(function (a) { return vistos.indexOf(a.id) < 0; });

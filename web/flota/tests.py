@@ -190,3 +190,74 @@ class ArmarDespachoTests(TestCase):
         pagina = self.client.get("/flota/despachar/")
         self.assertNotContains(pagina, 'value="CAM-01"')       # CAM-01 y CAM-02 tienen viaje en curso en la demostración
         self.assertContains(pagina, 'value="CAM-03"')
+
+
+class ModoDemostracion(TestCase):
+    """La ruptura forzada es solo para administradores, pide confirmación, se marca como forzada y se puede apagar y borrar."""
+    CLAVE = "demo-cofrial-2026"
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def _admin(self):
+        self.assertTrue(self.client.login(username="admin@cofrial.cl", password=self.CLAVE))
+
+    def test_solo_el_administrador_entra(self):
+        self.assertEqual(self.client.get("/demo/").status_code, 302)                       # sin sesión
+        self.client.login(username="ana@correo.test", password=self.CLAVE)
+        self.assertEqual(self.client.get("/demo/").status_code, 403)                        # cliente
+        self.assertEqual(self.client.post("/demo/pulso/", {"camion": "CAM-01", "confirmar": "1"}).status_code, 403)
+        self.assertEqual(Telemetria.objects.filter(forzada=True).count(), 0)
+
+    def test_exige_confirmacion_y_marca_las_lecturas(self):
+        self._admin()
+        self.assertEqual(self.client.post("/demo/pulso/", {"camion": "CAM-01"}).status_code, 400)
+        self.assertEqual(Telemetria.objects.filter(forzada=True).count(), 0)
+        r = self.client.post("/demo/pulso/", {"camion": "CAM-01", "confirmar": "1"}).json()
+        self.assertTrue(r["activa"])
+        lectura = Telemetria.objects.get(forzada=True)
+        tmax = float(Camion.objects.get(pk="CAM-01").rango_temperatura.temp_max_c)
+        self.assertTrue(lectura.alerta_ruptura_frio)
+        self.assertGreater(lectura.temp_camara, tmax)
+        # el siguiente pulso sigue sin pedir confirmación; apagar deja una lectura normal
+        self.assertEqual(self.client.post("/demo/pulso/", {"camion": "CAM-01"}).status_code, 200)
+        self.client.post("/demo/apagar/", {"camion": "CAM-01"})
+        ultima = Telemetria.objects.filter(camion_id="CAM-01").latest("registrado_en")
+        self.assertFalse(ultima.alerta_ruptura_frio)
+        self.assertTrue(ultima.forzada)
+
+    def test_limpiar_borra_solo_lo_forzado(self):
+        self._admin()
+        real = Telemetria.objects.create(camion_id="CAM-01", temp_camara=2.0, lat=-38.7, long=-72.6, combustible_pct=50, alerta_ruptura_frio=False)
+        self.client.post("/demo/pulso/", {"camion": "CAM-01", "confirmar": "1"})
+        self.assertEqual(self.client.post("/demo/limpiar/", {}).status_code, 400)           # sin confirmar no borra
+        self.assertEqual(self.client.post("/demo/limpiar/", {"confirmar": "1"}).json()["borradas"], 1)
+        self.assertTrue(Telemetria.objects.filter(pk=real.pk).exists())
+
+    def test_se_corta_al_pasar_el_tiempo_maximo(self):
+        from flota import demo
+        self._admin()
+        self.client.post("/demo/pulso/", {"camion": "CAM-01", "confirmar": "1"})
+        sesion = self.client.session
+        t = sesion["demo_CAM-01"]; t["inicio"] -= demo.DURACION_MAX_S + 5; t["ultimo"] = timezone.now().timestamp()
+        sesion["demo_CAM-01"] = t; sesion.save()
+        n = Telemetria.objects.filter(forzada=True).count()
+        r = self.client.post("/demo/pulso/", {"camion": "CAM-01"})
+        self.assertEqual(r.status_code, 400)                                                  # ya no hay ruptura activa: pide confirmar de nuevo
+        self.assertEqual(Telemetria.objects.filter(forzada=True).count(), n)
+
+    def test_el_cliente_del_camion_recibe_el_aviso_en_la_campanita(self):
+        from datetime import timedelta
+        from pedidos.models import Orden
+        orden = Orden.objects.exclude(despacho=None).first()
+        if orden is None:
+            self.skipTest("la demostración no trae órdenes despachadas")
+        d = orden.despacho
+        type(d).objects.filter(pk=d.pk).update(salida_en=timezone.now() - timedelta(minutes=5), llegada_en=None)
+        self._admin()
+        self.client.post("/demo/pulso/", {"camion": d.camion_id, "confirmar": "1"})
+        self.client.logout()
+        self.client.force_login(orden.direccion.cliente.usuario)
+        tipos = {a["tipo"] for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.orden_id}
+        self.assertIn("frio", tipos)

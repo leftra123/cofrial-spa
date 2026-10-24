@@ -64,6 +64,7 @@ DATABASES = {"default": {
     "HOST": entorno("DB_HOST", "localhost"),
     "PORT": entorno("DB_PORT", "5432"),
     "CONN_MAX_AGE": 60,
+    "CONN_HEALTH_CHECKS": True,                  # comprueba que la conexión persistente siga viva antes de reutilizarla (RDS puede cerrarla)
     "OPTIONS": {"sslmode": entorno("DB_SSLMODE", "prefer")},     # contra RDS: DB_SSLMODE=require
 }}
 
@@ -110,3 +111,18 @@ MAPA_TILES = {
 # Mapa y rutas (OpenStreetMap, sin clave). La base es el punto de salida de los camiones, el mismo donde parte el simulador IoT.
 BASE_LOGISTICA = {"nombre": "Frigorífico central, Temuco", "lat": -38.7359, "long": -72.5904}
 GEOCODIFICAR = os.environ.get("GEOCODIFICAR", "1") == "1" and "test" not in sys.argv
+
+
+# Registro de errores: con DEBUG apagado Django no imprime los 500 en la consola (solo los manda por correo, que no está configurado),
+# así que `docker logs` no mostraba ningún traceback. Todo va a la salida estándar, que es lo que lee Docker.
+LOGGING = {
+    "version": 1, "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"consola": {"class": "logging.StreamHandler", "formatter": "simple"}},
+    "loggers": {
+        "django.request": {"handlers": ["consola"], "level": "WARNING", "propagate": False},
+        "django.db.backends": {"handlers": ["consola"], "level": "ERROR", "propagate": False},
+        "cofrial": {"handlers": ["consola"], "level": "INFO", "propagate": False},
+    },
+    "root": {"handlers": ["consola"], "level": "WARNING"},
+}

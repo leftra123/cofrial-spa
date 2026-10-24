@@ -367,7 +367,8 @@ class AsistenteDeIA(TestCase):
         self.assertIn("No aparece entre los pedidos de esta cuenta", prompt)
         self.client.login(username="abastecimiento@hospital.test", password=self.CLAVE)
         self._preguntar("¿Cómo va mi pedido 1?")
-        self.assertIn("Manuel Montt", self.prompts[-1])                                                   # el dueño sí lo recibe
+        self.assertIn('"numero": ', self.prompts[-1])                                                     # el dueño sí recibe su pedido (número, estado, productos)
+        self.assertIn("5 x Lomo vetado", self.prompts[-1])
 
     def test_inyeccion_y_fuera_de_alcance_ni_llegan_al_modelo(self):
         self.client.login(username="ana@correo.test", password=self.CLAVE)
@@ -423,6 +424,33 @@ class AsistenteDeIA(TestCase):
             self._preguntar("precio del lomo vetado secreto-XYZ")
         self.assertNotIn("secreto-XYZ", "\n".join(registro.output))
         self.assertNotIn("Ana", "\n".join(registro.output))
+
+    def test_el_contexto_no_lleva_datos_que_identifiquen_a_la_persona(self):
+        """Los datos van a un proveedor de IA gratuito: ni nombre, RUT, correo, teléfono, dirección ni usuario del cliente."""
+        from clientes.models import Cliente
+        for usuario, rut in (("abastecimiento@hospital.test", "61.973.200-4"), ("ana@correo.test", "12.345.678-5")):
+            self.client.login(username=usuario, password=self.CLAVE)
+            self._preguntar("¿Cómo va mi pedido? ¿Y qué lleva? ¿cuánto cuesta el lomo vetado?")
+            prompt = self.prompts[-1]
+            cliente = Cliente.objects.get(rut=rut)
+            secretos = [cliente.nombre, cliente.rut, cliente.email, cliente.usuario.username, cliente.usuario.email]
+            secretos += [getattr(cliente, c, "") for c in ("telefono",)]
+            for d in cliente.direccion_set.all():
+                secretos += [d.calle_numero, str(d)]
+            for dato in filter(None, secretos):
+                self.assertNotIn(dato, prompt, f"el contexto de {usuario} contiene «{dato}»")
+
+    def test_sin_claves_o_con_ajustes_invalidos_degrada_sin_romper_la_pagina(self):
+        import json
+        import os
+        from unittest.mock import patch
+        self.client.login(username="ana@correo.test", password=self.CLAVE)
+        for ajuste in ({"GEMINI_API_KEY": "", "GROQ_API_KEY": ""}, {"IA_CHAT_PROVEEDORES": "inexistente", "GEMINI_API_KEY": "", "GROQ_API_KEY": ""}):
+            with patch.dict(os.environ, ajuste):
+                r = self.client.post("/api/asistente/", json.dumps({"mensaje": "precio del lomo vetado"}), content_type="application/json")
+                self.assertEqual(r.status_code, 200)
+                self.assertEqual(r.json()["origen"], "error")                                           # mensaje seguro, sin datos ni excepción
+                self.assertEqual(self.client.get("/catalogo/").status_code, 200)
 
     def test_anonimo_no_ve_pedidos(self):
         self._preguntar("¿Dónde está mi pedido 1?")

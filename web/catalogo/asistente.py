@@ -138,9 +138,11 @@ def _productos_mencionados(norm, producto_id):
 
 
 def _pedido(o, perfil):
+    """Un pedido para el contexto. PRIVACIDAD: los datos salen a un proveedor de IA de plan gratuito; aquí no entra nada que identifique a la persona
+    (ni nombre, RUT, correo, teléfono ni dirección): solo número, estado, fechas, productos, montos y la temperatura del camión."""
     total = pedidos.total_orden(o)
     d = {"numero": o.orden_id, "estado": o.estado_orden.nombre, "creado": localtime(o.creada_en).strftime("%d/%m/%Y"),
-         "direccion_de_entrega": str(o.direccion), "productos": [f"{i.cantidad} x {i.producto.nombre}" for i in o.ordenitem_set.select_related("producto")]}
+         "productos": [f"{i.cantidad} x {i.producto.nombre}" for i in o.ordenitem_set.select_related("producto")]}
     if perfil is not None and perfil.codigo == "B2B":
         d["total_neto"], d["total_con_iva"] = clp(total), con_iva(total)
     else:

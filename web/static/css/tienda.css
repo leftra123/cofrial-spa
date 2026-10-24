@@ -416,3 +416,37 @@ html.filtros-vivos .filtros noscript { display: none; }
 .tb-marca img { height: 30px; width: auto; display: block; }
 :root[data-tema="oscuro"] .tb-marca { background: #fff; border-radius: 10px; padding: 5px 10px; }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tb-marca { background: #fff; border-radius: 10px; padding: 5px 10px; } }
+
+/* ---------- catálogo y tarjeta de producto (dirección «Termómetro») ---------- */
+.filtros { border-radius: 18px; box-shadow: none; }
+.filtros h2 { text-transform: none; letter-spacing: 0; font-size: .84rem; color: var(--texto-2); font-weight: 650; }
+.productos { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 24px; }
+.prod { border-radius: 18px; box-shadow: none; }
+.prod:hover { transform: translateY(-2px); box-shadow: none; border-color: var(--acento); }
+.productos .prod-img { aspect-ratio: 1 / 1; background: var(--fondo-2); }
+.productos .prod-img .foto, .productos .prod-img .ilus { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; padding: 0; }
+.productos .prod-img .foto.ia { object-fit: contain; padding: 14px; mix-blend-mode: normal; }
+.prod:hover .prod-img .foto { transform: none; }
+:root[data-tema="oscuro"] .productos .prod-img { background: #E9EEF5; }
+:root[data-tema="oscuro"] .productos .prod-img .foto { mix-blend-mode: normal; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .productos .prod-img { background: #E9EEF5; } :root:not([data-tema="claro"]) .productos .prod-img .foto { mix-blend-mode: normal; } }
+.prod-badges { left: 12px; top: 12px; right: auto; }
+/* rango de conservación: píldora blanca con una mini escala (−25 a +4 °C) que marca dónde cae el rango */
+.etq-temp { gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px; font-size: .78rem; background: #fff; color: #0B2350; box-shadow: none; }
+.etq-temp.refrigerado, .etq-temp.congelado { background: #fff; color: #0B2350; }
+.etq-temp svg { display: none; }
+.etq-temp::before { content: ""; width: 34px; height: 6px; border-radius: 3px; flex: none; }
+.etq-temp.refrigerado::before { background: linear-gradient(90deg, #D5E1EE 60%, #143A7B 60%); }
+.etq-temp.congelado::before { background: linear-gradient(90deg, #143A7B 28%, #D5E1EE 28%); }
+.prod-cuerpo { padding: 16px 16px 20px; }
+.prod-cuerpo h3 { font-size: 1.08rem; line-height: 1.25; letter-spacing: -.01em; }
+.prod-precio { font-size: 1.75rem; letter-spacing: -.035em; line-height: 1; font-variant-numeric: normal; padding-top: 12px; }
+.prod-precio small { margin-top: 6px; }
+.prod-comprar .btn, .prod-comprar .agregar { min-height: 46px; }
+@media (max-width: 520px) {
+  .productos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .prod-cuerpo { padding: 12px 12px 14px; } .prod-cuerpo h3 { font-size: .98rem; } .prod-precio { font-size: 1.4rem; }
+  .prod-comprar form { flex-wrap: wrap; } .prod-comprar .cant { width: 100%; } .prod-comprar .cant input { flex: 1; width: auto; }
+  .etq-temp { font-size: .7rem; padding: 4px 9px 4px 8px; } .etq-temp::before { display: none; }
+}
+.prod-comprar { flex-wrap: wrap; }

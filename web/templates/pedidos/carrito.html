@@ -11,6 +11,7 @@
 {% endblock %}
 {% block contenido %}
 {% if filas %}
+{% if sin_stock %}<p class="aviso warning" role="alert">{% if sin_stock|length == 1 %}Un producto de tu carrito supera el stock disponible{% else %}{{ sin_stock|length }} productos de tu carrito superan el stock disponible{% endif %}. Ajusta la cantidad o quítalo para poder generar la orden.</p>{% endif %}
 <div class="carro">
   <div class="carro-lineas">
   <h2 class="solo-lector">Productos en tu carrito</h2>
@@ -19,7 +20,7 @@
       <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "catalogo/_miniatura.html" with producto=f.producto %}</a>
       <div class="linea-info"><h3><a href="{% url 'producto' f.producto.producto_id %}" style="color:var(--texto)">{{ f.producto.nombre }}</a></h3>
         <span class="frio">{{ f.precio|clp }} c/u</span>
-        {% if not f.hay_stock %}<span class="alerta" style="margin-top:6px">Solo quedan {{ f.producto.stock_disponible }}</span>{% endif %}</div>
+        {% if not f.hay_stock %}<span class="chip alerta sin-punto" style="margin-top:6px">{% if f.producto.stock_disponible <= 0 %}Agotado por ahora{% else %}Solo quedan {{ f.producto.stock_disponible }}{% endif %}</span>{% endif %}</div>
       <div class="linea-total">{{ f.subtotal|clp }}</div>
       <form class="linea-form" method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}">
         <span class="cant"><button type="button" data-menos aria-label="Una unidad menos">−</button><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0" aria-label="Cantidad de {{ f.producto.nombre }}"><button type="button" data-mas aria-label="Una unidad más">+</button></span>
@@ -45,7 +46,7 @@
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
       {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
-      <button class="confirmar" data-cargando="Generando orden…">Generar orden</button>
+      <button class="confirmar" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% endif %}>Generar orden</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
     </form>
     <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde "Mis pedidos"</p>
   </aside>

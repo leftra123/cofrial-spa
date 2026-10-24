@@ -117,6 +117,7 @@ body.tienda { background: var(--fondo); }
 .auth h1, .auth-doble h1 { font-size: 1.5rem; margin-bottom: 6px; }
 .auth form p, .auth-doble form p { margin: 0 0 4px; }
 .auth .errorlist, .auth-doble .errorlist { background: var(--alerta-bg); padding: 6px 10px; border-radius: 8px; }
+.auth .errorlist.nonfield, .auth-doble .errorlist.nonfield { display: none; }          /* ya va en el resumen de arriba */
 .auth form p input:not([type=checkbox]), .auth-doble form p input:not([type=checkbox]), .auth form p select { width: 100%; }
 .auth form button, .auth-doble form button { width: 100%; margin-top: 20px; padding: 12px; }
 .auth .helptext, .auth-doble .helptext { display: block; font-size: .8rem; color: var(--texto-3); margin-top: 4px; }
@@ -250,7 +251,7 @@ html.filtros-vivos .filtros noscript { display: none; }
 .campana-btn { position: relative; }
 .campana-n { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--lima); color: var(--lima-fg); font-size: .7rem; font-weight: 800; line-height: 18px; text-align: center; border: 2px solid var(--tarjeta); }
 .campana-panel { position: absolute; right: 0; top: calc(100% + 10px); width: min(360px, calc(100vw - 32px)); background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra-alta); z-index: 40; overflow: hidden; }
-.campana-cab { padding: 12px 16px; border-bottom: 1px solid var(--borde); }
+.campana-cab { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--borde); }
 .campana-panel ul { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
 .campana-vacio { padding: 22px 16px; color: var(--texto-3); font-size: .9rem; text-align: center; }
 .campana-item a { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 12px 16px; border-bottom: 1px solid var(--borde); color: var(--texto); }
@@ -263,7 +264,7 @@ html.filtros-vivos .filtros noscript { display: none; }
 .campana-tipo.t-llego { background: var(--entregado-bg); color: var(--entregado-fg); }
 .campana-tipo.t-cerca { background: var(--pendiente-bg); color: var(--pendiente-fg); }
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
-.toast { background: var(--acento); color: var(--acento-fg); border-left: 5px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }
+.toast { background: var(--acento); color: var(--acento-fg); border: 1px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }
 .toast a { color: inherit; font-weight: 600; }
 .toast.sale { opacity: 0; transform: translateX(20px); }
 @media (max-width: 860px) { .campana-panel { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; } }
@@ -274,7 +275,7 @@ html.filtros-vivos .filtros noscript { display: none; }
 .seg-datos span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-3); font-weight: 600; }
 .seg-datos b { font-size: 1.1rem;  }
 .seg-datos b.cerca { background: var(--lima); color: var(--lima-fg); padding: 0 .3em; border-radius: 3px; }
-.seg-llego { background: var(--entregado-bg); color: var(--entregado-fg); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 1.05rem; border-left: 5px solid var(--ok); }
+.seg-llego { background: var(--entregado-bg); color: var(--entregado-fg); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 1.05rem; border: 1px solid var(--ok); }
 @media (max-width: 480px) { .seg-datos { grid-template-columns: 1fr 1fr; } .seg-datos div:last-child { grid-column: 1 / -1; } }
 /* aviso de stock */
 .aviso-stock { margin: 8px 0 0; font-size: .85rem; color: var(--texto-2); }
@@ -327,7 +328,7 @@ html.filtros-vivos .filtros noscript { display: none; }
 @media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }
 
 .campana-tipo.t-frio { background: var(--alerta-bg); color: var(--alerta-fg); }
-.toast.t-frio { background: #991B1B; color: #fff; border-left-color: #FCA5A5; }
+.toast.t-frio { background: #991B1B; color: #fff; border-color: #FCA5A5; }
 
 /* ---------- asistente de IA ---------- */
 .asistente { position: fixed; right: 18px; bottom: 18px; z-index: 45; }
@@ -382,7 +383,7 @@ body:has(.asistente) .toasts { bottom: 84px; }
 .linea.cargando { opacity: .6; pointer-events: none; }
 button[aria-busy="true"] { cursor: progress; }
 button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
-.toast.t-error { background: #991B1B; color: #fff; border-left-color: #FCA5A5; }
+.toast.t-error { background: #991B1B; color: #fff; border-color: #FCA5A5; }
 
 /* ---------- portada (dirección «Termómetro») ---------- */
 .portada { --esp: clamp(40px, 6vw, 72px); }
@@ -630,3 +631,10 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .ayuda { font-size: .82rem; color: var(--texto-3); margin: 4px 0 0; max-width: 520px; }
 .oc-registro dd form { margin: 0; }
 .oc-registro input { max-width: 200px; }
+
+/* campanita: estados de carga y error del panel */
+.campana-vacio.cargando { color: var(--texto-3); }
+.campana-error { display: grid; gap: 8px; justify-items: start; padding: 14px 16px; color: var(--alerta-fg); }
+.campana-nota { margin-left: auto; font-size: .78rem; font-weight: 600; color: var(--alerta-fg); }
+/* lista de pedidos: sin resultados con el filtro activo */
+.sin-resultados { margin-top: 12px; }

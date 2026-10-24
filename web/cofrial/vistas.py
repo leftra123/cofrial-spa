@@ -4,6 +4,7 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -33,8 +34,14 @@ def inicio(request):
         "hace_seg": hace if hace is not None and hace < 3600 else None})
 
 
+class FormularioEntrar(AuthenticationForm):
+    error_messages = {**AuthenticationForm.error_messages,
+                      "invalid_login": "El usuario o la clave no coinciden. Revisa que no tengas las mayúsculas activadas e inténtalo de nuevo."}
+
+
 class Entrar(LoginView):
     template_name = "cuenta/entrar.html"
+    authentication_form = FormularioEntrar
 
     def get_success_url(self):
         destino = self.get_redirect_url()
@@ -65,3 +72,12 @@ def guia(request):
               "en_ruta": en_ruta, "sin_stock": Producto.objects.filter(activo=True, stock_disponible__lte=0).count(),
               "avisos": AvisoStock.objects.filter(atendido_en__isnull=True).count()}
     return render(request, "guia.html", {"estado": estado})
+
+
+def csrf_fallo(request, reason=""):
+    """Un formulario venció (pestaña abierta mucho rato, sesión cerrada en otra pestaña): se explica y se vuelve a donde estaba, en vez de la página seca de Django."""
+    from django.utils.http import url_has_allowed_host_and_scheme
+    atras = request.META.get("HTTP_REFERER", "")
+    if not url_has_allowed_host_and_scheme(atras, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        atras = "/"
+    return render(request, "403_csrf.html", {"volver": atras}, status=403)

@@ -1,16 +1,17 @@
 {% extends "crm/base.html" %}
+{% block titulo %}Nuevo prospecto | Cofrial SpA{% endblock %}
 {% block crm %}
 <div class="pagina-cab"><div><h1>Nuevo prospecto</h1><p class="sub">Se crea en la primera etapa del embudo.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/embudo/">Cancelar</a></div></div>
 <div class="tarjeta-ui" style="max-width:560px">
-<form method="post">{% csrf_token %}
-  {% if es_admin %}<label>Vendedor responsable</label><select name="vendedor">{% for v in vendedores %}<option value="{{ v.pk }}">{{ v }}</option>{% endfor %}</select>{% endif %}
-  <label>Nombre del contacto</label><input name="nombre_contacto" required>
-  <label>Empresa</label><input name="empresa">
-  <label>Correo</label><input name="email" type="email">
-  <label>Teléfono</label><input name="telefono">
-  <label>Origen</label><select name="origen">{% for v, t in origenes %}<option value="{{ v }}">{{ t }}</option>{% endfor %}</select>
-  <label>Monto estimado ($)</label><input name="monto" type="number" min="0" style="width:200px">
-  <p class="frio" style="margin-top:12px">Se necesita al menos un correo o un teléfono.</p>
-  <button>Crear prospecto</button>
+<form method="post" data-carga>{% csrf_token %}
+  {% if es_admin %}<label for="p-vendedor">Vendedor responsable</label><select name="vendedor" id="p-vendedor" required{% if campo_error == "vendedor" %} aria-invalid="true" autofocus{% endif %}>{% for x in vendedores %}<option value="{{ x.pk }}"{% if v.vendedor == x.pk|stringformat:"s" %} selected{% endif %}>{{ x }}</option>{% endfor %}</select>{% endif %}
+  <label for="p-nombre">Nombre del contacto</label><input name="nombre_contacto" id="p-nombre" value="{{ v.nombre_contacto }}" required autocomplete="off"{% if campo_error == "nombre_contacto" %} aria-invalid="true" autofocus{% endif %}>
+  <label for="p-empresa">Empresa</label><input name="empresa" id="p-empresa" value="{{ v.empresa }}" autocomplete="off">
+  <label for="p-email">Correo</label><input name="email" id="p-email" type="email" value="{{ v.email }}" aria-describedby="p-contacto"{% if campo_error == "email" %} aria-invalid="true" autofocus{% endif %}>
+  <label for="p-telefono">Teléfono</label><input name="telefono" id="p-telefono" value="{{ v.telefono }}" aria-describedby="p-contacto"{% if campo_error == "email" %} aria-invalid="true"{% endif %}>
+  <label for="p-origen">Origen</label><select name="origen" id="p-origen">{% for val, t in origenes %}<option value="{{ val }}"{% if v.origen == val %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+  <label for="p-monto">Monto estimado ($)</label><input name="monto" id="p-monto" type="number" min="0" value="{{ v.monto }}" style="width:200px">
+  <p class="frio" id="p-contacto" style="margin-top:12px">Se necesita al menos un correo o un teléfono.</p>
+  <button data-cargando="Creando…">Crear prospecto</button>
 </form></div>
 {% endblock %}

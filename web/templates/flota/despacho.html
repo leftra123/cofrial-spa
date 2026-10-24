@@ -9,14 +9,14 @@
 </div>
 {% endblock %}
 {% block contenido %}
-<form method="post" id="form-despacho">{% csrf_token %}
+<form method="post" id="form-despacho" data-carga>{% csrf_token %}
 <div class="despacho-grid">
   <div>
     <div class="seccion"><h2>1. Camión</h2></div>
     <div class="tarjeta-ui">
       {% for c in camiones %}
       <label class="opcion"><input type="radio" name="camion" value="{{ c.camion_id }}" {% if forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rango_temperatura.nombre }}</span> <span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
-      {% empty %}<p class="vacio" style="margin:0">No hay camiones libres: todos están en ruta o inactivos.</p>{% endfor %}
+      {% empty %}{% include "componentes/vacio_estado.html" with plano=True compacto=True ico="camion" titulo="No hay camiones libres" texto="Todos están en ruta o inactivos. Cuando uno vuelva a la bodega podrás armar el viaje." url="/flota/" accion="Ver la flota" %}{% endfor %}
     </div>
 
     <div class="seccion"><h2>2. Pedidos por despachar</h2></div>
@@ -30,11 +30,11 @@
             {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}{% if p.o.oc_pendiente %}<span class="chip pendiente">OC pendiente</span>{% endif %}</span></span>
       </label>
       {% if not p.ubicada %}
-      <button class="btn-sec" type="submit" formnovalidate formaction="/flota/despachar/ubicar/{{ p.o.direccion_id }}/" style="margin:0 0 8px 26px">Ubicar «{{ p.o.direccion.calle_numero }}» en el mapa</button>
+      <button class="btn-sec" type="submit" formnovalidate formaction="/flota/despachar/ubicar/{{ p.o.direccion_id }}/" data-cargando="Ubicando…" style="margin:0 0 8px 26px">Ubicar «{{ p.o.direccion.calle_numero }}» en el mapa</button>
       {% endif %}
-      {% empty %}<p class="vacio" style="margin:0">No hay pedidos pendientes. Cuando un cliente compre, aparecerá aquí.</p>{% endfor %}
+      {% empty %}{% include "componentes/vacio_estado.html" with plano=True compacto=True ico="caja" titulo="No hay pedidos por despachar" texto="Cuando un cliente genere una orden, aparecerá aquí lista para asignarle camión." %}{% endfor %}
     </div>
-    <p><button class="btn" id="btn-despachar" {% if not camiones %}disabled{% endif %}>Despachar y salir ahora</button></p>
+    <p><button class="btn" id="btn-despachar" data-cargando="Despachando…" {% if not camiones or not pedidos %}disabled aria-describedby="why-despachar"{% endif %}>Despachar y salir ahora</button>{% if not camiones or not pedidos %} <span class="frio" id="why-despachar">{% if not camiones %}Falta un camión libre.{% else %}Falta al menos un pedido por despachar.{% endif %}</span>{% endif %}</p>
   </div>
   <div>
     <div class="seccion"><h2>Ruta sugerida</h2></div>

@@ -1,4 +1,5 @@
 {% extends "crm/base.html" %}
+{% block titulo %}Requerimientos | Cofrial SpA{% endblock %}
 {% block crm %}
 <div class="pagina-cab"><div><h1>Requerimientos</h1><p class="sub">Consultas y reclamos de clientes, con su clasificación.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/ia/">¿Cómo funciona la IA?</a></div></div>
 <div class="tabla-caja"><table><thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Estado</th><th><span class="solo-lector">Acciones</span></th></tr></thead><tbody>
@@ -8,7 +9,7 @@
     {% elif r.categoria_requerimiento %}<span class="chip cancelado" title="Clasificado por una persona">Manual</span>
     {% elif r.confianza_ia is not None %}<span class="chip pendiente" title="La IA no estuvo lo bastante segura">IA dudó {{ r.confianza_ia }}</span>{% endif %}</td>
   <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% else %}entregado{% endif %}">{{ r.get_estado_display }}</span></td>
-  <td class="celda-acciones">{% if puede_editar and r.estado == "sin_clasificar" %}<form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/ia/">{% csrf_token %}<button class="btn-sec">Clasificar con IA</button></form><form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/clasificar/">{% csrf_token %}<select name="categoria" aria-label="Categoría">{% for c in categorias %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}</select> <button>Clasificar</button></form>{% endif %}</td></tr>
-{% empty %}<tr><td colspan="5" class="vacio">No hay requerimientos.</td></tr>{% endfor %}
+  <td class="celda-acciones">{% if puede_editar and r.estado == "sin_clasificar" %}<form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/ia/" data-carga>{% csrf_token %}<button class="btn-sec" data-cargando="Consultando a la IA…">Clasificar con IA</button></form><form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/clasificar/" data-carga>{% csrf_token %}<select name="categoria" aria-label="Categoría">{% for c in categorias %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}</select> <button data-cargando="Guardando…">Clasificar</button></form>{% endif %}</td></tr>
+{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="chat" titulo="No hay consultas ni reclamos" texto="Cuando un cliente escriba desde Soporte, la consulta llega aquí con su clasificación." url="/crm/ia/" accion="Probar la clasificación con IA" %}{% endfor %}
 </tbody></table></div>
 {% endblock %}

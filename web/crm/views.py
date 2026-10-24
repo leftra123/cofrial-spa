@@ -56,21 +56,25 @@ def panel(request):
 def embudo(request):
     prospectos = list(s.prospectos_visibles(request.user).order_by("-creado_en"))
     columnas = [{"etapa": e, "prospectos": [p for p in prospectos if p.etapa_id == e.pk]} for e in EtapaPipeline.objects.all()]
-    return render(request, "crm/embudo.html", _contexto(request, columnas=columnas))
+    return render(request, "crm/embudo.html", _contexto(request, columnas=columnas, sin_prospectos=not prospectos))
 
 
 @con_rol("admin", "vendedor")
 def prospecto_nuevo(request):
     vendedores = Vendedor.objects.filter(activo=True)
+    campo_error = ""                  # el campo a corregir: el formulario vuelve con lo que se escribió y ese campo marcado
     if request.method == "POST":
         p = request.POST
         vendedor = s.vendedor_de(request.user) or vendedores.filter(pk=p.get("vendedor") or 0).first()
         if vendedor is None:
             messages.error(request, "Elige el vendedor responsable.")
+            campo_error = "vendedor"
         elif not p.get("nombre_contacto", "").strip():
             messages.error(request, "Indica el nombre del contacto.")
+            campo_error = "nombre_contacto"
         elif not (p.get("email", "").strip() or p.get("telefono", "").strip()):
             messages.error(request, "Ingresa al menos un correo o un teléfono.")
+            campo_error = "email"
         else:
             try:
                 monto = int(p["monto"]) if p.get("monto") else None
@@ -83,7 +87,7 @@ def prospecto_nuevo(request):
             messages.success(request, "Prospecto creado.")
             return redirect("crm_prospecto", pk=nuevo.pk)
     return render(request, "crm/prospecto_nuevo.html", _contexto(request, origenes=Prospecto.ORIGENES, vendedores=vendedores,
-                                                                 es_admin=request.rol == "admin"))
+                                                                 es_admin=request.rol == "admin", v=request.POST, campo_error=campo_error))
 
 
 def _prospecto(request, pk):

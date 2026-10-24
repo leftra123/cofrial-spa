@@ -1,7 +1,8 @@
 {% extends "crm/base.html" %}
+{% block titulo %}Clientes | Cofrial SpA{% endblock %}
 {% block crm %}
 <div class="pagina-cab"><div><h1>Clientes</h1><p class="sub">Cartera de clientes B2B y B2C.</p></div></div>
 <div class="tabla-caja"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>Vendedor</th><th>Correo</th></tr></thead><tbody>
-{% for c in clientes %}<tr><td><a class="id-orden" href="/crm/clientes/{{ c.cliente_id }}/">{{ c.nombre }}</a></td><td><span class="chip {% if c.tipo_cliente.codigo == 'B2B' %}asignado{% else %}transito{% endif %}">{{ c.tipo_cliente.codigo }}</span></td><td>{{ c.vendedor|default:"–" }}</td><td>{{ c.email }}</td></tr>{% empty %}<tr><td colspan="4" class="vacio">No hay clientes en tu cartera.</td></tr>{% endfor %}
+{% for c in clientes %}<tr><td><a class="id-orden" href="/crm/clientes/{{ c.cliente_id }}/">{{ c.nombre }}</a></td><td><span class="chip {% if c.tipo_cliente.codigo == 'B2B' %}asignado{% else %}transito{% endif %}">{{ c.tipo_cliente.codigo }}</span></td><td>{{ c.vendedor|default:"–" }}</td><td>{{ c.email }}</td></tr>{% empty %}{% include "componentes/vacio_estado.html" with cols=4 ico="caja" titulo="Tu cartera todavía no tiene clientes" texto="Los clientes aparecen aquí cuando un prospecto se gana o cuando se registran en la tienda." url="/crm/embudo/" accion="Ver el embudo" %}{% endfor %}
 </tbody></table></div>
 {% endblock %}

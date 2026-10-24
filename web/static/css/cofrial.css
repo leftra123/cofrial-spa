@@ -246,10 +246,13 @@ td select { padding: 6px 8px; max-width: 220px; }
 
 /* ---------- avisos ---------- */
 .avisos { margin-bottom: 20px; display: grid; gap: 8px; }
-.aviso { margin: 0; padding: 12px 16px; border-radius: var(--radio-sm); background: var(--tarjeta); border: 1px solid var(--borde); border-left: 4px solid var(--texto-3); font-size: .92rem; box-shadow: var(--sombra); animation: entra .25s ease-out; }
-.aviso.success { border-left-color: var(--ok); background: var(--entregado-bg); color: var(--entregado-fg); }
-.aviso.error { border-left-color: #DC2626; background: var(--alerta-bg); color: var(--alerta-fg); }
-.aviso.warning { border-left-color: #D97706; background: var(--pendiente-bg); color: var(--pendiente-fg); }
+.aviso { --ico-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.6v.01'/%3E%3C/svg%3E");
+  display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 12px 16px; border-radius: var(--radio-sm); background: var(--tarjeta); border: 1px solid var(--borde-fuerte); color: var(--texto); font-size: .92rem; box-shadow: var(--sombra); animation: entra .25s ease-out; }
+.aviso::before { content: ""; flex: none; width: 18px; height: 18px; margin-top: 2px; background: currentColor; -webkit-mask: var(--ico-aviso) center / contain no-repeat; mask: var(--ico-aviso) center / contain no-repeat; }
+.aviso.success, .aviso.exito { --ico-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12.3l2.7 2.7L16 9.5'/%3E%3C/svg%3E"); border-color: var(--ok); background: var(--entregado-bg); color: var(--entregado-fg); }
+.aviso.error { --ico-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.4v.01'/%3E%3C/svg%3E"); border-color: var(--alerta-borde); background: var(--alerta-bg); color: var(--alerta-fg); }
+.aviso.warning { --ico-aviso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l9.5 16.5h-19z'/%3E%3Cpath d='M12 10v4.5M12 17.4v.01'/%3E%3C/svg%3E"); border-color: #D97706; background: var(--pendiente-bg); color: var(--pendiente-fg); }
+.aviso a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 @keyframes entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
 /* ---------- pestañas de sección (CRM) ---------- */
@@ -432,7 +435,7 @@ td.celda-acciones select { max-width: 100%; }
 
 /* páginas de error */
 .error-pag { max-width: 560px; margin: 8vh auto 0; text-align: center; padding: 40px 28px; }
-.error-pag .codigo { font-size: 4.5rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; background: linear-gradient(135deg, var(--acento), var(--marino)); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 8px; }
+.error-pag .codigo { font-size: 4.5rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--acento); margin-bottom: 8px; }
 .error-pag h1 { font-size: 1.4rem; margin-bottom: 8px; }
 .error-pag p { color: var(--texto-3); }
 .error-pag .acciones { justify-content: center; margin-top: 18px; }
@@ -469,7 +472,7 @@ td.celda-acciones select { max-width: 100%; }
 .panel-bi:hover { text-decoration: none; filter: brightness(.95); }
 
 /* confirmación de compra */
-.confirmacion { display: flex; gap: 18px; align-items: flex-start; background: var(--entregado-bg); color: var(--entregado-fg); border: 1px solid #86EFAC; border-left: 6px solid var(--lima); border-radius: var(--radio); padding: 22px 24px; margin-bottom: 22px; animation: entra .3s ease-out; }
+.confirmacion { display: flex; gap: 18px; align-items: flex-start; background: var(--entregado-bg); color: var(--entregado-fg); border: 1px solid #86EFAC; border-radius: var(--radio); padding: 22px 24px; margin-bottom: 22px; animation: entra .3s ease-out; }
 .confirmacion h2 { font-size: 1.3rem; color: inherit; margin-bottom: 4px; }
 .confirmacion p { margin: 0 0 12px; }
 .conf-ico { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--ok); color: #fff; display: grid; place-items: center; }
@@ -512,6 +515,54 @@ td.celda-acciones select { max-width: 100%; }
 /* icono de la aplicación en el menú del panel interno */
 .marca-icono { width: 32px; height: 32px; border-radius: 8px; flex: none; display: block; }
 
+
+/* ---------- estados compartidos (estados.js y componentes/vacio_estado.html) ---------- */
+.vacio-caja .vacio-titulo { margin: 0 0 6px; color: var(--texto); font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+.vacio-caja.compacto { padding: 24px 20px; }
+.vacio-caja.compacto .vacio-ico { width: 44px; height: 44px; margin-bottom: 10px; }
+.vacio-caja.compacto .vacio-ico svg { width: 22px; height: 22px; }
+.vacio-caja.compacto .vacio-titulo { font-size: 1rem; }
+.vacio-caja.compacto p { margin-bottom: 12px; }
+.vacio-caja .acciones { justify-content: center; }
+.vacio-caja .vacio-ico.alerta { background: var(--alerta-bg); color: var(--alerta-fg); }
+
+/* indicador de conexión de los paneles que se refrescan solos */
+.vivo { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border-radius: 999px; font-size: .82rem; font-weight: 600; color: var(--texto-3); background: var(--cancelado-bg); white-space: nowrap; }
+.vivo::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.vivo[data-estado="vivo"] { color: var(--entregado-fg); background: var(--entregado-bg); }
+.vivo[data-estado="vivo"]::before { animation: pulso-vivo 2s ease-out infinite; }
+.vivo[data-estado="retraso"] { color: var(--pendiente-fg); background: var(--pendiente-bg); }
+.vivo[data-estado="caido"] { color: var(--alerta-fg); background: var(--alerta-bg); }
+.vivo[data-estado="caido"]::before { border-radius: 2px; }                 /* la forma cambia, no solo el color */
+@keyframes pulso-vivo { 0% { box-shadow: 0 0 0 0 currentColor; } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+@media (prefers-reduced-motion: reduce) { .vivo[data-estado="vivo"]::before { animation: none; } }
+.desactualizado [data-resumen], .desactualizado [data-campo], .desactualizado .seg-datos b, .desactualizado .temp-grande, .desactualizado .mapa, .desactualizado .grafico { opacity: .62; transition: opacity .3s; }
+
+/* acción destructiva en dos pasos */
+button.confirmando, .btn.confirmando { background: var(--alerta-fg); border-color: var(--alerta-fg); color: var(--alerta-bg); }
+button.confirmando:hover, .btn.confirmando:hover { background: var(--alerta-fg); border-color: var(--alerta-fg); box-shadow: none; }
+
+/* resumen de errores de un formulario: se enfoca al cargar para que el lector de pantalla lo lea */
+.resumen-errores { margin: 0 0 18px; padding: 12px 16px; border-radius: var(--radio-sm); background: var(--alerta-bg); border: 1px solid var(--alerta-borde); color: var(--alerta-fg); font-size: .92rem; }
+.resumen-errores:focus { outline: 3px solid var(--foco); outline-offset: 2px; }
+.resumen-errores b { display: block; margin-bottom: 4px; }
+.resumen-errores ul { margin: 0; padding-left: 18px; }
+.resumen-errores a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: #DC2626; }
+
+/* estado de una orden: qué pasó y qué sigue */
+.estado-pedido { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 20px; padding: 16px 18px; border-radius: var(--radio); background: var(--tarjeta); border: 1px solid var(--borde-fuerte); }
+.estado-pedido .ep-ico { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--acento-suave); color: var(--acento); }
+.estado-pedido .ep-ico svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.estado-pedido h2 { font-size: 1.05rem; margin: 0 0 2px; }
+.estado-pedido p { margin: 0; color: var(--texto-2); max-width: 62ch; }
+.estado-pedido .acciones { margin-top: 12px; }
+.estado-pedido.cancelada { background: var(--cancelado-bg); }
+.estado-pedido.cancelada .ep-ico { background: var(--tarjeta); color: var(--cancelado-fg); }
+.estado-pedido.entregada { border-color: var(--ok); background: var(--entregado-bg); }
+.estado-pedido.entregada .ep-ico { background: var(--tarjeta); color: var(--entregado-fg); }
+.estado-pedido.entregada h2, .estado-pedido.entregada p { color: var(--entregado-fg); }
+.estado-pedido.transito .ep-ico { background: var(--transito-bg); color: var(--transito-fg); }
 /* ---------- panel interno (CRM, flota) con la dirección «Termómetro» ---------- */
 .pagina-cab .marca-texto { background: none; color: inherit; padding: 0; font-weight: inherit; }
 .pagina-cab h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.03em; }

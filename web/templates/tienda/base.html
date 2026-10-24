@@ -35,8 +35,8 @@
       {% if menu.cliente %}<div class="campana" id="campana">
         <button type="button" class="tema-btn campana-btn" id="campana-btn" aria-label="Avisos de tus pedidos" aria-expanded="false" aria-controls="campana-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/></svg><span class="campana-n" id="campana-n" hidden>0</span></button>
         <div class="campana-panel" id="campana-panel" role="region" aria-label="Avisos" hidden>
-          <div class="campana-cab"><b>Avisos</b></div>
-          <ul id="campana-lista"><li class="campana-vacio">Sin avisos por ahora. Te avisamos cuando tu pedido salga, esté cerca y llegue.</li></ul>
+          <div class="campana-cab"><b>Avisos</b><span class="campana-nota" id="campana-nota" role="status" hidden>Sin actualizar</span></div>
+          <ul id="campana-lista" aria-busy="true"><li class="campana-vacio cargando">Cargando avisos…</li></ul>
         </div>
       </div>{% endif %}
       {% if menu.cliente %}<a class="tema-btn tb-carro-movil" href="/carrito/" aria-label="Carrito{% if carrito_n %}, {{ carrito_n }} producto{{ carrito_n|pluralize }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg><span class="campana-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
@@ -65,6 +65,7 @@
 {% endwith %}
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
+<script src="{% static 'js/estados.js' %}"></script>
 <script src="{% static 'js/tienda.js' %}"></script>
 {% if menu.cliente %}<script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>

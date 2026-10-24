@@ -4,9 +4,10 @@
 <div class="auth tarjeta-ui">
   <h1>Crear cuenta de cliente particular</h1>
   <p class="muted">Con ella compra con los precios del público general y sigue sus pedidos.</p>
-  <form method="post" novalidate>{% csrf_token %}
+  {% include "componentes/resumen_errores.html" with titulo="Corrige estos datos para crear tu cuenta" %}
+  <form method="post" novalidate data-carga>{% csrf_token %}
     {{ form.as_p }}
-    <button>Crear cuenta</button>
+    <button data-cargando="Creando cuenta…">Crear cuenta</button>
   </form>
   <p class="muted" style="margin-top:16px;text-align:center">¿Ya tiene cuenta? <a href="/cuenta/entrar/">Ingresar</a></p>
 </div>

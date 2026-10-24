@@ -80,7 +80,7 @@ def confirmar(request, cliente):
         _mostrar_errores(request, e)
         return redirect("carrito")
     messages.success(request, f"Orden {orden.orden_id} recibida.")
-    return redirect("orden", orden_id=orden.orden_id)
+    return redirect(f"/pedidos/{orden.orden_id}/?nueva=1")
 
 
 @solo_clientes

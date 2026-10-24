@@ -31,6 +31,7 @@
   <div>
     <div class="cat-chips" id="cat-chips" aria-label="Filtros activos" hidden></div>
     <p class="solo-lector" id="cat-vivo" role="status" aria-live="polite"></p>
+    <h2 class="solo-lector">Productos</h2>
     <div class="productos" id="productos">
     {% for f in filas %}{% include "catalogo/_tarjeta.html" %}
     {% empty %}<div class="vacio-grande">{% include "componentes/vacio.html" with ico="lupa" %}<b>No encontramos productos con esos filtros</b>Pruebe con otra palabra o quite algún filtro.<p style="margin-top:14px"><a class="btn btn-sec" href="/catalogo/" data-limpiar>Ver todo el catálogo</a></p></div>{% endfor %}

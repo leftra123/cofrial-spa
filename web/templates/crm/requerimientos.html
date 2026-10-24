@@ -1,7 +1,7 @@
 {% extends "crm/base.html" %}
 {% block crm %}
 <div class="pagina-cab"><div><h1>Requerimientos</h1><p class="sub">Consultas y reclamos de clientes, con su clasificación.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/ia/">¿Cómo funciona la IA?</a></div></div>
-<div class="tabla-caja"><table><thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Estado</th><th></th></tr></thead><tbody>
+<div class="tabla-caja"><table><thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Estado</th><th><span class="solo-lector">Acciones</span></th></tr></thead><tbody>
 {% for r in reqs %}<tr><td class="celda-asunto"><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:90 }}</span></td><td>{{ r.cliente|default:"–" }}</td>
   <td>{{ r.categoria_requerimiento|default:"–" }}
     {% if r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado" title="Clasificado por la IA con esta confianza">IA {{ r.confianza_ia }}</span>

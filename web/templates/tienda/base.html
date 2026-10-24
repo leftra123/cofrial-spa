@@ -20,7 +20,7 @@
 <header class="tb">
   <div class="tb-fila">
     <a class="tb-marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span><span class="marca-texto-logo">COFRIAL</span></a>
-    <form class="tb-buscar" action="/catalogo/" method="get" role="search">
+    <form class="tb-buscar" action="/catalogo/" method="get" role="search" aria-label="Buscador del sitio">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos o SKU" aria-label="Buscar productos">
     </form>
     <nav class="tb-nav" aria-label="Principal">

@@ -13,6 +13,14 @@
 {% endblock %}
 {% block cabeza %}{% if seg %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endif %}{% endblock %}
 {% block contenido %}
+{% if request.GET.nueva and orden.estado_orden.orden_flujo <= 2 %}
+<section class="confirmacion" aria-labelledby="conf-t">
+  <span class="conf-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+  <div><h2 id="conf-t">¡Listo! Recibimos tu pedido N.º {{ orden.orden_id }}</h2>
+    <p>Lo vamos a preparar y te avisamos por la campanita cuando salga el camión. Aquí abajo puedes seguirlo en todo momento.</p>
+    <div class="acciones"><a class="btn" href="/pedidos/">Mis pedidos</a><a class="btn btn-sec" href="/catalogo/">Seguir comprando</a></div></div>
+</section>
+{% endif %}
 {% if orden.estado_orden.nombre != "Cancelada" %}
 <div class="tarjeta-ui">
   <h2>Seguimiento del envío</h2>
@@ -39,7 +47,7 @@
       <div><span>Última señal</span><b id="seg-senal" class="skeleton">hace 0 s</b></div>
     </div>
     <div style="position:relative">
-      <div id="mapa" class="mapa alto" role="img" aria-label="Posición del camión y ruta a su dirección"></div>
+      <div id="mapa" class="mapa alto" role="group" aria-label="Mapa con la posición del camión y la ruta a su dirección"></div>
       <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
     </div>
     <p class="ruta-info" id="ruta-info" aria-live="polite"></p>
@@ -66,11 +74,11 @@
   </dl>
 </div>
 <div class="seccion"><h2>Productos</h2></div>
-<div class="tabla-caja">
+<div class="tabla-caja tabla-cards">
 <table>
   <thead><tr><th>Producto</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Subtotal</th></tr></thead>
   <tbody>
-  {% for i in items %}<tr><td>{{ i.producto.nombre }}</td><td class="num">{{ i.cantidad }}</td><td class="num">{{ i.precio_unitario_clp|clp }}</td><td class="num">{% widthratio i.cantidad 1 i.precio_unitario_clp as sub %}{{ sub|clp }}</td></tr>{% endfor %}
+  {% for i in items %}<tr><td data-label="Producto">{{ i.producto.nombre }}</td><td class="num" data-label="Cantidad">{{ i.cantidad }}</td><td class="num" data-label="Precio">{{ i.precio_unitario_clp|clp }}</td><td class="num" data-label="Subtotal">{% widthratio i.cantidad 1 i.precio_unitario_clp as sub %}{{ sub|clp }}</td></tr>{% endfor %}
   {% if es_b2b %}<tr><td colspan="3" class="num">Neto</td><td class="num">{{ total|clp }}</td></tr>
   <tr><td colspan="3" class="num">IVA 19 %</td><td class="num">{{ total|iva }}</td></tr>
   <tr class="fila-total"><th colspan="3" class="num">Total con IVA</th><th class="num">{{ total|con_iva }}</th></tr>
@@ -108,7 +116,7 @@
     var llego = !!s.llegada_en || estado === "Entregada";
     document.getElementById("seg-llego").hidden = !llego;
     if (llego && s.llegada_en) document.getElementById("seg-llego-hora").textContent = "a las " + hora(s.llegada_en);
-    quitarSk("seg-eta", llego ? "Ya llegó" : s.eta ? hora(s.eta.desde) + " y " + hora(s.eta.hasta) : s.salida_en ? "Calculando…" : "Cuando salga");
+    quitarSk("seg-eta", llego ? "Ya llegó" : s.eta ? hora(s.eta.desde) + " y " + hora(s.eta.hasta) : s.salida_en ? (s.ultima && s.ultima.hace_seg > 600 ? "Sin señal reciente" : "Calculando…") : "Cuando salga");
     document.getElementById("seg-eta").classList.toggle("cerca", !!s.cerca && !llego);
     if (s.ultima) { ultimaSenal = Date.now() - s.ultima.hace_seg * 1000; mostrarSenal(); } else quitarSk("seg-senal", "Sin señal aún");
   }
@@ -126,8 +134,8 @@
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
           mapa = CofrialMapa.crear("mapa", cam, 14);
-          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id)}).addTo(mapa).bindPopup("Camión " + s.camion_id);
-          if (dest) L.marker(dest, {icon: CofrialMapa.destino()}).addTo(mapa).bindPopup(s.destino.direccion);
+          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
+          if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(s.destino.direccion);
         } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id)); }
         if (dest && Date.now() - ultimaRuta > 20000) {       // la ruta se recalcula cada 20 s para no abusar del servicio gratuito
           ultimaRuta = Date.now();

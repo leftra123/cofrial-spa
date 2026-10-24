@@ -18,7 +18,7 @@
 {% endif %}
 <div class="tabla-caja tabla-lista">
 <table>
-  <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th class="num">Total</th><th></th></tr></thead>
+  <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th class="num">Total</th><th><span class="solo-lector">Acciones</span></th></tr></thead>
   <tbody id="filas-pedidos">
   {% for o in ordenes %}<tr data-estado="{% if o.estado_orden.nombre == 'Recibida' or o.estado_orden.nombre == 'Confirmada' %}pendiente{% elif o.estado_orden.nombre == 'En preparación' %}asignado{% elif o.estado_orden.nombre == 'Despachada' %}transito{% elif o.estado_orden.nombre == 'Entregada' %}entregado{% else %}otro{% endif %}">
     <td><a class="id-orden" href="/pedidos/{{ o.orden_id }}/">N.º {{ o.orden_id }}</a></td>

@@ -13,6 +13,7 @@
 {% if filas %}
 <div class="carro">
   <div class="carro-lineas">
+  <h2 class="solo-lector">Productos en tu carrito</h2>
   {% for f in filas %}
     <article class="linea">
       <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "tienda/ilustracion.html" with categoria=f.producto.categoria.nombre %}</a>

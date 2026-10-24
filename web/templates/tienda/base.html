@@ -9,7 +9,7 @@
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="{% static 'img/cofrial-favicon.ico' %}" sizes="any">
   <link rel="apple-touch-icon" href="{% static 'img/cofrial-camion.png' %}">
-  <link rel="preload" href="{% static 'fonts/inter-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
   <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
   {% block cabeza %}{% endblock %}
@@ -19,7 +19,7 @@
 {% with ruta=request.path %}
 <header class="tb">
   <div class="tb-fila">
-    <a class="tb-marca" href="/"><span class="marca-logo"><img src="{% static 'img/cofrial-camion.png' %}" alt="" width="22" height="13"></span><span class="marca-texto-logo">COFRIAL</span></a>
+    <a class="tb-marca" href="/" aria-label="Cofrial, inicio"><img src="{% static 'img/cofrial-logo.png' %}" alt="Cofrial" width="116" height="30"></a>
     <form class="tb-buscar" action="/catalogo/" method="get" role="search" aria-label="Buscador del sitio">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos o SKU" aria-label="Buscar productos">
     </form>

@@ -2,20 +2,20 @@
    Solo presentación: ningún selector depende de la lógica de negocio. Colores, radios y sombras viven en variables;
    el modo oscuro (según el sistema o el botón de la barra) solo redefine las variables. */
 
-/* Inter variable autoalojada (subconjunto latino, WOFF2). La "Inter Fallback" iguala las métricas de Arial para que el cambio de fuente no mueva el diseño. */
-@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("../fonts/inter-latin-var.woff2") format("woff2");
+/* Schibsted Grotesk variable autoalojada (subconjunto latino, WOFF2). La "Schibsted Fallback" iguala las métricas para que el cambio de fuente no mueva el diseño. */
+@font-face { font-family: "Schibsted Grotesk"; font-style: normal; font-weight: 400 900; font-display: swap; src: url("../fonts/schibsted-grotesk-latin-var.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "Inter Fallback"; src: local("Arial"); size-adjust: 107.4%; ascent-override: 90.2%; descent-override: 22.5%; line-gap-override: 0%; }
+@font-face { font-family: "Schibsted Fallback"; src: local("Arial"); size-adjust: 113.5%; ascent-override: 86%; descent-override: 22.7%; line-gap-override: 0%; }
 
 :root {
-  --fondo: #F4F6FA;
-  --fondo-2: #EAEEF5;
+  --fondo: #F7F9FC;
+  --fondo-2: #EDF3F9;
   --tarjeta: #FFFFFF;
-  --texto: #0F172A;
-  --texto-2: #3F4B5F;
-  --texto-3: #5B6779;           /* contraste 5,6:1 sobre blanco (AA) */
-  --borde: #E3E8F0;
-  --borde-fuerte: #CBD3E0;
+  --texto: #0B2350;
+  --texto-2: #43546C;
+  --texto-3: #566680;           /* contraste 5,6:1 sobre blanco (AA) */
+  --borde: #D5E1EE;
+  --borde-fuerte: #BCCBDD;
   --acento: #143A7B;             /* azul marino del logo */
   --acento-hover: #0F2D61;
   --acento-suave: #E8EEF9;
@@ -74,7 +74,7 @@
 html { color-scheme: light; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--fondo); color: var(--texto);
-  font: 15px/1.55 Inter, "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.55 "Schibsted Grotesk", "Schibsted Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
 a { color: var(--acento); text-decoration: none; }

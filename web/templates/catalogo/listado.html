@@ -3,7 +3,7 @@
 {% block titulo %}Catálogo | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab" id="cat-inicio">
-  <div><h1>Catálogo de <span class="marca-texto">refrigerados y congelados</span></h1><p class="sub" id="cat-contador" aria-live="polite">{{ filas|length }} producto{{ filas|length|pluralize }}{% if perfil %} · Lista: {{ perfil.lista_precio.nombre }}{% endif %}{% if q %} · búsqueda "{{ q }}"{% endif %}</p></div>
+  <div><h1>Catálogo de refrigerados y congelados</h1><p class="sub" id="cat-contador" aria-live="polite">{{ filas|length }} producto{{ filas|length|pluralize }}{% if perfil %} · Lista: {{ perfil.lista_precio.nombre }}{% endif %}{% if q %} · búsqueda "{{ q }}"{% endif %}</p></div>
   {% if menu.cliente and perfil.codigo == "B2B" %}<div class="acciones"><form method="post" action="/carrito/repetir/">{% csrf_token %}<button class="btn-sec">Repetir mi último pedido</button></form></div>{% endif %}
 </div>
 {% endblock %}

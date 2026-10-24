@@ -28,6 +28,7 @@
     <button type="button" class="filtros-ver" id="filtros-ver" data-cerrar-filtros>Ver {{ filas|length }} producto{{ filas|length|pluralize }}</button>
     </form>
   </details>
+  <script>/* En pantallas chicas los filtros arrancan plegados: se pliegan antes del primer pintado para que el catálogo no se corra. */var d = document.getElementById("filtros-det"); if (d && matchMedia("(max-width: 860px)").matches && !{{ filtrado|yesno:"1,0" }}) d.removeAttribute("open");</script>
   <div>
     <div class="cat-chips" id="cat-chips" aria-label="Filtros activos" hidden></div>
     <p class="solo-lector" id="cat-vivo" role="status" aria-live="polite"></p>

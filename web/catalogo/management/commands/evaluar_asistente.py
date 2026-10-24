@@ -38,6 +38,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, p):
         p.add_argument("--solo", help="un solo proveedor: gemini o groq")
+        p.add_argument("--orden", help="orden con respaldo, por ejemplo gemini,groq (lo mismo que IA_CHAT_PROVEEDORES)")
 
     def casos(self):
         hosp = Cliente.objects.get(rut="61.973.200-4")      # B2B
@@ -90,23 +91,27 @@ class Command(BaseCommand):
             t = time.monotonic()
             try:
                 r = asistente.responder(mensaje, cliente, perfil, "evaluacion", orden_proveedores=orden)
-                resp, origen = r["respuesta"], r["origen"]
+                resp, origen, prov = r["respuesta"], r["origen"], r.get("proveedor", "-")
             except asistente.Rechazo as e:
-                resp, origen = e.texto, "rechazo"
+                resp, origen, prov = e.texto, "rechazo", "-"
             seg = time.monotonic() - t
             tiempos.append(seg)
             bien = bool(ok(resp)) and origen != "error"
             if origen == "error":
                 fallas += 1
             aciertos += bien
-            self.stdout.write(f"{'OK ' if bien else 'MAL'} {seg:4.1f}s [{origen:5}] {titulo:<38} -> {resp[:90]}")
+            self.stdout.write(f"{'OK ' if bien else 'MAL'} {seg:4.1f}s [{origen:5}/{prov:<6}] {titulo:<38} -> {resp[:90]}")
         n = len(tiempos)
         tiempos.sort()
         self.stdout.write(self.style.SUCCESS(f"\n{nombre}: acierto {aciertos}/{n} = {100 * aciertos / n:.0f} % · sin respuesta de la IA: {fallas} · "
                                               f"latencia mediana {tiempos[n // 2]:.1f} s, máxima {tiempos[-1]:.1f} s\n"))
         return aciertos, n
 
-    def handle(self, *args, solo=None, **opciones):
+    def handle(self, *args, solo=None, orden=None, **opciones):
+        if orden:
+            lista = [n.strip() for n in orden.split(",") if n.strip()]
+            self.correr("orden " + " → ".join(lista), lista)
+            return
         if solo:
             self.correr(f"solo {solo}", [solo])
             return

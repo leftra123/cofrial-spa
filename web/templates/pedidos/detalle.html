@@ -18,6 +18,7 @@
   <span class="conf-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
   <div><h2 id="conf-t">¡Listo! Recibimos tu pedido N.º {{ orden.orden_id }}</h2>
     <p>Lo vamos a preparar y te avisamos por la campanita cuando salga el camión. Aquí abajo puedes seguirlo en todo momento.</p>
+    <p class="conf-datos">{% if orden.numero_oc %}<span>Orden de compra <b>{{ orden.numero_oc }}</b></span>{% endif %}<span>Entrega en <b>{{ orden.direccion }}</b></span></p>
     <div class="acciones"><a class="btn" href="/pedidos/">Mis pedidos</a><a class="btn btn-sec" href="/catalogo/">Seguir comprando</a></div></div>
 </section>
 {% endif %}
@@ -57,9 +58,11 @@
     <h2>Temperatura de la cámara</h2>
     <div class="temp-grande"><b id="seg-temp" class="{% if not seg.ultima %}skeleton{% endif %}">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}00,0{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}alerta{% elif seg.ultima %}entregado{% else %}cancelado{% endif %}" id="seg-estado" role="status">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% elif seg.ultima %}Dentro de rango{% else %}Sin lecturas{% endif %}</span></div>
     <p class="sub" style="color:var(--texto-3)">Rango de conservación: {{ seg.banda.min|floatformat:"-1" }} a {{ seg.banda.max|floatformat:"-1" }} °C ({{ seg.banda.nombre }})</p>
-    <svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora" hidden></svg>
+    <div class="grafico"><svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora" hidden></svg><span class="gy" id="spark-ymax" hidden></span><span class="gy" id="spark-ymin" hidden></span></div>
+    <div class="grafico-x" id="spark-x" hidden><span id="spark-t0"></span><span id="spark-t1"></span></div>
+    <p class="spark-stats" id="spark-stats" hidden></p>
     <div class="spark-vacio" id="spark-vacio">Aún no hay lecturas de temperatura de este viaje.</div>
-    <p class="frio" style="margin:6px 0 0">Última hora · franja verde = rango permitido</p>
+    <p class="frio" style="margin:6px 0 0">Última hora · la franja verde es el rango permitido</p>
     <div class="aviso error" id="seg-ruptura" style="margin-top:14px" {% if not seg.hubo_ruptura %}hidden{% endif %}>Detectamos una variación de temperatura en el transporte de su pedido. Ya estamos revisándola; si lo desea, informe cualquier problema.</div>
   </div>
 </div>
@@ -102,23 +105,29 @@
     var svg = document.getElementById("spark");
     var vacio = document.getElementById("spark-vacio");
     if (serie.length) svg.removeAttribute("hidden"); else svg.setAttribute("hidden", ""); vacio.hidden = serie.length > 0;
+    ["spark-x", "spark-stats", "spark-ymax", "spark-ymin"].forEach(function (id) { document.getElementById(id).hidden = !serie.length; });
     if (!serie.length) { svg.innerHTML = ""; return; }
     var t = serie.map(function (p) { return p.temp; });
     var lo = Math.min.apply(null, t.concat([min])) - 1, hi = Math.max.apply(null, t.concat([max])) + 1;
     function y(v) { return 100 - (v - lo) / (hi - lo) * 100; }
+    function fmt(v) { return v.toFixed(1).replace(".", ","); }
+    var ymax = document.getElementById("spark-ymax"), ymin = document.getElementById("spark-ymin");
+    ymax.textContent = fmt(max) + " °C"; ymax.style.top = y(max) + "%"; ymin.textContent = fmt(min) + " °C"; ymin.style.top = y(min) + "%";
+    document.getElementById("spark-t0").textContent = hora(serie[0].t); document.getElementById("spark-t1").textContent = hora(serie[serie.length - 1].t);
+    document.getElementById("spark-stats").textContent = "Mínima " + fmt(Math.min.apply(null, t)) + " °C · máxima " + fmt(Math.max.apply(null, t)) + " °C · " + serie.length + " lecturas";
     var pts = serie.map(function (p, i) { return (serie.length === 1 ? 150 : i / (serie.length - 1) * 300).toFixed(1) + "," + y(p.temp).toFixed(1); }).join(" ");
     svg.innerHTML = '<rect x="0" y="' + y(max) + '" width="300" height="' + (y(min) - y(max)) + '" fill="#16A34A" fill-opacity=".16"/><polyline points="' + pts + '" fill="none" stroke="#143A7B" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   }
   var ultimaSenal = null;
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
   function quitarSk(id, texto) { var e = document.getElementById(id); e.textContent = texto; e.classList.remove("skeleton"); }
-  function haceTxt(s) { var t = s < 60 ? s + " s" : s < 3600 ? Math.floor(s / 60) + " min" : s < 86400 ? Math.floor(s / 3600) + " h" : Math.floor(s / 86400) + " d"; return (s > 300 ? "Sin señal reciente · " : "") + "hace " + t; }
+  function haceTxt(s) { var t = s < 60 ? s + " s" : s < 3600 ? Math.floor(s / 60) + " min" : s < 86400 ? Math.floor(s / 3600) + " h" : Math.floor(s / 86400) + " d"; return "hace " + t; }
   function ponerFacts(s, estado) {
     quitarSk("seg-salio", s.salida_en ? hora(s.salida_en) : "Aún no sale");
     var llego = !!s.llegada_en || estado === "Entregada";
     document.getElementById("seg-llego").hidden = !llego;
     if (llego && s.llegada_en) document.getElementById("seg-llego-hora").textContent = "a las " + hora(s.llegada_en);
-    quitarSk("seg-eta", llego ? "Ya llegó" : s.eta ? hora(s.eta.desde) + " y " + hora(s.eta.hasta) : s.salida_en ? (s.ultima && s.ultima.hace_seg > 600 ? "Sin señal reciente" : "Calculando…") : "Cuando salga");
+    quitarSk("seg-eta", llego ? "Ya llegó" : s.eta ? hora(s.eta.desde) + " y " + hora(s.eta.hasta) : s.salida_en ? (s.ultima && s.ultima.hace_seg > 600 ? "Sin estimado" : "Calculando…") : "Cuando salga");
     document.getElementById("seg-eta").classList.toggle("cerca", !!s.cerca && !llego);
     if (s.ultima) { ultimaSenal = Date.now() - s.ultima.hace_seg * 1000; mostrarSenal(); } else quitarSk("seg-senal", "Sin señal aún");
   }

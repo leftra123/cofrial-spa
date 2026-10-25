@@ -23,35 +23,6 @@
   <div id="rutas-sugeridas"></div>
 </div>
 
-<div class="seccion"><h2>Vehículos</h2></div>
-<div class="rejilla vehiculos">
-{% for x in tarjetas %}
-  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}" data-camion="{{ x.camion.camion_id }}">
-    <div class="vehiculo-cab">
-      <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
-        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}</div></div></div>
-      {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
-      {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
-      {% elif x.viaje %}<span class="chip transito">En ruta</span>
-      {% else %}<span class="chip entregado">Disponible</span>{% endif %}
-    </div>
-    {% if x.lectura %}
-    <div class="mini">
-      <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
-      <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
-      <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div>
-    </div>
-    <div class="barra" data-campo="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
-    <div class="frio" data-campo="lectura">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
-    {% else %}
-    <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
-    {% endif %}
-  </article>
-{% empty %}
-  {% include "componentes/vacio_estado.html" with ico="camion" titulo="No hay camiones registrados" texto="Registra la flota desde Administración para ver aquí su estado y su telemetría." url="/admin/" accion="Ir a Administración" %}
-{% endfor %}
-</div>
-
 <div class="seccion"><h2>Viajes activos</h2></div>
 {% if not viajes %}
 {% include "componentes/vacio_estado.html" with compacto=True ico="mapa" titulo="Ningún camión está en ruta" texto="Cuando despaches pedidos, cada viaje aparece aquí con su ruta, su temperatura y sus entregas." url="/flota/despachar/" accion="Armar despacho" %}
@@ -82,6 +53,35 @@
 {% endfor %}
 </div>
 {% endif %}
+<div class="seccion"><h2>Vehículos</h2></div>
+<div class="rejilla vehiculos">
+{% for x in tarjetas %}
+  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}{% if not x.lectura %} sin-lectura{% endif %}" data-camion="{{ x.camion.camion_id }}">
+    <div class="vehiculo-cab">
+      <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
+        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
+      {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
+      {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
+      {% elif x.viaje %}<span class="chip transito">En ruta</span>
+      {% else %}<span class="chip entregado">Disponible</span>{% endif %}
+    </div>
+    {% if x.lectura %}
+    <div class="mini">
+      <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
+      <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
+      <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div>
+    </div>
+    <div class="barra" data-campo="barra" role="img" aria-label="Combustible {{ x.lectura.combustible_pct }} por ciento"><i class="{% if x.combustible_bajo %}bajo{% endif %}" style="width: {{ x.lectura.combustible_pct }}%"></i></div>
+    <div class="frio" data-campo="lectura">Última lectura {{ x.lectura.registrado_en|date:"d/m H:i:s" }} · {{ x.lectura.lat|floatformat:4 }}, {{ x.lectura.long|floatformat:4 }}</div>
+    {% else %}
+    <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
+    {% endif %}
+  </article>
+{% empty %}
+  {% include "componentes/vacio_estado.html" with ico="camion" titulo="No hay camiones registrados" texto="Registra la flota desde Administración para ver aquí su estado y su telemetría." url="/admin/" accion="Ir a Administración" %}
+{% endfor %}
+</div>
+
 {% endblock %}
 {% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
 {% block scripts %}

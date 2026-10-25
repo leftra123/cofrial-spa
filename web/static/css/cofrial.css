@@ -589,3 +589,15 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 .pagina-cab > div:first-child { flex: 1 1 320px; min-width: 0; }
 .cerrar-viaje { margin: 14px 0 0; }
 .cerrar-viaje button { width: 100%; }
+
+/* ---------- flota y despacho (Termómetro): lo que está pasando primero, el resto compacto ---------- */
+.vehiculo.sin-lectura { padding: 12px 16px; }
+.vehiculo.sin-lectura .mini { display: none; }
+.vehiculo.sin-lectura .vehiculo-cab { margin: 0; }
+.rejilla.vehiculos { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.lista-corta { max-height: 340px; overflow-y: auto; padding-block: 8px; }
+.despacho-grid > div:last-child { position: sticky; top: 16px; }
+@media (max-width: 860px) { .despacho-grid > div:last-child { position: static; } }
+/* accesibilidad: enlaces dentro de párrafos y listas se distinguen por subrayado (no solo por color) y los enlaces de la cuenta miden al menos 24 px de alto */
+.tarjeta-ui li a, .tarjeta-ui p a, .sub a { text-decoration: underline; text-underline-offset: 3px; }
+.enlace { display: inline-block; padding: 4px 0; min-height: 24px; }

@@ -21,7 +21,7 @@
       <dt>Conservación</dt><dd>{{ p.categoria.rango_temperatura.nombre }}: {{ p.categoria.rango_temperatura.temp_min_c|floatformat:"-1" }} a {{ p.categoria.rango_temperatura.temp_max_c|floatformat:"-1" }} °C
         <span class="mini-escala {% if p.categoria.rango_temperatura.nombre == "Congelado" %}es-cong{% else %}es-ref{% endif %}" aria-hidden="true"><i class="eje"></i><i class="b-cong"></i><i class="b-ref"></i><em>−25</em><em>+4 °C</em></span></dd>
       <dt>Formato de venta</dt><dd>{{ p.get_unidad_medida_display }}</dd>
-      <dt>Disponible</dt><dd>{{ p.stock_disponible }}</dd>
+      <dt>Disponible</dt><dd>{{ p.stock_disponible }} {% if p.unidad_medida == "caja" %}caja{{ p.stock_disponible|pluralize }}{% elif p.unidad_medida == "un" %}unidad{{ p.stock_disponible|pluralize:"es" }}{% else %}{{ p.unidad_medida }}{% endif %}</dd>
     </dl>
     <div class="det-compra">
       <div class="prod-comprar">

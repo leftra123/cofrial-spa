@@ -26,9 +26,8 @@
     <nav class="tb-nav" aria-label="Principal">
       <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}>Catálogo</a>
       {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo"{% endif %}>Mis pedidos</a>{% endif %}
-      <a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>
+      {% if not menu.cliente %}<a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>{% endif %}
       <a href="/guia/" {% if "/guia/" in ruta %}class="activo"{% endif %}>Guía</a>
-      {% if menu.cliente %}<a href="/avisos/" {% if "/avisos/" in ruta %}class="activo"{% endif %}>Avisos{% if avisos_n %}<span class="tb-n" title="Productos que esperabas y ya tienen stock">{{ avisos_n }}</span>{% endif %}</a>{% endif %}
       {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito<span class="tb-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
     </nav>
     <div class="tb-cuenta">
@@ -37,6 +36,7 @@
         <div class="campana-panel" id="campana-panel" role="region" aria-label="Avisos" hidden>
           <div class="campana-cab"><b>Avisos</b><span class="campana-nota" id="campana-nota" role="status" hidden>Sin actualizar</span></div>
           <ul id="campana-lista" aria-busy="true"><li class="campana-vacio cargando">Cargando avisos…</li></ul>
+          <a class="campana-pie" href="/avisos/">Avisos de stock{% if avisos_n %} <span class="tb-n" title="Productos que esperabas y ya tienen stock">{{ avisos_n }}</span>{% endif %}</a>
         </div>
       </div>{% endif %}
       {% if menu.cliente %}<a class="tema-btn tb-carro-movil" href="/carrito/" aria-label="Carrito{% if carrito_n %}, {{ carrito_n }} producto{{ carrito_n|pluralize }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg><span class="campana-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}

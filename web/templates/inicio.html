@@ -15,7 +15,7 @@
     </form>
     <p class="seguir">¿Ya hizo un pedido? <a href="/seguimiento/">Siga su entrega</a></p>
   </div>
-  {% if hace_seg is not None %}<div class="lectura" role="status"><b><i class="pulso"></i>{{ n_camiones }} {% if n_camiones == 1 %}camión{% else %}camiones{% endif %} con sensor</b><span>Última lectura hace {{ hace_seg }} s</span></div>{% endif %}
+  {% if hace_seg is not None %}<div class="lectura" role="status"><b><i class="pulso"></i>{{ n_camiones }} {% if n_camiones == 1 %}camión{% else %}camiones{% endif %} con sensor</b><span>Última lectura hace {% if hace_seg < 60 %}{{ hace_seg }} s{% elif hace_seg < 3600 %}{% widthratio hace_seg 60 1 %} min{% else %}más de una hora{% endif %}</span></div>{% endif %}
 </section>
 
 <div class="franja" role="group" aria-label="Rangos de temperatura de conservación">

@@ -171,6 +171,7 @@ def crear_pedido_para_cliente(usuario, cliente_id, cantidades, direccion_id, num
 
 
 # ---------------------------------------------------------------- RN-14: clasificación con IA y manual
+ASUNTO_AUTOMATICO = "Entrega no concretada del pedido"   # lo escribe el sistema cuando el cliente dice «No pude recibirlo»
 CATEGORIA_ENTREGA = "Problema en la entrega"   # la usa por defecto un requerimiento creado por una entrega no concretada
 UMBRAL_CONFIANZA = 0.60            # supuesto del informe (RN-14): por debajo, revisión manual
 
@@ -203,7 +204,8 @@ def desglosar_requerimiento(requerimiento):
         return None
     try:
         estado = estado_de_pedido(requerimiento.orden.estado_orden.nombre)
-        requerimiento.desglose = ia.desglosar(f"{requerimiento.asunto}. {requerimiento.descripcion}", estado)
+        texto = requerimiento.descripcion if requerimiento.asunto.startswith(ASUNTO_AUTOMATICO) else f"{requerimiento.asunto}. {requerimiento.descripcion}"
+        requerimiento.desglose = ia.desglosar(texto, estado)         # el asunto que arma el sistema no es del cliente: no se manda ni sale como «hecho»
     except ia.ErrorIA as e:
         ia.log.warning("Requerimiento %s sin desglose de IA: %s", requerimiento.pk, e)
         return None

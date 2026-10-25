@@ -185,6 +185,11 @@ def clasificar(asunto, descripcion, categorias):
     return _interpretar(_llamar(_prompt(asunto, descripcion, categorias)), categorias)
 
 
+def redactar(prompt, plazo=8):
+    """Texto libre de la IA (mismos proveedores y respaldo que la clasificación). Lanza ErrorIA si no responde a tiempo."""
+    return _llamar(prompt, plazo)
+
+
 def estado():
     """Configuración visible de la IA para el panel del CRM. Nunca incluye las claves, solo si existen."""
     return {"gemini": bool(os.environ.get("GEMINI_API_KEY")), "groq": bool(os.environ.get("GROQ_API_KEY")),

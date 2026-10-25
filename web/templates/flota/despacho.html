@@ -13,9 +13,9 @@
 <div class="despacho-grid">
   <div>
     <div class="seccion"><h2>1. Camión</h2></div>
-    <div class="tarjeta-ui">
+    <div class="tarjeta-ui lista-corta">
       {% for c in camiones %}
-      <label class="opcion"><input type="radio" name="camion" value="{{ c.camion_id }}" {% if forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rango_temperatura.nombre }}</span> <span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
+      <label class="opcion"><input type="radio" name="camion" value="{{ c.camion_id }}" {% if camion_sugerido %}{% if c.camion_id == camion_sugerido %}checked{% endif %}{% elif forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rango_temperatura.nombre }}</span> <span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
       {% empty %}{% include "componentes/vacio_estado.html" with plano=True compacto=True ico="camion" titulo="No hay camiones libres" texto="Todos están en ruta o inactivos. Cuando uno vuelva a la bodega podrás armar el viaje." url="/flota/" accion="Ver la flota" %}{% endfor %}
     </div>
 
@@ -23,7 +23,7 @@
     <div class="tarjeta-ui">
       {% for p in pedidos %}
       <label class="opcion pedido">
-        <input type="checkbox" name="ordenes" value="{{ p.o.orden_id }}" data-orden="{{ p.o.orden_id }}" {% if not p.ubicada %}data-sin-ubicar="1"{% endif %}>
+        <input type="checkbox" name="ordenes" value="{{ p.o.orden_id }}" data-orden="{{ p.o.orden_id }}" {% if p.o.orden_id in marcados %}checked{% endif %} {% if not p.ubicada %}data-sin-ubicar="1"{% endif %}>
         <span><b>Orden N.º {{ p.o.orden_id }}</b> · {{ p.o.direccion.cliente.nombre }}
           <span class="frio" style="display:block">{{ p.o.direccion }} · {% include "componentes/chip_estado.html" with estado=p.o.estado_orden.nombre %}
             {% if p.mixto %}<span class="chip alerta">Mezcla frío y congelado</span>{% else %}{% for r in p.rangos %}<span class="chip transito">{{ r }}</span>{% endfor %}{% endif %}
@@ -86,6 +86,7 @@
     }).catch(function () { if (mio === version) resumen.textContent = "No pudimos calcular la ruta. Intenta de nuevo."; });
   }
   document.querySelectorAll("input[name=ordenes]").forEach(function (c) { c.addEventListener("change", recalcular); });
+  if (marcados().length) recalcular();                       // viene de una sugerencia: ya hay pedidos marcados
 })();
 </script>
 {% endblock %}

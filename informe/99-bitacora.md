@@ -43,3 +43,7 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 ## 2026-10-22 (tarde)
 - Rotación de claves de la IA: se reemplazó la clave de Gemini por una de la cuenta institucional y se agregó la de Groq. `aws/provision.sh recrear-web` recrea la instancia web con las claves nuevas sin entrar por SSH.
 - Al probar Groq con la clave real se corrigieron tres defectos propios: la protección contra bots de Groq bloqueaba el identificador de Python, el modelo de respaldo elegido no existía en la cuenta y un proveedor principal lento dejaba sin tiempo al respaldo. Acierto final: 100 % (20 de 20) con Gemini y Groq de respaldo.
+
+## 2026-10-25
+- Grafana ya no admite acceso anónimo (`GF_AUTH_ANONYMOUS_ENABLED=false`). Una cuenta `visor` (rol Viewer, creada por el servicio `grafana-visor` en ambos `docker-compose`) permite mirar el tablero en vivo sin poder editarlo; `admin` conserva la edición. La clave del visor se genera en `aws/.estado/secretos.env` como `GRAFANA_VISOR_PASSWORD`. El puerto 3000 sigue abierto, ahora con inicio de sesión. Se actualizaron `aws/verificar.py`, la guía de la web y la Tabla 3 del informe.
+- Pendiente: recrear la EC2 web (`bash aws/provision.sh recrear-web`) para que la instalación desplegada tome el cambio.

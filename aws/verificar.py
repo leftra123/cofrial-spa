@@ -5,9 +5,10 @@
     python3 aws/verificar.py http://IP       # o una dirección explícita
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
 
-Las claves se toman de DEMO_PASSWORD y ADMIN_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
+Las claves se toman de DEMO_PASSWORD, ADMIN_PASSWORD y GRAFANA_VISOR_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
 Solo usa la biblioteca estándar de Python (sin instalar nada). Sale con código 0 si todo pasó y 1 si algo falló.
 """
+import base64
 import datetime
 import http.cookiejar
 import json
@@ -122,7 +123,11 @@ def consulta_grafana(sql):
     sql = sql.replace("$camion", "'CAM-01'")           # variable del selector de camiones del tablero: aquí se prueba con uno
     cuerpo = json.dumps({"queries": [{"refId": "A", "datasource": {"uid": "cofrial-pg"}, "rawSql": sql, "format": "table"}],
                          "from": "now-24h", "to": "now"}).encode()
-    pedido = urllib.request.Request(f"http://{HOST}:3000/api/ds/query", data=cuerpo, headers={"Content-Type": "application/json"})
+    cabeceras = {"Content-Type": "application/json"}
+    clave = os.environ.get("GRAFANA_VISOR_PASSWORD") or leer_estado("GRAFANA_VISOR_PASSWORD")
+    if clave:                                          # Grafana ya no admite acceso anónimo: se consulta con la cuenta visor
+        cabeceras["Authorization"] = "Basic " + base64.b64encode(f"visor:{clave}".encode()).decode()
+    pedido = urllib.request.Request(f"http://{HOST}:3000/api/ds/query", data=cuerpo, headers=cabeceras)
     try:
         return json.loads(urllib.request.urlopen(pedido, timeout=30).read())["results"]["A"]
     except urllib.error.HTTPError as e:

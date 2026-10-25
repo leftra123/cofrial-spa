@@ -29,6 +29,13 @@ services:
       <<: *bd
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}            # ruta propia del panel de administración; por defecto /admin/
+      ACCESO_MAX_FALLOS_CUENTA: ${ACCESO_MAX_FALLOS_CUENTA:-10}   # claves malas por cuenta antes de bloquearla 15 min
+      ACCESO_MAX_FALLOS_IP: ${ACCESO_MAX_FALLOS_IP:-0}           # 0 = sin límite por IP (en la defensa toda la sala sale por una IP)
+      ESCANEO_MAX_404: ${ESCANEO_MAX_404:-60}                    # «no encontrado» por IP en la ventana antes del 429
+      ESCANEO_VENTANA_SEG: ${ESCANEO_VENTANA_SEG:-600}
+      LIMITE_REGISTRO_HORA: ${LIMITE_REGISTRO_HORA:-10}          # registros por IP y hora
+      LIMITE_SOPORTE_HORA: ${LIMITE_SOPORTE_HORA:-20}            # consultas a soporte (gastan cuota de IA) por IP y hora
       DEMO_PASSWORD: ${DEMO_PASSWORD:?define DEMO_PASSWORD en .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       VELOCIDAD_MEDIA_KMH: ${VELOCIDAD_MEDIA_KMH:-50}

@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib import admin
+from django.db import connection
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
@@ -17,6 +19,20 @@ def salud(request):
     """Responde 200 si la aplicación está viva; el balanceo y las pruebas la usan."""
     return JsonResponse({"estado": "ok"})
 
+
+def salud_bd(request):
+    """Además de estar viva, la aplicación alcanza la base de datos (503 si no). Para ver la caída controlada sin abrir una pantalla."""
+    from django.db import DatabaseError
+    try:
+        with connection.cursor() as c:
+            c.execute("SELECT 1")
+    except DatabaseError:
+        return JsonResponse({"estado": "sin_base"}, status=503)
+    return JsonResponse({"estado": "ok"})
+
+
+handler400 = "cofrial.seguridad.error_400"
+handler500 = "cofrial.seguridad.error_500"
 
 urlpatterns = [
     path("", vistas.inicio, name="inicio"),
@@ -41,5 +57,6 @@ urlpatterns = [
     path("cuenta/clave/hecho/", auth_views.PasswordChangeDoneView.as_view(template_name="cuenta/clave_hecha.html"), name="clave_hecha"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
     path("salud/", salud),
-    path("admin/", admin.site.urls),
+    path("salud/bd/", salud_bd),
+    path(settings.ADMIN_URL, admin.site.urls),
 ]

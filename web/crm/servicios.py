@@ -6,6 +6,7 @@ from django.utils import timezone
 from catalogo.asistente import estado_de_pedido
 from catalogo.models import ListaPrecio
 from clientes.models import Cliente, TipoCliente, Vendedor
+from cofrial import entradas
 from flota.models import Telemetria
 from pedidos import servicios as pedidos
 from pedidos.models import Orden
@@ -14,6 +15,7 @@ from . import ia
 from .models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 
 ROLES = ("admin", "gerencia", "vendedor", "despachador")
+TEXTO_MAXIMO = 4000          # caracteres de un detalle o una consulta; lo que se envía a la IA y se guarda no crece sin límite
 
 
 class ErrorDeNegocio(pedidos.ErrorDeNegocio):
@@ -79,17 +81,21 @@ def mover_prospecto(usuario, prospecto_id, etapa_id, motivo="", rut=""):
     prospecto = prospectos_visibles(usuario).select_for_update(of=("self",)).get(pk=prospecto_id)
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede modificar prospectos.")
-    destino = next((e for e in transiciones_de(prospecto) if e.pk == int(etapa_id)), None)
+    destino = next((e for e in transiciones_de(prospecto) if e.pk == entradas.entero(etapa_id)), None)
     if destino is None:
         raise ErrorDeNegocio(f"No se puede pasar de \"{prospecto.etapa.nombre}\" a esa etapa; el embudo no permite saltos.")
     ahora = timezone.now()
     if destino.es_final and not destino.es_ganada:                      # Perdido
         if not motivo.strip():
             raise ErrorDeNegocio("Perder un prospecto exige indicar el motivo.")
+        if len(motivo.strip()) > 200:
+            raise ErrorDeNegocio("El motivo admite hasta 200 caracteres.")
         prospecto.motivo_perdida, prospecto.cerrado_en = motivo.strip(), ahora
     elif destino.es_ganada:                                              # RN-11: ganar crea el cliente B2B
         if not rut.strip():
             raise ErrorDeNegocio("Para ganar el prospecto indica el RUT de la empresa.")
+        if len(rut.strip()) > 12:
+            raise ErrorDeNegocio("El RUT no es válido (máximo 12 caracteres, con puntos y guion).")
         if not prospecto.email:
             raise ErrorDeNegocio("El prospecto necesita un correo para crearlo como cliente.")
         if Cliente.objects.filter(rut=rut.strip()).exists():
@@ -110,8 +116,12 @@ def mover_prospecto(usuario, prospecto_id, etapa_id, motivo="", rut=""):
 def registrar_interaccion(usuario, tipo, detalle, prospecto=None, cliente=None):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede registrar interacciones.")
+    if tipo not in dict(Interaccion.TIPOS):
+        raise ErrorDeNegocio("Elige un tipo de interacción válido.")
     if not (detalle or "").strip():
         raise ErrorDeNegocio("Escribe el detalle de la interacción.")
+    if len(detalle) > TEXTO_MAXIMO:
+        raise ErrorDeNegocio(f"El detalle admite hasta {TEXTO_MAXIMO} caracteres.")
     vendedor = vendedor_de(usuario) or (prospecto.vendedor if prospecto else cliente.vendedor)
     if vendedor is None:
         raise ErrorDeNegocio("El cliente no tiene vendedor asignado; asígnalo antes de registrar interacciones.")
@@ -242,6 +252,8 @@ def crear_requerimiento(cliente, asunto, descripcion, orden=None, categoria_nomb
     asunto, descripcion = asunto.strip(), descripcion.strip()
     if not asunto or not descripcion:
         raise ErrorDeNegocio("Indica el asunto y describe tu consulta.")
+    if len(descripcion) > TEXTO_MAXIMO:
+        raise ErrorDeNegocio(f"La descripción admite hasta {TEXTO_MAXIMO} caracteres; resume tu consulta.")
     r = Requerimiento.objects.create(cliente=cliente, orden=orden, asunto=asunto[:150], descripcion=descripcion)
     if categoria_nombre is None and orden is not None and orden.estado_orden.nombre == "Entrega no concretada":
         categoria_nombre = CATEGORIA_ENTREGA            # lo crea el cliente al decir «No pude recibirlo»: la categoría ya se sabe
@@ -264,7 +276,7 @@ def clasificar_manual(usuario, requerimiento_id, categoria_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
     r = Requerimiento.objects.get(pk=requerimiento_id)
-    r.categoria_requerimiento_id, r.estado, r.clasificado_manual = categoria_id, "clasificado", True
+    r.categoria_requerimiento, r.estado, r.clasificado_manual = CategoriaRequerimiento.objects.get(pk=categoria_id), "clasificado", True     # una categoría inexistente no se guarda
     r.save(update_fields=["categoria_requerimiento", "estado", "clasificado_manual"])
     return r
 

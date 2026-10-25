@@ -1,4 +1,5 @@
 """Avisos de stock: el cliente pide que se le avise cuando haya al menos X unidades de un producto."""
+from django.conf import settings
 from django.db.models import Count, F, Sum
 from django.utils import timezone
 
@@ -15,8 +16,8 @@ def pedir(cliente, producto_id, cantidad):
         producto = Producto.objects.get(pk=producto_id, activo=True)
     except Producto.DoesNotExist:
         raise ErrorAviso("El producto no existe o ya no está disponible.")
-    if cantidad < 1:
-        raise ErrorAviso("Indica cuántas unidades necesitas (al menos 1).")
+    if cantidad < 1 or cantidad > settings.CANTIDAD_MAXIMA_POR_LINEA:
+        raise ErrorAviso(f"Indica cuántas unidades necesitas (entre 1 y {settings.CANTIDAD_MAXIMA_POR_LINEA}).")
     if producto.stock_disponible >= cantidad:
         raise ErrorAviso(f"Ya hay {producto.stock_disponible} unidades disponibles de {producto.nombre}; puedes agregarlas al carrito.")
     aviso, _ = AvisoStock.objects.update_or_create(cliente=cliente, producto=producto, atendido_en=None,

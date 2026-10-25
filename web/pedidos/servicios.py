@@ -2,12 +2,14 @@
 
 Toda la lógica vive aquí y no en las vistas, para que el portal, el CRM y las pruebas usen las mismas reglas.
 """
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 
 from catalogo import avisos
 from catalogo.models import Categoria, PrecioProducto, Producto
 from clientes.models import Cliente, Direccion
+from cofrial import entradas
 
 from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
 
@@ -39,9 +41,15 @@ def carrito_abierto(cliente):
     return carrito
 
 
-def agregar(cliente, producto_id, cantidad):
+def _validar_cantidad(cantidad):
     if cantidad < 1:
         raise ErrorDeNegocio("La cantidad debe ser al menos 1.")
+    if cantidad > settings.CANTIDAD_MAXIMA_POR_LINEA:
+        raise ErrorDeNegocio(f"La cantidad máxima por producto es {settings.CANTIDAD_MAXIMA_POR_LINEA}; para pedidos mayores contacta a tu vendedor.")
+
+
+def agregar(cliente, producto_id, cantidad):
+    _validar_cantidad(cantidad)
     try:
         producto = Producto.objects.get(pk=producto_id, activo=True)
     except Producto.DoesNotExist:
@@ -52,6 +60,7 @@ def agregar(cliente, producto_id, cantidad):
     avisos.marcar_atendidos(cliente, producto.pk)          # si esperaba este producto, el aviso ya cumplió su función
     item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
     if not creado:
+        _validar_cantidad(item.cantidad + cantidad)
         item.cantidad += cantidad
         item.save(update_fields=["cantidad"])
     return item
@@ -62,6 +71,7 @@ def fijar_cantidad(cliente, producto_id, cantidad):
     if cantidad < 1:
         CarritoItem.objects.filter(carrito=carrito, producto_id=producto_id).delete()
     else:
+        _validar_cantidad(cantidad)
         CarritoItem.objects.filter(carrito=carrito, producto_id=producto_id).update(cantidad=cantidad)
 
 
@@ -89,6 +99,10 @@ def generar_ordenes(cliente, direccion_id, numero_oc=""):
     """
     numero_oc = (numero_oc or "").strip()[:30]
     pendiente = cliente.tipo_cliente.codigo == "B2B" and not numero_oc      # RN-05: sin OC la orden se crea igual, marcada «OC pendiente»
+    try:
+        direccion_id = entradas.entero(direccion_id)          # un id no numérico es «dirección ajena», no un 500
+    except ValueError:
+        direccion_id = 0
     direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()    # RN-04
     if direccion is None:
         raise ErrorDeNegocio("Elige una dirección de entrega que pertenezca a tu cuenta.")

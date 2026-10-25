@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from clientes import geo
+from cofrial import entradas
 from clientes.models import Direccion
 from pedidos.servicios import ErrorDeNegocio
 
@@ -27,7 +28,7 @@ def _ruta_para_mapa(viaje):
 @con_rol("admin", "gerencia", "despachador")
 def ruta_sugerida(request):
     """Vista previa al armar un despacho: la misma ruta por calles que quedará guardada al despachar (sale de la caché del servidor)."""
-    ids = [int(i) for i in request.GET.get("ordenes", "").split(",") if i.strip().isdigit()]
+    ids = [entradas.entero(i) for i in request.GET.get("ordenes", "").split(",") if entradas.es_entero(i)]     # «²» pasa isdigit() y rompe int()
     ordenes = list(servicios.pedidos_por_despachar().filter(pk__in=ids))
     ruta = rutas.armar_ruta([(o.direccion_id, o.direccion.lat, o.direccion.long) for o in ordenes])
     if ruta is None:
@@ -88,7 +89,7 @@ def despachar(request):
     """Armar un viaje: elegir camión y pedidos; la ruta sugerida se previsualiza en el mapa antes de salir."""
     if request.method == "POST":
         try:
-            d = servicios.despachar(request.POST.get("camion", ""), [int(i) for i in request.POST.getlist("ordenes") if i.isdigit()])
+            d = servicios.despachar(request.POST.get("camion", ""), [entradas.entero(i) for i in request.POST.getlist("ordenes") if entradas.es_entero(i)])
             messages.success(request, f"Despacho N.º {d.despacho_id} en ruta con {d.camion_id}. Ya puedes ver la ruta sugerida.")
             return redirect("flota")
         except ErrorDeNegocio as e:
@@ -102,7 +103,7 @@ def despachar(request):
     mapa = {"base": settings.BASE_LOGISTICA,
             "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
                                           "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}
-    marcados = {int(i) for i in request.GET.get("ordenes", "").split(",") if i.isdigit()}      # preselección que llega desde la sugerencia
+    marcados = {entradas.entero(i) for i in request.GET.get("ordenes", "").split(",") if entradas.es_entero(i)}      # preselección que llega desde la sugerencia
     return render(request, "flota/despacho.html", {"pedidos": pedidos, "camiones": servicios.camiones_libres(), "mapa": mapa,
                                                    "camion_sugerido": request.GET.get("camion", ""), "marcados": marcados})
 

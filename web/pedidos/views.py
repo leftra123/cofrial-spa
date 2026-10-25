@@ -3,8 +3,10 @@ from functools import wraps
 from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from cofrial import entradas
 from crm import servicios as crm
 from crm.models import Requerimiento
 
@@ -44,13 +46,15 @@ def _respuesta_json(request, cliente):
 @solo_clientes
 def agregar(request, cliente):
     try:
-        s.agregar(cliente, int(request.POST.get("producto", 0)), int(request.POST.get("cantidad", 1)))
+        s.agregar(cliente, entradas.entero(request.POST.get("producto", 0)), entradas.entero(request.POST.get("cantidad", 1)))
         messages.success(request, "Producto agregado al carrito.")
     except (s.ErrorDeNegocio, ValueError) as e:
         _mostrar_errores(request, e) if isinstance(e, s.ErrorDeNegocio) else messages.error(request, "Cantidad no válida.")
     if request.headers.get("X-Requested-With") == "fetch":         # mejora progresiva: la tienda agrega sin recargar; sin JavaScript sigue la redirección de siempre
         return _respuesta_json(request, cliente)
-    return redirect(request.POST.get("volver") or "catalogo")
+    destino = request.POST.get("volver") or "/catalogo/"
+    seguro = url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()) and destino.startswith("/")
+    return redirect(destino if seguro else "/catalogo/")           # misma validación que /avisos/pedir/: sin redirección abierta
 
 
 @solo_clientes
@@ -66,9 +70,11 @@ def ver_carrito(request, cliente):
 @solo_clientes
 def actualizar(request, cliente):
     try:
-        s.fijar_cantidad(cliente, int(request.POST["producto"]), int(request.POST["cantidad"]))
+        s.fijar_cantidad(cliente, entradas.entero(request.POST["producto"]), entradas.entero(request.POST["cantidad"]))
     except (KeyError, ValueError):
         messages.error(request, "Cantidad no válida.")
+    except s.ErrorDeNegocio as e:
+        _mostrar_errores(request, e)
     return redirect("carrito")
 
 
@@ -165,7 +171,7 @@ def cancelar(request, cliente, orden_id):
 def soporte(request, cliente):
     """CU-09: el cliente registra una consulta o reclamo; la IA la clasifica (RN-14) y llega a la bandeja del CRM."""
     ref = request.POST.get("orden") or request.GET.get("orden") or ""
-    orden = s.ordenes_de(cliente).filter(pk=int(ref)).first() if ref.isdigit() else None     # solo una orden propia
+    orden = s.ordenes_de(cliente).filter(pk=entradas.entero(ref)).first() if entradas.es_entero(ref) else None     # solo una orden propia
     if request.method == "POST":
         try:
             r = crm.crear_requerimiento(cliente, request.POST.get("asunto", ""), request.POST.get("descripcion", ""), orden=orden)

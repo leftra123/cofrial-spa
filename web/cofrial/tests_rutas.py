@@ -5,6 +5,7 @@ así ninguna ruta queda sin decidir quién entra."""
 import re
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.management import call_command
 from django.test import Client, TestCase
 from django.urls import URLResolver, get_resolver
@@ -42,6 +43,7 @@ ESPERADO = {
     '/crm/demanda/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/crm/alertas/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/flota/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/flota/sugerencias/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 →/flota/despachar/ →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
@@ -78,6 +80,7 @@ ESPERADO = {
     '/cuenta/clave/': ('L 200 200 200 200 200 200', 'L 200 200 200 200 200 200'),
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
+    '/salud/bd/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/admin/': ('L L L L L L 200', 'L L L L L L 200'),
 }
 
@@ -143,6 +146,7 @@ class TablaDeRutas(Base):
             for url, (get, post) in ESPERADO.items():
                 for metodo, esperado in (("get", get), ("post", post)):
                     kw = {"HTTP_X_REQUESTED_WITH": "fetch"} if metodo == "post" else {}
+                    cache.clear()          # aquí se audita quién entra; el 429 por barrido de 404 se prueba en tests_seguridad
                     obtenido = _resultado(getattr(c, metodo)(url, **kw))
                     if obtenido != esperado.split()[ROLES.index(rol)]:
                         fallas.append(f"{rol} {metodo.upper()} {url}: {obtenido} (esperado {esperado.split()[ROLES.index(rol)]})")

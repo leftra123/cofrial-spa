@@ -11,6 +11,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente, TipoCliente
+from cofrial import entradas
 
 from . import avisos
 
@@ -94,10 +95,10 @@ def listado(request):
     productos = Producto.objects.filter(activo=True).select_related("categoria__rango_temperatura").order_by("categoria__nombre", "nombre")
     if q:
         productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q) | Q(categoria__nombre__icontains=q))
-    if cat.isdigit():
-        productos = productos.filter(categoria_id=int(cat))
-    if temp.isdigit():
-        productos = productos.filter(categoria__rango_temperatura_id=int(temp))
+    if entradas.es_entero(cat):
+        productos = productos.filter(categoria_id=entradas.entero(cat))
+    if entradas.es_entero(temp):
+        productos = productos.filter(categoria__rango_temperatura_id=entradas.entero(temp))
     if solo_stock:
         productos = productos.filter(stock_disponible__gt=0)
     filas = [_fila(p, precios) for p in productos]
@@ -126,7 +127,7 @@ def pedir_aviso(request):
         from cofrial.acceso import inicio_de
         return redirect(inicio_de(request.user) if request.user.is_authenticated else "/cuenta/entrar/")
     try:
-        a = avisos.pedir(cliente, int(request.POST.get("producto", 0)), int(request.POST.get("cantidad", 0)))
+        a = avisos.pedir(cliente, entradas.entero(request.POST.get("producto", 0)), entradas.entero(request.POST.get("cantidad", 0)))
         messages.success(request, f"Listo: te avisaremos cuando haya al menos {a.cantidad_minima} de {a.producto.nombre}.")
     except (avisos.ErrorAviso, ValueError) as e:
         messages.error(request, str(e) if isinstance(e, avisos.ErrorAviso) else "Indica una cantidad válida.")

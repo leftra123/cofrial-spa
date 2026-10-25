@@ -20,6 +20,10 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = [h for h in entorno("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in entorno("DJANGO_CSRF_ORIGINS", "").split(",") if o]
 CSRF_FAILURE_VIEW = "cofrial.vistas.csrf_fallo"
+# Ruta del panel de administración. En producción conviene una propia (DJANGO_ADMIN_URL=panel-9f3k/) para que /admin/ no exista.
+ADMIN_URL = entorno("DJANGO_ADMIN_URL", "admin/").strip("/") + "/"
+# Detrás de un balanceador (ALB/nginx) que agrega X-Forwarded-For: DJANGO_CONFIAR_PROXY=1 usa esa IP en los límites de intentos.
+CONFIAR_PROXY = entorno("DJANGO_CONFIAR_PROXY", "0") == "1"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -39,6 +43,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "cofrial.seguridad.ProteccionMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -159,3 +164,17 @@ OSRM_TIMEOUT_SEG = float(os.environ.get("OSRM_TIMEOUT_SEG") or 4)
 # Tiempo que el cliente tiene para confirmar la entrega cuando el camión llega a su puerta; vencido, el pedido se da por entregado solo.
 # 120 s sirve para la demostración; en una operación real serían horas.
 CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)
+
+# ---- Defensas de la aplicación (ver cofrial/seguridad.py). Main ya fija arriba cookies, HTTPS, Referer y la vista de CSRF.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 500                    # un formulario legítimo (pedido con cantidades por producto) usa menos de 100
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "cofrial"}}
+# Límite de intentos. En la defensa toda la sala sale por una sola IP pública: por eso se cuenta por cuenta y no por IP (0 = sin límite por IP).
+ACCESO_MAX_FALLOS_USUARIO = int(entorno("ACCESO_MAX_FALLOS_CUENTA") or 10)   # claves malas seguidas para una misma cuenta
+ACCESO_MAX_FALLOS_IP = int(entorno("ACCESO_MAX_FALLOS_IP") or 0)              # claves malas desde una misma IP (cuentas distintas); 0 = no se cuenta
+ACCESO_VENTANA_SEG = int(entorno("ACCESO_VENTANA_SEG") or 15 * 60)            # el bloqueo dura lo mismo que la ventana de conteo
+# Barrido de rutas: «no encontrado» tolerados por IP en la ventana antes de responder 429 (un recorrido de 30 páginas en 10 minutos pasa con holgura).
+ESCANEO_MAX_404 = int(entorno("ESCANEO_MAX_404") or 60)
+ESCANEO_VENTANA_SEG = int(entorno("ESCANEO_VENTANA_SEG") or 10 * 60)
+LIMITE_POST_POR_HORA = {"/cuenta/registro/": int(entorno("LIMITE_REGISTRO_HORA") or 10),     # envíos por IP: crean cuentas
+                        "/soporte/": int(entorno("LIMITE_SOPORTE_HORA") or 20)}             # y gastan la cuota gratuita de la IA
+CANTIDAD_MAXIMA_POR_LINEA = 10000      # unidades de un producto en una línea del carrito

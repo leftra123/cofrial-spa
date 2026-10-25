@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-cofrial}
       POSTGRES_USER: ${DB_USER:-cofrial}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
-    ports: ["5433:5432"]            # 5433 para no chocar con un Postgres local
+    ports: ["127.0.0.1:5433:5432"]  # solo desde esta máquina; 5433 para no chocar con un Postgres local
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cofrial} -d ${DB_NAME:-cofrial}"]
@@ -27,7 +27,7 @@ services:
     command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2"
     environment:
       <<: *bd
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-clave-solo-para-desarrollo}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
       DEMO_PASSWORD: ${DEMO_PASSWORD:?define DEMO_PASSWORD en .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
@@ -62,7 +62,7 @@ services:
   flota-5: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "41"}}
 
   grafana:
-    image: grafana/grafana:11.6.0
+    image: grafana/grafana:11.6.16
     environment:
       DB_HOST: db
       DB_PORT: "5432"
@@ -73,6 +73,9 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"   # el tablero se puede mirar sin clave; editar exige la cuenta admin
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/cofrial.json
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"       # evita el caché de avatares (DoS CVE-2026-21720)
+      GF_PUBLIC_DASHBOARDS_ENABLED: "false"       # sin tableros públicos por enlace (DoS CVE-2026-42127)
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
     ports: ["3000:3000"]

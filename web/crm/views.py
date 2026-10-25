@@ -2,6 +2,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -183,7 +184,16 @@ def cliente_pedido(request, pk):
 def requerimientos(request):
     return render(request, "crm/requerimientos.html", _contexto(
         request, reqs=Requerimiento.objects.select_related("cliente", "categoria_requerimiento").order_by("-creado_en"),
-        categorias=CategoriaRequerimiento.objects.all()))
+        categorias=CategoriaRequerimiento.objects.all(), umbral=s.UMBRAL_CONFIANZA))
+
+
+@con_rol(*COMERCIAL)
+def requerimiento_detalle(request, pk):
+    """Un requerimiento con el texto original, el desglose de la IA y, si es de temperatura, el dato real de la base al lado."""
+    r = get_object_or_404(Requerimiento.objects.select_related("cliente", "categoria_requerimiento", "orden__despacho__camion__rango_temperatura", "orden__estado_orden"), pk=pk)
+    d = r.desglose or None
+    dato = s.telemetria_del_viaje(r.orden) if r.orden_id and d and (d.get("motivo_principal") == "temperatura_inadecuada" or "temperatur" in r.descripcion.lower()) else None
+    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
 
 
 @require_POST
@@ -227,13 +237,13 @@ def ia_panel(request):
             prompt, filas = ia.comparar(asunto[:150], texto[:1000], categorias)
     todos = Requerimiento.objects.all()
     resumen = {"total": todos.count(),
-               "por_ia": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=False).count(),
+               "por_ia": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=False, clasificado_manual=False).count(),
                "ia_dudo": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=True).count(),
-               "manual": todos.filter(confianza_ia__isnull=True, categoria_requerimiento__isnull=False).count(),
+               "manual": todos.filter(Q(clasificado_manual=True) | Q(confianza_ia__isnull=True, categoria_requerimiento__isnull=False)).count(),
                "sin_clasificar": todos.filter(estado="sin_clasificar").count()}
     ultimos = list(todos.select_related("cliente", "categoria_requerimiento").order_by("-creado_en")[:12])
     return render(request, "crm/ia.html", _contexto(request, ia=ia.estado(), categorias=categorias, asunto=asunto, texto=texto, prompt=prompt,
-                                                    filas=filas, resumen=resumen, ultimos=ultimos, umbral=s.UMBRAL_CONFIANZA))
+                                                    filas=filas, resumen=resumen, ultimos=ultimos, umbral=s.UMBRAL_CONFIANZA, acierto=s.acierto_de_la_ia()))
 
 
 @con_rol(*TODOS)

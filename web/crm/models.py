@@ -91,6 +91,11 @@ class Requerimiento(models.Model):
     descripcion = models.TextField()
     categoria_requerimiento = models.ForeignKey(CategoriaRequerimiento, null=True, blank=True, on_delete=models.SET_NULL)
     confianza_ia = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    # Lo que propuso la IA (aunque no se asignara por baja confianza) y si una persona lo clasificó a mano: sirve para medir cuánto acierta de verdad.
+    categoria_ia = models.ForeignKey(CategoriaRequerimiento, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    clasificado_manual = models.BooleanField(default=False)
+    # Desglose estructurado del texto del cliente (resumen, motivo, hechos, urgencia, acción sugerida y confianza). Es una ayuda: el texto original queda intacto.
+    desglose = models.JSONField(null=True, blank=True)
     estado = models.CharField(max_length=14, choices=ESTADOS, default="sin_clasificar")
     creado_en = models.DateTimeField(auto_now_add=True)
     respondido_en = models.DateTimeField(null=True, blank=True)

@@ -1,0 +1,39 @@
+{% extends "crm/base.html" %}
+{% block titulo %}Requerimiento {{ r.requerimiento_id }} | Cofrial SpA{% endblock %}
+{% block crm %}
+<div class="pagina-cab">
+  <div><h1>{{ r.asunto }}</h1><p class="sub">Requerimiento N.º {{ r.requerimiento_id }} · {{ r.creado_en|date:"d/m/Y H:i" }} · {{ r.cliente|default:"Sin cliente" }}{% if r.orden_id %} · pedido N.º {{ r.orden_id }}{% endif %}</p></div>
+  <div class="acciones"><a class="btn btn-sec" href="{% url 'crm_requerimientos' %}">Volver a requerimientos</a></div>
+</div>
+<div class="rejilla dos">
+  <section class="tarjeta-ui">
+    <h2>Lo que escribió el cliente</h2>
+    <p class="texto-original">{{ r.descripcion|linebreaksbr }}</p>
+    <dl class="datos">
+      <div><dt>Categoría</dt><dd>{{ r.categoria_requerimiento|default:"Sin clasificar" }}
+        {% if r.clasificado_manual %}<span class="chip cancelado">Manual</span>{% elif r.categoria_requerimiento and r.confianza_ia is None and r.desglose %}<span class="chip asignado" title="Asignada por el sistema al registrar una entrega no concretada; la IA solo afina el motivo.">Por entrega</span>{% elif r.confianza_ia is not None %}<span class="chip {% if r.categoria_requerimiento %}asignado{% else %}pendiente{% endif %}" title="Confianza declarada por el modelo (no calibrada); se asigna sola desde {% widthratio umbral 1 100 %} %">IA {% widthratio r.confianza_ia 1 100 %} %</span>{% endif %}</dd></div>
+      <div><dt>Estado</dt><dd>{{ r.get_estado_display }}</dd></div>
+    </dl>
+    <p class="frio">Confianza declarada por el modelo, umbral {% widthratio umbral 1 100 %} %.</p>
+  </section>
+  {% if d %}{% include "crm/_desglose.html" %}{% else %}
+  <section class="tarjeta-ui"><h2>Desglose de la IA</h2><p class="muted">{% if r.orden_id %}La IA no pudo desglosar este mensaje (o aún no lo intentó). El texto original está intacto.{% else %}Este requerimiento no está ligado a un pedido, así que no se desglosa.{% endif %}</p></section>{% endif %}
+</div>
+{% if dato %}
+<section class="tarjeta-ui dato-base" aria-labelledby="dato-t">
+  <h2 id="dato-t">Dato real de la base: temperatura del viaje</h2>
+  {% if dato.lecturas %}
+  <dl class="datos">
+    <div><dt>Camión</dt><dd>{{ dato.camion }}</dd></div>
+    <div><dt>Última temperatura</dt><dd>{{ dato.ultima_temp|floatformat:1 }} °C <span class="frio">({{ dato.ultima_hora|date:"d/m H:i" }})</span></dd></div>
+    <div><dt>Máxima del viaje</dt><dd>{{ dato.max_temp|floatformat:1 }} °C <span class="frio">(límite {{ dato.limite|floatformat:"-1" }} °C)</span></dd></div>
+    <div><dt>Alerta de frío</dt><dd>{% if dato.alertas %}<span class="chip alerta">Sí: {{ dato.alertas }} lectura{{ dato.alertas|pluralize }} fuera de rango</span>{% else %}<span class="chip entregado">No hubo</span>{% endif %}</dd></div>
+  </dl>
+  {% else %}<p class="muted">El camión {{ dato.camion }} no tiene lecturas durante este viaje.</p>{% endif %}
+  <p class="frio">Viene de la telemetría registrada, no de la IA: sirve para contrastar lo que dijo el cliente.</p>
+</section>{% endif %}
+{% if puede_editar and r.estado == "sin_clasificar" %}
+<section class="tarjeta-ui"><h2>Clasificar a mano</h2>
+  <form class="en-linea" method="post" action="/crm/requerimientos/{{ r.requerimiento_id }}/clasificar/">{% csrf_token %}
+    <select name="categoria" aria-label="Categoría">{% for c in categorias %}<option value="{{ c.pk }}">{{ c }}</option>{% endfor %}</select> <button>Clasificar</button></form></section>{% endif %}
+{% endblock %}

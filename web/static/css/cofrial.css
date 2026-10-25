@@ -589,3 +589,19 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 .pagina-cab > div:first-child { flex: 1 1 320px; min-width: 0; }
 .cerrar-viaje { margin: 14px 0 0; }
 .cerrar-viaje button { width: 100%; }
+
+/* desglose de la IA en el CRM */
+.desglose { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px; padding: 22px 24px; }
+.desglose-cab { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.desglose-cab h2 { margin: 0; }
+.desglose-resumen { font-size: 1.05rem; font-weight: 600; margin: 0 0 16px; }
+.desglose-sub { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-3); margin: 18px 0 8px; }
+.hechos { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.hechos q { display: block; color: var(--texto-3); font-size: .86rem; quotes: "\201C" "\201D"; }
+.desglose-pie { margin: 16px 0 0; }
+.chip.urg-baja { background: var(--entregado-bg); color: var(--entregado-fg); }
+.chip.urg-media { background: var(--pendiente-bg); color: var(--pendiente-fg); }
+.chip.urg-alta { background: var(--alerta-bg); color: var(--alerta-fg); }
+.texto-original { font-size: 1rem; line-height: 1.6; padding: 14px 16px; background: var(--fondo); border-radius: 12px; border-left: 4px solid var(--borde-fuerte); margin: 0 0 16px; }
+.dato-base { margin-top: 20px; border-left: 5px solid var(--lima); }
+.acierto-cifra b { font-size: 2rem; letter-spacing: -.03em; margin-right: 8px; }

@@ -240,12 +240,13 @@ def anonimizar(texto):
 DEFINICION_DE_MOTIVOS = (
     "nadie_en_casa = no había quién recibiera (en la casa, el local, la bodega o la oficina); "
     "direccion_incorrecta = la dirección estaba mal, no se encontró el lugar o fueron a otro; "
-    "producto_danado = caja o envase roto, hinchado, aplastado, vencido o producto en mal estado físico; "
-    "temperatura_inadecuada = llegó tibio, caliente, blando, descongelado, con mal olor por falta de frío o con un termómetro fuera de rango; "
+    "producto_danado = el problema es físico: golpes, rotura, envase abierto o aplastado, caja rota, hinchado, vencido; "
+    "temperatura_inadecuada = el problema es el frío: llegó tibio, caliente, blando, descongelado, líquido, con hielo derretido, con olor fuerte por falta de frío o con un termómetro fuera de rango; "
     "pedido_incompleto = faltaron productos o cantidades, o llegaron productos distintos a los pedidos; "
     "rechazo_del_cliente = el cliente decidió no recibirlo por una razón propia (por ejemplo ya lo compró en otro lado); "
     "demora = el camión no llegó a la hora, se atrasó o no pudo pasar; "
-    "otro = nada de lo anterior")
+    "otro = nada de lo anterior. "
+    "Desempate: si el daño o el olor se explica por falta de frío (descongelado, derretido, tibio) es temperatura_inadecuada; si se explica por un golpe o un envase roto es producto_danado")
 RUBRICA_DE_URGENCIA = ("alta = temperatura, productos dañados o riesgo para la salud; "
                        "media = el pedido sigue sin entregarse, llegó incompleto o equivocado, o hay un problema de dirección o de demora que ventas debe resolver hoy; "
                        "baja = no se recibió por una razón del propio cliente (no había nadie, rechazo) y se puede reprogramar sin apuro")

@@ -650,3 +650,38 @@ class DesgloseConIA(TestCase):
         self.assertEqual(self.client.get(f"/crm/requerimientos/{r.pk}/").status_code, 302)       # sin sesión
         self.client.login(username="ana@correo.test", password=CLAVE)
         self.assertEqual(self.client.get(f"/crm/requerimientos/{r.pk}/").status_code, 403)       # un cliente no entra al CRM
+
+
+class CategoriaDeEntrega(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_la_categoria_existe_y_cargar_demo_no_la_duplica(self):
+        from crm.models import CategoriaRequerimiento
+        self.assertEqual(CategoriaRequerimiento.objects.filter(nombre=s.CATEGORIA_ENTREGA).count(), 1)
+        call_command("cargar_demo", verbosity=0)
+        self.assertEqual(CategoriaRequerimiento.objects.filter(nombre=s.CATEGORIA_ENTREGA).count(), 1)
+
+    def test_una_entrega_no_concretada_usa_esa_categoria_y_la_ia_solo_afina_el_motivo(self):
+        import json
+        from unittest.mock import patch
+        orden = Orden.objects.first()
+        desglose = json.dumps({"resumen": "No había nadie.", "motivo_principal": "nadie_en_casa", "hechos": [], "urgencia": "baja", "accion_sugerida": "reprogramar_entrega", "confianza": 0.9})
+        with patch("crm.ia._llamar", return_value=desglose) as m:
+            r = s.crear_requerimiento(orden.direccion.cliente, "Entrega no concretada", "No había nadie en la casa", orden=orden, categoria_nombre=s.CATEGORIA_ENTREGA)
+        self.assertEqual(m.call_count, 1)                                        # solo el desglose; la categoría no se le pregunta a la IA
+        r.refresh_from_db()
+        self.assertEqual(r.categoria_requerimiento.nombre, s.CATEGORIA_ENTREGA)
+        self.assertEqual((r.estado, r.desglose["motivo_principal"]), ("clasificado", "nadie_en_casa"))
+
+    def test_la_categoria_por_defecto_no_se_muestra_como_manual(self):
+        import json
+        from unittest.mock import patch
+        orden = Orden.objects.first()
+        with patch("crm.ia._llamar", return_value=json.dumps({"resumen": "x", "motivo_principal": "demora", "hechos": [], "urgencia": "media", "accion_sugerida": "contactar_cliente", "confianza": 0.8})):
+            r = s.crear_requerimiento(orden.direccion.cliente, "Entrega no concretada", "El camión no llegó", orden=orden, categoria_nombre=s.CATEGORIA_ENTREGA)
+        self.client.login(username="vendedora@cofrial.cl", password=CLAVE)
+        for url in ("/crm/requerimientos/", f"/crm/requerimientos/{r.pk}/", "/crm/ia/"):
+            pagina = self.client.get(url).content.decode()
+            self.assertIn("Por entrega", pagina)

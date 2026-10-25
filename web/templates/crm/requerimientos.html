@@ -5,7 +5,8 @@
 <div class="tabla-caja"><table><thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Estado</th><th><span class="solo-lector">Acciones</span></th></tr></thead><tbody>
 {% for r in reqs %}<tr><td class="celda-asunto"><a href="{% url 'crm_requerimiento' r.requerimiento_id %}"><b>{{ r.asunto }}</b></a>{% if r.desglose %} <span class="chip urg-{{ r.desglose.urgencia }} sin-punto" title="Urgencia según el desglose de la IA">{{ r.desglose.urgencia }}</span>{% endif %}<br><span class="frio">{{ r.descripcion|truncatechars:90 }}</span></td><td>{{ r.cliente|default:"–" }}</td>
   <td>{{ r.categoria_requerimiento|default:"–" }}
-    {% if r.clasificado_manual or r.categoria_requerimiento and r.confianza_ia is None %}<span class="chip cancelado" title="Clasificado por una persona">Manual</span>
+    {% if r.categoria_requerimiento and r.confianza_ia is None and r.desglose and not r.clasificado_manual %}<span class="chip asignado" title="Asignada por el sistema al registrar una entrega no concretada; la IA solo afina el motivo.">Por entrega</span>
+    {% elif r.clasificado_manual or r.categoria_requerimiento and r.confianza_ia is None %}<span class="chip cancelado" title="Clasificado por una persona">Manual</span>
     {% elif r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado" title="Confianza declarada por el modelo en su propia respuesta (no es una probabilidad calibrada). Se asigna sola desde {% widthratio umbral 1 100 %} %.">IA {% widthratio r.confianza_ia 1 100 %} %</span>
     {% elif r.confianza_ia is not None %}<span class="chip pendiente" title="La IA no estuvo lo bastante segura (bajo {% widthratio umbral 1 100 %} %); queda para revisión manual.">IA dudó {% widthratio r.confianza_ia 1 100 %} %</span>{% endif %}</td>
   <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% else %}entregado{% endif %}">{{ r.get_estado_display }}</span></td>

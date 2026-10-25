@@ -171,6 +171,7 @@ def crear_pedido_para_cliente(usuario, cliente_id, cantidades, direccion_id, num
 
 
 # ---------------------------------------------------------------- RN-14: clasificación con IA y manual
+CATEGORIA_ENTREGA = "Problema en la entrega"   # la usa por defecto un requerimiento creado por una entrega no concretada
 UMBRAL_CONFIANZA = 0.60            # supuesto del informe (RN-14): por debajo, revisión manual
 
 
@@ -233,12 +234,19 @@ def acierto_de_la_ia():
     return {"corregidos": n, "coinciden": coinciden, "porcentaje": round(100 * coinciden / n) if n else None}
 
 
-def crear_requerimiento(cliente, asunto, descripcion, orden=None):
-    """CU-09: el cliente registra su consulta; se guarda siempre y luego se intenta clasificar."""
+def crear_requerimiento(cliente, asunto, descripcion, orden=None, categoria_nombre=None):
+    """CU-09: el cliente registra su consulta; se guarda siempre y luego se intenta clasificar.
+    Con `categoria_nombre` (p. ej. CATEGORIA_ENTREGA) la categoría ya es conocida: se asigna sin pasar por la IA, que solo afina el motivo en el desglose."""
     asunto, descripcion = asunto.strip(), descripcion.strip()
     if not asunto or not descripcion:
         raise ErrorDeNegocio("Indica el asunto y describe tu consulta.")
     r = Requerimiento.objects.create(cliente=cliente, orden=orden, asunto=asunto[:150], descripcion=descripcion)
+    categoria = CategoriaRequerimiento.objects.filter(nombre=categoria_nombre).first() if categoria_nombre else None
+    if categoria:
+        r.categoria_requerimiento, r.estado = categoria, "clasificado"
+        r.save(update_fields=["categoria_requerimiento", "estado"])
+        desglosar_requerimiento(r)
+        return r
     return clasificar_con_ia(r)
 
 

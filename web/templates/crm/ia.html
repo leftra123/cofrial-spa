@@ -87,7 +87,8 @@
     <td><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:70 }}</span></td>
     <td>{{ r.cliente|default:"–" }}</td>
     <td>{{ r.categoria_requerimiento|default:"–" }}</td>
-    <td>{% if r.clasificado_manual or r.categoria_requerimiento and r.confianza_ia is None %}<span class="chip cancelado">Manual</span>
+    <td>{% if r.categoria_requerimiento and r.confianza_ia is None and r.desglose and not r.clasificado_manual %}<span class="chip asignado" title="Asignada por el sistema al registrar una entrega no concretada; la IA solo afina el motivo.">Por entrega</span>
+    {% elif r.clasificado_manual or r.categoria_requerimiento and r.confianza_ia is None %}<span class="chip cancelado">Manual</span>
         {% elif r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado" title="Confianza declarada por el modelo (no calibrada)">IA · {% widthratio r.confianza_ia 1 100 %} %</span>
         {% elif r.confianza_ia is not None %}<span class="chip pendiente" title="Bajo el umbral de {% widthratio umbral 1 100 %} %">IA dudó · {% widthratio r.confianza_ia 1 100 %} %</span>
         {% else %}<span class="frio">Aún nadie</span>{% endif %}</td>

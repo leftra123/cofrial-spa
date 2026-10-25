@@ -11,7 +11,7 @@
     <p class="texto-original">{{ r.descripcion|linebreaksbr }}</p>
     <dl class="datos">
       <div><dt>Categoría</dt><dd>{{ r.categoria_requerimiento|default:"Sin clasificar" }}
-        {% if r.clasificado_manual %}<span class="chip cancelado">Manual</span>{% elif r.confianza_ia is not None %}<span class="chip {% if r.categoria_requerimiento %}asignado{% else %}pendiente{% endif %}" title="Confianza declarada por el modelo (no calibrada); se asigna sola desde {% widthratio umbral 1 100 %} %">IA {% widthratio r.confianza_ia 1 100 %} %</span>{% endif %}</dd></div>
+        {% if r.clasificado_manual %}<span class="chip cancelado">Manual</span>{% elif r.categoria_requerimiento and r.confianza_ia is None and r.desglose %}<span class="chip asignado" title="Asignada por el sistema al registrar una entrega no concretada; la IA solo afina el motivo.">Por entrega</span>{% elif r.confianza_ia is not None %}<span class="chip {% if r.categoria_requerimiento %}asignado{% else %}pendiente{% endif %}" title="Confianza declarada por el modelo (no calibrada); se asigna sola desde {% widthratio umbral 1 100 %} %">IA {% widthratio r.confianza_ia 1 100 %} %</span>{% endif %}</dd></div>
       <div><dt>Estado</dt><dd>{{ r.get_estado_display }}</dd></div>
     </dl>
     <p class="frio">Confianza declarada por el modelo, umbral {% widthratio umbral 1 100 %} %.</p>

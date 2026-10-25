@@ -29,7 +29,7 @@ services:
       <<: *bd
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-clave-solo-para-desarrollo}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
-      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo-cofrial-2026}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?define DEMO_PASSWORD en .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       VELOCIDAD_MEDIA_KMH: ${VELOCIDAD_MEDIA_KMH:-50}
       FACTOR_CALLES: ${FACTOR_CALLES:-1.3}

@@ -1,6 +1,8 @@
 """Carga datos de demostración (ficticios) de forma idempotente: se puede ejecutar varias veces."""
 import os
 import random
+import secrets
+import sys
 from datetime import timedelta
 from decimal import Decimal
 
@@ -85,7 +87,15 @@ class Command(BaseCommand):
     help = "Carga catálogo, clientes, flota y datos base de demostración."
 
     def handle(self, *args, **opciones):
-        clave = os.environ.get("DEMO_PASSWORD", "demo-cofrial-2026")
+        clave = os.environ.get("DEMO_PASSWORD")
+        if not clave:
+            # Sin DEMO_PASSWORD no hay clave por defecto en el código: solo las pruebas automáticas usan una fija (base de datos de prueba);
+            # en cualquier otro caso se genera una al azar y se muestra una sola vez.
+            if sys.argv[1:2] == ["test"]:
+                clave = "demo-cofrial-2026"
+            else:
+                clave = secrets.token_urlsafe(12)
+                self.stdout.write(self.style.WARNING(f"DEMO_PASSWORD no está definida: las cuentas nuevas quedan con la clave generada {clave}"))
         # La clave se fija SOLO al crear una cuenta: una clave cambiada desde adentro (administración o «Cambiar mi clave») nunca se pisa,
         # aunque este comando corra en cada arranque. Las cuentas administradoras usan ADMIN_PASSWORD si está definida.
         clave_admin = os.environ.get("ADMIN_PASSWORD") or clave

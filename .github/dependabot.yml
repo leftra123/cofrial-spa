@@ -1,0 +1,15 @@
+# Avisos semanales de actualizaciones de seguridad para las dependencias del proyecto.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /web
+    schedule: {interval: weekly}
+  - package-ecosystem: docker
+    directory: /web
+    schedule: {interval: weekly}
+  - package-ecosystem: docker
+    directory: /iot
+    schedule: {interval: weekly}
+  - package-ecosystem: npm
+    directory: /informe/exportar
+    schedule: {interval: weekly}

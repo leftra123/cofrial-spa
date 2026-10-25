@@ -10,8 +10,13 @@ def entorno(nombre, defecto=None):
     return os.environ.get(nombre, defecto)
 
 
-SECRET_KEY = entorno("DJANGO_SECRET_KEY", "clave-solo-para-desarrollo")
 DEBUG = entorno("DJANGO_DEBUG", "0") == "1"
+# Sin clave propia solo se arranca en desarrollo (DEBUG) o en las pruebas: una clave conocida permite falsificar sesiones.
+SECRET_KEY = entorno("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if not (DEBUG or "test" in sys.argv):
+        raise RuntimeError("Define DJANGO_SECRET_KEY en .env (una clave larga y aleatoria).")
+    SECRET_KEY = "clave-solo-para-desarrollo"
 ALLOWED_HOSTS = [h for h in entorno("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in entorno("DJANGO_CSRF_ORIGINS", "").split(",") if o]
 CSRF_FAILURE_VIEW = "cofrial.vistas.csrf_fallo"
@@ -96,6 +101,15 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
 }
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+# Detrás de HTTPS (DJANGO_HTTPS=1): cookies solo por canal seguro, HSTS y redirección. Apagado por defecto porque la demo en EC2 puede ir por HTTP.
+if entorno("DJANGO_HTTPS", "0") == "1":
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SAMESITE = "Lax"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
 LOGIN_URL = "/cuenta/entrar/"
 LOGIN_REDIRECT_URL = "/catalogo/"
 LOGOUT_REDIRECT_URL = "/"

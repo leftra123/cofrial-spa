@@ -22,7 +22,7 @@ class AvisosYAdmin(TestCase):
         self.assertEqual(r["Location"], "/catalogo/1/")
 
     def test_el_equipo_no_rebota_al_login_desde_avisos(self):
-        for usuario, destino in (("vendedora@cofrial.cl", "/crm/"), ("gerencia@cofrial.cl", "/crm/"), ("despacho@cofrial.cl", "/crm/"), ("admin@cofrial.cl", "/crm/")):
+        for usuario, destino in (("vendedora@cofrial.cl", "/crm/"), ("gerencia@cofrial.cl", "/crm/"), ("despacho@cofrial.cl", "/flota/"), ("admin@cofrial.cl", "/crm/")):
             self.client.logout()
             self.entrar(usuario)
             r = self.client.get("/avisos/")

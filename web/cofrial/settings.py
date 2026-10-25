@@ -111,7 +111,7 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 LOGIN_URL = "/cuenta/entrar/"
-LOGIN_REDIRECT_URL = "/catalogo/"
+LOGIN_REDIRECT_URL = "/"                        # lo decide cofrial.acceso.inicio_de(); «/» envía a cada cuenta a su inicio
 LOGOUT_REDIRECT_URL = "/"
 
 # Los mosaicos de OpenStreetMap exigen que el navegador envíe el Referer (su política de uso). Django envía por defecto «same-origin»,

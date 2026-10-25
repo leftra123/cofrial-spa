@@ -8,7 +8,7 @@ from flota import demo as flota_demo
 
 from flota.urls import api_urlpatterns as flota_api
 
-admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser      # el equipo trabaja en el CRM y la flota; el admin de Django es del administrador
+admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser      # el equipo (vendedor, gerencia, despacho) trabaja en el CRM y la flota; el admin de Django es del administrador
 admin.site.site_header = "Cofrial SpA: CRM y operación"
 admin.site.site_title = "Cofrial"
 
@@ -20,6 +20,7 @@ def salud(request):
 
 urlpatterns = [
     path("", vistas.inicio, name="inicio"),
+    path("portada/", lambda request: vistas.inicio(request, portada=True), name="portada"),
     path("guia/", vistas.guia, name="guia"),
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),

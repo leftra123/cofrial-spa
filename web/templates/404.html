@@ -9,6 +9,6 @@
   {% elif "/catalogo/" in request_path %}<p>Ese producto ya no está en el catálogo o la dirección está mal escrita.</p>
   {% elif "/crm/" in request_path %}<p>Ese registro del CRM no existe o no está en tu cartera.</p>
   {% else %}<p>Puede que la dirección esté mal escrita o que el recurso ya no exista.</p>{% endif %}
-  <div class="acciones"><a class="btn" href="/">Volver al inicio</a>{% if "/pedidos/" in request_path %}<a class="btn btn-sec" href="/pedidos/">Ver mis pedidos</a>{% elif "/crm/" in request_path %}<a class="btn btn-sec" href="/crm/">Ir al CRM</a>{% else %}<a class="btn btn-sec" href="/catalogo/">Ver el catálogo</a>{% endif %}</div>
+  <div class="acciones"><a class="btn" href="{{ inicio_url|default:"/" }}">Ir a mi inicio</a>{% if "/pedidos/" in request_path %}<a class="btn btn-sec" href="/pedidos/">Ver mis pedidos</a>{% elif "/crm/" in request_path %}<a class="btn btn-sec" href="/crm/">Ir al CRM</a>{% elif menu.tienda or tipo_cuenta == "anonimo" %}<a class="btn btn-sec" href="/catalogo/">Ver el catálogo</a>{% endif %}</div>
 </div>
 {% endblock %}

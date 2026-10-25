@@ -12,6 +12,7 @@ from django.utils.text import slugify
 
 from catalogo.models import Categoria, Producto
 from clientes.forms import RegistroB2CForm
+from .acceso import inicio_de
 from crm import servicios as crm
 from flota import servicios as flota
 from flota.models import Camion, Despacho, Telemetria
@@ -23,7 +24,12 @@ def _imagen_de_categoria(nombre):
     return ruta if (Path(settings.BASE_DIR) / "static" / ruta).exists() else None
 
 
-def inicio(request):
+def inicio(request, portada=False):
+    """«/»: la portada es para visitantes. Con la sesión abierta cada cuenta va a su inicio (acceso.inicio_de); `portada=True` (/portada/) la deja ver al personal."""
+    if request.user.is_authenticated and not portada:
+        destino = inicio_de(request.user)
+        if destino != "/":
+            return redirect(destino)
     ultima = Telemetria.objects.order_by("-registrado_en").first()
     hace = int((timezone.now() - ultima.registrado_en).total_seconds()) if ultima else None
     return render(request, "inicio.html", {
@@ -43,16 +49,20 @@ class Entrar(LoginView):
     template_name = "cuenta/entrar.html"
     authentication_form = FormularioEntrar
 
+    def dispatch(self, request, *args, **kwargs):
+        """Con la sesión abierta, /cuenta/entrar/ lleva al inicio de la cuenta. No respeta ?next a propósito: una página que manda al login a quien ya entró haría un bucle."""
+        if request.user.is_authenticated:
+            return redirect(inicio_de(request.user))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
-        destino = self.get_redirect_url()
-        if destino:
-            return destino
-        return "/crm/" if crm.rol(self.request.user) else "/catalogo/"
+        """Primero el ?next, que Django solo acepta si es del mismo sitio (sin redirecciones abiertas); si no hay, el inicio del rol."""
+        return self.get_redirect_url() or inicio_de(self.request.user)
 
 
 def registro(request):
     if request.user.is_authenticated:
-        return redirect("catalogo")
+        return redirect(inicio_de(request.user))
     form = RegistroB2CForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         usuario = form.guardar()

@@ -123,7 +123,8 @@ def pedir_aviso(request):
     cliente = _cliente(request)
     if cliente is None:
         messages.error(request, "Ingresa con tu cuenta de cliente para pedir un aviso.")
-        return redirect("/cuenta/entrar/")
+        from cofrial.acceso import inicio_de
+        return redirect(inicio_de(request.user) if request.user.is_authenticated else "/cuenta/entrar/")
     try:
         a = avisos.pedir(cliente, int(request.POST.get("producto", 0)), int(request.POST.get("cantidad", 0)))
         messages.success(request, f"Listo: te avisaremos cuando haya al menos {a.cantidad_minima} de {a.producto.nombre}.")
@@ -137,10 +138,10 @@ def pedir_aviso(request):
 def mis_avisos(request):
     cliente = _cliente(request)
     if cliente is None:
-        if request.user.is_authenticated:           # una cuenta del equipo no tiene avisos de stock: ir al login con sesión abierta sería un rebote inútil
+        if request.user.is_authenticated:           # una cuenta del equipo no tiene avisos de stock: va a su inicio, no al login (volvería a «/avisos/» en bucle)
+            from cofrial.acceso import inicio_de
             messages.info(request, "Los avisos de stock son de las cuentas de clientes.")
-            from crm import servicios as crm
-            return redirect("/crm/" if crm.rol(request.user) else "/catalogo/")
+            return redirect(inicio_de(request.user))
         return redirect("/cuenta/entrar/?next=/avisos/")
     lista = list(avisos.pendientes(cliente))
     for a in lista:

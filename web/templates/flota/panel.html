@@ -3,8 +3,8 @@
 {% block titulo %}Flota | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
-  <div><h1>Flota</h1><p class="sub">Estado de cada camión según su última lectura de telemetría.</p></div>
-  <div class="acciones"><span id="en-vivo" aria-live="off">Conectando…</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a><a class="btn" href="/flota/despachar/">Armar despacho</a></div>
+  <div><h1>Flota</h1><p class="sub">Hola, <b>{{ user.get_full_name|default:user.username }}</b> · {{ etiqueta_cuenta }}. Estado de cada camión según su última lectura de telemetría.</p></div>
+  <div class="acciones"><span id="en-vivo" aria-live="off">Conectando…</span><a class="btn btn-sec" href="/crm/alertas/">Ver alertas de frío</a>{% if tipo_cuenta == "admin" or tipo_cuenta == "despachador" %}<a class="btn" href="/flota/despachar/">Armar despacho</a>{% endif %}</div>
 </div>
 {% endblock %}
 {% block contenido %}

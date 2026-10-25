@@ -1,5 +1,6 @@
 """Panel de flota (solo lectura): estado de cada camión según su última lectura de telemetría y su viaje activo."""
 from django.conf import settings
+from django.http import JsonResponse
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -10,8 +11,32 @@ from pedidos.servicios import ErrorDeNegocio
 
 from crm.views import con_rol
 
-from . import servicios
+from . import rutas, servicios
 from .servicios import estado_flota
+
+
+def _ruta_para_mapa(viaje):
+    """La ruta guardada del viaje (se calcula una vez si es de antes de guardarlas) con los minutos que tomaría a la velocidad media."""
+    ruta = rutas.asegurar_ruta(viaje)
+    if not ruta:
+        return None
+    return {**ruta, "minutos": round(ruta["km"] / settings.VELOCIDAD_MEDIA_KMH * 60)}
+
+
+@con_rol("admin", "gerencia", "despachador")
+def ruta_sugerida(request):
+    """Vista previa al armar un despacho: la misma ruta por calles que quedará guardada al despachar (sale de la caché del servidor)."""
+    ids = [int(i) for i in request.GET.get("ordenes", "").split(",") if i.strip().isdigit()]
+    ordenes = list(servicios.pedidos_por_despachar().filter(pk__in=ids))
+    ruta = rutas.armar_ruta([(o.direccion_id, o.direccion.lat, o.direccion.long) for o in ordenes])
+    if ruta is None:
+        return JsonResponse({"ruta": None})
+    por_direccion = {}
+    for o in ordenes:
+        por_direccion.setdefault(o.direccion_id, []).append(o.orden_id)
+    for p in ruta["paradas"]:
+        p["ordenes"] = por_direccion.get(p["direccion_id"], [])
+    return JsonResponse({"ruta": {**ruta, "minutos": round(ruta["km"] / settings.VELOCIDAD_MEDIA_KMH * 60)}})
 
 
 @con_rol("admin", "gerencia", "despachador")
@@ -23,7 +48,9 @@ def panel(request):
             "camiones": [{"id": x["camion"].camion_id, "patente": x["camion"].patente, "lat": x["lectura"].lat, "long": x["lectura"].long,
                           "alerta": x["alerta"]} for x in tarjetas if x["lectura"]],
             "viajes": [{"camion": x["camion"].camion_id, "patente": x["camion"].patente, "despacho": x["viaje"].despacho_id,
-                        "paradas": [{"orden": o.orden_id, "cliente": o.direccion.cliente.nombre, "direccion": str(o.direccion),
+                        "situacion": x["situacion_texto"], "ruta": _ruta_para_mapa(x["viaje"]),
+                        "paradas": [{"orden": o.orden_id, "direccion_id": o.direccion_id, "cliente": o.direccion.cliente.nombre,
+                                     "direccion": str(o.direccion), "estado": o.estado_orden.nombre,
                                      "lat": o.direccion.lat, "long": o.direccion.long}
                                     for o in x["pedidos"] if o.direccion.lat is not None]} for x in viajes]}
     return render(request, "flota/panel.html", {"rol": request.rol, "tarjetas": tarjetas, "resumen": resumen,
@@ -39,7 +66,7 @@ def cerrar_despacho(request, despacho_id):
         return redirect("flota")
     try:
         d, n = servicios.cerrar_despacho(despacho_id)
-        messages.success(request, f"Despacho N.º {d.despacho_id} cerrado: {d.camion_id} quedó libre y {n} pedido{'s' if n != 1 else ''} pasó a «Entregada».")
+        messages.success(request, f"Despacho N.º {d.despacho_id} dado por llegado: {d.camion_id} vuelve a la base y {n} pedido{'s' if n != 1 else ''} pasó a «Entregada».")
     except ErrorDeNegocio as e:
         for m in e.mensajes:
             messages.error(request, m)

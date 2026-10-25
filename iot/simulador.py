@@ -7,13 +7,17 @@ camion_id, temp_camara, lat, long, combustible_pct y alerta_ruptura_frio.
 La alerta es verdadera cuando la temperatura sale del rango del camión. La mayoría de la flota funciona bien; de vez en
 cuando un camión sufre una ruptura de frío (falla del equipo) que sube su temperatura hasta que se "repara".
 
-Sin viaje, recorridos (líneas rectas entre puntos, con el tiempo acelerado para que se vean en una demostración):
-  - urbano: vueltas alrededor de la base (INACAP Temuco) dentro de unos 7 km;
-  - regional: viaje de ida y vuelta entre la base y una ciudad lejana de La Araucanía (hasta ~100 km).
-
-Con un despacho en curso (salida registrada y sin llegada) en la tabla despacho, el camión parte desde donde está hacia las
-direcciones de entrega de sus pedidos (el más cercano primero), se detiene unas lecturas en cada parada intermedia y queda
-estacionado en la última, listo para marcar el despacho como entregado.
+Ciclo de un camión:
+  - SIN despacho queda GUARDADO en la base (un puesto fijo junto al frigorífico), detenido, con su telemetría cada INTERVALO_SEG.
+  - Con un despacho en curso (salida registrada y sin regreso) recorre la polilínea por calles que el servidor calculó y guardó
+    en despacho.ruta_geojson (base -> paradas -> base); si el despacho no la tiene, recorre rectas entre las direcciones.
+  - Al llegar a cada dirección los pedidos de esa dirección que iban «Despachada» pasan a «Camión en la puerta» y empieza a correr
+    el plazo del cliente (fase en_la_puerta); se queda DETENCION_LECTURAS lecturas y sigue.
+  - Al llegar a la última parada registra despacho.llegada_en; luego vuelve a la base por la ruta de regreso (fase volviendo)
+    y al llegar registra despacho.regreso_en: recién entonces el camión queda libre.
+  - El simulador también da por entregados («confirmada automáticamente») los pedidos cuyo camión lleva más de
+    CONFIRMACION_AUTO_SEG en la puerta sin respuesta del cliente. Es una sentencia condicional sobre el estado: repetirla, o que
+    corra en varios contenedores o tras un reinicio, no cambia nada; el plazo está en la base (orden.puerta_en), no en memoria.
 """
 import logging
 import math
@@ -28,12 +32,12 @@ log = logging.getLogger("simulador")
 
 INTERVALO = float(os.environ.get("INTERVALO_SEG", "5"))
 PROB_RUPTURA = float(os.environ.get("PROB_RUPTURA", "0.001"))     # por lectura y camión: la flota casi siempre está sana
-VELOCIDAD_X = float(os.environ.get("VELOCIDAD_X", "1"))           # multiplica los kilómetros que avanza cada camión por lectura
 # Velocidad y factor de calles COMPARTIDOS con la web: la hora de llegada que muestra la tienda se calcula con los mismos valores
 # (variables VELOCIDAD_MEDIA_KMH y FACTOR_CALLES), así el camión llega cuando la pantalla dijo. VELOCIDAD_KMH queda solo por compatibilidad.
 VELOCIDAD_MEDIA_KMH = float(os.environ.get("VELOCIDAD_MEDIA_KMH") or os.environ.get("VELOCIDAD_KMH") or "50")
-FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES", "1.3"))      # la ruta por calles es más larga que la línea recta que recorre el simulador
-DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas detenido en cada parada intermedia
+FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES", "1.3"))      # solo para rectas: la ruta por calles es más larga que la línea recta
+DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas detenido en cada dirección de entrega
+CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)
 if os.environ.get("CAMION_ID"):
     IDS = [os.environ["CAMION_ID"]]
 else:
@@ -42,14 +46,6 @@ else:
 
 # Base de la flota (referencia: INACAP Temuco). Debe coincidir con BASE_LOGISTICA en web/cofrial/settings.py
 BASE = (-38.7330, -72.6040)
-# Ciudades de destino de los viajes regionales (lat, long aproximadas)
-DESTINOS = [("Lautaro", -38.5300, -72.4330), ("Nueva Imperial", -38.7440, -72.9500), ("Villarrica", -39.2850, -72.2270),
-            ("Pucón", -39.2720, -71.9770), ("Loncoche", -39.3700, -72.6310), ("Victoria", -38.2330, -72.3350),
-            ("Freire", -38.9500, -72.6200), ("Gorbea", -39.1000, -72.6700), ("Carahue", -38.7100, -73.1600),
-            ("Cunco", -38.9250, -72.0300), ("Vilcún", -38.6700, -72.2300), ("Traiguén", -38.2500, -72.6700),
-            ("Angol", -37.8000, -72.7100), ("Curacautín", -38.4400, -71.8900)]
-KM_LAT, KM_LON = 111.0, 111.0 * math.cos(math.radians(BASE[0]))
-KM_LECTURA_URBANO, KM_LECTURA_REGIONAL = 0.15, 0.6
 
 
 def conectar():
@@ -74,31 +70,31 @@ def km_entre(a, b):
 
 
 def ordenar_paradas(origen, paradas):
-    """Vecino más cercano: de la posición actual a la parada más próxima, y desde ahí a la siguiente más próxima."""
+    """Vecino más cercano sobre [(direccion_id, lat, long)] (solo para despachos sin ruta guardada)."""
     pendientes, orden, actual = list(paradas), [], origen
     while pendientes:
-        siguiente = min(pendientes, key=lambda p: km_entre(actual, p))
+        siguiente = min(pendientes, key=lambda p: km_entre(actual, (p[1], p[2])))
         pendientes.remove(siguiente)
         orden.append(siguiente)
-        actual = siguiente
+        actual = (siguiente[1], siguiente[2])
     return orden
 
 
 def viajes_en_curso(con, ids):
-    """{camion_id: (despacho_id, direcciones)} de los viajes en curso (salida registrada y sin llegada); las direcciones sin
-    ubicar o de pedidos ya cerrados no cuentan."""
+    """{camion_id: viaje} de los despachos con salida y sin regreso. viaje = {despacho_id, llego (ya llegó a la última parada),
+    ruta (dict guardado o None), paradas (direcciones por visitar, solo si no hay ruta)}."""
     viajes = {}
-    for camion_id, despacho_id in con.execute(
-            "SELECT camion_id, despacho_id FROM despacho WHERE camion_id = ANY(%s) AND salida_en IS NOT NULL AND llegada_en IS NULL "
-            "ORDER BY salida_en DESC", (ids,)).fetchall():
-        viajes[camion_id] = (despacho_id, [])                    # si hubiera dos abiertos, gana el más antiguo
-    if viajes:
-        por_despacho = {v[0]: v[1] for v in viajes.values()}
-        for despacho_id, lat, lon in con.execute(
-                'SELECT DISTINCT o.despacho_id, d.lat, d."long" FROM orden o JOIN direccion d USING (direccion_id) '
-                "JOIN estado_orden e USING (estado_orden_id) WHERE o.despacho_id = ANY(%s) AND NOT e.es_final "
-                'AND d.lat IS NOT NULL AND d."long" IS NOT NULL', (list(por_despacho),)).fetchall():
-            por_despacho[despacho_id].append((float(lat), float(lon)))
+    for camion_id, despacho_id, llego, ruta in con.execute(
+            "SELECT camion_id, despacho_id, llegada_en IS NOT NULL, ruta_geojson FROM despacho "
+            "WHERE camion_id = ANY(%s) AND salida_en IS NOT NULL AND regreso_en IS NULL ORDER BY salida_en DESC", (ids,)).fetchall():
+        viajes[camion_id] = {"despacho_id": despacho_id, "llego": llego, "ruta": ruta, "paradas": []}     # si hubiera dos abiertos, gana el más antiguo
+    sin_ruta = {v["despacho_id"]: v for v in viajes.values() if not v["ruta"]}
+    if sin_ruta:
+        for despacho_id, did, lat, lon in con.execute(
+                'SELECT DISTINCT o.despacho_id, d.direccion_id, d.lat, d."long" FROM orden o JOIN direccion d USING (direccion_id) '
+                "JOIN estado_orden e USING (estado_orden_id) WHERE o.despacho_id = ANY(%s) AND e.nombre = 'Despachada' "
+                'AND d.lat IS NOT NULL AND d."long" IS NOT NULL', (list(sin_ruta),)).fetchall():
+            sin_ruta[despacho_id]["paradas"].append((did, float(lat), float(lon)))
     return viajes
 
 
@@ -108,69 +104,114 @@ class Camion:
         self.tmin, self.tmax = tmin, tmax
         self.objetivo = (tmin + tmax) / 2
         self.temp = self.objetivo
-        azar = random.Random(camion_id)                          # el recorrido de cada camión es siempre el mismo
-        n = int(camion_id.split("-")[-1]) if camion_id.split("-")[-1].isdigit() else 0
-        self.regional = n > 3 and azar.random() < 0.35           # CAM-01 a CAM-03 reparten en Temuco (despachos de demostración)
-        if self.regional:
-            self.destino = azar.choice(DESTINOS)[1:]
-            self.puntos = [BASE, self.destino]
-            self.paso_km = KM_LECTURA_REGIONAL * azar.uniform(0.8, 1.2)
-        else:
-            vertices = azar.randint(5, 7)
-            angulos = sorted(azar.uniform(0, 2 * math.pi) for _ in range(vertices))
-            radios = [azar.uniform(1.5, 7.0) for _ in range(vertices)]
-            self.puntos = [(BASE[0] + r * math.sin(a) / KM_LAT, BASE[1] + r * math.cos(a) / KM_LON) for a, r in zip(angulos, radios)]
-            self.paso_km = KM_LECTURA_URBANO * azar.uniform(0.8, 1.2)
-        self.paso_km *= VELOCIDAD_X
-        self.tramo = azar.randrange(len(self.puntos))
-        self.avance = azar.random()
+        azar = random.Random(camion_id)                          # cada camión tiene siempre el mismo puesto en la base (a pocos metros del resto)
+        self.casa = (BASE[0] + azar.uniform(-0.0003, 0.0003), BASE[1] + azar.uniform(-0.0003, 0.0003))
+        self.pos = self.casa
         self.combustible = random.randint(60, 100)
         self.ruptura_restante = 0
-        a, b = self.puntos[self.tramo], self.puntos[self.siguiente(self.tramo)]
-        self.pos = (a[0] + (b[0] - a[0]) * self.avance, a[1] + (b[1] - a[1]) * self.avance)   # parte en algún punto del recorrido
-        self.tramo = self.siguiente(self.tramo)                  # punto del recorrido al que se dirige
-        self.despacho = None            # viaje en curso: id, paradas por visitar y lecturas que faltan de detención
-        self.paradas = []
+        self.despacho = None            # viaje en curso
+        self.camino = []                # [(lat, long)...] que está recorriendo; vacío = guardado en la base
+        self.i = 0                      # índice del próximo vértice del camino
+        self.marcas = {}                # {índice del camino: [direccion_id...]} de las direcciones de entrega
+        self.ultima_marca = -1          # índice de la última parada
+        self.paso_km = 0.0
         self.detenido = 0
+        self.al_reanudar = None         # fase que se informa al terminar la detención
+        self.fase = None
+        self.eventos = []               # lo que el proceso debe escribir en la base: ("puerta", despacho, direccion), ("llegada", d), ("fase", d, f), ("regreso", d)
 
-    def siguiente(self, tramo):
-        return 1 - tramo if self.regional else (tramo + 1) % len(self.puntos)
+    @property
+    def en_base(self):
+        return self.despacho is None and not self.camino
 
-    def asignar(self, despacho_id, paradas):
-        """Sincroniza con el viaje activo de la base: al aparecer uno nuevo ordena sus paradas desde la posición actual."""
-        if despacho_id != self.despacho:
-            self.despacho, self.detenido = despacho_id, 0
-            self.paradas = ordenar_paradas(self.pos, paradas)
-            if despacho_id:
-                log.info("%s, viaje %s: %d parada(s)", self.id, despacho_id, len(self.paradas))
-            else:
-                log.info("%s sin viaje: vuelve a su recorrido", self.id)
-        elif despacho_id:
-            vigentes = set(paradas)
-            self.paradas = [p for p in self.paradas if p in vigentes]    # un pedido entregado o cancelado deja de ser parada
+    def _paso_para(self, aproximada):
+        return VELOCIDAD_MEDIA_KMH * INTERVALO / 3600 / (FACTOR_CALLES if aproximada else 1)
+
+    def _volver(self):
+        """Regreso directo a la base desde donde está (sin ruta guardada para ese tramo)."""
+        self.camino, self.i, self.marcas, self.ultima_marca = [self.pos, self.casa], 1, {}, -1
+        self.paso_km = self._paso_para(True)
+
+    def asignar(self, viaje):
+        """Sincroniza con el despacho de la base: al aparecer uno nuevo arma su camino; si desaparece, vuelve a la base."""
+        if viaje is None:
+            if self.despacho is not None:                        # el viaje se cerró desde afuera: vuelve a su puesto
+                log.info("%s sin viaje: vuelve a la base", self.id)
+                self.despacho, self.fase, self.detenido, self.al_reanudar = None, None, 0, None
+                self._volver()
+            return
+        if viaje["despacho_id"] != self.despacho:
+            self.despacho, self.detenido, self.al_reanudar, self.eventos = viaje["despacho_id"], 0, None, []
+            ruta = viaje["ruta"]
+            if viaje["llego"]:                                    # reinicio a mitad de la vuelta: solo termina de volver
+                self._volver()
+                self.fase = "volviendo"
+            elif ruta and ruta.get("puntos"):
+                puntos = [tuple(p) for p in ruta["puntos"]]
+                desfase = 0
+                if km_entre(self.pos, puntos[0]) > 0.2:           # no parte de la base: primero llega al comienzo de la ruta
+                    puntos, desfase = [self.pos] + puntos, 1
+                self.camino, self.i, self.marcas, self.paso_km = puntos, 1, {}, self._paso_para(bool(ruta.get("aproximada")))
+                for p in ruta.get("paradas", []):
+                    self.marcas.setdefault(p["indice"] + desfase, []).append(p["direccion_id"])
+                self.fase = "en_ruta"
+            else:                                                 # sin ruta guardada: rectas entre las direcciones y de vuelta a la base
+                orden = ordenar_paradas(self.pos, viaje["paradas"])
+                self.camino = [self.pos] + [(p[1], p[2]) for p in orden] + [self.casa]
+                self.i, self.marcas, self.paso_km = 1, {k + 1: [p[0]] for k, p in enumerate(orden)}, self._paso_para(True)
+                self.fase = "en_ruta"
+            self.ultima_marca = max(self.marcas) if self.marcas else -1
+            log.info("%s, viaje %s: %d parada(s)", self.id, self.despacho, len(self.marcas))
+            if not self.marcas and self.fase == "en_ruta":        # nada que entregar: llega y vuelve
+                self.eventos.append(("llegada", self.despacho))
+                self.fase = "volviendo"
+                self.eventos.append(("fase", self.despacho, "volviendo"))
+        elif viaje["llego"] and self.fase != "volviendo":          # corrección manual: se dio el viaje por llegado, el camión regresa
+            self.fase, self.detenido, self.al_reanudar = "volviendo", 0, None
+            self._volver()
 
     def posicion(self):
         if self.detenido > 0:
             self.detenido -= 1
+            if self.detenido == 0 and self.al_reanudar:
+                self.fase = self.al_reanudar
+                self.eventos.append(("fase", self.despacho, self.fase))
+                self.al_reanudar = None
             return self.pos
-        if self.despacho is not None:
-            if not self.paradas:
-                return self.pos                                   # estacionado en la última entrega
-            destino, paso_km = self.paradas[0], VELOCIDAD_MEDIA_KMH * INTERVALO / 3600 / FACTOR_CALLES   # en línea recta; por calles equivale a VELOCIDAD_MEDIA_KMH
-        else:
-            destino, paso_km = self.puntos[self.tramo], self.paso_km
-        faltan = km_entre(self.pos, destino)
-        if faltan <= paso_km:
-            self.pos = destino
-            if self.despacho is None:
-                self.tramo = self.siguiente(self.tramo)
-            else:
-                self.paradas.pop(0)
-                if self.paradas:                                  # la última parada no se espera: queda estacionado
-                    self.detenido = DETENCION_LECTURAS
-        else:
-            f = paso_km / faltan
-            self.pos = (self.pos[0] + (destino[0] - self.pos[0]) * f, self.pos[1] + (destino[1] - self.pos[1]) * f)
+        if not self.camino:
+            return self.pos                                       # guardado en la base
+        paso = self.paso_km
+        while paso > 0 and self.i < len(self.camino):
+            destino = self.camino[self.i]
+            faltan = km_entre(self.pos, destino)
+            if faltan > paso:
+                f = paso / faltan
+                self.pos = (self.pos[0] + (destino[0] - self.pos[0]) * f, self.pos[1] + (destino[1] - self.pos[1]) * f)
+                break
+            self.pos, paso = destino, paso - faltan
+            indice, self.i = self.i, self.i + 1
+            if indice in self.marcas:                              # llegó a una dirección de entrega
+                for did in self.marcas.pop(indice):
+                    self.eventos.append(("puerta", self.despacho, did))
+                self.fase = "en_la_puerta"
+                self.eventos.append(("fase", self.despacho, self.fase))
+                self.detenido = DETENCION_LECTURAS
+                if indice == self.ultima_marca:                    # última parada: queda registrada la llegada y luego vuelve
+                    self.eventos.append(("llegada", self.despacho))
+                    self.al_reanudar = "volviendo"
+                else:
+                    self.al_reanudar = "en_ruta"
+                if self.detenido == 0:                             # sin detención configurada
+                    self.fase = self.al_reanudar
+                    self.eventos.append(("fase", self.despacho, self.fase))
+                    self.al_reanudar = None
+                break
+        if self.i >= len(self.camino):                             # llegó al final del camino: de vuelta en la base
+            if self.despacho is not None:
+                self.eventos.append(("regreso", self.despacho))
+                log.info("%s de vuelta en la base (viaje %s)", self.id, self.despacho)
+            self.despacho, self.camino, self.marcas, self.fase = None, [], {}, None
+            self.pos = self.casa
         return self.pos
 
     def paso(self):
@@ -189,6 +230,33 @@ class Camion:
         temp = round(self.temp, 1)
         alerta = temp > self.tmax or temp < self.tmin
         return temp, round(lat, 6), round(lon, 6), self.combustible, alerta
+
+
+def aplicar_eventos(con, camion):
+    """Escribe en la base lo que le pasó al camión en esta lectura. Cada sentencia es condicional sobre el estado actual, así que
+    repetirla no cambia nada."""
+    for ev in camion.eventos:
+        if ev[0] == "puerta":
+            con.execute(
+                "UPDATE orden SET estado_orden_id = (SELECT estado_orden_id FROM estado_orden WHERE nombre = 'Camión en la puerta'), puerta_en = now() "
+                "WHERE despacho_id = %s AND direccion_id = %s AND estado_orden_id = (SELECT estado_orden_id FROM estado_orden WHERE nombre = 'Despachada')",
+                (ev[1], ev[2]))
+        elif ev[0] == "llegada":
+            con.execute("UPDATE despacho SET llegada_en = now(), fase = 'en_la_puerta' WHERE despacho_id = %s AND llegada_en IS NULL", (ev[1],))
+        elif ev[0] == "fase":
+            con.execute("UPDATE despacho SET fase = %s WHERE despacho_id = %s AND regreso_en IS NULL", (ev[2], ev[1]))
+        elif ev[0] == "regreso":
+            con.execute("UPDATE despacho SET llegada_en = COALESCE(llegada_en, now()), regreso_en = now() WHERE despacho_id = %s AND regreso_en IS NULL", (ev[1],))
+    camion.eventos = []
+
+
+def confirmar_vencidas(con):
+    """Da por entregados los pedidos con el camión en la puerta sin respuesta pasado el plazo (misma regla que la web)."""
+    return con.execute(
+        "UPDATE orden SET estado_orden_id = (SELECT estado_orden_id FROM estado_orden WHERE nombre = 'Entregada'), "
+        "entrega_resuelta_en = now(), entrega_automatica = true "
+        "WHERE estado_orden_id = (SELECT estado_orden_id FROM estado_orden WHERE nombre = 'Camión en la puerta') "
+        "AND puerta_en <= now() - make_interval(secs => %s)", (CONFIRMACION_AUTO_SEG,)).rowcount
 
 
 def rangos_de(con, ids):
@@ -213,9 +281,13 @@ def main():
             viajes = viajes_en_curso(con, list(flota))
             filas = []
             for c in flota.values():
-                c.asignar(*viajes.get(c.id, (None, [])))
+                c.asignar(viajes.get(c.id))
                 temp, lat, lon, comb, alerta = c.paso()
                 filas.append((c.id, temp, lat, lon, comb, alerta))
+                aplicar_eventos(con, c)
+            confirmadas = confirmar_vencidas(con)
+            if confirmadas:
+                log.info("%d pedido(s) dados por entregados al vencer el plazo de confirmación", confirmadas)
             if filas:
                 with con.transaction():
                     con.cursor().executemany(

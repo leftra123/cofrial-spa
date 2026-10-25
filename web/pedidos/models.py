@@ -56,6 +56,10 @@ class Orden(models.Model):
     numero_oc = models.CharField(max_length=30, blank=True)
     oc_pendiente = models.BooleanField(default=False, db_default=False)       # B2B que compró sin su OC: numero_oc lleva una referencia WEB-aaaa-nnnn hasta que la agregue
     creada_en = models.DateTimeField(auto_now_add=True)
+    puerta_en = models.DateTimeField(null=True, blank=True)                  # el camión llegó a la dirección: desde aquí corre la confirmación del cliente
+    entrega_resuelta_en = models.DateTimeField(null=True, blank=True)        # cuando el cliente (o el tiempo) cerró la entrega
+    entrega_motivo = models.TextField(blank=True)                            # por qué el cliente no pudo recibir
+    entrega_automatica = models.BooleanField(default=False, db_default=False)    # se dio por entregada sola al vencer el plazo
 
     class Meta:
         db_table = "orden"

@@ -26,11 +26,17 @@ class Despacho(models.Model):
     camion = models.ForeignKey(Camion, on_delete=models.PROTECT)
     programado_para = models.DateTimeField()
     salida_en = models.DateTimeField(null=True, blank=True)
-    llegada_en = models.DateTimeField(null=True, blank=True)
+    llegada_en = models.DateTimeField(null=True, blank=True)      # el camión llegó a la última entrega (la registra el simulador)
+    regreso_en = models.DateTimeField(null=True, blank=True)      # el camión volvió a la base: recién entonces queda libre
+    FASES = [("en_ruta", "en ruta"), ("en_la_puerta", "en la puerta del cliente"), ("volviendo", "volviendo a la base")]
+    fase = models.CharField(max_length=12, choices=FASES, default="en_ruta", db_default="en_ruta")     # la actualiza el simulador mientras dura el viaje
+    ruta_geojson = models.JSONField(null=True, blank=True)        # recorrido por calles base -> paradas -> base: {"puntos": [[lat, long]...], "paradas": [{"direccion_id", "indice"}]}
+    ruta_aproximada = models.BooleanField(default=False, db_default=False)     # true si OSRM no respondió y la ruta son rectas entre los puntos
 
     class Meta:
         db_table = "despacho"
         constraints = [
+            models.CheckConstraint(condition=Q(regreso_en__isnull=True) | Q(llegada_en__isnull=False), name="regreso_requiere_llegada"),
             models.CheckConstraint(condition=Q(llegada_en__isnull=True) | Q(salida_en__isnull=False), name="llegada_requiere_salida"),
             models.CheckConstraint(condition=Q(llegada_en__isnull=True) | Q(llegada_en__gte=models.F("salida_en")), name="llegada_despues_de_salida"),
         ]
@@ -64,3 +70,15 @@ class Telemetria(models.Model):
             models.Index(fields=["camion", "-registrado_en"], name="idx_telemetria_camion_fecha"),
             models.Index(fields=["registrado_en"], condition=Q(alerta_ruptura_frio=True), name="idx_telemetria_alerta"),
         ]
+
+
+class RutaCache(models.Model):
+    """Recorridos ya calculados con OSRM: la misma secuencia de puntos devuelve siempre la misma ruta y no se vuelve a pedir al servicio."""
+    clave = models.CharField(max_length=64, primary_key=True)        # SHA-256 de la secuencia de coordenadas redondeadas
+    ruta_geojson = models.JSONField()
+    km = models.FloatField()
+    aproximada = models.BooleanField(default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ruta_cache"

@@ -23,13 +23,22 @@
 </section>
 {% endif %}
 {% if not request.GET.nueva %}{% with n=orden.estado_orden.nombre %}
-<section class="estado-pedido{% if n == "Cancelada" %} cancelada{% elif n == "Entregada" %} entregada{% elif n == "Despachada" %} transito{% endif %}" aria-labelledby="ep-t">
+<section class="estado-pedido{% if n == "Cancelada" %} cancelada{% elif n == "Entregada" %} entregada{% elif n == "Despachada" or n == "Camión en la puerta" %} transito{% endif %}" aria-labelledby="ep-t">
   <span class="ep-ico" aria-hidden="true"><svg viewBox="0 0 24 24">{% if n == "Cancelada" %}<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>{% elif n == "Entregada" %}<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.5"/>{% elif n == "Despachada" %}<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>{% elif n == "En preparación" %}<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>{% else %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>{% endif %}</svg></span>
   <div>
     {% if n == "Cancelada" %}<h2 id="ep-t">Esta orden fue cancelada</h2><p>El stock de los productos quedó repuesto. Si fue un error, arma el pedido de nuevo desde el catálogo.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Ir al catálogo</a><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Consultar por esta orden</a></div>
     {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado</h2><p>Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura. Si algo no llegó como esperabas, cuéntanoslo.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Estamos afuera de tu dirección</h2><p>El camión llegó con tu pedido. Confírmanos si lo recibiste; si no pudiste recibirlo, cuéntanos por qué. Si no respondes, lo damos por entregado en unos minutos.</p>
+      <div class="entrega-resp">
+        <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/">{% csrf_token %}<input type="hidden" name="accion" value="aceptar"><button class="btn">Recibí mi pedido</button></form>
+        <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" class="entrega-no">{% csrf_token %}<input type="hidden" name="accion" value="no_recibido">
+          <label for="motivo-entrega">No pude recibirlo / hay un problema</label>
+          <textarea id="motivo-entrega" name="motivo" rows="2" minlength="5" maxlength="500" required placeholder="Cuéntanos qué pasó"></textarea>
+          <button class="btn btn-sec">Informar el problema</button></form>
+      </div>
+    {% elif n == "Entrega no concretada" %}<h2 id="ep-t">No pudimos entregar tu pedido</h2><p>Registramos tu aviso{% if orden.entrega_motivo %}: «{{ orden.entrega_motivo }}»{% endif %}. Nuestro equipo te contactará para reprogramar la entrega.</p>
     {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p>Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.</p>
     {% elif n == "En preparación" %}<h2 id="ep-t">Estamos preparando tu pedido</h2><p>Cada producto se arma en su rango de temperatura. Te avisamos por la campanita cuando salga el camión.</p>
     {% elif n == "Confirmada" %}<h2 id="ep-t">Tu pedido está confirmado</h2><p>Ya reservamos el stock. En breve lo pasamos a preparación.</p>
@@ -46,13 +55,14 @@
     <li class="paso {% if f >= 2 %}hecho{% endif %}{% if f == 2 %} actual{% endif %}" {% if f == 2 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Confirmada</li>
     <li class="paso {% if f >= 3 %}hecho{% endif %}{% if f == 3 %} actual{% endif %}" {% if f == 3 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>En preparación</li>
     <li class="paso {% if f >= 4 %}hecho{% endif %}{% if f == 4 %} actual{% endif %}" {% if f == 4 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Despachada</li>
-    <li class="paso {% if f >= 5 %}hecho{% endif %}{% if f == 5 %} actual{% endif %}" {% if f == 5 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Entregada</li>
+    <li class="paso {% if f >= 5 and f != 7 %}hecho{% endif %}{% if f == 5 %} actual{% endif %}" {% if f == 5 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Camión en la puerta</li>
+    <li class="paso {% if f == 6 %}hecho actual{% endif %}" {% if f == 6 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>{% if f == 7 %}Entrega no concretada{% else %}Entregada{% endif %}</li>
   </ol>
   {% endwith %}
 </div>
 {% endif %}
 {% if seg %}
-<div class="seg-grid" id="seg"{% if orden.estado_orden.nombre == "Entregada" %} data-final{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
+<div class="seg-grid" id="seg" data-estado="{{ orden.estado_orden.nombre }}"{% if orden.estado_orden.nombre == "Entregada" %} data-final{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     <h2>Dónde va su pedido</h2>
     <p class="sub" style="margin:2px 0 12px;color:var(--texto-3)">Camión {{ seg.camion_id }} <span id="seg-hace" class="solo-lector">{% if seg.ultima and seg.ultima.hace_seg > 300 %}sin señal reciente{% elif seg.ultima %}última posición hace {{ seg.ultima.hace_seg }} s{% else %}sin lecturas todavía{% endif %}</span> · <span id="seg-vivo">Conectando…</span></p>
@@ -64,7 +74,7 @@
     </div>
     <div style="position:relative">
       <div id="mapa" class="mapa alto" role="group" aria-label="Mapa con la posición del camión y la ruta a su dirección"></div>
-      <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
+      <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima and seg.mapa_en_vivo %}hidden{% endif %}><div>{% if seg.mapa_en_vivo %}<b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.{% else %}<b>El mapa en vivo ya no está disponible</b>Aquí queda el registro de temperatura del viaje.{% endif %}</div></div>
     </div>
     <p class="ruta-info" id="ruta-info" aria-live="polite"></p>
     <ul class="leyenda" id="leyenda-pedido" aria-label="Leyenda del mapa"></ul>
@@ -150,29 +160,31 @@
   function mostrarSenal() { if (ultimaSenal) quitarSk("seg-senal", haceTxt(Math.max(0, Math.round((Date.now() - ultimaSenal) / 1000)))); }
   setInterval(mostrarSenal, 1000);
   function pintar(d) {
+    if (d.estado && d.estado !== raiz.dataset.estado) { location.reload(); return; }     // el estado cambió (llegó el camión, entrega confirmada...): se vuelve a dibujar la orden
     var s = d.seguimiento; if (!s) return;
     var u = s.ultima;
     if (u) {
       var tt = document.getElementById("seg-temp"); tt.textContent = u.temp_camara.toFixed(1).replace(".", ","); tt.classList.remove("skeleton");
-      document.getElementById("mapa-vacio").hidden = true;
+      if (u.lat != null) document.getElementById("mapa-vacio").hidden = true;
       document.getElementById("seg-hace").textContent = u.hace_seg > 300 ? "sin señal reciente" : "última posición hace " + u.hace_seg + " s";
       var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "alerta" : "entregado");
-      if (window.L) {
+      if (window.L && u.lat != null) {
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
           mapa = CofrialMapa.crear("mapa", cam, 14);
           marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
           if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(s.destino.direccion);
         } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id)); }
-        if (dest && Date.now() - ultimaRuta > 20000) {       // la ruta se recalcula cada 20 s para no abusar del servicio gratuito
+        if (dest && s.ruta_url && Date.now() - ultimaRuta > 60000) {       // la ruta por calles la calculó y guardó el servidor: se pide una vez por minuto
           ultimaRuta = Date.now();
-          CofrialMapa.ruta([cam, dest], false).then(function (r) {
+          fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
+            if (!r) return;
             if (linea) mapa.removeLayer(linea);
-            linea = L.polyline(r.linea, {color: "#143A7B", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
+            linea = L.polyline(r.puntos, {color: "#143A7B", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
             if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30]}); encuadrado = true; }
-            document.getElementById("ruta-info").textContent = (r.metros == null ? "Ruta aproximada" : "Faltan " + (r.metros / 1000).toFixed(1).replace(".", ",") + " km") + " hasta " + s.destino.direccion;
           });
         }
+        document.getElementById("ruta-info").textContent = (s.km_restantes != null ? "Faltan " + String(s.km_restantes).replace(".", ",") + " km hasta " : "Entrega en ") + (s.destino ? s.destino.direccion : "tu dirección");
       }
     }
     ponerFacts(s, d.estado);

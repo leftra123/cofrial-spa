@@ -34,6 +34,8 @@ class CamionSerializer(serializers.Serializer):
     rango_temperatura = serializers.CharField(source="camion.rango_temperatura.nombre")
     activo = serializers.BooleanField(source="camion.activo")
     en_ruta = serializers.SerializerMethodField()
+    situacion = serializers.CharField()
+    situacion_texto = serializers.CharField()
     alerta = serializers.BooleanField()
     combustible_bajo = serializers.BooleanField()
     ultima_lectura = LecturaSerializer(source="lectura", allow_null=True)
@@ -73,5 +75,23 @@ class SeguimientoAPI(APIView):
         orden = pedidos.ordenes_de(cliente).filter(pk=orden_id).first()
         if orden is None:
             return Response({"detail": "Orden no encontrada."}, status=404)       # ajena e inexistente se ven igual
-        return Response({"orden_id": orden.orden_id, "estado": orden.estado_orden.nombre,
+        return Response({"orden_id": orden.orden_id, "estado": orden.estado_orden.nombre, "mapa_en_vivo": pedidos.mapa_en_vivo(orden),
+                         "entrega": pedidos.entrega_de(orden),
+                         "mensaje": None if orden.despacho_id else "Tu pedido aún no sale.",
                          "seguimiento": pedidos.seguimiento(orden)})
+
+
+class RutaAPI(APIView):
+    """Polilínea guardada del viaje de una orden propia (la misma que ve el despachador), para dibujarla una sola vez en el mapa del cliente."""
+
+    def get(self, request, orden_id):
+        cliente = pedidos.cliente_de(request.user)
+        if cliente is None:
+            return Response({"detail": "Tu cuenta no está asociada a un cliente."}, status=403)
+        orden = pedidos.ordenes_de(cliente).filter(pk=orden_id).first()
+        if orden is None:
+            return Response({"detail": "Orden no encontrada."}, status=404)
+        ruta = pedidos.ruta_del_pedido(orden)
+        if ruta is None:
+            return Response({"detail": "El mapa en vivo solo está disponible mientras el pedido va en camino."}, status=404)
+        return Response(ruta)

@@ -334,7 +334,7 @@ class CerrarDespachoTests(TestCase):
                 continue
             self._entrar(usuario)
             r = self.client.post(f"/flota/viajes/{d.pk}/cerrar/", {"confirmar": "1"}, follow=True)
-            self.assertContains(r, "quedó libre")
+            self.assertContains(r, "vuelve a la base")
             d.refresh_from_db()
             self.assertIsNotNone(d.llegada_en)
             self.assertFalse(Orden.objects.filter(despacho=d).exclude(estado_orden__nombre="Entregada").exists())
@@ -358,12 +358,17 @@ class CerrarDespachoTests(TestCase):
         d.refresh_from_db()
         self.assertIsNone(d.llegada_en)
 
-    def test_cerrar_libera_el_camion_y_no_se_puede_cerrar_dos_veces(self):
+    def test_cerrar_manda_al_camion_de_vuelta_y_no_se_puede_cerrar_dos_veces(self):
         from flota import servicios
         d = self._viaje()
         libres_antes = {c.camion_id for c in servicios.camiones_libres()}
         self.assertNotIn(d.camion_id, libres_antes)
         servicios.cerrar_despacho(d.pk)
+        d.refresh_from_db()
+        self.assertEqual(d.fase, "volviendo")
+        self.assertNotIn(d.camion_id, {c.camion_id for c in servicios.camiones_libres()})        # sigue ocupado hasta volver a la base
+        d.regreso_en = d.llegada_en                                                             # lo que registra el simulador al llegar
+        d.save()
         self.assertIn(d.camion_id, {c.camion_id for c in servicios.camiones_libres()})
         from pedidos.servicios import ErrorDeNegocio
         with self.assertRaises(ErrorDeNegocio):

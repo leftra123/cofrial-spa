@@ -107,5 +107,10 @@ window.CofrialMapa = (function () {
     return (r.metros / 1000).toFixed(1).replace(".", ",") + " km · unos " + Math.max(1, Math.round(r.segundos / 60)) + " min";
   }
 
-  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, texto: texto};
+  /* La ruta que calculó y guardó el servidor ({puntos, km, minutos, aproximada}): se dibuja tal cual, sin volver a pedirle nada a OSRM. */
+  function rutaGuardada(r) {
+    return {linea: r.puntos, metros: r.aproximada ? null : r.km * 1000, segundos: (r.minutos || 0) * 60, orden: null, aproximada: !!r.aproximada};
+  }
+
+  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto};
 })();

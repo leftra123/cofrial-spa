@@ -162,6 +162,7 @@ def registrar_oc(cliente, orden_id, numero_oc):
 
 
 def ordenes_de(cliente):
+    confirmar_vencidas()                  # quien lee las órdenes ve ya aplicada la confirmación automática (el simulador también la ejecuta)
     return (Orden.objects.filter(direccion__cliente=cliente).select_related("estado_orden", "direccion__comuna", "despacho")
             .order_by("-creada_en"))
 
@@ -175,7 +176,8 @@ def cancelar(orden, como="cliente"):
     """RN-07: el cliente cancela solo en «Recibida»; el vendedor hasta «En preparación». Cancelar repone el stock."""
     orden = Orden.objects.select_for_update().select_related("estado_orden").get(pk=orden.pk)
     limite = 1 if como == "cliente" else 3
-    if orden.estado_orden.es_final or orden.estado_orden.orden_flujo > limite:
+    sin_concretar = como != "cliente" and orden.estado_orden.nombre == "Entrega no concretada"     # ventas puede dar de baja una entrega fallida
+    if not sin_concretar and (orden.estado_orden.es_final or orden.estado_orden.orden_flujo > limite):
         quien = "el cliente" if como == "cliente" else "el vendedor"
         raise ErrorDeNegocio(f"La orden está \"{orden.estado_orden.nombre}\" y {quien} ya no puede cancelarla.")
     for item in orden.ordenitem_set.all():
@@ -191,8 +193,11 @@ def avanzar(orden):
     orden = Orden.objects.select_for_update().select_related("estado_orden").get(pk=orden.pk)
     if orden.estado_orden.es_final:
         raise ErrorDeNegocio(f"La orden ya está \"{orden.estado_orden.nombre}\".")
-    siguiente = EstadoOrden.objects.filter(orden_flujo__gt=orden.estado_orden.orden_flujo, es_final=False).first() \
-        or EstadoOrden.objects.get(nombre="Entregada")
+    siguiente_de = {"Recibida": "Confirmada", "Confirmada": "En preparación", "En preparación": "Despachada",
+                    "Despachada": "Entregada", "Camión en la puerta": "Entregada"}      # de «Despachada» a «Entregada» solo como corrección manual
+    if orden.estado_orden.nombre not in siguiente_de:
+        raise ErrorDeNegocio(f"La orden está \"{orden.estado_orden.nombre}\": ese estado no avanza con este botón.")
+    siguiente = EstadoOrden.objects.get(nombre=siguiente_de[orden.estado_orden.nombre])
     if siguiente.nombre == "Despachada" and orden.despacho_id is None:
         raise ErrorDeNegocio("Asigna un despacho antes de marcar la orden como despachada.")
     orden.estado_orden = siguiente
@@ -231,6 +236,7 @@ def seguimiento(orden):
 
     if orden.despacho_id is None:
         return None
+    from flota import rutas
     camion = orden.despacho.camion
     desde = timezone.now() - timedelta(minutes=60)
     lecturas = list(Telemetria.objects.filter(camion=camion, registrado_en__gte=desde).order_by("registrado_en"))
@@ -238,19 +244,40 @@ def seguimiento(orden):
     from flota.vigente import ultima_vigente
     ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada
     rango = camion.rango_temperatura
+    en_vivo = mapa_en_vivo(orden)                     # el mapa y la posición solo se muestran mientras el camión va o está en la puerta
     return {
-        "camion_id": camion.camion_id, "patente": camion.patente,
+        "camion_id": camion.camion_id, "patente": camion.patente, "mapa_en_vivo": en_vivo,
         "banda": {"min": rango.temp_min_c, "max": rango.temp_max_c, "nombre": rango.nombre},
         "ultima": None if ultima is None else {
-            "temp_camara": ultima.temp_camara, "lat": ultima.lat, "long": ultima.long, "combustible_pct": ultima.combustible_pct,
+            "temp_camara": ultima.temp_camara, "lat": ultima.lat if en_vivo else None, "long": ultima.long if en_vivo else None,
+            "combustible_pct": ultima.combustible_pct,
             "alerta_ruptura_frio": ultima.alerta_ruptura_frio, "hace_seg": int((timezone.now() - ultima.registrado_en).total_seconds())},
-        "destino": None if orden.direccion.lat is None else {"lat": orden.direccion.lat, "long": orden.direccion.long, "direccion": str(orden.direccion)},
+        "destino": None if orden.direccion.lat is None or not en_vivo else {"lat": orden.direccion.lat, "long": orden.direccion.long, "direccion": str(orden.direccion)},
         "hubo_ruptura": any(l.alerta_ruptura_frio for l in lecturas),
         "serie": [{"t": l.registrado_en.isoformat(), "temp": l.temp_camara} for l in lecturas][-120:],
         "salida_en": orden.despacho.salida_en.isoformat() if orden.despacho.salida_en else None,
-        "llegada_en": orden.despacho.llegada_en.isoformat() if orden.despacho.llegada_en else None,
+        "llegada_en": orden.puerta_en.isoformat() if orden.puerta_en else None,          # cuando el camión llegó a ESTA dirección
+        "ruta_url": f"/api/pedidos/{orden.orden_id}/ruta/" if en_vivo else None,
+        "entrega": entrega_de(orden),
         **_llegada(orden, ultima),
     }
+
+
+def mapa_en_vivo(orden):
+    """RN-16: el cliente ve el mapa en vivo solo con el pedido «Despachada» (en ruta) o «Camión en la puerta»."""
+    return orden.estado_orden.nombre in ("Despachada", "Camión en la puerta")
+
+
+def ruta_del_pedido(orden):
+    """Polilínea guardada del viaje y el punto de la parada de este pedido (para dibujar al cliente la misma ruta que ve el despachador)."""
+    from flota import rutas
+    if orden.despacho_id is None or not mapa_en_vivo(orden):
+        return None
+    ruta = rutas.asegurar_ruta(orden.despacho)
+    if not ruta:
+        return None
+    parada = next((p for p in ruta["paradas"] if p["direccion_id"] == orden.direccion_id), None)
+    return {"puntos": ruta["puntos"], "parada": parada, "aproximada": ruta["aproximada"], "km": ruta["km"]}
 
 
 # ---------- llegada estimada y avisos (campanita) ----------
@@ -271,17 +298,24 @@ def _redondear5(momento):
 
 
 def _llegada(orden, ultima):
-    """Distancia que falta y ventana estimada de llegada («entre las 15:10 y las 15:30»). Solo mientras el camión va en camino."""
+    """Distancia que falta y ventana estimada de llegada («entre las 15:10 y las 15:30»). Solo mientras el camión va en camino a esta dirección.
+    Con la ruta guardada, los km son los que faltan por esa ruta; sin ella, la distancia en línea recta por el factor de calles."""
     from datetime import timedelta
+    from django.conf import settings
     from django.utils import timezone
     vacio = {"km_restantes": None, "eta": None, "cerca": False}
     d = orden.despacho
-    if ultima is None or orden.direccion.lat is None or d.salida_en is None or d.llegada_en is not None:
+    if ultima is None or orden.direccion.lat is None or d.salida_en is None or orden.estado_orden.nombre != "Despachada":
         return vacio
     if timezone.now() - ultima.registrado_en > timedelta(minutes=10):      # sin señal reciente no se inventa una hora
         return vacio
-    from django.conf import settings
-    km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
+    from flota import rutas
+    ruta = d.ruta_geojson
+    parada = next((p for p in (ruta or {}).get("paradas", []) if p["direccion_id"] == orden.direccion_id), None)
+    if ruta and parada and not ruta.get("aproximada"):
+        km = rutas.km_hasta(ruta, (ultima.lat, ultima.long), parada["indice"])
+    else:
+        km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
     minutos = km / settings.VELOCIDAD_MEDIA_KMH * 60
     centro = timezone.now() + timedelta(minutes=minutos)
     return {"km_restantes": round(km, 1), "cerca": km <= CERCA_KM,
@@ -299,18 +333,29 @@ def avisos_de_llegada(cliente):
 
     hace_un_dia = timezone.now() - timedelta(hours=24)
     salida = []
+    hora = lambda x: localtime(x).strftime("%H:%M")
     for o in ordenes_de(cliente).select_related("despacho__camion", "direccion", "estado_orden"):
         d = o.despacho
         if d is None or d.salida_en is None:
             continue
-        if d.llegada_en is not None and d.llegada_en < hace_un_dia:
+        if (o.entrega_resuelta_en or (d.regreso_en if o.estado_orden.es_final else None) or timezone.now()) < hace_un_dia:
             continue
-        hora = lambda x: localtime(x).strftime("%H:%M")
+        nombre = o.estado_orden.nombre
         salida.append({"id": f"{o.orden_id}-salio", "orden_id": o.orden_id, "tipo": "salio", "cuando": d.salida_en.isoformat(),
                        "texto": f"Tu pedido N.º {o.orden_id} salió a las {hora(d.salida_en)}."})
-        if d.llegada_en is not None:
-            salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": d.llegada_en.isoformat(),
-                           "texto": f"Tu pedido N.º {o.orden_id} llegó a las {hora(d.llegada_en)}."})
+        if o.puerta_en:
+            salida.append({"id": f"{o.orden_id}-puerta", "orden_id": o.orden_id, "tipo": "puerta", "cuando": o.puerta_en.isoformat(),
+                           "texto": f"Estamos afuera de tu dirección con tu pedido N.º {o.orden_id}. Confírmanos si lo recibiste."
+                           if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}."})
+        if nombre == "Entregada" and o.entrega_resuelta_en:
+            salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": o.entrega_resuelta_en.isoformat(),
+                           "texto": f"Tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
+                           + (" (confirmado automáticamente)." if o.entrega_automatica else ".")})
+        if nombre == "Entrega no concretada":
+            salida.append({"id": f"{o.orden_id}-no-concretada", "orden_id": o.orden_id, "tipo": "no_concretada",
+                           "cuando": (o.entrega_resuelta_en or o.puerta_en or d.salida_en).isoformat(),
+                           "texto": f"No pudimos entregar tu pedido N.º {o.orden_id}. Nuestro equipo te contactará para reprogramar."})
+        if nombre != "Despachada":
             continue
         ultima = Telemetria.objects.filter(camion=d.camion, registrado_en__gte=d.salida_en).order_by("-registrado_en").first()
         if Telemetria.objects.filter(camion=d.camion, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
@@ -325,3 +370,77 @@ def avisos_de_llegada(cliente):
             salida.append({"id": f"{o.orden_id}-cerca", "orden_id": o.orden_id, "tipo": "cerca", "cuando": ultima.registrado_en.isoformat(),
                            "texto": f"El camión de tu pedido N.º {o.orden_id} está a menos de {CERCA_KM} km."})
     return sorted(salida, key=lambda a: a["cuando"], reverse=True)
+
+
+# ---------- entrega en la puerta (RN-15): el camión llega, el cliente confirma o explica ----------
+MOTIVO_MINIMO = 5
+
+
+def _estado(nombre):
+    return EstadoOrden.objects.get(nombre=nombre)
+
+
+def entrega_de(orden):
+    """Estado de la entrega para la pantalla del cliente: si puede confirmar, cuánto tiempo le queda y qué decidió."""
+    from datetime import timedelta
+
+    from django.conf import settings
+    from django.utils import timezone
+    nombre = orden.estado_orden.nombre
+    limite = orden.puerta_en + timedelta(seconds=settings.CONFIRMACION_AUTO_SEG) if orden.puerta_en else None
+    return {"estado": nombre, "puede_responder": nombre == "Camión en la puerta",
+            "puerta_en": orden.puerta_en.isoformat() if orden.puerta_en else None,
+            "se_confirma_sola_en_seg": max(0, int((limite - timezone.now()).total_seconds())) if limite and nombre == "Camión en la puerta" else None,
+            "resuelta_en": orden.entrega_resuelta_en.isoformat() if orden.entrega_resuelta_en else None,
+            "motivo": orden.entrega_motivo or None, "automatica": orden.entrega_automatica}
+
+
+def resolver_entrega(cliente, orden_id, accion, motivo=""):
+    """El cliente responde al aviso «estamos afuera»: `aceptar` (queda «Entregada») o `no_recibido` con el motivo (queda «Entrega no
+    concretada», no final, y se crea un requerimiento para ventas). Solo mientras la orden está «Camión en la puerta»: si el plazo
+    la dio por entregada o ya respondió, no cambia nada y se informa."""
+    from django.utils import timezone
+    motivo = (motivo or "").strip()
+    if accion not in ("aceptar", "no_recibido"):
+        raise ErrorDeNegocio("Elige «Recibí mi pedido» o «No pude recibirlo».")
+    if accion == "no_recibido" and len(motivo) < MOTIVO_MINIMO:
+        raise ErrorDeNegocio("Cuéntanos por qué no pudiste recibirlo (al menos unas palabras).")
+    with transaction.atomic():
+        orden = ordenes_de(cliente).select_for_update(of=("self",)).filter(pk=orden_id).first()
+        if orden is None:
+            raise ErrorDeNegocio("Orden no encontrada.")
+        if orden.estado_orden.nombre != "Camión en la puerta":
+            raise ErrorDeNegocio(f"El pedido está «{orden.estado_orden.nombre}»: ya no hay una entrega por confirmar.")
+        orden.estado_orden = _estado("Entregada" if accion == "aceptar" else "Entrega no concretada")
+        orden.entrega_resuelta_en = timezone.now()
+        orden.entrega_automatica = False
+        if accion == "no_recibido":
+            orden.entrega_motivo = motivo[:500]
+        orden.save(update_fields=["estado_orden", "entrega_resuelta_en", "entrega_automatica", "entrega_motivo"])
+    if accion == "no_recibido":
+        from crm import servicios as crm
+        crm.crear_requerimiento(orden.direccion.cliente, f"Entrega no concretada del pedido N.º {orden.pk}", motivo, orden=orden)
+    return orden
+
+
+def confirmar_vencidas(ahora=None):
+    """Da por entregadas («confirmada automáticamente») las órdenes cuyo camión lleva más de CONFIRMACION_AUTO_SEG en la puerta sin
+    respuesta. Es una sola sentencia condicional sobre el estado: si el cliente ya respondió entre medio no coincide, y repetirla
+    (el simulador y la web la ejecutan) no cambia nada. Devuelve cuántas órdenes cambió."""
+    from datetime import timedelta
+
+    from django.conf import settings
+    from django.utils import timezone
+    ahora = ahora or timezone.now()
+    return Orden.objects.filter(estado_orden__nombre="Camión en la puerta",
+                                puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG)).update(
+        estado_orden=_estado("Entregada"), entrega_resuelta_en=ahora, entrega_automatica=True)
+
+
+def llegar_a_la_puerta(ordenes, ahora=None):
+    """El camión llegó a la dirección de estas órdenes: las que iban «Despachada» pasan a «Camión en la puerta» y empieza a correr
+    el plazo del cliente. Condicional sobre el estado, por lo que repetirla no hace nada. Devuelve cuántas cambió."""
+    from django.utils import timezone
+    ahora = ahora or timezone.now()
+    return Orden.objects.filter(pk__in=[o.pk if hasattr(o, "pk") else o for o in ordenes], estado_orden__nombre="Despachada").update(
+        estado_orden=_estado("Camión en la puerta"), puerta_en=ahora)

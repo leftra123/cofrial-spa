@@ -152,3 +152,10 @@ LOGGING = {
 # Velocidad media de reparto y factor de calles: los usan la hora de llegada de la tienda y el simulador IoT (mismas variables).
 VELOCIDAD_MEDIA_KMH = float(os.environ.get("VELOCIDAD_MEDIA_KMH") or 50)
 FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES") or 1.3)
+
+# Rutas por calles: el servidor las calcula con OSRM (perfil driving) al armar un despacho y las guarda; vacío = sin OSRM (rectas marcadas como aproximadas).
+OSRM_URL = "" if "test" in sys.argv else os.environ.get("OSRM_URL", "https://router.project-osrm.org")
+OSRM_TIMEOUT_SEG = float(os.environ.get("OSRM_TIMEOUT_SEG") or 4)
+# Tiempo que el cliente tiene para confirmar la entrega cuando el camión llega a su puerta; vencido, el pedido se da por entregado solo.
+# 120 s sirve para la demostración; en una operación real serían horas.
+CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)

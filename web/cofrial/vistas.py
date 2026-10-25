@@ -67,7 +67,7 @@ def registro(request):
 def guia(request):
     """Guía de flujos: qué hace cada perfil, paso a paso, con enlaces y el estado actual del sistema para guiar una demostración."""
     from catalogo.models import AvisoStock, Producto
-    en_ruta = Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).count()
+    en_ruta = Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).count()
     estado = {"por_despachar": flota.pedidos_por_despachar().count(), "camiones_libres": flota.camiones_libres().count(),
               "en_ruta": en_ruta, "sin_stock": Producto.objects.filter(activo=True, stock_disponible__lte=0).count(),
               "avisos": AvisoStock.objects.filter(atendido_en__isnull=True).count()}

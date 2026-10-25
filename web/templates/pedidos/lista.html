@@ -22,7 +22,7 @@
 <table>
   <thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th class="num">Total</th><th><span class="solo-lector">Acciones</span></th></tr></thead>
   <tbody id="filas-pedidos">
-  {% for o in ordenes %}<tr data-estado="{% if o.estado_orden.nombre == 'Recibida' or o.estado_orden.nombre == 'Confirmada' %}pendiente{% elif o.estado_orden.nombre == 'En preparación' %}asignado{% elif o.estado_orden.nombre == 'Despachada' %}transito{% elif o.estado_orden.nombre == 'Entregada' %}entregado{% else %}otro{% endif %}">
+  {% for o in ordenes %}<tr data-estado="{% if o.estado_orden.nombre == 'Recibida' or o.estado_orden.nombre == 'Confirmada' %}pendiente{% elif o.estado_orden.nombre == 'En preparación' %}asignado{% elif o.estado_orden.nombre == 'Despachada' or o.estado_orden.nombre == 'Camión en la puerta' %}transito{% elif o.estado_orden.nombre == 'Entregada' %}entregado{% else %}otro{% endif %}">
     <td><a class="id-orden" href="/pedidos/{{ o.orden_id }}/">N.º {{ o.orden_id }}</a>{% if o.oc_pendiente %} <span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</td>
     <td>{{ o.creada_en|date:"d/m/Y H:i" }}</td>
     <td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td>
@@ -33,7 +33,7 @@
 </table>
 </div>
 <div class="lista-movil" id="lista-movil">
-  {% for o in ordenes %}<a class="pedido-card" href="/pedidos/{{ o.orden_id }}/" data-estado="{% if o.estado_orden.nombre == 'Recibida' or o.estado_orden.nombre == 'Confirmada' %}pendiente{% elif o.estado_orden.nombre == 'En preparación' %}asignado{% elif o.estado_orden.nombre == 'Despachada' %}transito{% elif o.estado_orden.nombre == 'Entregada' %}entregado{% else %}otro{% endif %}">
+  {% for o in ordenes %}<a class="pedido-card" href="/pedidos/{{ o.orden_id }}/" data-estado="{% if o.estado_orden.nombre == 'Recibida' or o.estado_orden.nombre == 'Confirmada' %}pendiente{% elif o.estado_orden.nombre == 'En preparación' %}asignado{% elif o.estado_orden.nombre == 'Despachada' or o.estado_orden.nombre == 'Camión en la puerta' %}transito{% elif o.estado_orden.nombre == 'Entregada' %}entregado{% else %}otro{% endif %}">
     <span class="fila"><b>Orden N.º {{ o.orden_id }}</b>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}{% if o.oc_pendiente %}<span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</span>
     <span class="fila"><span class="frio">{{ o.creada_en|date:"d/m/Y H:i" }}</span><b>{{ o.total|clp }}</b></span></a>{% endfor %}
 </div>

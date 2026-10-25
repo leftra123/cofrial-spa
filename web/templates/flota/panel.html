@@ -10,7 +10,10 @@
 {% block contenido %}
 <div class="rejilla">
   <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor" data-resumen="activos">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
-  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor" data-resumen="en_ruta">{{ resumen.en_ruta }}</div><div class="detalle">con despacho en curso</div></div>
+  <div class="kpi-card"><div class="etiqueta">En base</div><div class="valor" data-resumen="en_base">{{ resumen.en_base }}</div><div class="detalle">guardados, sin despacho</div></div>
+  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor" data-resumen="en_ruta">{{ resumen.en_ruta }}</div><div class="detalle">hacia sus entregas</div></div>
+  <div class="kpi-card"><div class="etiqueta">En la puerta</div><div class="valor" data-resumen="en_la_puerta">{{ resumen.en_la_puerta }}</div><div class="detalle">esperando la confirmación del cliente</div></div>
+  <div class="kpi-card"><div class="etiqueta">Volviendo</div><div class="valor" data-resumen="volviendo">{{ resumen.volviendo }}</div><div class="detalle">de regreso a la base</div></div>
   <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor" data-resumen="con_alerta">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
   <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
 </div>
@@ -32,8 +35,8 @@
         <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}</div></div></div>
       {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
       {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
-      {% elif x.viaje %}<span class="chip transito">En ruta</span>
-      {% else %}<span class="chip entregado">Disponible</span>{% endif %}
+      {% elif x.situacion == "en_base" %}<span class="chip entregado" data-campo="situacion">{{ x.situacion_texto|capfirst }}</span>
+      {% else %}<span class="chip transito" data-campo="situacion">{{ x.situacion_texto|capfirst }}</span>{% endif %}
     </div>
     {% if x.lectura %}
     <div class="mini">
@@ -60,7 +63,7 @@
 {% for x in viajes %}
   <article class="tarjeta-ui viaje">
     <div class="vehiculo-cab"><div><div class="patente" style="font-weight:700">{{ x.camion.patente }}</div><div class="frio">Despacho N.º {{ x.viaje.despacho_id }}</div></div>
-      {% if x.alerta %}<span class="chip alerta">Ruptura de frío</span>{% else %}<span class="chip transito">En tránsito</span>{% endif %}</div>
+      {% if x.alerta %}<span class="chip alerta">Ruptura de frío</span>{% else %}<span class="chip transito">{{ x.situacion_texto|capfirst }}</span>{% endif %}</div>
     <div class="ruta">
       <span class="punto"></span><div><b>Frigorífico central</b><div class="frio">Temuco · salida {{ x.viaje.salida_en|date:"d/m H:i" }}</div></div>
       <span class="linea"></span><span></span>
@@ -71,11 +74,11 @@
       <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Orden N.º {{ o.orden_id }}</div></div>
       <span style="margin-left:auto">{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</span></div>
     {% endfor %}
-    {% if puede_cerrar %}
+    {% if puede_cerrar and not x.viaje.llegada_en %}
     <form method="post" action="/flota/viajes/{{ x.viaje.despacho_id }}/cerrar/" class="cerrar-viaje"
-          onsubmit="return confirm('¿Marcar entregado y cerrar el despacho N.º {{ x.viaje.despacho_id }}? Los pedidos pasarán a «Entregada» y el camión {{ x.camion.camion_id }} quedará libre.')">
+          onsubmit="return confirm('Corrección manual: ¿dar por llegado el despacho N.º {{ x.viaje.despacho_id }}? Los pedidos pasarán a «Entregada» y el camión {{ x.camion.camion_id }} volverá a la base. Normalmente el sistema lo registra solo.')">
       {% csrf_token %}<input type="hidden" name="confirmar" value="1">
-      <button class="btn-sec">Marcar entregado y cerrar despacho</button>
+      <button class="btn-sec">Marcar entregado y cerrar despacho (corrección)</button>
     </form>
     {% endif %}
   </article>
@@ -102,19 +105,21 @@
     d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });          // el encuadre incluye a los camiones, no solo la bodega y las paradas
     d.viajes.forEach(function (v, i) {
       if (!v.paradas.length) return;
-      var color = colores[i % colores.length], pts = [base].concat(v.paradas.map(function (p) { return [p.lat, p.long]; }));
+      var color = colores[i % colores.length];
       v.paradas.forEach(function (p) { todos.push([p.lat, p.long]); });
-      CofrialMapa.ruta(pts, true).then(function (r) {
+      if (!v.ruta) return;
+      (function () {
+        var r = CofrialMapa.rutaGuardada(v.ruta), lista = [];       // la MISMA polilínea que sigue el camión y que ve el cliente
         L.polyline(r.linea, {color: color, weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(m);
-        var orden = r.orden || pts.map(function (_, k) { return k; }), lista = [];
-        v.paradas.forEach(function (p, k) {
-          var n = orden[k + 1];                                   // posición de la parada en el recorrido (la base es 0)
+        var posicion = {}; v.ruta.paradas.forEach(function (q, k) { posicion[q.direccion_id] = k + 1; });
+        v.paradas.forEach(function (p) {
+          var n = posicion[p.direccion_id] || 1;                  // posición de la parada en el recorrido (la base es 0)
           L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
-          lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + ")</span></li>";
+          lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")</span></li>";
         });
         document.getElementById("rutas-sugeridas").insertAdjacentHTML("beforeend",
-          "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b>, ruta sugerida: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.join("") + "</ol>");
-      });
+          "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b> · " + v.situacion + ", ruta por calles: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.filter(Boolean).join("") + "</ol>");
+      })();
     });
     if (todos.length > 1) m.fitBounds(todos, {paddingTopLeft: [44, 56], paddingBottomRight: [44, 64], maxZoom: 15});   // margen para el camión (64x40) y su código; sin acercarse de más
     var puntosRutas = todos.slice();
@@ -144,6 +149,7 @@
         var t = document.querySelector('[data-camion="' + c.camion_id + '"]'), l = c.ultima_lectura;
         if (!t || !l) return;
         t.classList.toggle("en-alerta", c.alerta);
+        pon(t.querySelector('[data-campo="situacion"]'), c.situacion_texto.charAt(0).toUpperCase() + c.situacion_texto.slice(1));
         pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
         pon(t.querySelector('[data-campo="comb"]'), l.combustible_pct + " %", c.combustible_bajo);
         var b = t.querySelector('[data-campo="barra"] i');

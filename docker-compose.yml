@@ -32,6 +32,8 @@ services:
       DEMO_PASSWORD: ${DEMO_PASSWORD:?define DEMO_PASSWORD en .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       VELOCIDAD_MEDIA_KMH: ${VELOCIDAD_MEDIA_KMH:-50}
+      CONFIRMACION_AUTO_SEG: ${CONFIRMACION_AUTO_SEG:-120}
+      OSRM_URL: ${OSRM_URL:-https://router.project-osrm.org}
       FACTOR_CALLES: ${FACTOR_CALLES:-1.3}
       GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?define GRAFANA_DB_PASSWORD en .env}
       MAP_TILE_URL: ${MAP_TILE_URL:-}
@@ -53,7 +55,7 @@ services:
   # La flota de 50 camiones se reparte en 5 contenedores de 10 (CAM-01 a CAM-10, CAM-11 a CAM-20, ...)
   flota-1: &flota
     build: ./iot
-    environment: &flota-env {<<: *bd, PRIMER_CAMION: "1", NUM_CAMIONES: "10", INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.001}", VELOCIDAD_MEDIA_KMH: "${VELOCIDAD_MEDIA_KMH:-50}", FACTOR_CALLES: "${FACTOR_CALLES:-1.3}"}
+    environment: &flota-env {<<: *bd, PRIMER_CAMION: "1", NUM_CAMIONES: "10", INTERVALO_SEG: "${INTERVALO_SEG:-5}", PROB_RUPTURA: "${PROB_RUPTURA:-0.001}", CONFIRMACION_AUTO_SEG: "${CONFIRMACION_AUTO_SEG:-120}", VELOCIDAD_MEDIA_KMH: "${VELOCIDAD_MEDIA_KMH:-50}", FACTOR_CALLES: "${FACTOR_CALLES:-1.3}"}
     depends_on: [web]
     restart: unless-stopped
   flota-2: {<<: *flota, environment: {<<: *flota-env, PRIMER_CAMION: "11"}}

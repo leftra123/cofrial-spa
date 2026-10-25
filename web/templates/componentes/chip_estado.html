@@ -1,6 +1,7 @@
 {% comment %}Chip de estado de una orden. Recibe `estado` (nombre del EstadoOrden). Agrupa los seis estados reales en cuatro colores.{% endcomment %}
 {% if estado == "Recibida" or estado == "Confirmada" %}<span class="chip pendiente">{{ estado }}</span>
 {% elif estado == "En preparación" %}<span class="chip asignado">{{ estado }}</span>
-{% elif estado == "Despachada" %}<span class="chip transito">{{ estado }}</span>
+{% elif estado == "Despachada" or estado == "Camión en la puerta" %}<span class="chip transito">{{ estado }}</span>
 {% elif estado == "Entregada" %}<span class="chip entregado">{{ estado }}</span>
+{% elif estado == "Entrega no concretada" %}<span class="chip alerta">{{ estado }}</span>
 {% else %}<span class="chip cancelado">{{ estado }}</span>{% endif %}

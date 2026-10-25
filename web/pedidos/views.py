@@ -185,3 +185,27 @@ def api_avisos(request):
     if cliente is None:
         return JsonResponse({"detail": "Inicia sesión con una cuenta de cliente."}, status=403)
     return JsonResponse({"avisos": s.avisos_de_llegada(cliente)}, json_dumps_params={"ensure_ascii": False})
+
+
+@solo_clientes
+def entrega(request, cliente, orden_id):
+    """Confirmación de la entrega en la puerta. GET: estado de la entrega (JSON). POST: accion=aceptar | no_recibido (+ motivo); responde
+    JSON si lo pide la pantalla (X-Requested-With: fetch o Accept: application/json) y, si no, vuelve a la orden con un mensaje."""
+    from django.http import JsonResponse
+    orden = _orden_del_cliente(cliente, orden_id)
+    quiere_json = request.headers.get("X-Requested-With") == "fetch" or "application/json" in request.headers.get("Accept", "")
+    if request.method == "GET":
+        return JsonResponse(s.entrega_de(orden), json_dumps_params={"ensure_ascii": False})
+    try:
+        orden = s.resolver_entrega(cliente, orden_id, request.POST.get("accion", ""), request.POST.get("motivo", ""))
+        mensaje = ("Gracias por confirmar la recepción." if orden.estado_orden.nombre == "Entregada"
+                   else "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar.")
+        ok = True
+    except s.ErrorDeNegocio as e:
+        mensaje, ok = " ".join(e.mensajes), False
+    if quiere_json:
+        orden = _orden_del_cliente(cliente, orden_id)
+        return JsonResponse({"ok": ok, "mensaje": mensaje, "entrega": s.entrega_de(orden)}, status=200 if ok else 400,
+                            json_dumps_params={"ensure_ascii": False})
+    (messages.success if ok else messages.error)(request, mensaje)
+    return redirect("orden", orden_id=orden_id)

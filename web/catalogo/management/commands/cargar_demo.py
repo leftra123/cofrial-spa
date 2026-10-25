@@ -62,7 +62,11 @@ DESCRIPCIONES = {
     "EMB-JAM-3K": "Jamón cocido de cerdo, pieza entera para cortar en fiambrería.",
     "EMB-LON-4K": "Longaniza ahumada tradicional, lista para cocer.",
 }
-ESTADOS_ORDEN = [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False), ("Entregada", True), ("Cancelada", True)]
+COMUNAS_ARAUCANIA = ["Angol", "Carahue", "Cholchol", "Collipulli", "Cunco", "Curacautín", "Freire", "Galvarino", "Gorbea", "Lautaro",
+                     "Loncoche", "Lonquimay", "Melipeuco", "Nueva Imperial", "Padre Las Casas", "Pitrufquén", "Pucón", "Traiguén",
+                     "Victoria", "Vilcún", "Villarrica"]        # Temuco se crea aparte (comuna de la base y de las direcciones de demostración)
+ESTADOS_ORDEN = [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False), ("Camión en la puerta", False),
+                ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True)]
 ETAPAS = [("Prospecto", False, False), ("Contactado", False, False), ("Propuesta enviada", False, False), ("Negociación", False, False), ("Cliente ganado", True, True), ("Perdido", True, False)]
 CATEGORIAS_REQ = ["Consulta de producto", "Reclamo por temperatura", "Atraso en entrega", "Facturación", "Otro"]
 CAMIONES = [("CAM-01", "HJKL-42", 8000, "Refrigerado"), ("CAM-02", "PQRS-17", 6000, "Congelado"), ("CAM-03", "TUVW-93", 8000, "Refrigerado")]
@@ -109,7 +113,8 @@ class Command(BaseCommand):
 
         region, _ = Region.objects.get_or_create(nombre="La Araucanía")
         temuco, _ = Comuna.objects.get_or_create(region=region, nombre="Temuco")
-        Comuna.objects.get_or_create(region=region, nombre="Villarrica")
+        for nombre in COMUNAS_ARAUCANIA:                       # idempotente: no toca las comunas que ya existen
+            Comuna.objects.get_or_create(region=region, nombre=nombre)
 
         refrigerado, _ = RangoTemperatura.objects.get_or_create(nombre="Refrigerado", defaults=dict(temp_min_c=Decimal("0.0"), temp_max_c=Decimal("4.0")))
         congelado, _ = RangoTemperatura.objects.get_or_create(nombre="Congelado", defaults=dict(temp_min_c=Decimal("-25.0"), temp_max_c=Decimal("-18.0")))
@@ -241,4 +246,11 @@ class Command(BaseCommand):
 
         if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
             Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_admin)
+        try:                                        # las rutas por calles de la demostración quedan calculadas y en caché: la defensa no depende de la red
+            from flota import rutas
+            for despacho in Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True, ruta_geojson__isnull=True):
+                rutas.asegurar_ruta(despacho)
+            rutas.precalcular_demo()
+        except Exception as e:                      # sin red o sin OSRM: se calculan al despachar, con respaldo en línea recta
+            self.stdout.write(self.style.WARNING(f"No se precalcularon las rutas de la demostración: {e}"))
         self.stdout.write(self.style.SUCCESS("Datos de demostración listos (usuarios de prueba: contraseña en DEMO_PASSWORD)."))

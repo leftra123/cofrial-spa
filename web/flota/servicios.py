@@ -1,19 +1,30 @@
 """Estado de la flota para el panel y la API: última lectura de cada camión y su viaje activo."""
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from pedidos import servicios as pedidos_servicios
-from pedidos.models import Orden
+from pedidos.models import EstadoOrden, Orden
 
+from . import rutas
 from .models import Camion, Despacho, Telemetria
 from .vigente import ultimas_vigentes
 
 
+SITUACIONES = {"en_base": "en base", "en_ruta": "en ruta", "en_la_puerta": "en la puerta del cliente", "volviendo": "volviendo a la base"}
+
+
+def situacion_de(viaje):
+    """Dónde está un camión según su viaje: sin viaje queda guardado en la base; con viaje, la fase que informa el simulador."""
+    return "en_base" if viaje is None else viaje.fase
+
+
 def estado_flota():
+    pedidos_servicios.confirmar_vencidas()
     camiones = list(Camion.objects.select_related("rango_temperatura").order_by("camion_id"))
     # DISTINCT ON de PostgreSQL: la última lectura de cada camión en una sola consulta.
     ultimas = ultimas_vigentes()
-    viajes = {d.camion_id: d for d in Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).order_by("salida_en")}
+    viajes = {d.camion_id: d for d in Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).order_by("salida_en")}
     ordenes = {}
     for o in (Orden.objects.filter(despacho__in=viajes.values())
               .select_related("direccion__cliente", "direccion__comuna", "estado_orden")):
@@ -26,10 +37,15 @@ def estado_flota():
         pedidos = ordenes.get(d.despacho_id, []) if d else []
         tarjetas.append({"camion": c, "lectura": t, "viaje": d, "pedidos": pedidos,
                          "destino": pedidos[0].direccion if pedidos else None,
+                         "situacion": situacion_de(d), "situacion_texto": SITUACIONES[situacion_de(d)],
                          "alerta": bool(t and t.alerta_ruptura_frio),
                          "combustible_bajo": bool(t and t.combustible_pct < 25)})
     resumen = {"total": len(camiones), "activos": sum(1 for c in camiones if c.activo),
-               "en_ruta": len(viajes), "con_alerta": sum(1 for x in tarjetas if x["alerta"]),
+               "en_ruta": sum(1 for x in tarjetas if x["situacion"] == "en_ruta"),
+               "en_la_puerta": sum(1 for x in tarjetas if x["situacion"] == "en_la_puerta"),
+               "volviendo": sum(1 for x in tarjetas if x["situacion"] == "volviendo"),
+               "en_base": sum(1 for x in tarjetas if x["situacion"] == "en_base"),
+               "con_viaje": len(viajes), "con_alerta": sum(1 for x in tarjetas if x["alerta"]),
                "sin_lectura": sum(1 for x in tarjetas if x["lectura"] is None)}
     return tarjetas, resumen
 
@@ -40,7 +56,8 @@ ETAPA_DESPACHADA = 4          # orden_flujo de «Despachada» (Recibida, Confirm
 
 def pedidos_por_despachar():
     """Órdenes todavía sin camión y aún no despachadas, las más antiguas primero."""
-    return (Orden.objects.filter(despacho__isnull=True, estado_orden__es_final=False, estado_orden__orden_flujo__lt=ETAPA_DESPACHADA)
+    sin_camion = Q(despacho__isnull=True, estado_orden__es_final=False, estado_orden__orden_flujo__lt=ETAPA_DESPACHADA)
+    return (Orden.objects.filter(sin_camion | Q(estado_orden__nombre="Entrega no concretada"))        # una entrega fallida se puede reprogramar
             .select_related("direccion__cliente", "direccion__comuna", "estado_orden")
             .prefetch_related("ordenitem_set__producto__categoria__rango_temperatura").order_by("creada_en"))
 
@@ -51,21 +68,24 @@ def rangos_de(orden):
 
 
 def camiones_libres():
-    ocupados = Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).values_list("camion_id", flat=True)
+    ocupados = Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).values_list("camion_id", flat=True)
     return Camion.objects.filter(activo=True).exclude(camion_id__in=list(ocupados)).select_related("rango_temperatura").order_by("camion_id")
 
 
 @transaction.atomic
 def cerrar_despacho(despacho_id):
-    """Marca el viaje como llegado: fija `llegada_en` (el camión queda libre) y pasa a «Entregada» las órdenes que iban «Despachada»."""
+    """Corrección manual (administrador y despachador): da el viaje por llegado sin esperar al camión. Fija `llegada_en`, pasa a
+    «Entregada» las órdenes que iban «Despachada» o con el camión en la puerta y manda al camión de vuelta a la base. El flujo normal
+    no lo necesita: el simulador registra la llegada solo y el cliente confirma."""
     despacho = Despacho.objects.select_for_update().filter(pk=despacho_id, salida_en__isnull=False, llegada_en__isnull=True).first()
     if despacho is None:
-        raise pedidos_servicios.ErrorDeNegocio("Ese viaje no existe o ya está cerrado.")
+        raise pedidos_servicios.ErrorDeNegocio("Ese viaje no existe o ya llegó.")
     despacho.llegada_en = timezone.now()
-    despacho.save(update_fields=["llegada_en"])
+    despacho.fase = "volviendo"
+    despacho.save(update_fields=["llegada_en", "fase"])
     entregadas = 0
     for o in Orden.objects.filter(despacho=despacho).select_related("estado_orden"):
-        if o.estado_orden.nombre == "Despachada":
+        if o.estado_orden.nombre in ("Despachada", "Camión en la puerta"):
             pedidos_servicios.avanzar(o)
             entregadas += 1
     return despacho, entregadas
@@ -96,9 +116,17 @@ def despachar(camion_id, orden_ids):
     if problemas:
         raise ErrorDeNegocio(*problemas)
     ahora = timezone.now()
-    despacho = Despacho.objects.create(camion=camion, programado_para=ahora, salida_en=ahora)
+    ruta = rutas.armar_ruta([(o.direccion_id, o.direccion.lat, o.direccion.long) for o in ordenes])       # la misma ruta que vio el despachador
+    despacho = Despacho.objects.create(camion=camion, programado_para=ahora, salida_en=ahora, ruta_geojson=ruta,
+                                       ruta_aproximada=bool(ruta and ruta["aproximada"]))
     for o in ordenes:
         o.despacho = despacho
+        if o.estado_orden.nombre == "Entrega no concretada":                 # reprogramada: vuelve a salir con otro viaje
+            o.estado_orden = EstadoOrden.objects.get(nombre="Despachada")
+            o.puerta_en = o.entrega_resuelta_en = None
+            o.entrega_automatica = False
+            o.save(update_fields=["despacho", "estado_orden", "puerta_en", "entrega_resuelta_en", "entrega_automatica"])
+            continue
         o.save(update_fields=["despacho"])
         while o.estado_orden.orden_flujo < ETAPA_DESPACHADA:
             o = pedidos_servicios.avanzar(o)

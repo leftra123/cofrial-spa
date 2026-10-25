@@ -17,6 +17,7 @@ x-bd: &bd
   NUM_CAMIONES: "10"
   VELOCIDAD_MEDIA_KMH: ${VELOCIDAD_MEDIA_KMH:-50}     # la web usa la misma para la hora de llegada
   FACTOR_CALLES: ${FACTOR_CALLES:-1.3}
+  CONFIRMACION_AUTO_SEG: ${CONFIRMACION_AUTO_SEG:-120}     # plazo del cliente en la puerta; la web usa el mismo
 
 services:
   flota-1: {<<: *flota, environment: {<<: *bd, PRIMER_CAMION: "1"}}

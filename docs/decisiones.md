@@ -115,3 +115,11 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 ## Pedidos mixtos: una orden por rango de temperatura (25-oct-2026)
 - **Problema:** `flota.servicios.despachar` rechaza una orden que mezcla productos congelados y refrigerados («no puede viajar en un solo camión»), y como la orden no se podía dividir, quedaba bloqueada y no se podía despachar.
 - **Decisión de Eric (opción «dividir al comprar»):** `pedidos.servicios.generar_ordenes` agrupa las líneas del carrito por el rango de temperatura de su categoría y crea una orden por rango, con la misma dirección, la misma OC (o su propia referencia WEB si es B2B sin OC) y el stock descontado de la misma manera; el carrito pasa a «convertido» una sola vez (RN-09). `generar_orden` se mantiene y devuelve la primera. La pantalla de confirmación avisa «Tu compra se dividió en 2 pedidos…» y el carrito lo anticipa. Sin migraciones y sin cambios en `despachar`.
+
+## Desglose con IA de problemas de entrega y métrica de acierto real
+
+- La IA resume el texto del cliente (motivo de lista cerrada, hechos con citas textuales, urgencia, acción sugerida) y se guarda en `Requerimiento.desglose` junto al texto original, que no se toca. Si la IA falla, el requerimiento queda "sin clasificar" y no se pierde.
+- El texto del cliente va entre marcas como dato (defensa de inyección) y sin RUT, correo ni teléfono. Las citas se validan contra el original y la urgencia "alta" se fuerza por reglas (temperatura, producto dañado, salud), no por el modelo.
+- La temperatura que se muestra junto a un motivo de temperatura sale de la telemetría en la base, no de la IA.
+- La "confianza" es la que declara el modelo (no calibrada; umbral 60 %). Se muestra como porcentaje y la pantalla de IA mide el acierto real: categoría propuesta por la IA vs la que dejó ventas (`clasificado_manual`).
+- Evaluación con APIs reales (`manage.py evaluar_desglose`, 15 textos): 1.ª corrida motivo 73 % y urgencia 80 %; tras definir motivos y rúbrica en el prompt, 15/15 y 15/15 (optimista, se ajustó con esos mismos textos). Con 8 textos nuevos: motivo 7/8, urgencia 8/8.

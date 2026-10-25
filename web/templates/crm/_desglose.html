@@ -1,0 +1,14 @@
+{% comment %}Tarjeta con el desglose que hizo la IA del texto del cliente. Recibe `d` (el desglose) y `umbral`.{% endcomment %}
+<section class="desglose" aria-labelledby="desglose-t">
+  <header class="desglose-cab"><h2 id="desglose-t">Desglose de la IA</h2>
+    <span class="chip urg-{{ d.urgencia }}">Urgencia {{ d.urgencia }}</span></header>
+  <p class="desglose-resumen">{{ d.resumen }}</p>
+  <dl class="datos">
+    <div><dt>Motivo principal</dt><dd>{{ d.motivo_texto }}</dd></div>
+    <div><dt>Acción sugerida</dt><dd>{{ d.accion_texto }}</dd></div>
+    <div><dt>Confianza declarada</dt><dd><span title="Lo declara el propio modelo en su respuesta; no es una probabilidad calibrada. Es una ayuda, no una verdad.">{% if d.confianza is not None %}{% widthratio d.confianza 1 100 %} %{% else %}–{% endif %}</span></dd></div>
+  </dl>
+  {% if d.hechos %}<h3 class="desglose-sub">Lo que afirma el cliente</h3>
+  <ul class="hechos">{% for h in d.hechos %}<li>{{ h.afirmacion }}{% if h.cita %} <q>{{ h.cita }}</q>{% endif %}</li>{% endfor %}</ul>{% endif %}
+  <p class="frio desglose-pie">Ayuda de la IA: la confianza es la que declara el modelo, no una probabilidad medida. El texto original está arriba, sin cambios.</p>
+</section>

@@ -14,6 +14,7 @@ urlpatterns = [
     path("clientes/<int:pk>/interaccion/", views.cliente_interaccion, name="crm_cliente_interaccion"),
     path("clientes/<int:pk>/pedido/", views.cliente_pedido, name="crm_cliente_pedido"),
     path("requerimientos/", views.requerimientos, name="crm_requerimientos"),
+    path("requerimientos/<int:pk>/", views.requerimiento_detalle, name="crm_requerimiento"),
     path("requerimientos/<int:pk>/ia/", views.requerimiento_ia, name="crm_requerimiento_ia"),
     path("requerimientos/<int:pk>/clasificar/", views.requerimiento_clasificar, name="crm_requerimiento_clasificar"),
     path("ia/", views.ia_panel, name="crm_ia"),

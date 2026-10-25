@@ -1,8 +1,9 @@
 """Reglas de negocio del CRM (RN-09 a RN-15 del informe, sección de arquitectura funcional del CRM)."""
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Max, Q, Sum
 from django.utils import timezone
 
+from catalogo.asistente import estado_de_pedido
 from catalogo.models import ListaPrecio
 from clientes.models import Cliente, TipoCliente, Vendedor
 from flota.models import Telemetria
@@ -175,20 +176,61 @@ UMBRAL_CONFIANZA = 0.60            # supuesto del informe (RN-14): por debajo, r
 
 def clasificar_con_ia(requerimiento):
     """RN-14. Clasifica con IA y guarda la confianza. Si la API falla o la confianza es menor que el umbral,
-    el requerimiento queda «sin clasificar» para revisión manual. Nunca lanza ni pierde el requerimiento."""
+    el requerimiento queda «sin clasificar» para revisión manual. Nunca lanza ni pierde el requerimiento.
+    Si el requerimiento está ligado a un pedido, además se intenta el desglose del texto; si ese falla, solo queda sin desglose."""
     categorias = {c.nombre: c for c in CategoriaRequerimiento.objects.all()}
     try:
         nombre, confianza = ia.clasificar(requerimiento.asunto, requerimiento.descripcion, list(categorias))
     except ia.ErrorIA as e:
         ia.log.warning("Requerimiento %s sin clasificar por IA: %s", requerimiento.pk, e)
         requerimiento.ia_no_disponible = True          # solo para informar a quien lo pidió; no se guarda
+        desglosar_requerimiento(requerimiento)
         return requerimiento
     requerimiento.confianza_ia = round(confianza, 2)
+    requerimiento.categoria_ia = categorias[nombre]                 # lo que propuso la IA, aunque no alcance el umbral (sirve para medir su acierto)
     if confianza >= UMBRAL_CONFIANZA:
         requerimiento.categoria_requerimiento = categorias[nombre]
         requerimiento.estado = "clasificado"
-    requerimiento.save(update_fields=["confianza_ia", "categoria_requerimiento", "estado"])
+    requerimiento.save(update_fields=["confianza_ia", "categoria_ia", "categoria_requerimiento", "estado"])
+    desglosar_requerimiento(requerimiento)
     return requerimiento
+
+
+def desglosar_requerimiento(requerimiento):
+    """Desglose del texto del cliente con IA, guardado junto al requerimiento. Cualquier falla se ignora: el requerimiento ya está guardado."""
+    if not requerimiento.orden_id:
+        return None
+    try:
+        estado = estado_de_pedido(requerimiento.orden.estado_orden.nombre)
+        requerimiento.desglose = ia.desglosar(f"{requerimiento.asunto}. {requerimiento.descripcion}", estado)
+    except ia.ErrorIA as e:
+        ia.log.warning("Requerimiento %s sin desglose de IA: %s", requerimiento.pk, e)
+        return None
+    requerimiento.save(update_fields=["desglose"])
+    return requerimiento.desglose
+
+
+def telemetria_del_viaje(orden):
+    """Dato de la BASE (no de la IA) para cruzar con un reclamo de temperatura: última temperatura del camión del viaje, la máxima y si hubo alerta de frío."""
+    d = orden.despacho
+    if d is None or d.salida_en is None:
+        return None
+    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, registrado_en__gte=d.salida_en, registrado_en__lte=d.llegada_en or timezone.now())
+    ultima = lecturas.order_by("-registrado_en").first()
+    if ultima is None:
+        return {"camion": d.camion_id, "lecturas": 0}
+    return {"camion": d.camion_id, "lecturas": lecturas.count(), "ultima_temp": ultima.temp_camara, "ultima_hora": ultima.registrado_en,
+            "max_temp": lecturas.aggregate(m=Max("temp_camara"))["m"], "alertas": lecturas.filter(alerta_ruptura_frio=True).count(),
+            "limite": d.camion.rango_temperatura.temp_max_c}
+
+
+def acierto_de_la_ia():
+    """Cuánto acierta la IA cuando ventas corrigió a mano: de los requerimientos que la IA dudó (o no pudo clasificar) y una persona clasificó,
+    en cuántos la persona eligió la misma categoría que la IA había propuesto."""
+    manuales = Requerimiento.objects.filter(clasificado_manual=True, categoria_ia__isnull=False)
+    n = manuales.count()
+    coinciden = manuales.filter(categoria_ia=F("categoria_requerimiento")).count()
+    return {"corregidos": n, "coinciden": coinciden, "porcentaje": round(100 * coinciden / n) if n else None}
 
 
 def crear_requerimiento(cliente, asunto, descripcion, orden=None):
@@ -210,8 +252,8 @@ def clasificar_manual(usuario, requerimiento_id, categoria_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
     r = Requerimiento.objects.get(pk=requerimiento_id)
-    r.categoria_requerimiento_id, r.estado = categoria_id, "clasificado"
-    r.save(update_fields=["categoria_requerimiento", "estado"])
+    r.categoria_requerimiento_id, r.estado, r.clasificado_manual = categoria_id, "clasificado", True
+    r.save(update_fields=["categoria_requerimiento", "estado", "clasificado_manual"])
     return r
 
 

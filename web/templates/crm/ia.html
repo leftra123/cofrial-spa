@@ -71,6 +71,14 @@
   {% endif %}
 </div>
 
+<div class="tarjeta-ui" style="margin-top:20px" aria-labelledby="acierto-t">
+  <h2 id="acierto-t">¿Cuánto acierta de verdad?</h2>
+  <p class="muted">La «confianza» que ves en los chips la declara el propio modelo en su respuesta: <b>no es una probabilidad medida</b>. Con {% widthratio umbral 1 100 %} % o más la categoría se asigna sola; bajo ese umbral queda para revisión manual. Lo que sí se mide es esto:</p>
+  {% if acierto.corregidos %}<p class="acierto-cifra"><b>{{ acierto.porcentaje }} %</b> <span class="muted">de las veces que ventas clasificó a mano un requerimiento que la IA había dudado, la persona eligió la misma categoría que la IA proponía ({{ acierto.coinciden }} de {{ acierto.corregidos }}).</span></p>
+  {% else %}<p class="muted">Todavía no hay requerimientos que ventas haya clasificado a mano después de una duda de la IA; cuando los haya, aquí aparece el porcentaje de coincidencia.</p>{% endif %}
+  <p class="frio">Además, en la evaluación con 20 mensajes de ejemplo la IA acertó 20 de 20 (<code>manage.py evaluar_ia</code>).</p>
+</div>
+
 <div class="seccion"><h2>Últimos requerimientos y qué hizo la IA</h2></div>
 <div class="tabla-caja"><table>
   <thead><tr><th>Asunto</th><th>Cliente</th><th>Categoría</th><th>Quién clasificó</th><th>Estado</th></tr></thead>
@@ -79,9 +87,9 @@
     <td><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:70 }}</span></td>
     <td>{{ r.cliente|default:"–" }}</td>
     <td>{{ r.categoria_requerimiento|default:"–" }}</td>
-    <td>{% if r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado">IA · {{ r.confianza_ia }}</span>
-        {% elif r.categoria_requerimiento %}<span class="chip cancelado">Manual</span>
-        {% elif r.confianza_ia is not None %}<span class="chip pendiente">IA dudó · {{ r.confianza_ia }}</span>
+    <td>{% if r.clasificado_manual or r.categoria_requerimiento and r.confianza_ia is None %}<span class="chip cancelado">Manual</span>
+        {% elif r.categoria_requerimiento and r.confianza_ia is not None %}<span class="chip asignado" title="Confianza declarada por el modelo (no calibrada)">IA · {% widthratio r.confianza_ia 1 100 %} %</span>
+        {% elif r.confianza_ia is not None %}<span class="chip pendiente" title="Bajo el umbral de {% widthratio umbral 1 100 %} %">IA dudó · {% widthratio r.confianza_ia 1 100 %} %</span>
         {% else %}<span class="frio">Aún nadie</span>{% endif %}</td>
     <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% else %}entregado{% endif %}">{{ r.get_estado_display }}</span></td>
   </tr>{% empty %}<tr><td colspan="5" class="vacio">Aún no hay requerimientos.</td></tr>{% endfor %}

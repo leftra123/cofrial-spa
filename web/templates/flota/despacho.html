@@ -13,7 +13,7 @@
 <div class="despacho-grid">
   <div>
     <div class="seccion"><h2>1. Camión</h2></div>
-    <div class="tarjeta-ui">
+    <div class="tarjeta-ui lista-corta">
       {% for c in camiones %}
       <label class="opcion"><input type="radio" name="camion" value="{{ c.camion_id }}" {% if forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rango_temperatura.nombre }}</span> <span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
       {% empty %}{% include "componentes/vacio_estado.html" with plano=True compacto=True ico="camion" titulo="No hay camiones libres" texto="Todos están en ruta o inactivos. Cuando uno vuelva a la bodega podrás armar el viaje." url="/flota/" accion="Ver la flota" %}{% endfor %}

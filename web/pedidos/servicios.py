@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import F
 
 from catalogo import avisos
-from catalogo.models import PrecioProducto, Producto
+from catalogo.models import Categoria, PrecioProducto, Producto
 from clientes.models import Cliente, Direccion
 
 from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
@@ -81,8 +81,12 @@ def total(filas):
 
 # ------------------------------------------------------------------------------------ órdenes
 @transaction.atomic
-def generar_orden(cliente, direccion_id, numero_oc=""):
-    """Convierte el carrito en una orden. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción."""
+def generar_ordenes(cliente, direccion_id, numero_oc=""):
+    """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
+
+    RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
+    (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección y la misma OC. Devuelve la lista.
+    """
     numero_oc = (numero_oc or "").strip()[:30]
     pendiente = cliente.tipo_cliente.codigo == "B2B" and not numero_oc      # RN-05: sin OC la orden se crea igual, marcada «OC pendiente»
     direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()    # RN-04
@@ -105,18 +109,32 @@ def generar_orden(cliente, direccion_id, numero_oc=""):
     if sin_precio:
         raise ErrorDeNegocio("Productos sin precio en tu lista: " + ", ".join(sin_precio) + ".")
 
-    orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente,
-                                 estado_orden=EstadoOrden.objects.get(orden_flujo=1))
-    if pendiente:
-        orden.numero_oc = referencia_web(orden)
-        orden.save(update_fields=["numero_oc"])
-    for i in items:
-        OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
-                                 precio_unitario_clp=precios[i.producto_id])        # RN-06: precio congelado
-        Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
+    rango_de_categoria = dict(Categoria.objects.filter(pk__in={p.categoria_id for p in productos.values()})
+                              .values_list("pk", "rango_temperatura_id"))
+    grupos = {}
+    for i in items:                                                                # RN-09: un grupo por rango de temperatura
+        grupos.setdefault(rango_de_categoria[productos[i.producto_id].categoria_id], []).append(i)
+
+    estado = EstadoOrden.objects.get(orden_flujo=1)
+    ordenes = []
+    for rango_id in sorted(grupos):
+        orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado)
+        if pendiente:
+            orden.numero_oc = referencia_web(orden)
+            orden.save(update_fields=["numero_oc"])
+        for i in grupos[rango_id]:
+            OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
+                                     precio_unitario_clp=precios[i.producto_id])        # RN-06: precio congelado
+            Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
+        ordenes.append(orden)
     carrito.estado = "convertido"                                                  # RN-03
     carrito.save(update_fields=["estado"])
-    return orden
+    return ordenes
+
+
+def generar_orden(cliente, direccion_id, numero_oc=""):
+    """Igual que `generar_ordenes`, pero devuelve solo la primera orden (la que muestra la pantalla de confirmación)."""
+    return generar_ordenes(cliente, direccion_id, numero_oc)[0]
 
 
 def referencia_web(orden):

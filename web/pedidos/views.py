@@ -21,6 +21,9 @@ def solo_clientes(vista):
             return redirect(f"/cuenta/entrar/?next={request.path}")
         cliente = s.cliente_de(request.user)
         if cliente is None:
+            if request.method == "POST":            # una cuenta del equipo no compra, no cancela ni abre reclamos como cliente: se le dice claro
+                return render(request, "403.html", {"detalle": "Las cuentas del equipo no compran, no cancelan pedidos ni abren reclamos como cliente. "
+                                                               "Para un pedido a nombre de un cliente, usa la ficha del cliente en el CRM."}, status=403)
             messages.error(request, "Tu cuenta no está asociada a un cliente. Entra con una cuenta de cliente.")
             return redirect("catalogo")
         return vista(request, cliente, *args, **kwargs)

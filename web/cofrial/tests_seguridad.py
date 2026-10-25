@@ -107,7 +107,7 @@ class SeparacionDeRolesTests(BaseSeguridad):
     def test_el_personal_no_compra_como_cliente(self):
         c = self.entrar("vendedora@cofrial.cl")
         r = c.post("/carrito/agregar/", {"producto": Producto.objects.first().pk, "cantidad": 1})
-        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.status_code, 403)                       # 403 claro, no una redirección con mensaje
         self.assertEqual(c.get("/api/pedidos/").status_code, 403)
 
     def test_el_despachador_no_toca_el_embudo_comercial(self):

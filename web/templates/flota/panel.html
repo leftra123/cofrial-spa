@@ -37,7 +37,7 @@
 
 <div class="seccion"><h2>Viajes activos</h2></div>
 {% if not viajes %}
-{% include "componentes/vacio_estado.html" with compacto=True ico="mapa" titulo="Ningún camión está en ruta" texto="Cuando despaches pedidos, cada viaje aparece aquí con su ruta, su temperatura y sus entregas." url="/flota/despachar/" accion="Armar despacho" %}
+{% if puede_cerrar %}{% include "componentes/vacio_estado.html" with compacto=True ico="mapa" titulo="Ningún camión está en ruta" texto="Cuando despaches pedidos, cada viaje aparece aquí con su ruta, su temperatura y sus entregas." url="/flota/despachar/" accion="Armar despacho" %}{% else %}{% include "componentes/vacio_estado.html" with compacto=True ico="mapa" titulo="Ningún camión está en ruta" texto="Cuando el despachador arme un viaje, aparece aquí con su ruta, su temperatura y sus entregas." %}{% endif %}
 {% else %}
 <div class="rejilla dos">
 {% for x in viajes %}

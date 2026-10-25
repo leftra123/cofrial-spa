@@ -313,6 +313,110 @@ class EncuadreFlotaTests(TestCase):
         self.assertIn("maxZoom: 15", html)
 
 
+class SugerenciaDespachoTests(TestCase):
+    """La sugerencia propone camión y pedidos con las mismas reglas de «Armar despacho» y no despacha nada."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def entrar(self, usuario):
+        from crm.tests import CLAVE
+        self.client.logout()
+        self.assertTrue(self.client.login(username=usuario, password=CLAVE))
+
+    def _pedido(self, sku, cliente_rut="61.973.200-4", cantidad=2):
+        from catalogo.models import Producto
+        from clientes.models import Cliente
+        from pedidos import servicios as pedidos
+        cliente = Cliente.objects.get(rut=cliente_rut)
+        pedidos.agregar(cliente, Producto.objects.get(sku=sku).pk, cantidad)
+        return pedidos.generar_orden(cliente, cliente.direccion_set.first().pk, "")
+
+    def test_sin_pedidos_pendientes_no_hay_viajes(self):
+        from flota import sugerencias
+        for o in sugerencias.servicios.pedidos_por_despachar():
+            o.delete()
+        viajes, resto = sugerencias.calcular()
+        self.assertEqual(viajes, [])
+        self.assertEqual(sugerencias.texto_base(viajes, resto), "")
+
+    def test_propone_camion_libre_del_mismo_rango(self):
+        from flota import sugerencias
+        orden = self._pedido("VAC-LOM-5K")                      # refrigerado, con dirección ubicada
+        viajes, _ = sugerencias.calcular()
+        mio = next(v for v in viajes if orden.orden_id in [p["orden"] for p in v["pedidos"]])
+        camion = Camion.objects.get(pk=mio["camion"])
+        self.assertEqual(camion.rango_temperatura.nombre, mio["rango"])
+        self.assertIn(camion, list(sugerencias.servicios.camiones_libres()))
+
+    def test_no_sugiere_camiones_en_ruta(self):
+        from flota import sugerencias
+        self._pedido("VAC-LOM-5K")
+        ocupados = set(sugerencias.servicios.Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).values_list("camion_id", flat=True))
+        for v in sugerencias.calcular()[0]:
+            self.assertNotIn(v["camion"], ocupados)
+
+    def test_sin_clave_usa_el_texto_base(self):
+        from flota import sugerencias
+        self._pedido("VAC-LOM-5K")
+        viajes, resto = sugerencias.calcular()
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "", "GROQ_API_KEY": ""}):
+            texto, por_ia = sugerencias.redactar(viajes, resto)
+        self.assertFalse(por_ia)
+        self.assertIn(viajes[0]["camion"], texto)
+
+    def test_texto_de_la_ia_con_camion_inventado_se_descarta(self):
+        from django.core.cache import cache
+        from flota import sugerencias
+        cache.clear()
+        self._pedido("VAC-LOM-5K")
+        viajes, resto = sugerencias.calcular()
+        with patch("flota.sugerencias.ia.redactar", return_value="Usa el CAM-99 para todo."):
+            texto, por_ia = sugerencias.redactar(viajes, resto)
+        self.assertFalse(por_ia)
+        self.assertNotIn("CAM-99", texto)
+
+    def test_texto_valido_de_la_ia_se_usa_y_no_lleva_datos_personales(self):
+        from django.core.cache import cache
+        from flota import sugerencias
+        cache.clear()
+        self._pedido("VAC-LOM-5K")
+        viajes, resto = sugerencias.calcular()
+        camion = viajes[0]["camion"]
+        with patch("flota.sugerencias.ia.redactar", return_value=f"Hay pedidos esperando; usa {camion}.") as falso:
+            texto, por_ia = sugerencias.redactar(viajes, resto)
+        self.assertTrue(por_ia)
+        self.assertIn(camion, texto)
+        enviado = falso.call_args[0][0]
+        self.assertNotIn("Hospital", enviado)                    # nombre de cliente
+        self.assertNotIn("Manuel Montt", enviado)                # calle
+
+    def test_endpoint_exige_rol_y_no_despacha(self):
+        from pedidos.models import Orden
+        self.client.logout()
+        self.assertEqual(self.client.get("/flota/sugerencias/").status_code, 302)
+        self.entrar("ana@correo.test")
+        self.assertEqual(self.client.get("/flota/sugerencias/").status_code, 403)
+        orden = self._pedido("VAC-LOM-5K")
+        self.entrar("admin@cofrial.cl")
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "", "GROQ_API_KEY": ""}):
+            r = self.client.get("/flota/sugerencias/")
+        self.assertEqual(r.status_code, 200)
+        datos = r.json()
+        self.assertTrue(datos["viajes"])
+        self.assertIn("/flota/despachar/?camion=", datos["viajes"][0]["enlace"])
+        self.assertIsNone(Orden.objects.get(pk=orden.pk).despacho_id)     # solo propone
+
+    def test_formulario_llega_con_la_preseleccion(self):
+        orden = self._pedido("VAC-LOM-5K")
+        self.entrar("admin@cofrial.cl")
+        r = self.client.get(f"/flota/despachar/?camion=CAM-03&ordenes={orden.orden_id}")
+        html = r.content.decode()
+        self.assertRegex(html, rf'value="{orden.orden_id}"[^>]*checked')
+        self.assertRegex(html, r'value="CAM-03" checked')
+
+
 class CerrarDespachoTests(TestCase):
     @classmethod
     def setUpTestData(cls):

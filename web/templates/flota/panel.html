@@ -15,6 +15,15 @@
   <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
 </div>
 
+<div id="sugerencia" hidden>
+  <div class="seccion"><h2>Sugerencia de despacho</h2><span class="chip transito" id="sug-origen"></span></div>
+  <div class="tarjeta-ui">
+    <p id="sug-texto" style="margin:0 0 10px"></p>
+    <div id="sug-viajes"></div>
+    <p class="frio" style="margin:8px 0 0">Es una propuesta: el botón abre «Armar despacho» con el camión y los pedidos marcados, y nada sale hasta que lo confirmes.</p>
+  </div>
+</div>
+
 <div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
 <div class="tarjeta-ui">
   <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
@@ -89,6 +98,23 @@
 <script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
+<script>
+  (function () {
+    fetch("/flota/sugerencias/", {credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !d.texto) return;
+      document.getElementById("sug-texto").textContent = d.texto;
+      document.getElementById("sug-origen").textContent = d.por_ia ? "Redactado por IA" : "Cálculo del sistema";
+      var cont = document.getElementById("sug-viajes");
+      d.viajes.forEach(function (v) {
+        var a = document.createElement("a");
+        a.className = "btn btn-sec"; a.href = v.enlace; a.style.marginRight = "8px";
+        a.textContent = "Armar despacho con " + v.camion + " (" + v.pedidos.length + (v.pedidos.length === 1 ? " pedido" : " pedidos") + ")";
+        cont.appendChild(a);
+      });
+      document.getElementById("sugerencia").hidden = false;
+    }).catch(function () {});               // sin sugerencia el panel funciona igual
+  })();
+</script>
 <script>CofrialLeyenda("leyenda-flota", ["camion", "alerta", "base", "destino"]);</script>
 <script>
   (function () {

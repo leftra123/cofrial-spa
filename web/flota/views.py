@@ -1,6 +1,7 @@
 """Panel de flota (solo lectura): estado de cada camión según su última lectura de telemetría y su viaje activo."""
 from django.conf import settings
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -10,7 +11,7 @@ from pedidos.servicios import ErrorDeNegocio
 
 from crm.views import con_rol
 
-from . import servicios
+from . import servicios, sugerencias
 from .servicios import estado_flota
 
 
@@ -47,6 +48,15 @@ def cerrar_despacho(request, despacho_id):
 
 
 @con_rol("admin", "gerencia", "despachador")
+def sugerencias_despacho(request):
+    """JSON para el panel: viajes sugeridos y un aviso redactado por la IA (o el texto base). Solo propone; no despacha."""
+    viajes, resto = sugerencias.calcular()
+    texto, por_ia = sugerencias.redactar(viajes, resto)
+    return JsonResponse({"texto": texto, "por_ia": por_ia, "viajes": sugerencias.con_enlaces(viajes), **resto},
+                        json_dumps_params={"ensure_ascii": False})
+
+
+@con_rol("admin", "gerencia", "despachador")
 def despachar(request):
     """Armar un viaje: elegir camión y pedidos; la ruta sugerida se previsualiza en el mapa antes de salir."""
     if request.method == "POST":
@@ -65,7 +75,9 @@ def despachar(request):
     mapa = {"base": settings.BASE_LOGISTICA,
             "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
                                           "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}
-    return render(request, "flota/despacho.html", {"pedidos": pedidos, "camiones": servicios.camiones_libres(), "mapa": mapa})
+    marcados = {int(i) for i in request.GET.get("ordenes", "").split(",") if i.isdigit()}      # preselección que llega desde la sugerencia
+    return render(request, "flota/despacho.html", {"pedidos": pedidos, "camiones": servicios.camiones_libres(), "mapa": mapa,
+                                                   "camion_sugerido": request.GET.get("camion", ""), "marcados": marcados})
 
 
 @require_POST

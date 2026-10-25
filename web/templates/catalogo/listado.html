@@ -34,7 +34,12 @@
     <p class="solo-lector" id="cat-vivo" role="status" aria-live="polite"></p>
     <h2 class="solo-lector">Productos</h2>
     <div class="productos" id="productos">
-    {% for f in filas %}{% include "catalogo/_tarjeta.html" %}
+    {% regroup filas|dictsort:"p.categoria.rango_temperatura.nombre" by p.categoria.rango_temperatura as grupos %}
+    {% for g in grupos %}{% with r=g.grouper %}
+    <section class="grupo-temp" aria-labelledby="gt-{{ r.pk }}">
+      <header class="grupo-cab"><h3 id="gt-{{ r.pk }}">{{ r.nombre }}</h3><span class="grupo-rango"><i class="grupo-escala {% if r.nombre == "Congelado" %}cong{% else %}ref{% endif %}" aria-hidden="true"></i>{{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C</span><span class="grupo-n">{{ g.list|length }} producto{{ g.list|length|pluralize }}</span></header>
+      <div class="grupo-grid">{% for f in g.list %}{% include "catalogo/_tarjeta.html" with prioritaria=forloop.parentloop.first %}{% endfor %}</div>
+    </section>{% endwith %}
     {% empty %}<div class="vacio-grande">{% include "componentes/vacio.html" with ico="lupa" %}<b>No encontramos productos con esos filtros</b>Pruebe con otra palabra o quite algún filtro.<p style="margin-top:14px"><a class="btn btn-sec" href="/catalogo/" data-limpiar>Ver todo el catálogo</a></p></div>{% endfor %}
     </div>
   </div>

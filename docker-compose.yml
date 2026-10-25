@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-cofrial}
       POSTGRES_USER: ${DB_USER:-cofrial}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
-    ports: ["127.0.0.1:5433:5432"]  # solo desde esta máquina; 5433 para no chocar con un Postgres local
+    ports: ["127.0.0.1:${DB_PUERTO:-5433}:5432"]  # solo desde esta máquina; 5433 para no chocar con un Postgres local
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cofrial} -d ${DB_NAME:-cofrial}"]
@@ -47,7 +47,7 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODELS: ${GROQ_MODELS:-}
       IA_PROVEEDORES: ${IA_PROVEEDORES:-}
-    ports: ["8000:8000"]
+    ports: ["${WEB_PUERTO:-8000}:8000"]
     depends_on:
       db: {condition: service_healthy}
     restart: unless-stopped
@@ -80,7 +80,7 @@ services:
       GF_PUBLIC_DASHBOARDS_ENABLED: "false"       # sin tableros públicos por enlace (DoS CVE-2026-42127)
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-    ports: ["3000:3000"]
+    ports: ["${GRAFANA_PUERTO:-3000}:3000"]
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro

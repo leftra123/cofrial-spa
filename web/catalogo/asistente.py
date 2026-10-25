@@ -142,11 +142,16 @@ def _productos_mencionados(norm, producto_id):
 
 
 ESTADO_DE_UN_PEDIDO = {"Recibida": "recibido", "Confirmada": "confirmado", "En preparación": "en preparación", "Despachada": "despachado",
-                       "Entregada": "entregado", "Cancelada": "cancelado"}        # «pedido» es masculino; el estado del sistema es femenino (de «orden»)
+                       "Entregada": "entregado", "Cancelada": "cancelado",
+                       "Camión en la puerta": "con el camión en la puerta", "Entrega no concretada": "con la entrega sin concretar"}        # «pedido» es masculino; el estado del sistema es femenino (de «orden»)
 
 
 def estado_de_pedido(nombre):
-    return ESTADO_DE_UN_PEDIDO.get(nombre, nombre.lower())
+    """El estado en masculino para frases como «Tu pedido 6 está …». Un estado nuevo que no esté en la tabla se pasa a masculino si termina en «-ada»."""
+    if nombre in ESTADO_DE_UN_PEDIDO:
+        return ESTADO_DE_UN_PEDIDO[nombre]
+    palabra = nombre.lower()
+    return palabra[:-3] + "ado" if palabra.endswith("ada") else palabra
 
 
 def _pedido(o, perfil):

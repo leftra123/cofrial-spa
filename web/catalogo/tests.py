@@ -477,7 +477,10 @@ class AsistenteDeIA(TestCase):
     def test_el_estado_del_pedido_va_en_masculino(self):
         from catalogo.asistente import _concordar, estado_de_pedido
         from pedidos.models import EstadoOrden
-        for e in EstadoOrden.objects.all():
+        from catalogo.asistente import ESTADO_DE_UN_PEDIDO
+        nombres = set(EstadoOrden.objects.values_list("nombre", flat=True)) | set(ESTADO_DE_UN_PEDIDO) | {"Reprogramada"}      # los de la base, los de la tabla y uno futuro sin entrada
+        for nombre in nombres:
+            e = type("E", (), {"nombre": nombre})
             palabra = estado_de_pedido(e.nombre)
             self.assertNotRegex(palabra, r"(ada)$", e.nombre)                                         # ni «despachada» ni «entregada»
             self.assertEqual(_concordar(f"Tu pedido 6 está {palabra}."), f"Tu pedido 6 está {palabra}.")

@@ -46,6 +46,7 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 | Crear pedido a nombre del cliente | E | — | — | E |
 | Requerimientos | L, E | — | L | L, E |
 | Alertas de frío | L | L | L | L |
+| Flota y armar despacho | — | L, E | L | L, E |
 | Reportes | L (propios) | — | L (todos) | L (todos) |
 
 *Nota.* Elaboración propia. Los clientes B2B y B2C no entran al CRM: usan solo el portal.

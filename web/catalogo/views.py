@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente, TipoCliente
@@ -129,12 +130,17 @@ def pedir_aviso(request):
     except (avisos.ErrorAviso, ValueError) as e:
         messages.error(request, str(e) if isinstance(e, avisos.ErrorAviso) else "Indica una cantidad válida.")
     destino = request.POST.get("volver") or "/avisos/"
-    return redirect(destino if destino.startswith("/") and not destino.startswith("//") else "/avisos/")
+    seguro = url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()) and destino.startswith("/")
+    return redirect(destino if seguro else "/avisos/")           # «/\\sitio.com» y «//sitio.com» no son del sitio: sin redirección abierta
 
 
 def mis_avisos(request):
     cliente = _cliente(request)
     if cliente is None:
+        if request.user.is_authenticated:           # una cuenta del equipo no tiene avisos de stock: ir al login con sesión abierta sería un rebote inútil
+            messages.info(request, "Los avisos de stock son de las cuentas de clientes.")
+            from crm import servicios as crm
+            return redirect("/crm/" if crm.rol(request.user) else "/catalogo/")
         return redirect("/cuenta/entrar/?next=/avisos/")
     lista = list(avisos.pendientes(cliente))
     for a in lista:

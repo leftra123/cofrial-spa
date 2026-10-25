@@ -24,7 +24,7 @@ def menu(request):
     if cliente is not None:
         n = sum(CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto").values_list("cantidad", flat=True))
     return {"menu": {"cliente": cliente is not None, "crm": rol is not None,
-                     "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_staff, "demo": u.is_superuser},
+                     "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_superuser, "demo": u.is_superuser},
             "carrito_n": n, "cliente_tienda": cliente,
             "avisos_n": avisos.cuantos_disponibles(cliente) if cliente is not None else 0,
             "grafana_url": _grafana(request) if rol is not None or u.is_staff else "", **tiles}

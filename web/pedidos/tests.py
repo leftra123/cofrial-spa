@@ -6,6 +6,7 @@ from django.test import TestCase, TransactionTestCase
 
 from catalogo.models import Producto
 from clientes.models import Cliente, Direccion
+from flota import servicios as sv
 from pedidos import servicios as s
 from pedidos.models import Carrito, EstadoOrden, Orden, OrdenItem
 
@@ -56,6 +57,25 @@ class ReglasDePedidos(TestCase):
         s.agregar(self.ana, self.lomo.pk, 1)
         with self.assertRaises(s.ErrorDeNegocio):
             s.generar_orden(self.ana, self.dir_de(self.hospital))
+
+    def test_rn09_un_carrito_mixto_se_divide_en_una_orden_por_rango_de_temperatura(self):
+        salmon = Producto.objects.get(sku="PES-FIL-3K")                       # Congelado; el lomo y el pollo son refrigerados
+        s.agregar(self.hospital, self.lomo.pk, 2)
+        s.agregar(self.hospital, self.pollo.pk, 1)
+        s.agregar(self.hospital, salmon.pk, 3)
+        stock_antes = self.stock(salmon)
+        convertidos = Carrito.objects.filter(cliente=self.hospital, estado="convertido").count()
+        ordenes = s.generar_ordenes(self.hospital, self.dir_de(self.hospital), "OC-9")
+        self.assertEqual(len(ordenes), 2)
+        self.assertEqual([sorted(r for r in sv.rangos_de(o)) for o in ordenes].count(["Congelado"]), 1)
+        for o in ordenes:
+            self.assertEqual(len(sv.rangos_de(o)), 1)                                    # ninguna orden mezcla rangos
+            self.assertEqual((o.numero_oc, o.oc_pendiente, o.direccion_id), ("OC-9", False, self.dir_de(self.hospital)))
+        self.assertEqual(self.stock(salmon), stock_antes - 3)
+        self.assertEqual(Carrito.objects.filter(cliente=self.hospital, estado="convertido").count(), convertidos + 1)    # un solo carrito, dos órdenes
+        camiones = {c.rango_temperatura.nombre: c.camion_id for c in sv.camiones_libres()}
+        for o in ordenes:
+            sv.despachar(camiones[sv.rangos_de(o)[0]], [o.orden_id])
 
     def test_rn05_b2b_sin_oc_queda_pendiente_con_referencia_propia_y_b2c_no(self):
         s.agregar(self.hospital, self.lomo.pk, 1)

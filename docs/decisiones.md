@@ -111,3 +111,7 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 - **Django:** `DJANGO_SECRET_KEY` es obligatoria fuera de DEBUG y de las pruebas (antes había una clave por defecto conocida); `DJANGO_HTTPS=1` activa cookies seguras, HSTS y redirección a HTTPS; `X_FRAME_OPTIONS=DENY`, `SameSite=Lax`.
 - **Dependabot** (`.github/dependabot.yml`) avisa semanalmente de pip, Docker y npm.
 - Verificación: 190 pruebas de Django y 9 del simulador en verde; ambas imágenes construyen. No se probó el despliegue en AWS.
+
+## Pedidos mixtos: una orden por rango de temperatura (25-oct-2026)
+- **Problema:** `flota.servicios.despachar` rechaza una orden que mezcla productos congelados y refrigerados («no puede viajar en un solo camión»), y como la orden no se podía dividir, quedaba bloqueada y no se podía despachar.
+- **Decisión de Eric (opción «dividir al comprar»):** `pedidos.servicios.generar_ordenes` agrupa las líneas del carrito por el rango de temperatura de su categoría y crea una orden por rango, con la misma dirección, la misma OC (o su propia referencia WEB si es B2B sin OC) y el stock descontado de la misma manera; el carrito pasa a «convertido» una sola vez (RN-09). `generar_orden` se mantiene y devuelve la primera. La pantalla de confirmación avisa «Tu compra se dividió en 2 pedidos…» y el carrito lo anticipa. Sin migraciones y sin cambios en `despachar`.

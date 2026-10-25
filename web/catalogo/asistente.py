@@ -146,6 +146,13 @@ ESTADO_DE_UN_PEDIDO = {"Recibida": "recibido", "Confirmada": "confirmado", "En p
                        "Camión en la puerta": "con el camión en la puerta", "Entrega no concretada": "con la entrega sin concretar"}        # «pedido» es masculino; el estado del sistema es femenino (de «orden»)
 
 
+SITUACION_DE_UN_PEDIDO = {       # lo que la persona puede hacer o esperar en estos dos estados; el modelo solo lo redacta
+    "Camión en la puerta": "Al responder, di que el camión está afuera de su dirección y que ahora puede tocar «Recibí mi pedido» o «No pude recibirlo» "
+                           "(botones en la pantalla del pedido y en la campanita); si no responde, se da por entregado a los pocos minutos.",
+    "Entrega no concretada": "Al responder, di que ya registramos su aviso de que no pudo recibirlo y que ventas lo contactará para reprogramar la entrega o cancelarlo; háblale de tú.",
+}
+
+
 def estado_de_pedido(nombre):
     """El estado en masculino para frases como «Tu pedido 6 está …». Un estado nuevo que no esté en la tabla se pasa a masculino si termina en «-ada»."""
     if nombre in ESTADO_DE_UN_PEDIDO:
@@ -164,6 +171,9 @@ def _pedido(o, perfil):
         d["total_neto"], d["total_con_iva"] = clp(total), con_iva(total)
     else:
         d["total"] = clp(total) + " (IVA incluido)"
+    situacion = SITUACION_DE_UN_PEDIDO.get(o.estado_orden.nombre)
+    if situacion:
+        d["que_pasa_ahora"] = situacion
     if o.despacho_id:
         seg = pedidos.seguimiento(o) or {}
         envio = {"camion": seg.get("camion_id")}

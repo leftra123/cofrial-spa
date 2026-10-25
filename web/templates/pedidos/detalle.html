@@ -28,20 +28,39 @@
   <div>
     {% if n == "Cancelada" %}<h2 id="ep-t">Esta orden fue cancelada</h2><p>El stock de los productos quedó repuesto. Si fue un error, arma el pedido de nuevo desde el catálogo.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Ir al catálogo</a><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Consultar por esta orden</a></div>
-    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado</h2><p>Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura. Si algo no llegó como esperabas, cuéntanoslo.</p>
-      <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>
-    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Estamos afuera de tu dirección</h2><p>El camión llegó con tu pedido. Confírmanos si lo recibiste; si no pudiste recibirlo, cuéntanos por qué. Si no respondes, lo damos por entregado en unos minutos.</p>
-      <div class="entrega-resp">
-        <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/">{% csrf_token %}<input type="hidden" name="accion" value="aceptar"><button class="btn">Recibí mi pedido</button></form>
-        <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" class="entrega-no">{% csrf_token %}<input type="hidden" name="accion" value="no_recibido">
-          <label for="motivo-entrega">No pude recibirlo / hay un problema</label>
-          <textarea id="motivo-entrega" name="motivo" rows="2" minlength="5" maxlength="500" required placeholder="Cuéntanos qué pasó"></textarea>
-          <button class="btn btn-sec">Informar el problema</button></form>
+    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado</h2>
+      {% if orden.entrega_automatica %}<p>No recibimos tu respuesta a tiempo y lo dimos por entregado{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Si no lo recibiste, cuéntanoslo y lo revisamos.</p>
+      <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">No lo recibí</a><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+      {% else %}<p>Confirmaste la recepción{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura.</p>
+      <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>{% endif %}
+    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Estamos afuera de tu dirección</h2>
+      <p>El camión llegó con tu pedido N.º {{ orden.orden_id }} a {{ orden.direccion }}. ¿Lo pudiste recibir?</p>
+      <div class="entrega" id="entrega" data-url="/pedidos/{{ orden.orden_id }}/entrega/">
+        <div class="entrega-resp">
+          <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar">{% csrf_token %}<input type="hidden" name="accion" value="aceptar"><button class="btn" data-cargando="Confirmando…">Recibí mi pedido</button></form>
+        </div>
+        <details class="entrega-no" id="entrega-no">
+          <summary>No pude recibirlo</summary>
+          <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="no_recibido" novalidate>{% csrf_token %}<input type="hidden" name="accion" value="no_recibido">
+            <label for="motivo-entrega">Cuéntanos qué pasó</label>
+            <textarea id="motivo-entrega" name="motivo" rows="3" minlength="5" maxlength="500" required aria-describedby="motivo-ayuda motivo-error" placeholder="Por ejemplo: no había nadie en la casa, la dirección no coincide, el producto llegó en mal estado…"></textarea>
+            <div class="entrega-pie"><span id="motivo-ayuda" class="frio">Mínimo 5 y máximo 500 caracteres. Ventas lo revisa y te contacta.</span><span class="entrega-cuenta-car" id="motivo-cuenta" aria-hidden="true">0 / 500</span></div>
+            <p class="entrega-error" id="motivo-error" role="alert" hidden></p>
+            <button class="btn btn-sec" data-cargando="Enviando…">Informar el problema</button>
+          </form>
+        </details>
+        <p class="entrega-espera" id="entrega-espera">Si no respondes, lo damos por entregado <span id="entrega-resta">en unos minutos</span>.</p>
+        <div class="entrega-barra" aria-hidden="true"><i id="entrega-barra"></i></div>
+        <p class="solo-lector" id="entrega-anuncio" role="status" aria-live="polite"></p>
       </div>
-    {% elif n == "Entrega no concretada" %}<h2 id="ep-t">No pudimos entregar tu pedido</h2><p>Registramos tu aviso{% if orden.entrega_motivo %}: «{{ orden.entrega_motivo }}»{% endif %}. Nuestro equipo te contactará para reprogramar la entrega.</p>
+    {% elif n == "Entrega no concretada" %}<h2 id="ep-t">No pudimos entregar tu pedido</h2>
+      <p>Registramos tu aviso{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}.</p>
+      {% if orden.entrega_motivo %}<blockquote class="entrega-motivo"><span class="frio">Lo que nos contaste</span>{{ orden.entrega_motivo }}</blockquote>{% endif %}
+      <ol class="que-sigue" aria-label="Qué sigue"><li>Ventas ya tiene tu aviso en su bandeja.</li><li>Te contactamos para reprogramar la entrega o cancelar el pedido.</li><li>Si lo reprogramamos, verás aquí el nuevo viaje y te avisamos por la campanita.</li></ol>
+      <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Escribir a ventas</a></div>
     {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p>Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.</p>
-    {% elif n == "En preparación" %}<h2 id="ep-t">Estamos preparando tu pedido</h2><p>Cada producto se arma en su rango de temperatura. Te avisamos por la campanita cuando salga el camión.</p>
-    {% elif n == "Confirmada" %}<h2 id="ep-t">Tu pedido está confirmado</h2><p>Ya reservamos el stock. En breve lo pasamos a preparación.</p>
+    {% elif n == "En preparación" %}<h2 id="ep-t">Estamos preparando tu pedido</h2><p>Tu pedido aún no sale. Cada producto se arma en su rango de temperatura y el mapa en vivo aparece cuando el camión parta; te avisamos por la campanita.</p>
+    {% elif n == "Confirmada" %}<h2 id="ep-t">Tu pedido está confirmado</h2><p>Ya reservamos el stock. Tu pedido aún no sale; el mapa aparece cuando el camión parta.</p>
     {% else %}<h2 id="ep-t">Recibimos tu pedido</h2><p>Estamos confirmando el stock.{% if puede_cancelar %} Mientras esté en esta etapa puedes cancelarlo.{% endif %}</p>{% endif %}
   </div>
 </section>
@@ -117,6 +136,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
+{% if orden.estado_orden.nombre == "Camión en la puerta" %}<script>CofrialEntrega.iniciar(document.getElementById("entrega"));</script>{% endif %}
 {% if seg %}
 <script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>

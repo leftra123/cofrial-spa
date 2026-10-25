@@ -275,7 +275,7 @@ td select { padding: 6px 8px; max-width: 220px; }
 .tarjeta a { font-weight: 600; }
 
 /* ---------- línea de tiempo del pedido ---------- */
-.pasos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 4px 0 8px; }
+.pasos { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin: 4px 0 8px; }
 .paso { position: relative; text-align: center; font-size: .82rem; color: var(--texto-3); padding-top: 42px; }
 .paso::before { content: ""; position: absolute; top: 5px; left: 50%; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: var(--tarjeta); border: 2px solid var(--borde-fuerte); z-index: 1; transition: all .3s; }
 .paso::after { content: ""; position: absolute; top: 16px; left: -50%; width: 100%; height: 4px; border-radius: 4px; background: var(--borde); }

@@ -67,7 +67,7 @@
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
 <script src="{% static 'js/tienda.js' %}"></script>
-{% if menu.cliente %}<script src="{% static 'js/campana.js' %}"></script>{% endif %}
+{% if menu.cliente %}<script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

@@ -241,6 +241,8 @@ def crear_requerimiento(cliente, asunto, descripcion, orden=None, categoria_nomb
     if not asunto or not descripcion:
         raise ErrorDeNegocio("Indica el asunto y describe tu consulta.")
     r = Requerimiento.objects.create(cliente=cliente, orden=orden, asunto=asunto[:150], descripcion=descripcion)
+    if categoria_nombre is None and orden is not None and orden.estado_orden.nombre == "Entrega no concretada":
+        categoria_nombre = CATEGORIA_ENTREGA            # lo crea el cliente al decir «No pude recibirlo»: la categoría ya se sabe
     categoria = CategoriaRequerimiento.objects.filter(nombre=categoria_nombre).first() if categoria_nombre else None
     if categoria:
         r.categoria_requerimiento, r.estado = categoria, "clasificado"

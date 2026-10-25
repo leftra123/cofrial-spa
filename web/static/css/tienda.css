@@ -319,7 +319,7 @@ html.filtros-vivos .filtros noscript { display: none; }
 .tb-carro-movil { display: none; position: relative; }
 .tb-carro-movil:hover { text-decoration: none; }
 @media (max-width: 860px) {
-  .tb { position: static; }                          /* en móvil el encabezado de 3 filas no se queda pegado: ocupaba el 20 % de la pantalla */
+  .tb { position: relative; }                          /* en móvil el encabezado de 3 filas no se queda pegado: ocupaba el 20 % de la pantalla */
   .tb-carro-movil { display: inline-flex; align-items: center; justify-content: center; }
   .tb-nav .tb-carro { display: none; }
   .filtros { top: 8px; max-height: calc(100vh - 24px); }
@@ -638,3 +638,39 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .campana-nota { margin-left: auto; font-size: .78rem; font-weight: 600; color: var(--alerta-fg); }
 /* lista de pedidos: sin resultados con el filtro activo */
 .sin-resultados { margin-top: 12px; }
+
+/* ---------- «Estamos afuera»: confirmar la entrega (pantalla del pedido, campanita y diálogo) ---------- */
+.estado-pedido.transito .entrega { margin-top: 14px; max-width: 560px; }
+.estado-pedido.cargando { opacity: .7; pointer-events: none; transition: opacity .15s; }
+.entrega-resp { display: flex; flex-wrap: wrap; gap: 10px; }
+.entrega-resp .btn { min-height: 48px; }
+.entrega-no { margin-top: 12px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--tarjeta); }
+.entrega-no > summary { cursor: pointer; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; font-weight: 600; color: var(--texto); list-style: none; }
+.entrega-no > summary::-webkit-details-marker { display: none; }
+.entrega-no > summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s; }
+.entrega-no[open] > summary::after { transform: rotate(-135deg); }
+.entrega-no form, .entrega-dialogo form { display: grid; gap: 8px; padding: 0 14px 14px; }
+.entrega-dialogo form { padding: 0; }
+.entrega-no label, .entrega-dialogo label { font-weight: 600; font-size: .9rem; color: var(--texto); }
+.entrega-no textarea, .entrega-dialogo textarea { width: 100%; resize: vertical; min-height: 84px; font: inherit; padding: 10px 12px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--fondo-campo, var(--tarjeta)); color: var(--texto); }
+.entrega-no textarea[aria-invalid="true"], .entrega-dialogo textarea[aria-invalid="true"] { border-color: var(--cancelado-fg); }
+.entrega-pie { display: flex; justify-content: space-between; gap: 12px; font-size: .8rem; }
+.entrega-cuenta-car { color: var(--texto-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.entrega-cuenta-car.limite { color: var(--alerta-fg); font-weight: 600; }
+.entrega-error { margin: 0; padding: 8px 12px; border-radius: var(--radio-sm); background: var(--cancelado-bg); color: var(--cancelado-fg); font-size: .875rem; }
+.estado-pedido .entrega-espera { margin: 16px 0 8px; font-size: .85rem; color: var(--texto-3); }
+.entrega-barra { height: 4px; border-radius: 2px; background: var(--borde); overflow: hidden; }
+.entrega-barra i { display: block; height: 100%; width: 100%; background: var(--acento); transition: width 4.5s linear; }
+.entrega-motivo { margin: 12px 0 0; padding: 10px 14px; border-left: 3px solid var(--borde-fuerte); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; background: var(--fondo); color: var(--texto); max-width: 62ch; overflow-wrap: anywhere; }
+.entrega-motivo .frio { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.que-sigue { margin: 12px 0 0; padding-left: 20px; color: var(--texto-2); display: grid; gap: 4px; max-width: 62ch; }
+.campana-acciones { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; border-bottom: 1px solid var(--borde); }
+.campana-acciones .btn, .campana-acciones .btn-sec { min-height: 40px; padding: 8px 12px; font-size: .875rem; }
+.campana-tipo.t-puerta { background: var(--transito-bg); color: var(--transito-fg); }
+.campana-tipo.t-no_concretada { background: var(--cancelado-bg); color: var(--cancelado-fg); }
+.toast.t-puerta { background: var(--acento); color: var(--acento-fg); }
+@media (max-width: 480px) { .entrega-resp .btn, .campana-acciones > * { flex: 1 1 100%; } }
+@media (prefers-reduced-motion: reduce) { .entrega-barra i, .entrega-no > summary::after { transition: none; } }
+@media (max-width: 480px) {            /* seis etapas en 375 px: etiquetas más chicas y con corte de palabra para que no se pisen */
+  .pasos .paso { font-size: .64rem; padding-left: 1px; padding-right: 1px; overflow-wrap: anywhere; hyphens: auto; line-height: 1.15; }
+}

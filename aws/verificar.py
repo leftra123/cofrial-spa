@@ -5,7 +5,7 @@
     python3 aws/verificar.py http://IP       # o una dirección explícita
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
 
-La clave de las cuentas de demostración se toma de la variable DEMO_PASSWORD o de aws/.estado/secretos.env; no se imprime.
+Las claves se toman de DEMO_PASSWORD y ADMIN_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
 Solo usa la biblioteca estándar de Python (sin instalar nada). Sale con código 0 si todo pasó y 1 si algo falló.
 """
 import datetime
@@ -48,6 +48,8 @@ def direccion():
 BASE = direccion()
 HOST = BASE.split("//", 1)[1].split("/")[0].split(":")[0]
 CLAVE = os.environ.get("DEMO_PASSWORD") or leer_estado("DEMO_PASSWORD")
+CLAVE_ADMIN = os.environ.get("ADMIN_PASSWORD") or leer_estado("ADMIN_PASSWORD") or CLAVE
+ADMINISTRADORES = ("admin@cofrial.cl", "eric@cofrial.cl")
 
 
 class SinRedireccion(urllib.request.HTTPRedirectHandler):
@@ -81,7 +83,7 @@ class Sesion:
 
     def entrar(self, usuario):
         t = self.token("/cuenta/entrar/")
-        st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": CLAVE, "next": "/"})
+        st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": CLAVE_ADMIN if usuario in ADMINISTRADORES else CLAVE, "next": "/"})
         return st == 200 and "/cuenta/salir/" in html          # el formulario de salida solo aparece con sesión iniciada
 
     def json(self, ruta):
@@ -117,6 +119,7 @@ def precio(html, sku):
 
 
 def consulta_grafana(sql):
+    sql = sql.replace("$camion", "'CAM-01'")           # variable del selector de camiones del tablero: aquí se prueba con uno
     cuerpo = json.dumps({"queries": [{"refId": "A", "datasource": {"uid": "cofrial-pg"}, "rawSql": sql, "format": "table"}],
                          "from": "now-24h", "to": "now"}).encode()
     pedido = urllib.request.Request(f"http://{HOST}:3000/api/ds/query", data=cuerpo, headers={"Content-Type": "application/json"})
@@ -155,7 +158,7 @@ def main():
         sesiones[clave] = s if s.entrar(usuario) else None
         chk(sesiones[clave] is not None, f"Inicio de sesión: {usuario}", "usuario o clave rechazados")
     if not all(sesiones.values()):
-        print("\nHay cuentas que no entran: revisar la clave de demostración (DEMO_PASSWORD).")
+        print("\nHay cuentas que no entran: revisar las claves (DEMO_PASSWORD, ADMIN_PASSWORD o la que se cambió desde la cuenta).")
 
     titulo("2. E-commerce: perfiles B2B y B2C")
     if sesiones["hospital"] and sesiones["ana"]:

@@ -29,9 +29,10 @@ log = logging.getLogger("simulador")
 INTERVALO = float(os.environ.get("INTERVALO_SEG", "5"))
 PROB_RUPTURA = float(os.environ.get("PROB_RUPTURA", "0.001"))     # por lectura y camión: la flota casi siempre está sana
 VELOCIDAD_X = float(os.environ.get("VELOCIDAD_X", "1"))           # multiplica los kilómetros que avanza cada camión por lectura
-# Velocidad en viaje de entrega. 120 km/h hace que un reparto de pocos km termine en un par de minutos (modo demostración);
-# con 30 km/h coincide con la velocidad urbana que usa la web para estimar la llegada.
-VELOCIDAD_KMH = float(os.environ.get("VELOCIDAD_KMH", "120"))
+# Velocidad y factor de calles COMPARTIDOS con la web: la hora de llegada que muestra la tienda se calcula con los mismos valores
+# (variables VELOCIDAD_MEDIA_KMH y FACTOR_CALLES), así el camión llega cuando la pantalla dijo. VELOCIDAD_KMH queda solo por compatibilidad.
+VELOCIDAD_MEDIA_KMH = float(os.environ.get("VELOCIDAD_MEDIA_KMH") or os.environ.get("VELOCIDAD_KMH") or "50")
+FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES", "1.3"))      # la ruta por calles es más larga que la línea recta que recorre el simulador
 DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas detenido en cada parada intermedia
 if os.environ.get("CAMION_ID"):
     IDS = [os.environ["CAMION_ID"]]
@@ -155,7 +156,7 @@ class Camion:
         if self.despacho is not None:
             if not self.paradas:
                 return self.pos                                   # estacionado en la última entrega
-            destino, paso_km = self.paradas[0], VELOCIDAD_KMH * INTERVALO / 3600
+            destino, paso_km = self.paradas[0], VELOCIDAD_MEDIA_KMH * INTERVALO / 3600 / FACTOR_CALLES   # en línea recta; por calles equivale a VELOCIDAD_MEDIA_KMH
         else:
             destino, paso_km = self.puntos[self.tramo], self.paso_km
         faltan = km_entre(self.pos, destino)

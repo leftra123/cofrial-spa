@@ -274,7 +274,7 @@ class GuiaYMapaTests(TestCase):
         for texto in ("Un cliente compra y sigue su pedido", "Despacho arma un viaje", "Ventas atiende un reclamo", "Un producto sin stock",
                       "esperando camión", "/flota/despachar/", "/crm/demanda/"):
             self.assertContains(r, texto)
-        self.assertNotContains(r, "123456")                     # la guía no publica claves
+        self.assertNotContains(r, "contraseña de prueba")                     # la guía no publica claves
 
     def test_el_mapa_dibuja_camion_destino_y_bodega(self):
         import re

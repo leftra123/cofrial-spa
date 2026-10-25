@@ -5,7 +5,10 @@
   <div class="codigo" aria-hidden="true">404</div>
   <span class="chip cancelado" style="margin-bottom:14px">No encontrado</span>
   <h1>No encontramos esa página</h1>
-  <p>Puede que la dirección esté mal escrita o que el recurso ya no exista.</p>
-  <div class="acciones"><a class="btn" href="/">Volver al inicio</a><a class="btn btn-sec" href="/catalogo/">Ver el catálogo</a></div>
+  {% if "/pedidos/" in request_path %}<p>Esa orden no existe o no pertenece a tu cuenta. Revisa el número en tu lista de pedidos.</p>
+  {% elif "/catalogo/" in request_path %}<p>Ese producto ya no está en el catálogo o la dirección está mal escrita.</p>
+  {% elif "/crm/" in request_path %}<p>Ese registro del CRM no existe o no está en tu cartera.</p>
+  {% else %}<p>Puede que la dirección esté mal escrita o que el recurso ya no exista.</p>{% endif %}
+  <div class="acciones"><a class="btn" href="/">Volver al inicio</a>{% if "/pedidos/" in request_path %}<a class="btn btn-sec" href="/pedidos/">Ver mis pedidos</a>{% elif "/crm/" in request_path %}<a class="btn btn-sec" href="/crm/">Ir al CRM</a>{% else %}<a class="btn btn-sec" href="/catalogo/">Ver el catálogo</a>{% endif %}</div>
 </div>
 {% endblock %}

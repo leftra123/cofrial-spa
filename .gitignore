@@ -50,3 +50,4 @@ web/db.sqlite3
 
 # Estado local del aprovisionamiento (llaves y claves generadas): nunca se sube
 aws/.estado/
+cuentas-demo.txt

@@ -1,0 +1,15 @@
+{% extends "tienda/base.html" %}
+{% load static %}
+{% block titulo %}Cambiar mi clave | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth-doble">
+  <div class="tarjeta-ui">
+    <h1>Cambiar mi clave</h1>
+    <p class="muted">Escriba su clave actual y la nueva dos veces. La nueva clave queda guardada y no se restablece al reiniciar el sistema.</p>
+    <form method="post">{% csrf_token %}
+      {{ form.as_p }}
+      <button>Guardar la nueva clave</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

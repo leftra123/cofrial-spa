@@ -1,0 +1,12 @@
+{% comment %}Estado vacío único para toda la web. Recibe:
+  ico        camion, caja, carro, lupa, campana, mapa, chat, ok (ver vacio.html)
+  titulo     qué falta, en una frase
+  texto      por qué y qué hacer
+  url, accion   (opcional) botón principal; url2, accion2 (opcional) botón secundario
+  cols       (opcional) si va dentro de una tabla, cuántas columnas ocupa
+  compacto   (opcional) versión chica para secciones dentro de una página
+  plano      (opcional) sin tarjeta propia, para usarlo dentro de otra tarjeta (no se anidan tarjetas){% endcomment %}
+{% if cols %}<tr><td colspan="{{ cols }}" class="vacio-caja{% if compacto %} compacto{% endif %}">{% else %}<div class="{% if not plano %}tarjeta-ui {% endif %}vacio-caja{% if compacto %} compacto{% endif %}">{% endif %}
+{% include "componentes/vacio.html" %}<p class="vacio-titulo">{{ titulo }}</p><p>{{ texto }}</p>
+{% if url or url2 %}<div class="acciones">{% if url %}<a class="btn" href="{{ url }}">{{ accion }}</a>{% endif %}{% if url2 %}<a class="btn btn-sec" href="{{ url2 }}">{{ accion2 }}</a>{% endif %}</div>{% endif %}
+{% if cols %}</td></tr>{% else %}</div>{% endif %}

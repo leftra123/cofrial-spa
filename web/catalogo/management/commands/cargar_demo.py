@@ -1,6 +1,8 @@
 """Carga datos de demostración (ficticios) de forma idempotente: se puede ejecutar varias veces."""
 import os
 import random
+import secrets
+import sys
 from datetime import timedelta
 from decimal import Decimal
 
@@ -85,7 +87,18 @@ class Command(BaseCommand):
     help = "Carga catálogo, clientes, flota y datos base de demostración."
 
     def handle(self, *args, **opciones):
-        clave = os.environ.get("DEMO_PASSWORD", "demo-cofrial-2026")
+        clave = os.environ.get("DEMO_PASSWORD")
+        if not clave:
+            # Sin DEMO_PASSWORD no hay clave por defecto en el código: solo las pruebas automáticas usan una fija (base de datos de prueba);
+            # en cualquier otro caso se genera una al azar y se muestra una sola vez.
+            if sys.argv[1:2] == ["test"]:
+                clave = "demo-cofrial-2026"
+            else:
+                clave = secrets.token_urlsafe(12)
+                self.stdout.write(self.style.WARNING(f"DEMO_PASSWORD no está definida: las cuentas nuevas quedan con la clave generada {clave}"))
+        # La clave se fija SOLO al crear una cuenta: una clave cambiada desde adentro (administración o «Cambiar mi clave») nunca se pisa,
+        # aunque este comando corra en cada arranque. Las cuentas administradoras usan ADMIN_PASSWORD si está definida.
+        clave_admin = os.environ.get("ADMIN_PASSWORD") or clave
         Usuario = get_user_model()
         # cuentas del personal con correos simples @cofrial.cl; si existen con el nombre anterior se renombran (conservan sus datos)
         for viejo, nuevo in (("admin", "admin@cofrial.cl"), ("vendedora@cofrial.test", "vendedora@cofrial.cl"),
@@ -190,7 +203,7 @@ class Command(BaseCommand):
             if not cliente.direccion_set.exists():
                 Direccion.objects.create(cliente=cliente, calle_numero=calle, comuna=temuco, es_principal=True, lat=lat, long=lon)
         if not Usuario.objects.filter(username="eric@cofrial.cl").exists():
-            Usuario.objects.create_superuser("eric@cofrial.cl", "eric@cofrial.cl", clave)
+            Usuario.objects.create_superuser("eric@cofrial.cl", "eric@cofrial.cl", clave_admin)
 
         etapas = {e.nombre: e for e in EtapaPipeline.objects.all()}
         for nombre, empresa, email, etapa, monto, v in [
@@ -227,5 +240,5 @@ class Command(BaseCommand):
             pedidos.avanzar(orden)
 
         if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
-            Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave)
+            Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_admin)
         self.stdout.write(self.style.SUCCESS("Datos de demostración listos (usuarios de prueba: contraseña en DEMO_PASSWORD)."))

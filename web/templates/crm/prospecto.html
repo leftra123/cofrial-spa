@@ -1,4 +1,5 @@
 {% extends "crm/base.html" %}
+{% block titulo %}{{ p.empresa|default:p.nombre_contacto }} | Cofrial SpA{% endblock %}
 {% block crm %}
 <div class="pagina-cab">
   <div><h1>{{ p.empresa|default:p.nombre_contacto }}</h1><p class="sub">Prospecto del embudo comercial</p></div>
@@ -18,12 +19,12 @@
 <div class="tarjeta-ui">
 <h2>Mover de etapa</h2>
 {% for d in destinos %}
-<form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/mover/" style="margin-bottom:10px;display:flex">{% csrf_token %}<input type="hidden" name="etapa" value="{{ d.pk }}">
+<form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/mover/" style="margin-bottom:10px;display:flex" data-carga>{% csrf_token %}<input type="hidden" name="etapa" value="{{ d.pk }}">
   {% if d.es_ganada %}<input name="rut" placeholder="RUT de la empresa" required> {% elif d.es_final %}<input name="motivo" placeholder="Motivo de la pérdida" required> {% endif %}
-  <button class="{% if d.es_final and not d.es_ganada %}btn-peligro{% endif %}">Pasar a "{{ d.nombre }}"</button></form>
+  <button class="{% if d.es_final and not d.es_ganada %}btn-peligro{% endif %}"{% if d.es_final and not d.es_ganada %} data-confirmar="¿Marcar como perdido?"{% endif %} data-cargando="Moviendo…">Pasar a "{{ d.nombre }}"</button></form>
 {% endfor %}</div>{% endif %}
 <div class="seccion"><h2>Interacciones</h2></div>
-{% if puede_editar %}<div class="tarjeta-ui" style="margin-bottom:16px"><form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/">{% csrf_token %}
-  <select name="tipo" aria-label="Tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button>Registrar</button></form></div>{% endif %}
-<div class="tabla-caja"><table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td><span class="chip asignado">{{ i.tipo }}</span></td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}<tr><td class="vacio">Sin interacciones registradas.</td></tr>{% endfor %}</tbody></table></div>
+{% if puede_editar %}<div class="tarjeta-ui" style="margin-bottom:16px"><form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/" data-carga>{% csrf_token %}
+  <select name="tipo" aria-label="Tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button data-cargando="Registrando…">Registrar</button></form></div>{% endif %}
+<div class="tabla-caja"><table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td><span class="chip asignado">{{ i.tipo }}</span></td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}{% include "componentes/vacio_estado.html" with cols=4 compacto=True ico="chat" titulo="Sin interacciones registradas" texto="Anota el primer contacto con este prospecto para mover el negocio." %}{% endfor %}</tbody></table></div>
 {% endblock %}

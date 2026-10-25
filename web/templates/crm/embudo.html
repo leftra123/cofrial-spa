@@ -5,6 +5,10 @@
   <div><h1>Embudo comercial</h1><p class="sub">Prospectos por etapa del pipeline.</p></div>
   {% if puede_editar %}<div class="acciones"><a class="btn" href="/crm/prospectos/nuevo/">+ Nuevo prospecto</a></div>{% endif %}
 </div>
+{% if sin_prospectos %}
+{% if puede_editar %}{% include "componentes/vacio_estado.html" with ico="mapa" titulo="El embudo está vacío" texto="Aún no hay prospectos. Registra el primero y muévelo por las etapas hasta ganarlo o perderlo." url="/crm/prospectos/nuevo/" accion="Crear el primer prospecto" %}
+{% else %}{% include "componentes/vacio_estado.html" with ico="mapa" titulo="El embudo está vacío" texto="Todavía no hay prospectos en la cartera que puedes ver." %}{% endif %}
+{% else %}
 <div class="embudo">
 {% for c in columnas %}
 <div class="col{% if c.etapa.es_ganada %} ganada{% elif c.etapa.es_final %} perdida{% endif %}"><div class="col-cab"><span>{{ c.etapa.orden_etapa }}. {{ c.etapa.nombre }}</span><span class="n">{{ c.prospectos|length }}</span></div>
@@ -12,4 +16,5 @@
 </div>
 {% endfor %}
 </div>
+{% endif %}
 {% endblock %}

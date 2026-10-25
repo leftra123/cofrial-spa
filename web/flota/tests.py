@@ -415,3 +415,67 @@ class SugerenciaDespachoTests(TestCase):
         html = r.content.decode()
         self.assertRegex(html, rf'value="{orden.orden_id}"[^>]*checked')
         self.assertRegex(html, r'value="CAM-03" checked')
+
+
+class CerrarDespachoTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def _viaje(self):
+        from flota.models import Despacho
+        return Despacho.objects.filter(llegada_en__isnull=True, salida_en__isnull=False).first()
+
+    def _entrar(self, usuario):
+        self.client.login(username=usuario, password="demo-cofrial-2026")
+
+    def test_el_despachador_y_el_admin_cierran_el_viaje_y_las_ordenes_pasan_a_entregada(self):
+        from pedidos.models import Orden
+        for usuario in ("despacho@cofrial.cl", "admin@cofrial.cl"):
+            call_command("cargar_demo", verbosity=0)
+            d = self._viaje()
+            if d is None:
+                continue
+            self._entrar(usuario)
+            r = self.client.post(f"/flota/viajes/{d.pk}/cerrar/", {"confirmar": "1"}, follow=True)
+            self.assertContains(r, "quedó libre")
+            d.refresh_from_db()
+            self.assertIsNotNone(d.llegada_en)
+            self.assertFalse(Orden.objects.filter(despacho=d).exclude(estado_orden__nombre="Entregada").exists())
+            self.client.logout()
+
+    def test_sin_confirmacion_no_cierra(self):
+        d = self._viaje()
+        self._entrar("despacho@cofrial.cl")
+        r = self.client.post(f"/flota/viajes/{d.pk}/cerrar/", {}, follow=True)
+        self.assertContains(r, "Hay que confirmar")
+        d.refresh_from_db()
+        self.assertIsNone(d.llegada_en)
+
+    def test_otros_roles_no_pueden_cerrar(self):
+        d = self._viaje()
+        for usuario in ("gerencia@cofrial.cl", "vendedora@cofrial.cl", "ana@correo.test", "felipe@cofrial.cl"):
+            self._entrar(usuario)
+            self.assertEqual(self.client.post(f"/flota/viajes/{d.pk}/cerrar/", {"confirmar": "1"}).status_code, 403)
+            self.client.logout()
+        self.assertEqual(self.client.post(f"/flota/viajes/{d.pk}/cerrar/", {"confirmar": "1"}).status_code, 302)     # sin sesión: al acceso
+        d.refresh_from_db()
+        self.assertIsNone(d.llegada_en)
+
+    def test_cerrar_libera_el_camion_y_no_se_puede_cerrar_dos_veces(self):
+        from flota import servicios
+        d = self._viaje()
+        libres_antes = {c.camion_id for c in servicios.camiones_libres()}
+        self.assertNotIn(d.camion_id, libres_antes)
+        servicios.cerrar_despacho(d.pk)
+        self.assertIn(d.camion_id, {c.camion_id for c in servicios.camiones_libres()})
+        from pedidos.servicios import ErrorDeNegocio
+        with self.assertRaises(ErrorDeNegocio):
+            servicios.cerrar_despacho(d.pk)
+
+    def test_el_boton_solo_se_ve_para_admin_y_despachador(self):
+        self._entrar("despacho@cofrial.cl")
+        self.assertContains(self.client.get("/flota/"), "Marcar entregado y cerrar despacho")
+        self.client.logout()
+        self._entrar("gerencia@cofrial.cl")
+        self.assertNotContains(self.client.get("/flota/"), "Marcar entregado y cerrar despacho")

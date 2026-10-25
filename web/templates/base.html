@@ -44,6 +44,7 @@
       {% if user.is_authenticated %}
         <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
         <div class="usuario-datos"><b>{{ user.username }}</b>
+          <a class="enlace" href="/cuenta/clave/">Cambiar mi clave</a>
           <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Cerrar sesión</button></form></div>
         {% include "componentes/tema_btn.html" %}
       {% else %}
@@ -66,6 +67,7 @@
 </script>
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
+<script src="{% static 'js/estados.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

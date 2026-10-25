@@ -14,6 +14,7 @@ SECRET_KEY = entorno("DJANGO_SECRET_KEY", "clave-solo-para-desarrollo")
 DEBUG = entorno("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = [h for h in entorno("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in entorno("DJANGO_CSRF_ORIGINS", "").split(",") if o]
+CSRF_FAILURE_VIEW = "cofrial.vistas.csrf_fallo"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -133,3 +134,7 @@ LOGGING = {
     },
     "root": {"handlers": ["consola"], "level": "WARNING"},
 }
+
+# Velocidad media de reparto y factor de calles: los usan la hora de llegada de la tienda y el simulador IoT (mismas variables).
+VELOCIDAD_MEDIA_KMH = float(os.environ.get("VELOCIDAD_MEDIA_KMH") or 50)
+FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES") or 1.3)

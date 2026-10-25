@@ -17,11 +17,11 @@
       <td>{% if a.disponible %}<span class="chip entregado">Ya disponible</span>{% else %}<span class="chip pendiente">Esperando stock</span>{% endif %}</td>
       <td class="num">
         {% if a.disponible %}<a class="btn" href="{% url 'producto' a.producto.producto_id %}">Comprar ahora</a>{% endif %}
-        <form class="en-linea" method="post" action="/avisos/{{ a.aviso_id }}/quitar/">{% csrf_token %}<button class="btn-sec">Quitar</button></form>
+        <form class="en-linea" method="post" action="/avisos/{{ a.aviso_id }}/quitar/" data-carga>{% csrf_token %}<button class="btn-sec" data-cargando="Quitando…">Quitar</button></form>
       </td>
     </tr>
   {% empty %}
-    <tr><td colspan="5" class="vacio">No tienes avisos. Cuando un producto esté sin stock, podrás pedir que te avisemos desde el catálogo.</td></tr>
+    {% include "componentes/vacio_estado.html" with cols=5 ico="campana" titulo="No estás esperando ningún producto" texto="Cuando algo esté sin stock, pídenos aviso desde el catálogo y te lo mostramos aquí apenas haya." url="/catalogo/" accion="Ver el catálogo" %}
   {% endfor %}
   </tbody>
 </table>

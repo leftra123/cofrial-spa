@@ -22,7 +22,7 @@
     <td>{{ r.categoria_requerimiento|default:"En revisión" }}</td>
     <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% elif r.estado == 'resuelto' %}entregado{% else %}asignado{% endif %}">{{ r.get_estado_display }}</span></td>
     <td>{{ r.creado_en|date:"d/m/Y H:i" }}</td></tr>
-  {% empty %}<tr><td colspan="4" class="vacio-caja">{% include "componentes/vacio.html" with ico="chat" %}<h2>Aún no has enviado consultas</h2><p>Cuando escribas una, verás aquí cómo la clasificamos.</p></td></tr>{% endfor %}
+  {% empty %}{% include "componentes/vacio_estado.html" with cols=4 compacto=True ico="chat" titulo="Aún no has enviado consultas" texto="Cuando escribas una, verás aquí cómo la clasificamos y en qué estado va." %}{% endfor %}
   </tbody>
 </table></div>
 {% endblock %}

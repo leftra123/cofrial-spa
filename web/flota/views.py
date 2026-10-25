@@ -28,7 +28,23 @@ def panel(request):
                                      "lat": o.direccion.lat, "long": o.direccion.long}
                                     for o in x["pedidos"] if o.direccion.lat is not None]} for x in viajes]}
     return render(request, "flota/panel.html", {"rol": request.rol, "tarjetas": tarjetas, "resumen": resumen,
-                                                "viajes": viajes, "mapa": mapa})
+                                                "viajes": viajes, "mapa": mapa, "puede_cerrar": request.rol in ("admin", "despachador")})
+
+
+@require_POST
+@con_rol("admin", "despachador")
+def cerrar_despacho(request, despacho_id):
+    """Marcar entregado / cerrar despacho: solo administrador y despachador, y con confirmación explícita."""
+    if request.POST.get("confirmar") != "1":
+        messages.error(request, "Hay que confirmar para cerrar el despacho.")
+        return redirect("flota")
+    try:
+        d, n = servicios.cerrar_despacho(despacho_id)
+        messages.success(request, f"Despacho N.º {d.despacho_id} cerrado: {d.camion_id} quedó libre y {n} pedido{'s' if n != 1 else ''} pasó a «Entregada».")
+    except ErrorDeNegocio as e:
+        for m in e.mensajes:
+            messages.error(request, m)
+    return redirect("flota")
 
 
 @con_rol("admin", "gerencia", "despachador")

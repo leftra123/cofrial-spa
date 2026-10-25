@@ -1,6 +1,6 @@
 /* Cofrial SpA · microinteracciones de la tienda (sin dependencias). Mejora progresiva: si algo falla, los formularios siguen funcionando como siempre. */
 (function () {
-  var RETARDO_SPINNER = 300, TIEMPO_MAX = 8000, MUESTRA_OK = 1200;
+  var TIEMPO_MAX = 8000, MUESTRA_OK = 1200;
 
   /* ---------- cantidades +/− ---------- */
   function iniciarCant(raiz) {
@@ -24,7 +24,7 @@
 
   /* ---------- aviso al usuario ---------- */
   /* los contenedores van al final de la página, después de este script: se buscan en el momento de usarlos */
-  function anunciar(texto) { var vivo = document.getElementById("vivo"); if (vivo) { vivo.textContent = ""; setTimeout(function () { vivo.textContent = texto; }, 50); } }
+  var anunciar = CofrialEstados.anunciar, ocupar = CofrialEstados.ocupar;      // estados.js se carga antes que este script
   function aviso(texto, tipo) {
     var toasts = document.getElementById("toasts"); if (!toasts) return;
     var t = document.createElement("div"); t.className = "toast t-" + (tipo || "info"); t.setAttribute("role", tipo === "error" ? "alert" : "status"); t.textContent = texto;
@@ -37,22 +37,6 @@
     });
   }
 
-  /* ---------- estado de carga de un botón ---------- */
-  /* Se deshabilita al tiro (sin doble envío) pero el spinner y el texto aparecen solo si tarda más de 300 ms: una respuesta rápida no parpadea. */
-  function ocupar(b, texto) {
-    if (!b) return function () {};
-    var original = b.innerHTML, ancho = b.offsetWidth, t = setTimeout(function () {
-      b.style.minWidth = ancho + "px";
-      b.innerHTML = '<span class="spinner" aria-hidden="true"></span> ' + texto;
-    }, RETARDO_SPINNER);
-    b.setAttribute("aria-busy", "true"); b.disabled = true;
-    return function (final, ms) {                       // final: texto opcional de confirmación (con ✓) que se muestra ms milisegundos
-      clearTimeout(t); b.removeAttribute("aria-busy");
-      function restaurar() { b.innerHTML = original; b.style.minWidth = ""; b.classList.remove("hecho"); b.disabled = false; }
-      if (final) { b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6L9 17l-5-5"/></svg> ' + final; b.classList.add("hecho"); setTimeout(restaurar, ms || MUESTRA_OK); }
-      else restaurar();
-    };
-  }
   function pedir(form, extra) {
     var ctl = window.AbortController ? new AbortController() : null, corte = setTimeout(function () { if (ctl) ctl.abort(); }, TIEMPO_MAX);
     var cab = {"X-Requested-With": "fetch"}; for (var k in extra) cab[k] = extra[k];
@@ -93,10 +77,6 @@
     if (!window.fetch || !window.FormData || e.defaultPrevented) return;
     if (f.matches('form[action="/carrito/agregar/"]')) { e.preventDefault(); if (!b || !b.disabled) agregar(f, f.querySelector(".agregar") || b); }
     else if (f.matches('.linea-form[action="/carrito/actualizar/"]')) { e.preventDefault(); if (!b || !b.disabled) actualizarCarrito(f, f.querySelector(".btn-sec")); }
-    else if (f.hasAttribute("data-carga") && b && !b.disabled) {              // «Generar orden», soporte: envío normal, con el mismo estado de carga del botón
-      var fin = ocupar(b, b.dataset.cargando || "Procesando…");
-      window.addEventListener("pageshow", function () { fin(); }, {once: true});  // si el navegador vuelve atrás desde su caché, el botón queda usable
-    }
   });
   window.CofrialTienda = {iniciarCant: iniciarCant};
 })();

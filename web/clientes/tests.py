@@ -81,14 +81,14 @@ class CuentasTests(TestCase):
         self.assertTrue(self.entra("ana@correo.test", clave="otra-clave-larga-9"))
 
     def test_clave_debil_se_rechaza_salvo_que_se_pida_expresamente(self):
-        with patch.dict("os.environ", {"DEMO_PASSWORD": "123456"}):
+        with patch.dict("os.environ", {"DEMO_PASSWORD": "12345678"}):
             with self.assertRaisesMessage(CommandError, "permitir-clave-debil"):
                 call_command("cambiar_clave_demo")
             self.assertTrue(self.entra("ana@correo.test", clave="demo-cofrial-2026"))      # no cambió nada al rechazarla
             call_command("cambiar_clave_demo", "--permitir-clave-debil")
         for u in ("admin@cofrial.cl", "ana@correo.test", "abastecimiento@hospital.test", "vendedora@cofrial.cl", "vendedor2@cofrial.cl",
                   "gerencia@cofrial.cl", "despacho@cofrial.cl"):
-            self.assertTrue(self.entra(u, clave="123456"), u)
+            self.assertTrue(self.entra(u, clave="12345678"), u)
 
 
 class RegistroB2CTests(TestCase):
@@ -164,3 +164,37 @@ class CuentasDelEquipoTests(TestCase):
         call_command("cargar_demo", verbosity=0)
         self.assertEqual(Cliente.objects.count(), n)
         self.assertEqual(get_user_model().objects.filter(username__in=["felipe@cofrial.cl", "sergio@cofrial.cl", "eric@cofrial.cl"]).count(), 3)
+
+
+class ClavesPersistentesTests(TestCase):
+    """Las claves se fijan solo al crear la cuenta: una clave cambiada desde adentro sobrevive a cada arranque."""
+
+    def test_cargar_demo_no_pisa_una_clave_cambiada_y_el_admin_usa_admin_password(self):
+        with patch.dict("os.environ", {"DEMO_PASSWORD": "clave-demo-larga-71", "ADMIN_PASSWORD": "clave-admin-larga-72"}):
+            call_command("cargar_demo", verbosity=0)
+            User = get_user_model()
+            self.assertTrue(User.objects.get(username="admin@cofrial.cl").check_password("clave-admin-larga-72"))
+            self.assertTrue(User.objects.get(username="eric@cofrial.cl").check_password("clave-admin-larga-72"))
+            self.assertTrue(User.objects.get(username="ana@correo.test").check_password("clave-demo-larga-71"))
+            for u, nueva in (("ana@correo.test", "ana-cambio-clave-83"), ("admin@cofrial.cl", "admin-cambio-clave-84")):
+                x = User.objects.get(username=u)
+                x.set_password(nueva)
+                x.save()
+            call_command("cargar_demo", verbosity=0)                  # reinicio del contenedor
+            self.assertTrue(User.objects.get(username="ana@correo.test").check_password("ana-cambio-clave-83"))
+            self.assertTrue(User.objects.get(username="admin@cofrial.cl").check_password("admin-cambio-clave-84"))
+
+    def test_pagina_cambiar_mi_clave(self):
+        with patch.dict("os.environ", {"DEMO_PASSWORD": "clave-demo-larga-71"}):
+            call_command("cargar_demo", verbosity=0)
+        self.assertEqual(self.client.get("/cuenta/clave/").status_code, 302)       # exige sesión
+        self.assertTrue(self.client.login(username="ana@correo.test", password="clave-demo-larga-71"))
+        r = self.client.get("/cuenta/clave/")
+        self.assertContains(r, "Cambiar mi clave")
+        r = self.client.post("/cuenta/clave/", {"old_password": "clave-demo-larga-71", "new_password1": "ana-nueva-clave-95", "new_password2": "ana-nueva-clave-95"})
+        self.assertRedirects(r, "/cuenta/clave/hecho/")
+        self.assertContains(self.client.get("/cuenta/clave/hecho/"), "Clave actualizada")
+        self.client.logout()
+        self.assertFalse(self.client.login(username="ana@correo.test", password="clave-demo-larga-71"))
+        self.assertTrue(self.client.login(username="ana@correo.test", password="ana-nueva-clave-95"))
+        self.assertContains(self.client.get("/"), "/cuenta/clave/")                # enlace en el menú

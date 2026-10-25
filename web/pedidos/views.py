@@ -57,6 +57,7 @@ def agregar(request, cliente):
 def ver_carrito(request, cliente):
     filas = s.lineas(cliente)
     return render(request, "pedidos/carrito.html", {"filas": filas, "total": s.total(filas), "cliente": cliente,
+                                                    "sin_stock": [f for f in filas if not f["hay_stock"]],
                                                     "direcciones": cliente.direccion_set.select_related("comuna"),
                                                     "pide_oc": cliente.tipo_cliente.codigo == "B2B"})
 
@@ -98,8 +99,13 @@ def confirmar(request, cliente):
 @solo_clientes
 def seguimiento(request, cliente):
     """«Seguir mi pedido» de la barra superior: lleva al pedido más reciente que sigue en curso, o a la lista."""
-    activa = s.ordenes_de(cliente).filter(estado_orden__es_final=False).first()
-    return redirect("orden", orden_id=activa.orden_id) if activa else redirect("pedidos")
+    ordenes = s.ordenes_de(cliente)
+    activa = ordenes.filter(estado_orden__es_final=False).first()
+    if activa:
+        return redirect("orden", orden_id=activa.orden_id)
+    if ordenes.exists():            # sin esta nota el enlace parecía no hacer nada: el cliente caía en la lista sin saber por qué
+        messages.info(request, "No tienes pedidos en curso ahora. Aquí está el historial de tus órdenes.")
+    return redirect("pedidos")
 
 
 @solo_clientes

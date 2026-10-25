@@ -129,3 +129,49 @@ class AsistenteConElCamionEnLaPuerta(EntregaBase):
         self.assertEqual(ctx["estado"], "con el camión en la puerta")
         self.assertIn("No pude recibirlo", ctx["que_pasa_ahora"])
         self.assertEqual(estado_de_pedido("Entrega no concretada"), "con la entrega sin concretar")
+
+
+class DesgloseSinElAsuntoAutomatico(EntregaBase):
+    def test_a_la_ia_solo_va_lo_que_escribio_el_cliente(self):
+        cliente, orden, _ = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        enviados = []
+        with patch("crm.ia._llamar", side_effect=lambda prompt, plazo=None, orden=None: enviados.append(prompt) or DESGLOSE):
+            s.resolver_entrega(cliente, orden.pk, "no_recibido", "No había nadie en la casa")
+        self.assertEqual(len(enviados), 1)
+        self.assertNotIn("Entrega no concretada del pedido", enviados[0])
+        self.assertIn("No había nadie en la casa", enviados[0])
+        req = Requerimiento.objects.get(orden=orden)
+        self.assertEqual(req.asunto, f"Entrega no concretada del pedido N.º {orden.pk}")          # el asunto se guarda igual
+        self.assertTrue(all("Entrega no concretada" not in h["afirmacion"] for h in req.desglose["hechos"]))
+
+    def test_un_asunto_escrito_por_el_cliente_si_va(self):
+        cliente, orden, _ = self.orden_despachada()
+        enviados = []
+        with patch("crm.ia._llamar", side_effect=lambda prompt, plazo=None, orden=None: enviados.append(prompt) or DESGLOSE):
+            crm.crear_requerimiento(cliente, "Camión con carga caliente", "No quise recibirla", orden=orden)
+        self.assertTrue(any("Camión con carga caliente" in p for p in enviados))
+
+
+class ContadorDeLaCampanita(EntregaBase):
+    def test_solo_cuenta_lo_que_espera_una_respuesta_o_es_nuevo(self):
+        import json
+        import os
+        import shutil
+        import subprocess
+        if not shutil.which("node"):
+            self.skipTest("sin node")
+        ahora = 1_800_000_000_000
+        iso = lambda ms: __import__("datetime").datetime.fromtimestamp(ahora / 1000 - ms / 1000, __import__("datetime").timezone.utc).isoformat()
+        avisos = [
+            {"id": "1-puerta", "tipo": "puerta", "texto": "Estamos afuera de tu dirección con tu pedido N.º 1.", "cuando": iso(3 * 86400_000)},   # pendiente de respuesta, aunque sea viejo
+            {"id": "2-no-concretada", "tipo": "no_concretada", "texto": "No pudimos entregar", "cuando": iso(86400_000)},
+            {"id": "3-llego", "tipo": "llego", "texto": "Tu pedido quedó entregado", "cuando": iso(60_000)},                                          # nuevo y reciente
+            {"id": "4-llego", "tipo": "llego", "texto": "Tu pedido quedó entregado", "cuando": iso(86400_000)},                                       # viejo: no suma
+            {"id": "5-salio", "tipo": "salio", "texto": "salió", "cuando": iso(60_000)},                                                             # ya visto: no suma
+            {"id": "6-puerta", "tipo": "puerta", "texto": "El camión llegó a tu dirección con el pedido N.º 6", "cuando": iso(60_000)},               # ya respondido, visto
+        ]
+        guion = "global.window = global; global.document = {}; require(process.argv[1]);" \
+                f"console.log(CofrialEntrega.contarAvisos({json.dumps(avisos)}, ['5-salio', '6-puerta'], {ahora}));"
+        salida = subprocess.run(["node", "-e", guion, os.path.abspath("static/js/entrega.js")], capture_output=True, text=True, timeout=20)
+        self.assertEqual(salida.stdout.strip(), "3", salida.stderr)                 # 1-puerta, 2-no-concretada y 3-llego

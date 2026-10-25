@@ -111,5 +111,15 @@
     var fin = ocupar(boton, "Confirmando…");
     enviar(ordenId, "aceptar").then(function (d) { if (d.ok) fin("Confirmado", 2500); else { fin(); toast(d.mensaje, "error"); anunciar(d.mensaje); } termino(ordenId, d); });
   }
-  window.CofrialEntrega = {iniciar: iniciar, modal: modal, aceptar: aceptarDirecto, validar: validar};
+  /* Lo que cuenta la campanita: lo que espera una respuesta, las entregas sin concretar aún abiertas (el aviso desaparece al cerrarse) y lo nuevo de las últimas 2 horas.
+     Los avisos viejos y lo ya entregado no suman, aunque sigan en la lista. */
+  var RECIENTE_MS = 2 * 3600 * 1000;
+  function pide(a) { return a.tipo === "puerta" && /^Estamos afuera/.test(a.texto); }
+  function contarAvisos(avisos, vistos, ahora) {
+    return avisos.filter(function (a) {
+      if (pide(a) || a.tipo === "no_concretada") return true;
+      return vistos.indexOf(a.id) < 0 && ahora - new Date(a.cuando).getTime() <= RECIENTE_MS;
+    }).length;
+  }
+  window.CofrialEntrega = {iniciar: iniciar, modal: modal, aceptar: aceptarDirecto, validar: validar, pide: pide, contarAvisos: contarAvisos};
 })();

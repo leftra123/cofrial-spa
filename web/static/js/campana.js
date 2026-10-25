@@ -8,6 +8,7 @@
   try { vistos = JSON.parse(localStorage.getItem(CLAVE) || "[]"); } catch (e) {}
   function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(vistos.slice(-200))); } catch (e) {} }
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
+  var pide = CofrialEntrega.pide, contar = CofrialEntrega.contarAvisos;      // reglas del contador en entrega.js (una función pura, con prueba)
   var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", frio: "Temperatura"};
 
   var VACIO = "Sin avisos por ahora. Te avisamos cuando tu pedido salga, esté cerca y llegue.", cargado = false, nota = document.getElementById("campana-nota");
@@ -15,12 +16,11 @@
   function pintar() {
     if (!cargado) return;
     lista.setAttribute("aria-busy", "false");
-    var nuevos = actuales.filter(function (a) { return vistos.indexOf(a.id) < 0; });
-    n.hidden = nuevos.length === 0; n.textContent = nuevos.length;
-    btn.setAttribute("aria-label", nuevos.length ? "Avisos de tus pedidos: " + nuevos.length + " sin leer" : "Avisos de tus pedidos");
+    var cuenta = contar(actuales, vistos, Date.now());
+    n.hidden = cuenta === 0; n.textContent = cuenta;
+    btn.setAttribute("aria-label", cuenta ? "Avisos de tus pedidos: " + cuenta + " por atender" : "Avisos de tus pedidos");
     if (!actuales.length) { mensaje("campana-vacio", VACIO); return; }
     lista.innerHTML = "";
-    function pide(a) { return a.tipo === "puerta" && /^Estamos afuera/.test(a.texto); }
     actuales.slice().sort(function (x, y) { return pide(y) - pide(x); }).forEach(function (a) {          // lo que espera una respuesta va primero
       var li = document.createElement("li"); li.className = "campana-item" + (vistos.indexOf(a.id) < 0 ? " nuevo" : "");
       var enlace = document.createElement("a"); enlace.href = "/pedidos/" + a.orden_id + "/";
@@ -67,7 +67,7 @@
   }
   btn.addEventListener("click", function () {
     var abre = panel.hidden; panel.hidden = !abre; btn.setAttribute("aria-expanded", abre);
-    if (abre) { actuales.forEach(function (a) { if (vistos.indexOf(a.id) < 0) vistos.push(a.id); }); guardar(); setTimeout(function () { n.hidden = true; }, 600); }
+    if (abre) { actuales.forEach(function (a) { if (vistos.indexOf(a.id) < 0) vistos.push(a.id); }); guardar(); setTimeout(function () { n.textContent = contar(actuales, vistos, Date.now()); n.hidden = n.textContent === "0"; }, 600); }
     else pintar();
   });
   document.addEventListener("click", function (e) { if (!panel.hidden && !e.target.closest("#campana")) { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); pintar(); } });

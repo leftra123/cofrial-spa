@@ -88,11 +88,16 @@ def repetir(request, cliente):
 @solo_clientes
 def confirmar(request, cliente):
     try:
-        orden = s.generar_orden(cliente, request.POST.get("direccion") or 0, request.POST.get("numero_oc", ""))
+        ordenes = s.generar_ordenes(cliente, request.POST.get("direccion") or 0, request.POST.get("numero_oc", ""))
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
         return redirect("carrito")
-    messages.success(request, f"Orden {orden.orden_id} recibida.")
+    orden = ordenes[0]
+    if len(ordenes) > 1:
+        numeros = " y ".join(f"N.º {o.orden_id}" for o in ordenes)
+        messages.success(request, f"Tu compra se dividió en {len(ordenes)} pedidos, uno por rango de temperatura, porque cada uno viaja en su camión: {numeros}.")
+    else:
+        messages.success(request, f"Orden {orden.orden_id} recibida.")
     return redirect(f"/pedidos/{orden.orden_id}/?nueva=1")
 
 

@@ -35,7 +35,7 @@
     <ul class="camaras" aria-label="Rangos de conservación de su pedido">
       {% for g in rangos %}{% with r=g.list.0.producto.categoria.rango_temperatura %}<li class="camara {% if r.nombre == "Congelado" %}cong{% else %}ref{% endif %}"><span class="cam-marca" aria-hidden="true"></span><span><b>{{ r.nombre }}</b> {{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C</span><span class="cam-n">{{ g.list|length }} producto{{ g.list|length|pluralize }}</span></li>{% endwith %}{% endfor %}
     </ul>
-    {% if rangos|length > 1 %}<p class="camaras-nota">Su pedido mezcla productos de {{ rangos|length }} rangos de temperatura.</p>{% endif %}
+    {% if rangos|length > 1 %}<p class="camaras-nota">Su compra mezcla {{ rangos|length }} rangos de temperatura: se enviará como {{ rangos|length }} pedidos, uno por rango, porque cada uno viaja en su camión.</p>{% endif %}
     <dl>
     {% if pide_oc %}<div><dt>Neto</dt><dd>{{ total|clp }}</dd></div>
       <div><dt>IVA 19 %</dt><dd>{{ total|iva }}</dd></div>

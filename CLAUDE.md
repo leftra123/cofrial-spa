@@ -7,7 +7,7 @@ Equipo: **Eric Aguayo Quintriqueo** (GitHub `leftra123`) y **Sergio Vásquez Mar
 ## Entregas
 | Hito | Nota | Fecha | Qué se entrega |
 |---|---|---|---|
-| 1 | Nota 2 | **mié 04-nov-2026** | Informe de ingeniería: diagnóstico, propuesta, decisiones AWS, diagrama, MER 3FN, wireframes y CRM |
+| 1 | Nota 2 | **jue 05-nov-2026** (aviso del foro adoptado) | Informe de ingeniería: diagnóstico, propuesta, decisiones AWS, diagrama, MER 3FN, wireframes y CRM |
 | 2 | Nota 3 | **jue 12-nov-2026** | Prototipo desplegado en AWS Academy + defensa técnica en vivo |
 
 Pauta completa y rúbrica: `informe/00-pauta-y-rubrica.md`. El objetivo es **Logrado (100%) en cada dimensión**.
@@ -27,7 +27,7 @@ Pauta completa y rúbrica: `informe/00-pauta-y-rubrica.md`. El objetivo es **Log
 - `docs/decisiones.md` — registro de decisiones técnicas (stack, trade-offs). Fuente para `informe/03-arquitectura-cloud.md`.
 - `docs/referencia-waretrack.md` — inspiración visual de la torre de control (proyecto visto en Threads; es material de terceros y no se publica).
 - `app/` — material de referencia privado (ignorado por git). **No** es la carpeta de código.
-- El código irá en carpetas propias cuando se cierre el stack (ver `docs/decisiones.md`).
+- La aplicación está en `web/`, el simulador en `iot/` y el despliegue en `aws/`; el stack implementado se considera adoptado (ver `docs/decisiones.md`).
 
 ## Forma de trabajo
 - Tablero Trello: https://trello.com/b/yrKII80H/cofrial-spa-transformaci%C3%B3n-digital

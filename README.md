@@ -16,51 +16,11 @@ Un ecosistema en AWS que une el **Front-Office comercial** (e-commerce B2B/B2C +
                                                              └── BI lee en vivo ventas × alertas de frío
 ```
 
-## Cronograma hacia el "Logrado"
+## Avance y calendario actualizado
 
-### Semana 1 · 13–18 oct · Arranque
-| Tarea | Responsable |
-|---|---|
-| Kickoff, roles y lectura de la rúbrica | Eric + Sergio |
-| Elegir stack (lista "Decisiones" en Trello) | Eric + Sergio |
-| Repo, AWS Academy y carpetas | Eric |
-| Probar Learner Lab: levantar una EC2 y una RDS de prueba | Sergio |
+Al 25-oct-2026 están implementados la aplicación Django, CRM, simulación de cincuenta camiones en cinco contenedores, Grafana, clasificación IA, asistente de tienda, OC diferida, compra dividida por conservación y cierre de viajes. La instalación base tiene registro AWS del 22 de octubre; la revisión actual se verifica por separado.
 
-### Semana 2 · 19–25 oct · Informe: problema y propuesta
-| Tarea | Responsable | Dimensión de la rúbrica |
-|---|---|---|
-| 1. Diagnóstico del dolor | Eric | H1-D1 |
-| 2. Propuesta de valor (matriz dolor → solución → indicador) | Eric | H1-D1 |
-| Borrador del MER | Sergio | H1-D3 |
-| Esqueleto del proyecto web (Django) | Eric | adelanta H2-D2 |
-
-### Semana 3 · 26 oct–1 nov · Informe: ingeniería
-| Tarea | Responsable | Dimensión |
-|---|---|---|
-| 3. Memoria de decisiones AWS (trade-offs) | Sergio | H1-D2 |
-| 4a. Diagrama de arquitectura | Sergio | H1-D3 |
-| 4b. MER 3FN + diccionario (final) | Sergio | H1-D3 |
-| 4c. Wireframes + user journeys B2B/B2C | Eric | H1-D4 |
-| 4d. Pipeline y flujos del CRM | Eric | H1-D4 |
-| Simulador IoT funcionando en local | Sergio | adelanta H2-D3 |
-
-### Semana 4 · 2–4 nov · Cierre Hito 1
-| Tarea | Responsable |
-|---|---|
-| Integrar y revisar el informe contra la rúbrica | Eric + Sergio |
-| **Entrega Hito 1 — mié 04-nov** | Eric + Sergio |
-
-### Semana 5 · 5–12 nov · Hito 2 (solo 8 días: por eso el código parte antes)
-| Tarea | Responsable | Dimensión |
-|---|---|---|
-| VPC + EC2 + RDS definitivos | Sergio | H2-D1 |
-| E-commerce: catálogo, B2B/B2C, carrito, órdenes | Eric | H2-D2 |
-| CRM: clientes, prospectos, pedidos | Eric | H2-D2 |
-| IoT Docker en EC2 dedicada | Sergio | H2-D3 |
-| Dashboard BI en vivo | Sergio | H2-D4 |
-| IA gratuita en CRM/e-commerce | Eric | H2-D5 |
-| Pruebas integrales y ensayo de defensa | Eric + Sergio | H2-D5 |
-| **Entrega Hito 2 + defensa — jue 12-nov** | Eric + Sergio | |
+El cronograma vigente está en `informe/07-metodologia-cronograma.md`, con Gantt y trabajo restante de revalidación, correcciones y defensa. Hito 1: **jueves 05-nov-2026**, fecha del foro adoptada por el equipo. Hito 2: **jueves 12-nov-2026**. Las decisiones implementadas están en `docs/decisiones.md` y las comprobaciones en `docs/revision-hito1-2026-10-25.md`.
 
 ### Extras para destacar (después de cumplir lo obligatorio)
 - **Torre de control** al estilo WareTrack: mapa con los camiones en vivo, KPIs y panel de detalle (`docs/referencia-waretrack.md`).
@@ -78,9 +38,35 @@ Para no gastar tokens de más:
 
 Se cambia con `/model` en Claude Code.
 
-## Estructura del repositorio
+## Código y documentación operativa
+
+| Carpeta / archivo | Contenido |
+|---|---|
+| `web/` | Aplicación Django (e-commerce, CRM, flota, APIs) |
+| `iot/` | Simulador de telemetría (50 camiones en Docker) |
+| `aws/` | Compose y scripts para Learner Lab (`aws/README.md`) |
+| `informe/` | Secciones del informe del Hito 1 |
+| `docs/codigo.md` | Resumen del sistema y arranque local |
+| `docs/credenciales-y-cuentas.md` | Dónde viven las claves (sin subirlas a Git) |
+| `docs/guia-pruebas-aws.md` | Recorrido de prueba sobre la instalación en la nube |
+| `CLAUDE.md` | Contexto para asistentes de código |
+
+## Arranque local (Docker)
+
+El dashboard de BI del proyecto es **Grafana** (no Power BI): consulta PostgreSQL en vivo y cruza ventas por canal con alertas de frío.
+
+```bash
+cp .env.example .env   # completar DB_PASSWORD, DEMO_PASSWORD y las tres claves Grafana (ver abajo)
+docker compose --env-file .env up -d --build
 ```
-informe/   Secciones del informe del Hito 1 (fuente para la redacción final)
-docs/      Decisiones técnicas y referencias
-CLAUDE.md  Contexto para Claude Code
-```
+
+| Servicio | URL local (puertos por defecto) |
+|---|---|
+| Portal | http://localhost:8000 |
+| Grafana | http://localhost:3000 |
+
+Grafana **no admite acceso anónimo**. En `.env` deben estar `GRAFANA_DB_PASSWORD` (usuario SQL de solo lectura), `GRAFANA_PASSWORD` (cuenta **admin**, edita tableros) y `GRAFANA_VISOR_PASSWORD` (cuenta **visor**, solo mirar; la crea el servicio `grafana-visor` al levantar Compose). Detalle en `docs/codigo.md` y `docs/credenciales-y-cuentas.md`.
+
+## Instalación en AWS Academy
+
+Guía completa: **`aws/README.md`**. Tras `bash aws/provision.sh`, las claves quedan en `aws/.estado/secretos.env` (ignorado por git). El tablero publica en `http://IP-ELASTICA:3000`: entrar como **visor** para la demo o **admin** para editar. Si Grafana pide login y las claves no funcionan, quien opera la EC2 web debe completar `GRAFANA_PASSWORD` y `GRAFANA_VISOR_PASSWORD` en `secretos.env` (o en el `.env` de la máquina) y ejecutar `bash aws/provision.sh recrear-web`. Pruebas ordenadas: `docs/guia-pruebas-aws.md`.

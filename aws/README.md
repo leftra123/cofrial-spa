@@ -1,25 +1,25 @@
 # Despliegue en AWS Academy (Hito 2, dimensión 1)
 
-Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + Grafana), **EC2 IoT** dedicada (camiones simulados) y **RDS PostgreSQL**. Los tres archivos de este directorio se probaron en local con la base como contenedor aparte, la aplicación en modo producción (`gunicorn`, `DEBUG=0`), el simulador en Docker y Grafana, contra una base vacía: migraciones, datos de demostración, telemetría en vivo y las 12 consultas del tablero respondieron sin errores. **La parte de AWS en sí (VPC, RDS, EC2) no se ejecutó**: requiere las credenciales del Learner Lab de cada integrante, que no se comparten.
+Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + Grafana), **EC2 IoT** dedicada (camiones simulados) y **RDS PostgreSQL**. Los tres archivos de este directorio se probaron en local con la base como contenedor aparte, la aplicación en modo producción (`gunicorn`, `DEBUG=0`), el simulador en Docker y Grafana, contra una base vacía: migraciones, datos de demostración, telemetría en vivo y las 12 consultas del tablero respondieron sin errores. El registro del proyecto documenta una instalación integral en AWS del 22-oct-2026. Los cambios posteriores requieren revalidación de la revisión actual; las credenciales del Learner Lab no se comparten.
 
 ## Arquitectura (resumen; el diagrama completo está en `informe/04a-diagrama-arquitectura.md`)
 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
 | EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80) y Grafana (3000) |
-| EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
+| EC2 IoT (`t3.micro`) | Subred pública compartida 10.0.1.0/24 | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
 | RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, Single-AZ | Base `cofrial` |
 
 ## Opción rápida: script de aprovisionamiento
 
-`aws/provision.sh` crea todo lo de abajo (VPC, subredes, Security Groups encadenados, RDS, las dos EC2 con IP elástica y los contenedores arrancando solos). Genera las contraseñas al azar y las guarda en `aws/.estado/` (ignorado por git). **Está escrito pero no se ha ejecutado contra AWS**; se probó el flujo y los scripts de arranque con un reemplazo del comando `aws`, que no valida la semántica real de AWS. Ejecútalo la primera vez leyendo cada mensaje.
+`aws/provision.sh` crea todo lo de abajo (VPC, subredes, Security Groups encadenados, RDS, las dos EC2, con IP elástica para la web y los contenedores arrancando solos). Genera las contraseñas al azar y las guarda en `aws/.estado/` (ignorado por git). El proyecto conserva una prueba histórica de ejecución en AWS y pruebas locales con un reemplazo de la CLI. Estas últimas no certifican la revisión vigente en la nube; véase `docs/revision-hito1-2026-10-25.md`.
 
 ```bash
 # 1. Learner Lab > AWS Details > AWS CLI: copiar las tres variables y exportarlas
 export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=...
 export GEMINI_API_KEY=...        # opcional aquí; también se puede agregar después (ver «Activar la IA»)
 bash aws/provision.sh            # ~10 minutos (RDS es lo más lento)
-bash aws/provision.sh destruir   # borra todo al terminar
+bash aws/provision.sh estado     # consulta los recursos existentes
 ```
 
 Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), parámetro público de SSM para la AMI de Ubuntu 24.04 y que el laboratorio permite crear VPC, RDS y EC2 (no crea roles de IAM). Si algo de esto no se cumple, usa los pasos manuales de más abajo. Las claves quedan también en el user-data de la EC2: aceptable para un laboratorio, no para producción (allí iría Secrets Manager).
@@ -35,6 +35,23 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 3. Verificar con la API real: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` debe responder «IA operativa». Si dice que no respondió, el mensaje trae la causa (clave, modelo no disponible o límite de uso). Los modelos se cambian con `GEMINI_MODELS` (lista separada por coma, en orden de preferencia).
 4. Medir el acierto (meta del informe: más de 85 %): `... exec web python manage.py evaluar_ia`.
 
+## Tablero Grafana (puerto 3000)
+
+El BI de la pauta es **Grafana** en la misma EC2 web. No hay acceso anónimo: todo ingreso exige usuario y clave.
+
+| Cuenta | Uso |
+|---|---|
+| `visor` | Ver el tablero en la defensa (rol Viewer; no edita) |
+| `admin` | Editar paneles y configuración |
+
+Variables en `secretos.env` o en el `.env` de la EC2 web (plantilla `aws/.env.aws.example`):
+
+- `GRAFANA_DB_PASSWORD` — usuario PostgreSQL `grafana_ro` (solo lectura; lo prepara el arranque de la web).
+- `GRAFANA_PASSWORD` — clave del **admin** de Grafana (`GF_SECURITY_ADMIN_PASSWORD`).
+- `GRAFANA_VISOR_PASSWORD` — clave de la cuenta **visor** (la crea el contenedor auxiliar `grafana-visor` de forma idempotente).
+
+`bash aws/provision.sh` genera las tres al azar la primera vez y las guarda en `aws/.estado/secretos.env`. Si el tablero en `:3000` carga pero el login falla, o si faltaban valores al desplegar, editar ese archivo (o el `.env` en `/opt/cofrial` en la EC2) y ejecutar `bash aws/provision.sh recrear-web` para recrear la instancia web con las claves nuevas (~8 minutos). Para leer la clave del visor sin pegarla en chats: `grep '^GRAFANA_VISOR_PASSWORD=' aws/.estado/secretos.env | cut -d= -f2-` en el panel Terminal del operador. Mapa completo: `docs/credenciales-y-cuentas.md`.
+
 ## Pasos manuales
 
 1. **Red.** VPC con una subred pública y dos privadas (RDS exige un grupo de subredes con dos zonas), Internet Gateway y tabla de ruteo de la subred pública.
@@ -43,13 +60,13 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
    - `sg-iot`: sin entradas públicas; 22 solo desde tu IP.
    - `sg-rds`: entrada 5432 **únicamente desde `sg-web` y `sg-iot`**.
 3. **RDS.** PostgreSQL 16, Single-AZ, sin acceso público, base inicial `cofrial`, usuario `cofrial`. Anota el endpoint.
-4. **EC2 web y EC2 IoT.** Ubuntu 24.04, mismo VPC, con `LabInstanceProfile` si el laboratorio lo ofrece. Asigna una **IP elástica** a la web (sin ella, la IP cambia al reiniciar el laboratorio).
+4. **EC2 web y EC2 IoT.** Ubuntu 24.04, mismo VPC, sin perfil de instancia en el script vigente; administración SSH restringida. Asigna una **IP elástica** a la web (sin ella, la IP cambia al reiniciar el laboratorio).
 5. **En cada EC2** (por SSH):
    ```bash
    sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2 git
    sudo usermod -aG docker $USER && newgrp docker
    git clone https://github.com/leftra123/cofrial-spa.git && cd cofrial-spa
-   cp aws/.env.aws.example .env && nano .env      # endpoint de RDS, claves y, en la web, DJANGO_CSRF_ORIGINS
+   cp aws/.env.aws.example .env && nano .env      # RDS, DJANGO_CSRF_ORIGINS y GRAFANA_* (admin, visor, grafana_ro)
    ```
 6. **Arrancar primero la web** (crea las tablas y los camiones en RDS) y después el IoT:
    ```bash
@@ -73,7 +90,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 - [ ] Entrar con `abastecimiento@hospital.test` (B2B) y con `ana@correo.test` (B2C): precios distintos en el catálogo, carrito y orden generada.
 - [ ] En el CRM (`vendedora@cofrial.cl`) aparece el pedido web y el embudo.
 - [ ] `docker compose -f aws/docker-compose.iot.yml logs -f` muestra una inserción cada 5 s por camión (50 camiones, en 5 contenedores); en `/flota/` las tarjetas cambian solas.
-- [ ] `http://IP-WEB:3000` muestra el tablero con ventas por canal, alertas y mapa.
+- [ ] `http://IP-WEB:3000` pide login; con **visor** + `GRAFANA_VISOR_PASSWORD` se ve el tablero (ventas por canal, alertas, mapa). **admin** + `GRAFANA_PASSWORD` solo si hay que editar paneles.
 - [ ] IA: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` responde «IA operativa». Enviar una consulta desde **Soporte** y verla clasificada en `/crm/requerimientos/`.
 - [ ] IA: `... exec web python manage.py evaluar_ia` da más de 85 % (meta del informe).
 - [ ] Plan B: probar también la demo con `GEMINI_API_KEY` vacía; el sistema sigue funcionando y deja el requerimiento «sin clasificar».

@@ -65,7 +65,7 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 17. Como `admin@cofrial.cl`, abrir `/api/flota/`: debe devolver JSON con los camiones y la última lectura (campos `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`).
 
 **E. Tablero de BI (18 a 19)** *(D4)*
-18. Abrir Grafana (`:3000`). **Esperar hasta 15 segundos la primera vez.** Deben verse: ventas del período, pedidos, alertas, ventas por canal, temperatura por camión y el mapa de la flota.
+18. Abrir Grafana (`:3000`). Debe aparecer la pantalla de inicio de sesión (no hay acceso anónimo). Entrar como usuario **`visor`** con la clave `GRAFANA_VISOR_PASSWORD` de `aws/.estado/secretos.env` en el computador de quien opera el laboratorio (compartirla por mensaje directo, no por Git). Si el login falla, quien tiene la EC2 web debe completar `GRAFANA_PASSWORD` y `GRAFANA_VISOR_PASSWORD` en `secretos.env` o en el `.env` de la máquina y ejecutar `bash aws/provision.sh recrear-web`. **Esperar hasta 15 segundos la primera vez** tras entrar. Deben verse: ventas del período, pedidos, alertas, ventas por canal, temperatura por camión y el mapa de la flota.
 19. Hacer una compra nueva como B2B y otra como B2C y esperar 5 a 10 segundos: **las ventas y el gráfico "Ventas por canal" deben cambiar** con ambos canales. *(Cruce ventas contra alertas de frío.)*
 
 **F. IA (20 a 22)** *(D5)*

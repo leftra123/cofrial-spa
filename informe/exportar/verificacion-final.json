@@ -1,0 +1,46 @@
+{
+  "paginas": 117,
+  "tablas": 90,
+  "figuras": 27,
+  "relaciones_internas_validas": true,
+  "medios_plantilla_preservados": 18,
+  "docx_sha256": "de57adf9a9012b00ae40edf15eba89660808c89b0a0551e4bc1dfd9195d62bd4",
+  "paginas_criticas": {
+    "Arquitectura cloud implementada": [
+      5,
+      48
+    ],
+    "Carta Gantt actualizada": [
+      5,
+      33
+    ],
+    "Descomposición lógica de requerimientos": [
+      5,
+      57
+    ],
+    "Etapas del embudo comercial": [
+      5,
+      78,
+      100
+    ],
+    "Extensiones físicas": [
+      105
+    ],
+    "Referencias": [
+      2,
+      90
+    ],
+    "Anexo D": [
+      2,
+      108,
+      109
+    ]
+  },
+  "indices_verificados": 137,
+  "indices_coinciden_con_paginacion": true,
+  "caracteres_fuera_de_pagina": 0,
+  "django_pruebas_aprobadas": 191,
+  "iot_pruebas_aprobadas": 9,
+  "camiones_locales_con_lectura_reciente": 50,
+  "requerimientos_con_cliente_inconsistente": 0
+}

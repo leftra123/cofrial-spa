@@ -1,7 +1,5 @@
 # 2. Propuesta de valor y resolución de conflictos
 
-> Rúbrica H1-D1 (Logrado): demostrar cómo la arquitectura **neutraliza cada dolor**, erradicando los pedidos por WhatsApp y el papel.
-> **Estado: borrador de redacción**, pendiente de validación del equipo. Las cifras de beneficio son supuestos ilustrativos que se apoyan en los de `01-diagnostico.md`.
 
 ## Propuesta de valor en una frase
 
@@ -32,10 +30,10 @@ La propuesta equilibra un Front-Office comercial, que captura la demanda, con un
 
 | Dolor | Causa raíz (`01-diagnostico.md`) | Componente que lo resuelve | Cómo se demuestra en el Hito 2 | Indicador sugerido |
 |---|---|---|---|---|
-| Servidor único sin respaldo | Sin arquitectura que proteja el dato | EC2 + RDS con respaldos automáticos | Aplicación y base de datos corriendo en AWS | Disponibilidad; tiempo de recuperación |
-| Excel incomunicados | Sin fuente oficial del dato | Una sola base de datos para ventas, inventario y logística | Una orden web descuenta stock y se ve en el CRM | Diferencias de inventario |
-| Camiones sin trazabilidad | La flota no emite datos | IoT: `lat` y `long` cada pocos segundos | Mapa con la posición en vivo | Porcentaje de entregas a tiempo |
-| Ruptura de frío no detectada | La temperatura no se mide | IoT: `temp_camara` y `alerta_ruptura_frio` | Alerta visible en el dashboard apenas ocurre | Mermas por ruptura de frío |
+| Servidor único sin respaldo | Sin arquitectura que proteja el dato | EC2 + RDS con respaldos automáticos | Aplicación y base de datos corriendo en AWS | Recuperación ensayada y antigüedad del respaldo; disponibilidad por medir |
+| Excel incomunicados | Sin fuente oficial del dato | Una sola base de datos para ventas, inventario y logística | Una orden web descuenta stock y se ve en el CRM | Rechazos por stock insuficiente y consistencia del descuento; diferencias físicas por medir |
+| Camiones sin trazabilidad | La flota no emite datos | IoT: `lat` y `long` cada pocos segundos | Mapa con la posición en vivo | Camiones con lectura reciente / camiones activos; puntualidad real por medir |
+| Ruptura de frío no detectada | La temperatura no se mide | IoT: `temp_camara` y `alerta_ruptura_frio` | Alerta visible en el dashboard apenas ocurre | Pedidos afectados y lecturas fuera de rango; merma evitada por validar |
 | Coordinación por WhatsApp y llamadas | Único canal conversacional | Dashboard y CRM como canal oficial | Pedido y estado visibles en el CRM | Pedidos fuera del sistema |
 | Pedidos por teléfono o correo | Sin punto de entrada propio | E-commerce B2B/B2C | Flujo catálogo, carrito y orden | Pedidos digitales sobre el total |
 | Cartera en celulares | El conocimiento es de la persona | CRM con embudo | Un prospecto avanza de etapa en el CRM | Tasa de conversión |
@@ -75,7 +73,7 @@ Siguiendo el modelo de `01-diagnostico.md` (escenario base: 5 % de viajes con ru
 
 *Nota.* Elaboración propia. Pérdida actual de referencia: 22,5 millones de pesos semanales (Tabla 6 de `01-diagnostico.md`). Todos los valores son ilustrativos y se reemplazan con datos reales de Cofrial.
 
-El costo de la solución se calcula en una etapa posterior; el prototipo se construye con los créditos de AWS Academy, por lo que no genera gasto. Para una operación real habría que estimar el costo mensual de las instancias, la base de datos, los sensores y el desarrollo, y compararlo con el ahorro del escenario que la empresa considere realista.
+El prototipo consume créditos de AWS Academy. Su ejecución académica no equivale a costo operativo nulo en producción. Para una operación real habría que estimar el costo mensual de las instancias, la base de datos, los sensores y el desarrollo, y compararlo con el ahorro del escenario que la empresa considere realista.
 
 ## Alcance y límites de la propuesta
 
@@ -107,17 +105,9 @@ Declarar los límites forma parte de la defensa:
 
 | Grupo | Riesgo | Mitigación |
 |---|---|---|
-| Vendedores | Resisten entregar su cartera personal | La cartera se asigna a su nombre en el CRM; los indicadores y las comisiones se calculan sobre lo registrado |
+| Vendedores | Resisten entregar su cartera personal | La cartera e indicadores se centralizan; una política de comisiones sería una medida organizacional adicional |
 | Conductores | Ven el sensor como vigilancia | Comunicar que protege la carga y a ellos ante reclamos injustos; datos de uso acotado |
 | Clientes institucionales | Prefieren seguir llamando | Durante la transición el vendedor ingresa el pedido en su nombre; el portal se muestra como una ventaja |
-| Contabilidad | Mantiene la doble digitación | Exportación periódica desde la base central como primer paso |
+| Contabilidad | Mantiene la doble digitación | Exportación periódica propuesta como primer paso; no implementada en el prototipo |
 
 *Nota.* Elaboración propia.
-
-## Pendiente
-
-- [ ] Validar con Cofrial los supuestos de beneficio y los umbrales de adopción.
-- [ ] Estimar el costo mensual de una operación real, para completar la comparación costo y beneficio.
-- [ ] Revisar la redacción final con la skill `informe-apa7-tecnico`.
-
-## Notas del equipo

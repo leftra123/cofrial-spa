@@ -113,12 +113,12 @@ def w1():
               '<div class="pad" style="text-align:center"><div class="img" style="height:120px;margin-bottom:14px">Imagen: cadena de frío monitoreada</div>'
               '<div style="font-size:22px;font-weight:800">Carnes y refrigerados con la temperatura bajo control</div><div class="m" style="margin:6px 0 20px">Elija cómo desea comprar</div>'
               '<div class="fila" style="justify-content:center;gap:30px">'
-              f'<div class="caja pad rel" style="width:340px;text-align:left">{N(1)}<div class="t">Soy una institución</div><div class="m">Hospitales, supermercados, ferias y empresas</div><ul style="padding-left:18px;margin:10px 0"><li>Lista de precios institucional</li><li>Pedidos por volumen y orden de compra</li><li>Vendedor asignado</li></ul><span class="btn p">Ingresar con RUT de la empresa</span></div>'
+              f'<div class="caja pad rel" style="width:340px;text-align:left">{N(1)}<div class="t">Soy una institución</div><div class="m">Hospitales, supermercados, ferias y empresas</div><ul style="padding-left:18px;margin:10px 0"><li>Lista de precios institucional</li><li>Pedidos por volumen y orden de compra</li><li>Vendedor asignado</li></ul><span class="btn p">Ingresar con cuenta institucional</span></div>'
               f'<div class="caja pad rel" style="width:340px;text-align:left">{N(1)}<div class="t">Soy cliente particular</div><div class="m">Compra para el hogar</div><ul style="padding-left:18px;margin:10px 0"><li>Precios públicos</li><li>Compra en pocos pasos</li><li>Seguimiento del despacho</li></ul><span class="btn p">Ver catálogo</span></div></div>'
               f'<div class="fila rel" style="justify-content:center;gap:40px;margin-top:22px">{N(2)}<span class="ins azul">Temperatura monitoreada en cada viaje</span><span class="ins azul">Seguimiento en línea</span><span class="ins azul">Respaldo en la nube</span></div></div>')
-    notas = ["El perfil elegido decide la lista de precios: <b>tipo_cliente → lista_precio</b>. Un cliente B2B nunca ve el precio público ni al revés.",
+    notas = ["La cuenta autenticada decide la lista de precios: <b>tipo_cliente → lista_precio</b>. Un cliente B2B nunca ve el precio público ni al revés.",
              "Mensajes de confianza que responden al dolor del caso (cadena de frío y trazabilidad). Se alimentan de datos reales, no de texto fijo.",
-             "Acceso directo a «Seguir mi pedido» por número de orden, para quien llega desde un correo."]
+             "Acceso autenticado a los pedidos propios; el botón lleva al pedido activo más reciente."]
     return ventana("https://cofrial.example/", cuerpo, notas, 620)
 
 
@@ -166,7 +166,7 @@ def w4():
               f'<div class="rel"><b>N° de orden de compra</b> <span class="m">(solo instituciones)</span><br><span class="busca" style="display:block;margin-top:4px">OC-2026-0457</span>{N(2)}</div>'
               f'<div class="rel" style="font-size:16px"><b>Total:</b> $979.650{N(4)}</div><span class="btn p" style="text-align:center">Confirmar pedido</span></div></div></div>')
     notas = ["Las cantidades se validan contra el stock al confirmar; si falta stock se avisa antes de crear la orden.",
-             "El número de orden de compra (<b>orden.numero_oc</b>) aparece solo para el perfil B2B.",
+             "OC opcional B2B: sin ella se asigna referencia WEB y queda pendiente; un carrito mixto se divide por rango de frío.",
              "Solo se ofrecen las direcciones del propio cliente (<b>direccion.cliente_id</b>).",
              "El total se calcula con las líneas del carrito; no se almacena."]
     return ventana("https://cofrial.example/carrito", cuerpo, notas, 560)
@@ -179,7 +179,7 @@ def w5():
               '<tr><td>Lomo vetado de vacuno 5 kg</td><td>10</td><td>$389.900</td></tr><tr><td>Pechuga de pollo 10 kg</td><td>5</td><td>$149.950</td></tr>'
               '<tr><td><b>Total</b></td><td></td><td><b>$539.850</b></td></tr></table><div class="m" style="margin-top:8px">Entrega en Manuel Montt 115, Temuco · OC-2026-0457</div></div>'
               f'<div class="rel caja pad" style="width:560px;margin:0 auto;text-align:left">{N(2)}Su vendedora <b>María Paz Soto</b> ya ve este pedido y lo confirmará.</div>'
-              '<div style="margin-top:16px"><span class="btn p">Seguir mi pedido</span> <span class="btn g">Descargar resumen</span></div></div>')
+              '<div style="margin-top:16px"><span class="btn p">Seguir mi pedido</span> <span class="btn g">Ver mis pedidos</span></div></div>')
     notas = ["La orden se crea en estado <b>Recibida</b> y el stock ya está descontado (misma transacción).",
              "Para B2B se informa el vendedor asignado (<b>cliente.vendedor_id</b>): el pedido aparece en su CRM al instante."]
     return ventana("https://cofrial.example/pedido/1001/confirmacion", cuerpo, notas, 600)
@@ -191,9 +191,9 @@ def w6():
               '<div class="fila"><div class="caja pad" style="flex:1"><b>Camión CAM-01</b> · salió 07:12<div class="mapa" style="margin:8px 0"><span class="cam">CAM-01</span></div><div class="m">Última posición hace 5 segundos</div></div>'
               f'<div class="caja pad rel col" style="width:330px">{N(2)}<b>Temperatura de la cámara</b><div style="font-size:30px;font-weight:800">3,4 °C</div><span class="ins verde">Dentro del rango (0 a 4 °C)</span>'
               '<div class="img" style="height:60px">gráfico de los últimos 60 minutos con la banda 0 a 4 °C</div></div></div>'
-              f'<div class="rel rojo caja pad" style="margin-top:12px;background:#fbe9e6;border-color:#c0392b">{N(3)}<b>Aviso:</b> a las 08:40 se detectó una lectura sobre 4 °C durante unos minutos. Su vendedora fue notificada y estamos verificando la carga.</div>'
+              f'<div class="rel rojo caja pad" style="margin-top:12px;background:#fbe9e6;border-color:#c0392b">{N(3)}<b>Aviso:</b> a las 08:40 se detectó una lectura sobre 4 °C durante unos minutos. La alerta está visible en el CRM y estamos verificando la carga.</div>'
               f'<div class="rel" style="margin-top:12px;width:max-content">{N(4)}<span class="btn r">Reportar un problema</span></div></div>')
-    notas = ["El estado sale de <b>estado_orden</b>; cada cambio queda con fecha y hora.",
+    notas = ["El estado sale de <b>estado_orden</b>; se muestra el estado vigente; no hay historial completo de cada transición.",
              "Posición y temperatura salen de <b>telemetria</b> del camión del despacho (<b>orden.despacho_id → despacho.camion_id</b>).",
              "Si una lectura trae <b>alerta_ruptura_frio</b> durante el viaje de esta orden, el cliente lo ve y el vendedor lo recibe en el CRM.",
              "«Reportar un problema» crea un <b>requerimiento</b>; la IA lo clasifica y llega al CRM."]
@@ -214,7 +214,7 @@ def w7():
         return f'<div class="tj"><b>{emp}</b><br>{con}<br><span class="m">{monto} · {dias} días en la etapa</span>{extra}</div>'
     cols = [("Prospecto", 4, tj("Clínica Alemana Temuco", "Dra. Pérez", "$1.800.000", 2) + tj("Feria Costanera", "J. Soto", "$600.000", 5)),
             ("Contactado", 3, tj("Hotel Pucón Sur", "L. Reyes", "$900.000", 3)),
-            ("Propuesta enviada", 2, tj("Supermercado El Sur", "C. Muñoz", "$2.500.000", 4, '<br><span class="ins amar">Sin respuesta hace 4 días</span>')),
+            ("Propuesta enviada", 2, tj("Supermercado El Sur", "C. Muñoz", "$2.500.000", 4, '<br><span class="ins amar">Seguimiento comercial</span>')),
             ("Negociación", 1, tj("Casino Industrial Norte", "P. Vega", "$3.200.000", 6)),
             ("Ganado", 7, ""), ("Perdido", 3, "")]
     col = "".join(f'<div class="kc"><h4><span>{n}</span><span class="ins azul">{c}</span></h4>{t}</div>' for n, c, t in cols)
@@ -224,7 +224,7 @@ def w7():
               '<div class="caja pad" style="flex:1"><span class="m">Valor del embudo</span><div style="font-size:22px;font-weight:800">$9.000.000</div></div>'
               '<div class="caja pad" style="flex:1"><span class="m">Conversión del mes</span><div style="font-size:22px;font-weight:800">70 %</div></div></div>'
               f'<div class="kan rel">{NL(1)}{col}</div></div></div>')
-    notas = ["Arrastrar una tarjeta cambia la <b>etapa</b>. Al mover a «Perdido» se exige el motivo; al mover a «Ganado» se crea el cliente.",
+    notas = ["El control de etapa cambia la <b>etapa</b>. Al mover a «Perdido» se exige el motivo; al mover a «Ganado» se crea el cliente.",
              "Los indicadores se calculan desde la base de datos (conversión = ganados sobre cerrados del mes).",
              "El vendedor ve solo su cartera; gerencia ve todas. Así la cartera pertenece a la empresa y no a un celular."]
     return ventana("https://cofrial.example/crm/prospectos", cuerpo, notas, 640)
@@ -247,17 +247,17 @@ def w8():
 
 
 def w9():
-    filas = ("<tr><td>Llegó tibia la carga</td><td>Hospital Regional</td><td><span class='ins rojo'>Calidad o frío</span> 91 %</td><td><span class='ins azul'>Clasificado</span></td></tr>"
-             "<tr><td>Cotización de 200 kg de pollo</td><td>Casino Norte</td><td><span class='ins azul'>Cotización</span> 87 %</td><td><span class='ins azul'>Clasificado</span></td></tr>"
-             f"<tr><td>¿Hacen despachos a Villarrica?</td><td>Anónimo</td><td><span class='ins amar'>Sin clasificar</span> {N(3)}</td><td><span class='ins amar'>Pendiente</span></td></tr>"
-             "<tr><td>Factura duplicada</td><td>Ana Pérez</td><td><span class='ins azul'>Reclamo</span> 78 %</td><td><span class='ins verde'>Resuelto</span></td></tr>")
+    filas = ("<tr><td>Llegó tibia la carga</td><td>Hospital Regional</td><td><span class='ins rojo'>Reclamo por temperatura</span> 91 %</td><td><span class='ins azul'>Clasificado</span></td></tr>"
+             "<tr><td>Cotización de 200 kg de pollo</td><td>Casino Norte</td><td><span class='ins azul'>Consulta de producto</span> 87 %</td><td><span class='ins azul'>Clasificado</span></td></tr>"
+             f"<tr><td>¿Hacen despachos a Villarrica?</td><td>Cliente registrado</td><td><span class='ins amar'>Sin clasificar</span> {N(3)}</td><td><span class='ins amar'>Pendiente</span></td></tr>"
+             "<tr><td>Factura duplicada</td><td>Ana Pérez</td><td><span class='ins azul'>Facturación</span> 78 %</td><td><span class='ins verde'>Resuelto</span></td></tr>")
     cuerpo = ('<div class="crm">' + menu("Requerimientos") + '<div style="flex:1" class="pad"><div class="fila" style="justify-content:space-between;margin-bottom:10px"><b style="font-size:17px">Bandeja de requerimientos</b>'
               '<div class="fila"><span class="chip">Categoría ▾</span><span class="chip">Estado ▾</span></div></div><div class="fila"><div style="flex:1.4" class="rel">'
               f'{N(1)}<table><tr><th>Asunto</th><th>Cliente</th><th>Categoría (IA)</th><th>Estado</th></tr>{filas}</table></div>'
               f'<div class="caja pad col rel" style="flex:1">{N(2)}<b>Llegó tibia la carga</b><div class="m">Hospital Regional · orden 1001 · hace 12 min</div>'
               '<div class="caja pad gris">El pedido llegó con la cadena de frío cortada. Necesitamos reposición urgente.</div>'
-              '<div><b>Categoría sugerida:</b> <span class="ins rojo">Calidad o frío</span> (confianza 91 %)</div>'
-              '<div class="fila"><span class="btn g">Reclasificar</span><span class="btn g">Asignar</span><span class="btn p">Marcar resuelto</span></div></div></div></div></div>')
+              '<div><b>Categoría sugerida:</b> <span class="ins rojo">Reclamo por temperatura</span> (confianza 91 %)</div>'
+              '<div class="fila"><span class="btn g">Reclasificar</span><span class="btn g">Clasificar con IA</span><span class="btn p">Guardar categoría</span></div></div></div></div></div>')
     notas = ["Cada requerimiento muestra la categoría que asignó la IA y su confianza (<b>requerimiento.confianza_ia</b>).",
              "El vendedor puede corregir la categoría: la decisión final es de una persona.",
              "Si la API de IA no responde, el requerimiento queda <b>sin_clasificar</b> y se revisa a mano: el servicio nunca se detiene."]
@@ -295,9 +295,9 @@ def j_b2b():
         "User journey B2B: Marcela Rojas, encargada de abastecimiento del Hospital Regional (persona ficticia)",
         "Objetivo: abastecer cada semana carnes refrigeradas, con trazabilidad de la temperatura y número de orden de compra. Tiene poco tiempo y responde ante auditorías sanitarias.",
         ["Ingresar", "Elegir productos", "Armar el pedido", "Confirmar", "Seguir el despacho", "Recibir y postventa"],
-        [("Acción del cliente", ["Entra con la cuenta de su institución", "Filtra por tipo de frío y repite su último pedido", "Define cantidades, dirección y N.° de orden de compra", "Confirma y recibe el número de orden", "Consulta estado, posición y temperatura del camión", "Recibe, confirma y reporta si hay un problema"], ""),
+        [("Acción del cliente", ["Entra con la cuenta de su institución", "Filtra por tipo de frío y repite su último pedido", "Define cantidades, dirección y OC opcional", "Confirma y recibe una orden por rango; OC diferida si falta", "Consulta estado, posición y temperatura del camión", "Recibe, confirma y reporta si hay un problema"], ""),
          ("Pantalla", ["Inicio de sesión (W1)", "Catálogo y detalle (W2, W3)", "Carrito (W4)", "Confirmación (W5)", "Seguimiento (W6)", "Seguimiento y requerimiento (W6)"], ""),
-         ("Sistema: dato y regla", ["<b>cliente → tipo_cliente → lista de precios institucional</b>", "<b>precio_producto</b> por lista; <b>stock_disponible</b> en línea", "<b>carrito_item</b>; <b>direccion</b> del cliente; <b>numero_oc</b>", "<b>orden</b> y <b>orden_item</b> con precio vigente; stock descontado en una transacción", "<b>orden → despacho → camion → telemetria</b>; <b>alerta_ruptura_frio</b>", "<b>requerimiento</b> clasificado por IA; vendedor notificado"], ""),
+         ("Sistema: dato y regla", ["<b>cliente → tipo_cliente → lista de precios institucional</b>", "<b>precio_producto</b> por lista; <b>stock_disponible</b> en línea", "<b>carrito_item</b>; <b>direccion</b> del cliente; <b>numero_oc</b>", "<b>orden</b> y <b>orden_item</b> con precio vigente; stock descontado en una transacción", "<b>orden → despacho → camion → telemetria</b>; <b>alerta_ruptura_frio</b>", "<b>requerimiento</b> clasificado por IA; visible en la bandeja comercial"], ""),
          ("Hoy (AS-IS)", ["Llama al vendedor; depende de que conteste", "Pide por correo sin saber si hay stock ni cuál es el precio vigente", "Dicta cantidades y el vendedor las anota a mano", "Espera que el vendedor confirme por WhatsApp", "Llama para preguntar dónde va; nadie sabe la temperatura", "Rechaza la carga y reclama por teléfono; no queda registro"], "hoy"),
          ("Con la plataforma", ["Entra a cualquier hora con su cuenta y ve su lista de precios", "Ve precio y stock reales y repite el pedido anterior en un clic", "Revisa el total y los avisos de stock antes de confirmar", "Recibe número y resumen al instante; el vendedor lo ve en el CRM", "Ve el estado en línea y se le avisa si hay una alerta de frío", "Reporta en el portal; la IA lo clasifica y el vendedor responde"], "tobe")],
         [2, 2, 2, 1.5, 1, 1], [4, 5, 4, 5, 4, 4],
@@ -307,9 +307,9 @@ def j_b2b():
 def j_b2c():
     return journey(
         "User journey B2C: Ana Pérez, compra para su familia de forma ocasional (persona ficticia)",
-        "Objetivo: comprar carnes de calidad sin ir a una tienda ni llamar por teléfono, y saber cuándo llega su pedido. Compra puntual, pago inmediato, sin vendedor asignado.",
-        ["Llegar", "Elegir productos", "Carrito y datos", "Pagar y confirmar", "Seguir el pedido", "Postventa"],
-        [("Acción del cliente", ["Entra al sitio y elige «Cliente particular»", "Mira el catálogo y los precios públicos", "Agrega productos y crea su cuenta con RUT y correo", "Elige la dirección y paga (pago simulado en el prototipo)", "Revisa el estado del despacho", "Reporta un problema o repite la compra"], ""),
+        "Objetivo: comprar carnes de calidad sin ir a una tienda ni llamar por teléfono, y saber cuándo llega su pedido. Compra puntual, sin pasarela de pago, sin vendedor asignado.",
+        ["Llegar", "Elegir productos", "Carrito y datos", "Confirmar compra", "Seguir el pedido", "Postventa"],
+        [("Acción del cliente", ["Entra al sitio y elige «Cliente particular»", "Mira el catálogo y los precios públicos", "Agrega productos y crea su cuenta con RUT, correo, dirección y clave", "Elige su dirección y confirma, sin cobro en línea", "Revisa el estado del despacho", "Reporta un problema o repite la compra"], ""),
          ("Pantalla", ["Inicio (W1)", "Catálogo y detalle (W2, W3)", "Carrito (W4)", "Confirmación (W5)", "Seguimiento (W6)", "Seguimiento y requerimiento"], ""),
          ("Sistema: dato y regla", ["<b>tipo_cliente B2C → lista pública</b>", "<b>precio_producto</b> de la lista pública; stock en línea", "<b>usuario</b>, <b>cliente</b> y <b>direccion</b> se crean; un solo <b>carrito</b> abierto", "<b>orden</b> en estado Recibida; stock descontado", "<b>estado_orden</b> y <b>telemetria</b> del despacho", "<b>requerimiento</b> clasificado por IA"], ""),
          ("Hoy (AS-IS)", ["No existe canal: compra en tienda o llama", "No conoce precios ni disponibilidad", "Debe dictar sus datos por teléfono", "Coordina el pago y la entrega a mano", "No sabe cuándo llega", "Reclama por teléfono sin respuesta clara"], "hoy"),
@@ -349,7 +349,7 @@ ARQ_CRM = """flowchart LR
     R1["Cartera por vendedor,<br/>permisos por rol"]:::reg
     R2["Motivo obligatorio<br/>al perder"]:::reg
     R3["Ganar crea cliente y<br/>asigna lista de precios"]:::reg
-    R4["Alerta de frío avisa al<br/>vendedor del cliente"]:::reg
+    R4["Alerta de frío visible<br/>en la ficha del cliente"]:::reg
   end
   DB[("Base de datos central<br/>RDS PostgreSQL")]:::dat
   subgraph X["Fuentes e integraciones"]
@@ -375,7 +375,7 @@ PIPELINE = """flowchart LR
   classDef pierde fill:#f9dcd8,stroke:#c0392b,color:#222,font-weight:bold
   classDef ini fill:#eef1f5,stroke:#5a6c86,color:#222
 
-  IN(["Ingreso manual<br/>o por el portal"]):::ini
+  IN(["Ingreso manual<br/>en el CRM"]):::ini
   subgraph ABIERTAS["Etapas abiertas"]
     direction LR
     P1["1. Prospecto"]:::etapa
@@ -388,11 +388,9 @@ PIPELINE = """flowchart LR
   CL(["Cliente creado<br/>con su lista de precios"]):::ini
 
   IN --> P1
-  P1 -->|"registrar la primera<br/>interacción"| P2
+  P1 -->|"interacción previa<br/>y movimiento explícito"| P2
   P2 -->|"registrar la propuesta"| P3
   P3 -->|"el cliente responde<br/>con condiciones"| P4
-  P3 -->|"pide aclaraciones"| P2
-  P3 -->|"acepta sin negociar"| G
   P4 -->|"acepta"| G
   ABIERTAS -.->|"motivo obligatorio"| X
   G -->|"se crea el cliente<br/>y se asigna la lista"| CL
@@ -475,3 +473,8 @@ if __name__ == "__main__":
     render_mermaid(PIPELINE, IMG / "crm-pipeline.png")
     render_mermaid(ESTADOS_ORDEN, IMG / "estados-orden.png")
     render_mermaid(CASOS_USO, IMG / "casos-de-uso.png", elk=True)
+
+
+if __name__ == "__main__":
+    import runpy
+    runpy.run_path(str(IMG / "generar-figuras-vigentes.py"))["pipeline"]()

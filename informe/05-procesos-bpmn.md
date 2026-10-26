@@ -1,7 +1,5 @@
 # Procesos AS-IS y TO-BE (BPMN 2.0)
 
-> Aporta a H1-D1 (el diagnóstico se ve en el AS-IS) y a H1-D4 (el TO-BE muestra cómo se elimina el Shadow IT).
-> **Estado: borrador de redacción**, pendiente de validación del equipo. Los seis diagramas están hechos; falta contrastarlos con cómo opera Cofrial en la realidad.
 
 ## Notación elegida
 
@@ -43,10 +41,10 @@ Los procesos se modelan con Business Process Model and Notation (BPMN) 2.0, est�
 
 | Punto de dolor (AS-IS) | Qué ocurre hoy | Cómo lo resuelve el TO-BE |
 |---|---|---|
-| 1. Registro informal | El vendedor anota el pedido en su celular o en papel | El cliente genera la orden en el portal; queda registrada en la base de datos |
+| 1. Registro informal | El vendedor anota el pedido en su celular o en papel | El cliente confirma el carrito; se crea una orden por rango de conservación, con OC diferida cuando falta |
 | 2. Canal no oficial | El vendedor avisa a bodega por WhatsApp personal | Bodega ve la orden en la misma base de datos, sin intermediarios |
 | 3. Stock descuadrado | Bodega revisa su Excel local, que no coincide con contabilidad | El portal valida el stock en tiempo real contra la base central y descuenta al confirmar |
-| 4. Doble digitación | Contabilidad vuelve a ingresar el pedido en un sistema cerrado | La orden existe una sola vez; se exporta a contabilidad desde la base (ver límites en `02-propuesta-valor.md`) |
+| 4. Doble digitación | Contabilidad vuelve a ingresar el pedido en un sistema cerrado | La orden se registra una sola vez; la exportación contable se propone como evolución (ver límites en `02-propuesta-valor.md`) |
 | 5. Sin seguimiento | Nadie sabe dónde está el pedido | El cliente ve el estado y el vendedor lo ve en el CRM |
 
 *Nota.* Elaboración propia. Casos de uso asociados: CU-01 a CU-05 y CU-08.
@@ -93,7 +91,7 @@ Los procesos se modelan con Business Process Model and Notation (BPMN) 2.0, est�
 
 ![Proceso 3 TO-BE](img/bpmn-p3-tobe.drawio.png)
 
-*Nota.* Elaboración propia. Carriles: prospecto, IA (servicio externo), CRM, vendedor y gerencia. Las etapas entre paréntesis corresponden a la tabla `etapa_pipeline`.
+*Nota.* Elaboración propia. Carriles: vendedor, CRM, cliente o prospecto y gerencia. El alta de un prospecto es manual; la clasificación automática de soporte no crea prospectos. Las etapas entre paréntesis corresponden a la tabla `etapa_pipeline`.
 
 **Tabla 4**
 *Proceso 3: de dónde viene el dolor y cómo lo resuelve el TO-BE*
@@ -105,12 +103,4 @@ Los procesos se modelan con Business Process Model and Notation (BPMN) 2.0, est�
 | 3. Sin etapas ni métricas | Nadie sabe en qué punto está cada prospecto | El prospecto avanza por etapas visibles en un tablero |
 | 4. Pérdidas sin motivo | Si el prospecto no acepta, no queda rastro | Se cierra como Perdido con el motivo, y la gerencia mide la conversión |
 
-*Nota.* Elaboración propia. Casos de uso asociados: CU-06, CU-07 y CU-09. El requerimiento que llega por el portal lo clasifica la IA antes de ingresar al CRM; si la API no responde, queda "sin clasificar" y lo revisa una persona.
-
-## Pendiente
-
-- [ ] Contrastar los seis diagramas con una conversación con Cofrial (en especial los pasos de bodega y contabilidad, que son supuestos del equipo).
-- [ ] Revisar si hace falta un cuarto proceso (por ejemplo, devoluciones o reclamos por cadena de frío).
-- [ ] Renumerar figuras y tablas al integrar el informe completo.
-
-## Notas del equipo
+*Nota.* Elaboración propia. Casos de uso asociados: CU-06, CU-07 y CU-09. El requerimiento que llega por el portal se persiste antes de consultar a la IA y aparece en el CRM; si la API no responde, queda "sin clasificar" y lo revisa una persona.

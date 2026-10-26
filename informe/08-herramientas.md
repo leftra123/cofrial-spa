@@ -1,8 +1,5 @@
 # Evaluación de herramientas (criterios ponderados)
 
-> Aporta a H1-D2. Sigue el método de TRAZO: criterios y pesos definidos antes de evaluar, alternativas puntuadas de 1 a 5 y puntaje ponderado.
-> Objetivo: dejar argumentado por qué se usan las herramientas que sugiere la pauta (AWS Academy, EC2, RDS, Docker, IA gratuita) frente a sus alternativas, aunque la pauta no exija esta comparación.
-> **Estado: borrador.** Los puntajes son una propuesta inicial que el equipo debe validar. Al cerrar una decisión en Trello se actualiza aquí y en `docs/decisiones.md`.
 
 ## Criterios
 
@@ -67,7 +64,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 **Tabla 4**
 *Puntuación ponderada: framework web (e-commerce, crm y api)*
 
-| Criterio (peso) | Django + plantillas (HTMX y Tailwind) | React + Django REST Framework | Next.js (React y Tailwind) | Astro (modo servidor) |
+| Criterio (peso) | Django + plantillas, CSS propio y JavaScript | React + Django REST Framework | Next.js (React y Tailwind) | Astro (modo servidor) |
 |---|---|---|---|---|
 | C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 5 | 5 |
 | C2 Viabilidad en el plazo (20 %) | 5 | 4 | 3 | 3 |
@@ -78,9 +75,9 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 | **Puntaje ponderado** | **4,75** | **4,65** | **4,30** | **4,35** |
 | **Decisión** | Adoptada | Complementaria (empate técnico) | Descartada | Descartada |
 
-*Nota.* Elaboración propia. Borrador pendiente de validación del equipo. En C2 se mide también cuánto código hay que escribir: Django trae ORM con migraciones, autenticación, grupos de permisos y un panel de administración; Next.js y Astro obligan a elegir y armar cada una de esas piezas. En C3 se asume que Eric ya trabajó con React y Django REST Framework; la experiencia de Sergio está por confirmar y puede mover este criterio.
+*Nota.* Elaboración propia. Borrador pendiente de validación del equipo consultor. En C2 se mide también cuánto código hay que escribir: Django trae ORM con migraciones, autenticación, grupos de permisos y un panel de administración; Next.js y Astro obligan a elegir y armar cada una de esas piezas. En C3 se asume que Eric ya trabajó con React y Django REST Framework; los valores representan el juicio de conveniencia del equipo consultor, no una medición experimental.
 
-**Conclusión.** Django con plantillas (4,75) y React con Django REST Framework (4,65) quedan en un empate técnico. Con Django, el MER en 3FN se convierte directo en modelos y migraciones, y el panel de administración da el CRM base (clientes, prospectos, pedidos) sin escribir interfaz. Python además sirve para los cálculos (listas de precios, mermas, umbrales de cadena de frío) y para el simulador IoT, con un solo lenguaje. React con Django REST Framework conserva esas ventajas del backend (el panel de administración sigue disponible como CRM base) y suma el ecosistema de React; su costo es mantener y desplegar dos aplicaciones, con CORS, autenticación por token y validaciones duplicadas. Si los dos integrantes ya dominan React, esa opción es defendible; si no, Django con plantillas ahorra tiempo. Next.js y Astro quedan atrás porque no traen autenticación, ORM ni panel de administración. El puntaje previo de Astro (4,75) se corrigió: puntuaba alto en plazo y facilidad por ser una elección previa, sin considerar el código que faltaba escribir.
+**Conclusión.** Django con plantillas (4,75) y React con Django REST Framework (4,65) quedan en un empate técnico. Con Django, el diseño de datos se traduce en modelos y migraciones, y el panel de administración da el CRM base (clientes, prospectos, pedidos) sin escribir interfaz. Python además sirve para los cálculos (listas de precios, mermas, umbrales de cadena de frío) y para el simulador IoT, con un solo lenguaje. React con Django REST Framework conserva esas ventajas del backend (el panel de administración sigue disponible como CRM base) y suma el ecosistema de React; su costo es mantener y desplegar dos aplicaciones, con CORS, autenticación por token y validaciones duplicadas. Si los dos integrantes ya dominan React, esa opción es defendible; si no, Django con plantillas ahorra tiempo. Next.js y Astro quedan atrás porque no traen autenticación, ORM ni panel de administración. La decisión implementada utiliza plantillas, vistas propias del CRM y API JSON con DRF; no incorpora React, HTMX ni Tailwind.
 
 ## Simulación IoT
 
@@ -100,7 +97,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Con Django adoptado para la web (Tabla 4), Python gana porque web e IoT comparten lenguaje: el equipo aprende una sola herramienta, el simulador usa una imagen ligera de Python y se ahorra mantener una segunda cadena de dependencias. Antes de elegir Django, Node/TypeScript puntuaba más (4,75 contra 4,55) solo por esa misma razón. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
+**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Con Django adoptado para la web (Tabla 4), Python gana porque web e IoT comparten lenguaje: el equipo consultor aprende una sola herramienta, el simulador usa una imagen ligera de Python y se ahorra mantener una segunda cadena de dependencias. Antes de elegir Django, Node/TypeScript puntuaba más (4,75 contra 4,55) solo por esa misma razón. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
 
 ## Dashboard de BI
 
@@ -142,7 +139,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 **Conclusión.** La pauta exige costo cero. Gemini y Groq ofrecen capas gratuitas con buena calidad en español; Groq queda como respaldo si se alcanza el límite. OpenAI no tiene capa gratuita permanente, por lo que incumple el requisito.
 
-**Resultado de la implementación.** Se implementó Gemini como proveedor principal y Groq como respaldo. Al probarlo con la API real se aprendió que la oferta gratuita cambia con rapidez: el modelo elegido inicialmente (`gemini-2.5-flash`) ya no estaba disponible para cuentas nuevas y los modelos vigentes se consumen con otra interfaz (Interactions API), por lo que el nombre del modelo no se fija en el código sino que se configura y se prueba en cascada. Este riesgo de disponibilidad es el principal costo de usar una capa gratuita y justifica mantener un segundo proveedor. El respaldo con Groq (modelos gpt-oss y qwen) responde en cerca de un segundo contra los 4 a 7 de Gemini y acertó 20 de 20 por sí solo; con ambos proveedores el acierto fue de 100 %. La medición y las latencias están en `06-casos-de-uso.md` (CU-09).
+**Resultado de la implementación.** El clasificador usa Gemini y Groq en orden configurable y conserva el requerimiento antes de invocar al proveedor. El asistente de tienda reutiliza la integración, con Groq primero por defecto, contexto del perfil y pedidos propios, controles de respuesta y modo de solo lectura. Los modelos no se consideran contratos permanentes de disponibilidad: se configuran y prueban por proveedor. El resultado histórico de veinte clasificaciones correctas corresponde a una muestra registrada el 22-oct-2026 y no a la precisión general del asistente. El presupuesto nominal es de doce segundos para clasificación y diez para chat, sin garantía de plazo extremo a extremo.
 
 ## Diagramas de arquitectura
 
@@ -151,18 +148,18 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | draw.io | Lucidchart (plan gratuito) | Mermaid | archify (HTML interactivo) |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 4 | 2 | 3 |
+| C1 Cumplimiento de la pauta (30 %) | 5 | 4 | 4 | 3 |
 | C2 Viabilidad en el plazo (20 %) | 5 | 4 | 5 | 4 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 4 | 4 |
 | C4 Costo cero (15 %) | 5 | 2 | 5 | 5 |
 | C5 Compatibilidad con AWS Academy (10 %) | 5 | 5 | 5 | 5 |
 | C6 Escalabilidad y evolución (10 %) | 4 | 3 | 3 | 3 |
-| **Puntaje ponderado** | **4,75** | **3,70** | **3,75** | **3,85** |
-| **Decisión** | Adoptada | Descartada | Descartada (eliminatorio) | Complementaria (defensa en vivo) |
+| **Puntaje ponderado** | **4,75** | **3,70** | **4,35** | **3,85** |
+| **Decisión** | Adoptada | Descartada | Complementaria para modelos | Complementaria (defensa en vivo) |
 
-*Nota.* Elaboración propia. Borrador pendiente de validación del equipo. En C1 se evaluó si genera un diagrama de topología con los íconos oficiales de AWS, que pide la rúbrica H1-D3. En C5 todas puntúan 5 porque ninguna depende de los permisos del Learner Lab. El puntaje de archify en C1 se verificó probándolo con el mismo diagrama: no incluye íconos oficiales de AWS y solo agrupa por región y Security Group, sin cajas de VPC, subredes ni zonas de disponibilidad. A cambio entrega un HTML interactivo (zoom, modo claro y oscuro, exportar) que pasó sus 9 validaciones de calidad.
+*Nota.* Elaboración propia. Borrador pendiente de validación del equipo consultor. En C1 se evaluó si genera un diagrama de topología con los íconos oficiales de AWS, elegidos por el equipo consultor para mejorar la lectura; la rúbrica H1-D3 exige claridad profesional, no una biblioteca de íconos específica. En C5 todas puntúan 5 porque ninguna depende de los permisos del Learner Lab. El puntaje de archify en C1 se verificó probándolo con el mismo diagrama: no incluye íconos oficiales de AWS y solo agrupa por región y Security Group, sin cajas de VPC, subredes ni zonas de disponibilidad. A cambio entrega un HTML interactivo (zoom, modo claro y oscuro, exportar) que pasó sus 9 validaciones de calidad.
 
-**Conclusión.** draw.io gana porque es gratuito, trae la librería oficial de íconos AWS y guarda el diagrama como archivo `.drawio` editable que se versiona en git, de modo que cualquiera del equipo lo corrige sin depender de la herramienta que lo generó. Mermaid se descarta por no tener íconos oficiales de AWS, lo que lo deja bajo el mínimo de C1. Lucidchart pierde por el límite de su plan gratuito. archify queda como complemento para animar el flujo en la defensa del Hito 2.
+**Conclusión.** draw.io gana porque es gratuito, trae la librería oficial de íconos AWS y guarda el diagrama como archivo `.drawio` editable que se versiona en git, de modo que cualquiera del equipo consultor lo corrige sin depender de la herramienta que lo generó. Mermaid es una alternativa válida para modelos y se utiliza en el MER; el equipo consultor prefiere un archivo draw.io editable para la topología. Lucidchart pierde por el límite de su plan gratuito. archify queda como complemento para animar el flujo en la defensa del Hito 2.
 
 ## Síntesis de decisiones
 
@@ -173,7 +170,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 |---|---|---|---|
 | Cómputo | Amazon EC2 | Elastic Beanstalk | Lo exige la pauta y deja visible la configuración de red y seguridad |
 | Base de datos | RDS PostgreSQL | RDS MySQL | Datos geográficos, series de tiempo e integración con Grafana |
-| Web | Django + plantillas (HTMX y Tailwind) | React + Django REST Framework | ORM, autenticación y panel de administración incluidos; Python para cálculos e IoT |
+| Web | Django + plantillas, CSS propio y JavaScript | React + Django REST Framework | ORM, autenticación y panel de administración incluidos; Python para cálculos e IoT |
 | IoT | Docker + Python | Docker + Node/TypeScript | Mismo lenguaje que la web (Django) y menos dependencias que mantener |
 | BI | Grafana | Metabase | Refresco en vivo y panel de mapa |
 | IA | Gemini (free tier) | Groq (free tier) | Calidad en español; Groq queda de respaldo |

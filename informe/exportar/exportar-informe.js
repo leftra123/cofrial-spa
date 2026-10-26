@@ -14,11 +14,11 @@ const {
 } = require("docx");
 
 const RAIZ = path.resolve(__dirname, "..");
-const FUENTE = "Tahoma";
-const ROJO = "EE0000";
-const ANCHO_VERT = 10538;         // ancho útil en DXA (carta, márgenes laterales de 851 como la plantilla)
-const PX_VERT = { w: 702, h: 700 };   // máximo de una figura en página vertical (px a 96 dpi)
-const PX_HORIZ = { w: 940, h: 430 };  // máximo en página horizontal
+const FUENTE = "Calibri";
+const ROJO = "000000";
+const ANCHO_VERT = 9404;         // ancho útil en DXA (carta, márgenes laterales de 851 como la plantilla)
+const PX_VERT = { w: 625, h: 710 };   // máximo de una figura en página vertical (px a 96 dpi)
+const PX_HORIZ = { w: 865, h: 425 };  // máximo en página horizontal
 
 // ------------------------------------------------------------------------------------------
 // Estructura del informe
@@ -26,20 +26,25 @@ const PX_HORIZ = { w: 940, h: 430 };  // máximo en página horizontal
 const SECCIONES = [
   { id: "intro", file: "entrega/introduccion.md", titulo: "Introducción", sinSalto: true },
   { id: "01", file: "01-diagnostico.md", titulo: "Diagnóstico y análisis del dolor" },
+  { id: "05", file: "05-procesos-bpmn.md", titulo: "Procesos actuales y propuestos" },
   { id: "02", file: "02-propuesta-valor.md", titulo: "Propuesta de valor y resolución de conflictos" },
+  { id: "07", file: "07-metodologia-cronograma.md", titulo: "Metodología y cronograma" },
+  { id: "08", file: "08-herramientas.md", titulo: "Evaluación de herramientas" },
   { id: "03", file: "03-arquitectura-cloud.md", titulo: "Memoria de decisiones de arquitectura cloud" },
   { id: "04a", file: "04a-diagrama-arquitectura.md", titulo: "Diagrama de arquitectura cloud" },
   { id: "04b", file: "04b-modelo-datos.md", titulo: "Modelo de datos: MER en tercera forma normal" },
   { id: "04c", file: "04c-canales-b2b-b2c.md", titulo: "Arquitectura de canales: wireframes y recorridos de usuario" },
   { id: "04d", file: "04d-crm.md", titulo: "Arquitectura funcional del CRM y pipeline comercial" },
+  { id: "04e", file: "04e-plan-despliegue.md", titulo: "Plan de despliegue y verificación" },
   { id: "concl", file: "entrega/conclusiones.md", titulo: "Conclusiones", sinSalto: true },
 ];
 const NUM_SECCION = {};
 SECCIONES.forEach((s, i) => { NUM_SECCION[path.basename(s.file)] = i + 1; });
+NUM_SECCION["06-casos-de-uso.md"] = "del Anexo D";
 
 const COMPACTO = process.argv.includes("--compacto");
 // En la versión compacta se omiten subsecciones y figuras de apoyo que la pauta no exige
-const OMITIR_H = !COMPACTO ? { "04b-modelo-datos.md": [/^Cómo responde el modelo/] } : {
+const OMITIR_H = !COMPACTO ? {} : {
   "04b-modelo-datos.md": [/^Cómo responde el modelo/],
   "06-casos-de-uso.md": [/^Formato/, /^Especificaciones de los casos/],
   "05-procesos-bpmn.md": [/^Proceso 3/],
@@ -51,6 +56,7 @@ const OMITIR_H = !COMPACTO ? { "04b-modelo-datos.md": [/^Cómo responde el model
 const OMITIR_CAPTION = !COMPACTO ? [] : [/^Cronograma de actividades/, /^W3\./, /^W5\./, /^W9\./];
 const omitida = b => b.tipo === "caption" && OMITIR_CAPTION.some(re => re.test(b.titulo));
 const corpus = [];
+const captionsImpresos = [];
 const SALTAR = /^(Notas del equipo|Pendiente|Por verificar|Estado\b|Código del diagrama)/i;
 
 // ------------------------------------------------------------------------------------------
@@ -77,8 +83,7 @@ function leerBloques(texto, omitir = []) {
       if (nivel === 1) { i++; continue; }
       if (SALTAR.test(titulo) || omitir.some(re => re.test(titulo))) { saltarNivel = nivel; i++; continue; }
       if (/^Diccionario de datos/.test(titulo)) {
-        bloques.push({ tipo: "h", nivel, texto: titulo });
-        bloques.push({ tipo: "p", texto: "El diccionario completo de las 25 tablas, con tipo, nulidad, clave, descripción y ejemplo de cada campo, se presenta en el Anexo A." });
+        // El diccionario se imprime íntegro en el Anexo A; no crear una página de remisión aislada.
         anexoA = { activo: true, lineas: [] };
         i++; continue;
       }
@@ -126,6 +131,17 @@ function leerBloques(texto, omitir = []) {
       bloques.push({ tipo: "p", texto: par.join(" ") });
     }
   }
+  // Completar captions y notas de tablas que no traían rótulo en la fuente.
+  let localAuto = 1000;
+  for (let j = 0; j < bloques.length; j++) {
+    if (bloques[j].tipo !== "tabla") continue;
+    if (!bloques[j - 1] || bloques[j - 1].tipo !== "caption") {
+      const h = bloques.slice(0, j).reverse().find(x => x.tipo === "h");
+      bloques.splice(j, 0, { tipo: "caption", etiqueta: "Tabla", local: String(++localAuto), titulo: h ? h.texto : "Datos del sistema" });
+      j++;
+    }
+    if (!bloques[j + 1] || bloques[j + 1].tipo !== "nota") bloques.splice(j + 1, 0, { tipo: "nota", texto: "Nota. Elaboración propia." });
+  }
   return { bloques, anexoA: anexoA ? anexoA.lineas : null };
 }
 
@@ -153,12 +169,13 @@ function limpiar(texto, archivo) {
       if (a2) return `Tablas ${num(archivo, "Tabla", a2)} y ${num(archivo, "Tabla", b2)}`;
       return `${e3} ${num(archivo, e3, n3)}`;
     });
-  t = t.replace(/`(?:informe\/)?([\d]{2}[a-d]?-[\w-]+\.md)`/g, (m, f) => {
+  t = t.replace(/`(?:informe\/)?([\d]{2}[a-e]?-[\w-]+\.md)`/g, (m, f) => {
     const s = NUM_SECCION[f];
     if (!s) throw new Error("Archivo sin sección: " + f);
-    return `la sección ${s}`;
+    return typeof s === "string" ? s : `la sección ${s}`;
   });
-  t = t.replace(/la la sección/g, "la sección");
+  t = t.replace(/la la sección/g, "la sección").replace(/(?:la sección |sección )del Anexo D/g, "el Anexo D");
+  t = t.replace(/\b(?:borrador|borradores)\b/gi, "diseño");
   t = t.replace(/(\d) %/g, "$1\u00A0%");
   t = t.replace(/Borrador pendiente de validación del equipo\.\s*/g, "");
   corpus.push(t);
@@ -209,7 +226,7 @@ function ajustar(img, max) {
 // Componentes de documento
 // ------------------------------------------------------------------------------------------
 const SANGRIA = 720;
-const parrafoBase = { indent: { firstLine: 567 }, alignment: AlignmentType.JUSTIFIED, spacing: { line: 276, lineRule: LineRuleType.AUTO, after: 120 } };
+const parrafoBase = { indent: { firstLine: 567 }, alignment: AlignmentType.JUSTIFIED, spacing: { line: 276, lineRule: LineRuleType.AUTO, after: 80 } };
 let nListaNum = 0;
 const configsNum = [];
 
@@ -233,9 +250,10 @@ function encabezado(b, numeracion) {
 }
 function tituloH1(texto, numero, salto = true) {
   return new Paragraph({ heading: HeadingLevel.HEADING_1, pageBreakBefore: salto, alignment: AlignmentType.CENTER, spacing: { before: 240, after: 200 },
-    children: [new TextRun({ text: numero ? `${numero}. ${texto}` : texto, font: FUENTE, size: 36, color: ROJO })] });
+    children: [new TextRun({ text: numero ? `${numero}. ${texto}` : texto, font: FUENTE, size: 32, color: ROJO })] });
 }
 function caption(etiqueta, numero, tituloBruto) {
+  captionsImpresos.push({etiqueta, numero, titulo: tituloBruto.replace(/[`*]/g, "")});
   const titulo = tituloBruto.replace(/`/g, "");
   return new Paragraph({
     style: "Caption", keepNext: true, keepLines: true,
@@ -248,7 +266,7 @@ function caption(etiqueta, numero, tituloBruto) {
   });
 }
 function nota(texto) {
-  return new Paragraph({ spacing: { before: 60, after: 240, line: 240 }, children: runs(texto.replace(/^\*Nota\.\*/, "Nota.").replace(/^\*|\*$/g, ""), { font: FUENTE, size: 18, italics: true }) });
+  return new Paragraph({ keepLines: true, spacing: { before: 60, after: 240, line: 240 }, children: runs(texto.replace(/^\*Nota\.\*/, "Nota.").replace(/^\*|\*$/g, ""), { font: FUENTE, size: 18, italics: true }) });
 }
 const SIN = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
 const ICONOS_AWS = [
@@ -262,7 +280,7 @@ function iconoDe(texto) {
 }
 function tabla(filas, archivo) {
   const ncol = filas[0].length;
-  const conIconos = filas[0][0] === "Elemento";
+  const conIconos = archivo === "04a-diagrama-arquitectura.md" && filas[0][0] === "Elemento";
   const pesos = Array.from({ length: ncol }, (_, c) => {
     const largo = Math.max(...filas.map(f => (f[c] || "").replace(/[`*]/g, "").length));
     const media = filas.reduce((a, f) => a + (f[c] || "").replace(/[`*]/g, "").length, 0) / filas.length;
@@ -270,16 +288,18 @@ function tabla(filas, archivo) {
   });
   const total = pesos.reduce((a, b) => a + b, 0);
   let anchos = pesos.map(p => Math.round(ANCHO_VERT * p / total));
+  if (filas[0][0] === "ID" && filas[0][1] === "Caso de uso") anchos = [650, 3000, 1800, 1400, 1450, 1104];
+  if (filas[0][0] === "Campo exigido") anchos = [2100, 1300, 2100, 1500, 2404];
   anchos[anchos.length - 1] += ANCHO_VERT - anchos.reduce((a, b) => a + b, 0);
-  const tam = ncol >= 6 ? 16 : ncol >= 5 ? 17 : 18;
+  const tam = (archivo === "04d-crm.md" && filas[0].includes("Vendedor")) ? 18 : ncol >= 6 ? 18 : ncol >= 5 ? 18 : 20;
   const filasT = filas.map((f, r) => new TableRow({
     tableHeader: r === 0, cantSplit: true,
     children: f.map((celda, c) => new TableCell({
       width: { size: anchos[c], type: WidthType.DXA },
-      verticalAlign: VerticalAlign.TOP,
+      verticalAlign: VerticalAlign.CENTER,
       margins: { top: 50, bottom: 50, left: 80, right: 80 },
       borders: { top: SIN, left: SIN, right: SIN, bottom: r === 0 ? { style: BorderStyle.SINGLE, size: 4, color: "000000" } : SIN },
-      children: [new Paragraph({ keepNext: r === filas.length - 1 || r === 0, keepLines: true, spacing: { line: 240 }, children: [
+      children: [new Paragraph({ keepNext: r === 0, keepLines: true, spacing: { line: 240 }, children: [
         ...((conIconos && c === 0 && r > 0 && iconoDe(celda)) ? [new ImageRun({ type: "png", data: iconoDe(celda), transformation: { width: 26, height: 26 }, altText: { title: "Ícono de AWS", description: "Ícono oficial de AWS", name: "icono-aws" } }), new TextRun({ text: "  ", size: tam })] : []),
         ...runs(limpiar(celda || "", archivo), { font: FUENTE, size: tam, bold: r === 0 })] })],
     })),
@@ -327,7 +347,7 @@ function portada() {
     c("Temuco, 4 de noviembre de 2026", { size: 22 }),
   ];
 }
-const tituloFrontal = t => new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 240 }, children: [new TextRun({ text: t, font: FUENTE, size: 36, color: ROJO })] });
+const tituloFrontal = t => new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 240 }, children: [new TextRun({ text: t, font: FUENTE, size: 32, color: ROJO })] });
 
 function renderBloques(bloques, archivo, numSec, opciones = {}) {
   let n2 = 0, n3 = 0;
@@ -398,6 +418,12 @@ function renderBloques(bloques, archivo, numSec, opciones = {}) {
   }
 }
 
+function agregarIndice(tipo) {
+  const cache = path.join(RAIZ, "exportar/indices.json");
+  if (!fs.existsSync(cache)) return;
+  const entradas = JSON.parse(fs.readFileSync(cache, "utf-8"))[tipo] || [];
+  for (const e of entradas) agregar(new Paragraph({ spacing: { after: 35, line: 220 }, tabStops: [{ type: "right", position: 9300, leader: "dot" }], children: [new TextRun({text: e.titulo + "\t" + e.pagina, font: FUENTE, size: 20})] }));
+}
 function main() {
   const datos = {};
   // 1) leer y asignar numeración
@@ -406,15 +432,29 @@ function main() {
     const txt = fs.readFileSync(path.join(RAIZ, f), "utf-8");
     datos[f] = leerBloques(txt, OMITIR_H[path.basename(f)] || []);
   }
+  const casos = leerBloques(fs.readFileSync(path.join(RAIZ, "06-casos-de-uso.md"), "utf-8")).bloques;
+  const integrados = SECCIONES.map((x,i) => `# ${i+1} ${x.titulo}\n\n` + fs.readFileSync(path.join(RAIZ,x.file), "utf-8").replace(/^# .*\n/, "")).join("\n\n");
+  fs.writeFileSync(path.join(RAIZ, "entrega/Informe_integrado_fuentes.md"), integrados);
   const anexoA = datos["04b-modelo-datos.md"].anexoA;
   const anexoAB = leerBloques(anexoA.join("\n")).bloques;
   for (const f of archivos) for (const b of datos[f].bloques) if (b.tipo === "caption" && !omitida(b)) asignar(f, b.etiqueta, b.local);
   for (const b of anexoAB) if (b.tipo === "caption") asignar("04b-modelo-datos.md", b.etiqueta, b.local);
 
+
+
+  const cuentasB = leerBloques(fs.readFileSync(path.join(RAIZ, "entrega/anexo-cuentas.md"), "utf-8")).bloques;
+  const pautaC = leerBloques(fs.readFileSync(path.join(RAIZ, "entrega/anexo-pauta.md"), "utf-8")).bloques;
+  for (const [f, bs] of [["entrega/anexo-cuentas.md", cuentasB], ["entrega/anexo-pauta.md", pautaC], ["06-casos-de-uso.md", casos]])
+    for (const b of bs) if (b.tipo === "caption") asignar(f, b.etiqueta, b.local);
+
   // 2) portada y preliminares
   abrirVertical();
   agregar(tituloFrontal("Índice"));
-  agregar(new TableOfContents("Índice", { hyperlink: true, headingStyleRange: "1-2" }));
+  agregarIndice("contenido");
+  agregar(tituloH1("Índice de tablas"));
+  agregarIndice("tablas");
+  agregar(tituloH1("Índice de figuras"));
+  agregarIndice("figuras");
   agregar(tituloH1("Resumen ejecutivo"));
   const resumen = leerBloques(fs.readFileSync(path.join(RAIZ, "entrega/resumen-ejecutivo.md"), "utf-8")).bloques;
   renderBloques(resumen, "entrega/resumen-ejecutivo.md", 0);
@@ -427,10 +467,10 @@ function main() {
 
   // 4) referencias y anexos
   agregar(tituloH1("Referencias"));
-  const CITAS = [[/^Aguayo/, /Aguayo Quintriqueo y Vásquez Marimán, 2026/], [/^Amazon Web Services\. \(s\.f\.\)/, /Amazon Web Services, s\.f\./], [/^Amazon Web Services\. \(2021\)/, /Amazon Web Services, 2021/],
+  const CITAS = [[/^Docker,/, /Docker, Inc\., s\.f\./], [/^Grafana Labs/, /Grafana Labs, s\.f\./], [/^Groq\./, /Groq, s\.f\./], [/^Leaflet\./, /Leaflet, s\.f\./], [/^PostgreSQL Global/, /PostgreSQL Global Development Group, s\.f\./], [/^Aguayo/, /Aguayo Quintriqueo y Vásquez Marimán, 2026/], [/^Amazon Web Services\. \(s\.f\.\)/, /Amazon Web Services, s\.f\./], [/^Amazon Web Services\. \(2021\)/, /Amazon Web Services, 2021/],
     [/^Anderson/, /Anderson, 2010/], [/^Codd/, /Codd \(1970\)/], [/^Django/, /Django Software Foundation, 2025/], [/^Google/, /Google, s\.f\./], [/^INACAP/, /INACAP Sede Temuco, 2026/], [/^Ministerio de Salud/, /Ministerio de Salud, 1997/],
     [/^Object Management Group\. \(2013\)/, /\[OMG\], 2013/], [/^Object Management Group\. \(2017\)/, /\[OMG\], 2017/], [/^Ohno/, /Ohno, 1988/], [/^Ortegón/, /Ortegón et al\., 2005/]];
-  const todoTexto = corpus.join("\n");
+  const todoTexto = corpus.join("\n") + fs.readFileSync(path.join(RAIZ, "06-casos-de-uso.md"), "utf-8");
   const refs = fs.readFileSync(path.join(RAIZ, "entrega/referencias.md"), "utf-8").split("\n").filter(Boolean).filter(r => {
     const par = CITAS.find(([re]) => re.test(r));
     if (!par) throw new Error("Referencia sin regla de cita: " + r.slice(0, 40));
@@ -442,9 +482,15 @@ function main() {
   agregar(parrafo("Cada tabla del modelo de datos se describe con sus campos, tipo, nulidad, clave, descripción y un ejemplo ficticio. Las tablas se agrupan por módulo."));
   renderBloques(anexoAB.filter(b => !(b.tipo === "h" && b.nivel === 2)), "04b-modelo-datos.md", 0, { diccionario: true });
   const anexoCuentas = leerBloques(fs.readFileSync(path.join(RAIZ, "entrega/anexo-cuentas.md"), "utf-8")).bloques;
-  for (const b of anexoCuentas) if (b.tipo === "caption") asignar("entrega/anexo-cuentas.md", b.etiqueta, b.local);
+
   agregar(tituloH1("Anexo B. Cuentas de prueba"));
   renderBloques(anexoCuentas, "entrega/anexo-cuentas.md", 0);
+  agregar(tituloH1("Anexo C Correspondencia con la pauta"));
+  renderBloques(pautaC, "entrega/anexo-pauta.md", 0);
+  agregar(tituloH1("Anexo D Casos de uso"));
+  renderBloques(casos, "06-casos-de-uso.md", 0);
+  agregar(tituloH1("Anexo E Glosario"));
+  renderBloques(leerBloques(fs.readFileSync(path.join(RAIZ, "entrega/glosario.md"), "utf-8")).bloques, "entrega/glosario.md", 0, { definiciones: true });
   const doc = new Document({
     creator: "Eric Aguayo Quintriqueo y Sergio Vásquez Marimán",
     title: "Cofrial SpA: del caos operativo a la cadena de frío inteligente. Informe de ingeniería, Hito 1",
@@ -462,21 +508,28 @@ function main() {
     numbering: { config: [{ reference: "vinetas", levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }, { level: 1, format: LevelFormat.BULLET, text: "–", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1160, hanging: 360 } } } }] }, ...configsNum] },
     sections: secciones.map(s => ({ properties: s.properties, children: s.children })),
   });
+  fs.writeFileSync(path.join(RAIZ, "exportar/captions.json"), JSON.stringify(captionsImpresos, null, 2));
   return Packer.toBuffer(doc).then(buf => {
     const os = require("os");
     const cp = require("child_process");
-    const carpetaPrincipal = path.resolve(RAIZ, "../../../..");   // carpeta visible de Cofrial SPA
+    const carpetaPrincipal = path.resolve(RAIZ, "..");   // carpeta visible de Cofrial SPA
     const argSalida = process.argv.find(a => a.startsWith("--salida="));
-    const carpetaSalida = argSalida ? argSalida.slice(9) : path.join(carpetaPrincipal, "Entrega Hito 1");
+    const carpetaSalida = argSalida ? argSalida.slice(9) : path.join(RAIZ, "entrega");
     fs.mkdirSync(carpetaSalida, { recursive: true });
-    const gen = path.join(os.tmpdir(), "generado_informe_cofrial.docx");
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cofrial-informe-"));
+    const gen = path.join(tempDir, "contenido.docx");
     fs.writeFileSync(gen, buf);
     const dest = path.join(carpetaSalida, "Informe_Hito1_Cofrial_SpA" + (COMPACTO ? "_compacto" : "") + ".docx");
-    const plantilla = path.join(carpetaPrincipal, "Carta-1-vert.docx");
-    const r = cp.spawnSync("python3", [path.join(__dirname, "armar-con-plantilla.py"), gen, plantilla, dest,
-      "INFORME DE INGENIERÍA DE TRANSFORMACIÓN DIGITAL", "Caso Cofrial SpA: del caos operativo a la cadena de frío inteligente",
+    const argPlantilla = process.argv.find(a => a.startsWith("--plantilla="));
+    const carta = path.join(carpetaPrincipal, "Carta-1-vert.docx");
+    const alternativa = path.join(carpetaPrincipal, "TIHI84_U1_Plantilla_informe_Guía_ABPro.docx");
+    const plantilla = argPlantilla ? path.resolve(argPlantilla.slice(12)) : (fs.existsSync(carta) ? carta : alternativa);
+    if (!fs.existsSync(plantilla)) throw new Error("Falta plantilla: use --plantilla=/ruta/a/plantilla.docx");
+    const aplicador = path.basename(plantilla) === "Carta-1-vert.docx" ? "armar-con-plantilla.py" : "aplicar-plantilla-adjunta.py";
+    const r = cp.spawnSync(process.env.COFRIAL_PYTHON || "python3", [path.join(__dirname, aplicador), gen, plantilla, dest,
+      "INFORME DE INGENIERÍA DE TRANSFORMACIÓN DIGITAL", "Cofrial SpA",
       "Sergio Vásquez Marimán y Eric Aguayo Quintriqueo", "Transformación Digital (TIEL15) — Evaluación Sumativa Integral, Hito 1 (Nota 2)",
-      "Felipe Andrés Henríquez Vilugrón", "4 de noviembre de 2026", "Ingeniería en Informática"], { encoding: "utf-8" });
+      "Felipe Andrés Henríquez Vilugrón", "5 de noviembre de 2026", "Ingeniería en Informática"], { encoding: "utf-8" });
     if (r.status !== 0) throw new Error("Falló la aplicación de la plantilla: " + r.stderr);
     console.log(r.stdout.trim());
     console.log(`Tablas: ${nTabla}, figuras: ${nFigura}, secciones de Word: ${secciones.length}`);

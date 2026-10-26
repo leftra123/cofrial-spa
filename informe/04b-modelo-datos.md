@@ -1,20 +1,17 @@
 # 4b. Modelo de datos (MER en 3FN + diccionario)
 
-> Rúbrica H1-D3 (Logrado): MER **rigurosamente normalizado** que soporte transacciones (E-commerce/CRM) **y** telemetría IoT.
-> **Estado: borrador de redacción**, pendiente de validación del equipo. El modelo no depende del framework web. La web se hará con Django (decisión D-01): los modelos se generan desde este diseño, la tabla `usuario` la reemplaza el sistema de autenticación del framework y las tres tablas de clave compuesta usan `CompositePrimaryKey` (Django 5.2 o superior) o una clave autogenerada con restricción de unicidad, que mantiene la 3FN.
-> La fuente del modelo es `informe/modelo/modelo.py`. De ahí se generan el script SQL (`informe/modelo/esquema.sql`), el diagrama y el diccionario de este documento, así que los tres no pueden contradecirse. Para regenerar: `python3 informe/modelo/modelo.py --png`.
 
 ## Alcance y supuestos
 
-El modelo tiene **25 tablas** en cinco módulos: geografía y cadena de frío, comercial (catálogo, precios, carrito y órdenes), clientes y accesos, CRM y logística e IoT. Supuestos que el equipo debe validar:
+El diseño de referencia tiene **25 entidades** en cinco módulos: geografía y cadena de frío, comercial (catálogo, precios, carrito y órdenes), clientes y accesos, CRM y logística e IoT. Reglas del prototipo y supuestos de negocio:
 
 - Los montos son pesos chilenos enteros, sin decimales.
 - Cada tipo de cliente (B2B o B2C) usa una lista de precios; un precio por producto y lista. El historial de precios queda en las líneas de cada orden.
 - Un cliente puede tener varias direcciones y un solo carrito abierto.
 - Un despacho (viaje de un camión) lleva varias órdenes; una orden va en un solo despacho.
 - La telemetría llega cada 5 segundos por camión (estimación: unas 864 000 lecturas diarias con 50 camiones).
-- El pago queda fuera del alcance: B2B con número de orden de compra, B2C con pago simulado.
-- La implementación en Django usa `CompositePrimaryKey` para las tres tablas de clave compuesta, función disponible desde Django 5.2 (Django Software Foundation, 2025); en versiones anteriores se usa una clave autogenerada con restricción de unicidad sobre el par, que mantiene la 3FN.
+- El pago queda fuera del alcance: B2B con OC o referencia temporal y OC pendiente; no se integra una pasarela de pago ni emisión tributaria.
+- La implementación usa un ID autogenerado y una restricción UNIQUE sobre el par en precio_producto, carrito_item y orden_item. Utiliza autenticación Django en lugar de la tabla lógica usuario (Django Software Foundation, 2025). El diccionario distingue el diseño de referencia de sus extensiones físicas.
 
 ## Diagrama entidad-relación
 
@@ -188,7 +185,7 @@ erDiagram
 | `camion_id` | String | `camion_id` | varchar(20), FK a `camion` | No se acepta un camión inexistente |
 | `temp_camara` | Float | `temp_camara` | double precision | Obligatorio |
 | `lat` | Coordenada | `lat` | double precision | Entre -90 y 90 |
-| `long` | Coordenada | `"long"` | double precision | Entre -180 y 180; va entre comillas porque LONG es palabra reservada |
+| `long` | Coordenada | `"long"` | double precision | Entre -180 y 180; se conserva entre comillas como en los scripts |
 | `combustible_pct` | Integer | `combustible_pct` | integer | Entre 0 y 100 |
 | `alerta_ruptura_frio` | Boolean | `alerta_ruptura_frio` | boolean | Verdadero si `temp_camara` sale del rango del camión |
 
@@ -196,20 +193,20 @@ erDiagram
 
 ## Normalización
 
-La normalización sigue el modelo relacional propuesto por Codd (1970): cada tabla se revisa contra la primera, segunda y tercera forma normal, y luego contra la forma de Boyce-Codd.
+La normalización sigue el modelo relacional propuesto por Codd (1970): cada tabla se revisa contra la primera, segunda y tercera forma normal, y se documenta por separado la excepción física de requerimientos vinculados a pedidos.
 
 ### Resultado por forma normal
 
 - **Primera forma normal (1FN).** Todos los campos son atómicos y no hay grupos repetitivos: los productos de un carrito o de una orden están en tablas de líneas (`carrito_item`, `orden_item`), no en columnas como `producto1`, `producto2`. Cada tabla tiene clave primaria.
 - **Segunda forma normal (2FN).** Solo tres tablas tienen clave compuesta: `precio_producto`, `carrito_item` y `orden_item`. En ellas, cada atributo depende de la clave completa: el precio depende de la lista y del producto a la vez, la cantidad del carrito depende del carrito y del producto. Las demás tablas tienen clave de una columna, por lo que no pueden tener dependencias parciales.
-- **Tercera forma normal (3FN).** No hay atributos que dependan de otro atributo que no sea clave. Las decisiones que lo logran:
+- **Tercera forma normal (3FN).** El núcleo evita dependencias transitivas mediante catálogos y relaciones. La tabla física requerimiento mantiene una redundancia condicional, analizada a continuación; no se afirma 3FN estricta universal para todo el esquema físico. Las decisiones del núcleo son:
   - La región no se guarda en la dirección: está en `comuna`, y la dirección apunta a la comuna.
   - La lista de precios no se guarda en el cliente: está en `tipo_cliente`.
   - El rango de temperatura no se guarda en el producto ni en el camión: está en `rango_temperatura`, al que apuntan `categoria` y `camion`.
   - **El cliente de una orden no se guarda en la orden:** se obtiene por su dirección de entrega, porque cada dirección pertenece a un cliente. Guardarlo habría creado una dependencia transitiva. La vista `v_orden` lo expone sin repetirlo.
   - El canal (B2B o B2C) y el total de la orden tampoco se guardan: se calculan con `v_orden` y `v_orden_total`.
   - El estado de un despacho no se guarda: se deduce de `salida_en` y `llegada_en`.
-- **Forma normal de Boyce-Codd (BCNF).** En todas las tablas, cada determinante es clave candidata (por ejemplo, `camion_id` y `patente` en `camion`; `cliente_id` y `rut` en `cliente`), por lo que el modelo cumple además esta forma, más estricta que la 3FN.
+- **Alcance de la afirmación.** No se declara BCNF para todo el esquema. Las claves candidatas y dependencias se revisan por relación; la coexistencia de cliente y orden en requerimiento exige una distinción entre diseño lógico normalizado y representación física.
 
 ### Verificación tabla por tabla
 
@@ -235,14 +232,14 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 | `estado_orden` | `estado_orden_id` | → `nombre`, `orden_flujo`, `es_final` | 3FN |
 | `camion` | `camion_id` | → `patente`, `capacidad_kg`, `rango_temperatura_id`; `patente` → `camion_id` (clave candidata) | 3FN |
 | `despacho` | `despacho_id` | → `camion_id`, `programado_para`, `salida_en`, `llegada_en` | 3FN |
-| `orden` | `orden_id` | → `direccion_id`, `estado_orden_id`, `despacho_id`, `numero_oc`, `oc_pendiente`, `creada_en`; sin cliente, canal ni total | 3FN |
+| `orden` | `orden_id` | → `direccion_id`, `estado_orden_id`, `despacho_id`, `numero_oc`, `creada_en`; sin cliente, canal ni total | 3FN |
 | `orden_item` | (`orden_id`, `producto_id`) | clave completa → `cantidad`, `precio_unitario_clp` | 3FN |
 | `telemetria` | `telemetria_id` | → todas las lecturas; (`camion_id`, `registrado_en`) es clave candidata | 3FN, ver D1 |
 | `etapa_pipeline` | `etapa_id` | → `nombre`, `orden_etapa`, `es_final`, `es_ganada` | 3FN |
 | `prospecto` | `prospecto_id` | → `vendedor_id`, `etapa_id`, `cliente_id`, datos de contacto, `origen`, `monto_estimado_clp`, `cerrado_en`, `motivo_perdida` | 3FN |
 | `interaccion` | `interaccion_id` | → `vendedor_id`, `prospecto_id`, `cliente_id`, `tipo`, `detalle` | 3FN |
 | `categoria_requerimiento` | `categoria_requerimiento_id` | → `nombre` | 3FN |
-| `requerimiento` | `requerimiento_id` | → `cliente_id`, `orden_id`, `asunto`, `descripcion`, categoría, `confianza_ia`, `estado`, `creado_en`, `respondido_en` | 3FN, ver reglas de negocio |
+| `requerimiento` | `requerimiento_id` | → `cliente_id`, `orden_id`, `asunto`, `descripcion`, categoría, `confianza_ia`, `estado`, `creado_en`, `respondido_en` | Excepción física: ver análisis de requerimiento |
 
 *Nota.* Elaboración propia.
 
@@ -270,10 +267,44 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 - Un usuario con rol `vendedor` debe tener fila en `vendedor`, y uno con rol `cliente`, fila en `cliente`.
 - Un cliente B2B debería tener vendedor asignado; uno B2C normalmente no.
 - Una orden solo puede asignarse a un despacho cuyo camión tenga un rango de temperatura compatible con la categoría de sus productos.
-- En un requerimiento, si `orden_id` está presente, la orden debe ser del mismo `cliente_id`. Es una dependencia condicional (solo aplica cuando la orden no es nula), por eso no se trata como dependencia funcional.
+- En un requerimiento, si `orden_id` está presente, la orden debe ser del mismo `cliente_id`. En las filas vinculadas a una orden existe la dependencia orden_id → cliente_id por la dirección de entrega; que orden_id sea opcional no elimina esa redundancia. El portal limita la selección a órdenes propias, pero no hay una restricción SQL que garantice la coincidencia en todas las vías de escritura.
 - Al ganar un prospecto se crea el cliente, se completa `prospecto.cliente_id` y la etapa pasa a "Cliente ganado".
 - Al perder un prospecto, la etapa «Perdido» exige `motivo_perdida` y `cerrado_en`; la base solo impide un motivo sin fecha de cierre, por lo que la exigencia completa se valida en la aplicación (RN-11 de `04d-crm.md`).
 - La clasificación de un requerimiento no es obligatoria: si la IA no responde, queda `sin_clasificar`.
+
+## Correspondencia entre diseño lógico y modelo físico
+
+El MER principal y el SQL representan el diseño de referencia de veinticinco entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veinticinco modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock; además Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
+
+**Tabla 5**
+*Diferencias deliberadas entre referencia lógica e implementación*
+
+| Elemento | Referencia lógica | Implementación vigente |
+|---|---|---|
+| Identidad | usuario y rol | auth_user, grupos, sesiones y relaciones a cliente/vendedor |
+| Líneas y precios | Clave compuesta | ID autogenerado y UNIQUE sobre el par; conserva la dependencia de la clave candidata |
+| Geolocalización | Dirección textual | direccion.lat y long, opcionales, para mapas y entregas |
+| OC diferida | numero_oc en orden | numero_oc y oc_pendiente; referencia WEB temporal para B2B sin OC |
+| Demostración | Telemetría ordinaria | telemetria.forzada distingue las inserciones administrativas |
+| Reposición | Sin entidad específica | aviso_stock con cliente, producto, cantidad mínima y atención |
+| Requerimiento | Cliente opcional y orden opcional | Se conservan ambas relaciones; el portal verifica propiedad de la orden |
+
+Nota. Elaboración propia. La separación de órdenes por rango y el cierre manual de despachos reutilizan entidades existentes.
+
+### Dependencia condicional del requerimiento y representación en 3FN
+
+La implementación conserva requerimiento.cliente_id y requerimiento.orden_id para admitir consultas generales y reclamos ligados a compras. En el subconjunto de reclamos con orden, orden_id determina al cliente a través de orden → direccion → cliente. Repetirlo es una decisión física de acceso y no una demostración de 3FN estricta. La relación reclamo–pedido se mantiene: retirarla eliminaría una función que ya utiliza el portal.
+
+Para expresar el mismo significado sin esa dependencia, el diseño lógico se descompone por origen en dos relaciones disjuntas: requerimiento_general(requerimiento_id, cliente_id, asunto, descripcion, categoria_id, confianza, estado, fechas) y requerimiento_pedido(requerimiento_id, orden_id, asunto, descripcion, categoria_id, confianza, estado, fechas). En la segunda el cliente se obtiene por la orden; en la primera no hay orden que lo determine. La representación lógica resultante contiene veintiséis relaciones en lugar de veinticinco; no es un recuento de tablas físicas instaladas. requerimiento_id es clave en ambas, los atributos de atención dependen de esa clave y los datos del pedido no se copian. La reconstrucción del registro físico usa unión de ambos tipos y deriva el cliente únicamente en el segundo; la partición por orden nula/no nula conserva todos los registros y evita duplicarlos si se cumple la coincidencia de cliente y orden. Una fila física que contradiga esa regla requiere depuración antes de reconstruir el mismo dato.
+
+**Figura 2**
+*Descomposición lógica de requerimientos y correspondencia física*
+
+![Normalización lógica de requerimientos](img/mer-requerimientos-normalizacion.png)
+
+Nota. Elaboración propia. La parte superior es una representación lógica normalizada del mismo comportamiento; la inferior es la tabla física utilizada. No se presenta la descomposición como una migración ejecutada.
+
+Esta distinción permite evaluar con precisión el diseño en 3FN y la decisión física del prototipo. La correspondencia se documenta sin cambiar código ni eliminar referencias a pedidos. Una migración física futura requeriría adaptar servicios y consultas; no forma parte de esta actualización documental.
 
 ## Cómo responde el modelo a la rúbrica y a los casos de uso
 
@@ -297,7 +328,7 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 
 ## Validación realizada
 
-El esquema (archivo `esquema.sql` del repositorio del proyecto; Aguayo Quintriqueo y Vásquez Marimán, 2026) se probó en PostgreSQL 16, en un contenedor temporal:
+La verificación histórica del esquema de referencia (archivo `esquema.sql` del repositorio del proyecto; Aguayo Quintriqueo y Vásquez Marimán, 2026) se realizó en PostgreSQL 16, en un contenedor temporal; no certifica la revisión actual de las migraciones Django:
 
 - El script `esquema.sql` crea sin errores las 25 tablas y 2 vistas.
 - `datos_prueba.sql` carga datos ficticios coherentes (hospital B2B, cliente B2C, camiones, órdenes, lecturas con una alerta, pipeline y un requerimiento).
@@ -692,11 +723,46 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 *Nota.* Elaboración propia.
 <!-- FIN:diccionario -->
 
-## Pendiente para validar en equipo
 
-- [ ] Confirmar los supuestos de la sección de alcance (un despacho con varias órdenes, un precio por lista, pago fuera de alcance).
-- [ ] Decidir si se agrega historial de estados de la orden y movimientos de inventario (hoy fuera del alcance; mejoran el seguimiento y la auditoría).
-- [ ] Revisar los rangos de temperatura reales de Cofrial (los ejemplos, 0 a 4 y -25 a -18 grados, son supuestos).
-- [ ] Al crear el proyecto Django, generar los modelos desde este diseño y reemplazar `usuario` por el sistema de autenticación.
 
-## Notas del equipo
+### Extensiones físicas de la aplicación
+
+El diccionario anterior corresponde al diseño lógico de referencia. Las siguientes tablas documentan las extensiones que utilizan las migraciones Django; no deben confundirse con columnas presentes en el SQL académico original.
+
+**Tabla D26**
+*Campos físicos adicionales de dirección, orden y telemetría*
+
+| Campo | Tipo físico | Nulo | Propósito |
+|---|---|---|---|
+| direccion.lat | double precision | Sí | Latitud de entrega para seguimiento y ruta |
+| direccion.long | double precision | Sí | Longitud de entrega para seguimiento y ruta |
+| orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
+| telemetria.forzada | boolean, por defecto false | No | Distingue lecturas administrativas de demostración |
+
+Nota. Elaboración propia. La demostración no cambia los seis campos exigidos por la pauta.
+
+**Tabla D27**
+*Diccionario físico de aviso_stock*
+
+| Campo | Tipo | Nulo | Clave y función |
+|---|---|---|---|
+| aviso_id | integer autogenerado | No | PK |
+| cliente_id | integer | No | FK cliente que espera el producto |
+| producto_id | integer | No | FK producto solicitado |
+| cantidad_minima | integer positivo | No | Cantidad que debe alcanzar el stock, al menos uno |
+| creado_en | timestamptz | No | Momento de la solicitud |
+| atendido_en | timestamptz | Sí | Momento en que se atiende el aviso |
+
+Nota. Elaboración propia. UNIQUE parcial sobre cliente y producto mientras atendido_en sea nulo. El sistema muestra el aviso en el portal; no envía correo.
+
+**Tabla D28**
+*Adaptaciones de identidad y claves en la implementación*
+
+| Entidad | Adaptación física | Restricción preservada |
+|---|---|---|
+| usuario | auth_user de Django con contraseña protegida mediante hash; grupos y sesiones en tablas técnicas | Identidad única y relación uno a uno desde cliente/vendedor |
+| precio_producto | ID autogenerado además de lista_precio_id y producto_id | UNIQUE del par lista–producto |
+| carrito_item | ID autogenerado además de carrito_id y producto_id | UNIQUE del par carrito–producto |
+| orden_item | ID autogenerado además de orden_id y producto_id | UNIQUE del par orden–producto |
+
+Nota. Elaboración propia. Las migraciones y modelos Django son la referencia del esquema físico. El ID adicional no elimina la clave candidata compuesta.

@@ -1,28 +1,13 @@
-Este anexo indica en qué sección del informe se atiende cada exigencia de la pauta del Hito 1 (INACAP Sede Temuco, 2026).
+El equipo consultor utiliza exclusivamente la pauta EVA2_3 Unidad 02 para evaluar el Hito 1 (INACAP Sede Temuco, 2026). Metodología, Gantt y pruebas complementan la argumentación; no se convierten en requisitos adicionales de la rúbrica.
 
 **Tabla 1**
-*Correspondencia entre las exigencias de la pauta y las secciones del informe*
+*Trazabilidad entre dimensiones y evidencia del informe*
 
-| Exigencia de la pauta | Sección |
-|---|---|
-| 1. Diagnóstico y análisis del dolor | 2 (con los procesos AS-IS de la sección 3) |
-| 2. Propuesta de valor y resolución de conflictos | 4 (con los procesos TO-BE de la sección 3 y los casos de uso de la sección 5) |
-| 3. Memoria y decisiones de arquitectura cloud, con trade-offs | 7 (con la evaluación de herramientas de la sección 6) |
-| 4. Diagrama de arquitectura cloud: topología completa de red y servicios | 8 |
-| 4. Modelamiento de datos: MER en 3FN y diccionario, para transacciones comerciales y telemetría IoT | 9 y Anexo A |
-| 4. Arquitectura de canales: wireframes y recorridos de usuario con perfiles B2B y B2C | 10 |
-| 4. Estados del pipeline comercial del CRM | 11 |
+| Dimensión | Secciones | Evidencia |
+|---|---|---|
+| D1 Diagnóstico y justificación | Diagnóstico, procesos y propuesta | Causas, mecanismos implementados e indicadores por dolor; supuestos económicos explícitos |
+| D2 Decisiones cloud | Herramientas y memoria de arquitectura | VPC, subredes, SG, EC2, RDS y trade-offs de la configuración vigente |
+| D3 Topología y MER | Diagrama, modelo y Anexo A | Topología de tres subredes, dependencias, diccionario, representación normalizada de requerimientos y diferencias físicas |
+| D4 Canales y CRM | Canales, CRM y Anexo D | Journeys B2B/B2C, stock, OC diferida, compra por rango, permisos, embudo y soporte con IA |
 
-*Nota.* Elaboración propia a partir de la pauta del curso (INACAP Sede Temuco, 2026).
-
-**Tabla 2**
-*Dónde se atiende cada dimensión de la rúbrica del Hito 1*
-
-| Dimensión de la rúbrica | Dónde se atiende |
-|---|---|
-| 1. Diagnóstico del dolor y justificación | Secciones 2, 3 y 4 |
-| 2. Decisiones de arquitectura cloud | Secciones 6 y 7 |
-| 3. Topología cloud y modelado MER (3FN) | Secciones 8 y 9, y Anexo A |
-| 4. Arquitectura de canales y CRM | Secciones 10 y 11 |
-
-*Nota.* Elaboración propia a partir de la pauta del curso (INACAP Sede Temuco, 2026).
+Nota. Elaboración propia. La descripción de cobertura no sustituye la calificación del docente ni convierte verificaciones históricas en pruebas actuales.

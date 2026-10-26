@@ -43,3 +43,15 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 ## 2026-10-22 (tarde)
 - Rotación de claves de la IA: se reemplazó la clave de Gemini por una de la cuenta institucional y se agregó la de Groq. `aws/provision.sh recrear-web` recrea la instancia web con las claves nuevas sin entrar por SSH.
 - Al probar Groq con la clave real se corrigieron tres defectos propios: la protección contra bots de Groq bloqueaba el identificador de Python, el modelo de respaldo elegido no existía en la cuenta y un proveedor principal lento dejaba sin tiempo al respaldo. Acierto final: 100 % (20 de 20) con Gemini y Groq de respaldo.
+
+## 2026-10-25
+- Grafana ya no admite acceso anónimo (`GF_AUTH_ANONYMOUS_ENABLED=false`). Una cuenta `visor` (rol Viewer, creada por el servicio `grafana-visor` en ambos `docker-compose`) permite mirar el tablero en vivo sin poder editarlo; `admin` conserva la edición. La clave del visor se genera en `aws/.estado/secretos.env` como `GRAFANA_VISOR_PASSWORD`. El puerto 3000 sigue abierto, ahora con inicio de sesión. Se actualizaron `aws/verificar.py`, la guía de la web y la Tabla 3 del informe.
+- Pendiente: recrear la EC2 web (`bash aws/provision.sh recrear-web`) para que la instalación desplegada tome el cambio.
+
+## 2026-10-25 (noche): segundo despliegue, integración en la rama `despliegue-2`
+- `/avisos/pedir/` y «volver» del carrito validan el destino con `url_has_allowed_host_and_scheme` de Django: `//sitio`, `/\sitio` y `javascript:` vuelven a la página propia (sin redirección abierta).
+- El admin de Django (`/admin/`, movible con `DJANGO_ADMIN_URL`) queda solo para el superusuario; el resto del equipo trabaja en el CRM y la flota. Una cuenta del equipo que abre `/avisos/` va a su inicio en vez de rebotar al login.
+- Navegación por rol (`cofrial/acceso.py`): cada cuenta aterriza en su inicio (cliente al catálogo, vendedor, gerencia y administrador al CRM, despachador a la flota); el menú no ofrece enlaces que darían 403 y las páginas 403 y 404 tienen «Ir a mi inicio». Una prueba recorre todas las rutas con cada rol.
+- Pruebas de seguridad y caídas controladas (`cofrial/tests_seguridad.py`): entradas hostiles (ids no numéricos, bytes NUL, cantidades enormes y textos más largos que la columna) responden 400 o un aviso y no 500; si la base cae, 503 con reintento.
+- Límite de intentos (decisión del equipo): 10 claves malas bloquean esa cuenta 15 minutos y no hay límite por IP, porque en la defensa toda la sala sale por una sola IP pública. Un barrido de rutas inexistentes recibe 429 recién pasados 60 «no encontrado» en 10 minutos. Todo se ajusta por variables de entorno (`aws/.env.aws.example`).
+- Gerencia ve la flota y la pantalla de despacho, pero recibe 403 al armar un despacho o ubicar una dirección (Tabla 2 de `04d-crm.md`). Las cuentas del equipo reciben un 403 claro si intentan comprar, cancelar o abrir un reclamo como cliente.

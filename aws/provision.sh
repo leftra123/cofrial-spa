@@ -122,7 +122,10 @@ DEMO_PASSWORD=$(gen)
 ADMIN_PASSWORD=$(gen)
 GRAFANA_DB_PASSWORD=$(gen)
 GRAFANA_PASSWORD=$(gen)
+GRAFANA_VISOR_PASSWORD=$(gen)
 S
+# instalaciones previas: agrega la clave del visor sin tocar las demás
+grep -q "^GRAFANA_VISOR_PASSWORD=" "$ESTADO/secretos.env" || echo "GRAFANA_VISOR_PASSWORD=$(gen)" >> "$ESTADO/secretos.env"
 chmod 600 "$ESTADO/secretos.env"; . "$ESTADO/secretos.env"
 echo "Claves de IA en secretos.env: Gemini=$([ -n "${GEMINI_API_KEY:-}" ] && echo sí || echo NO), Groq=$([ -n "${GROQ_API_KEY:-}" ] && echo sí || echo NO)"
 MI_IP="${MI_IP:-$(curl -s https://checkip.amazonaws.com | tr -d '\n')}"; [ -n "$MI_IP" ] || { echo "No pude detectar tu IP pública"; exit 1; }
@@ -215,6 +218,7 @@ DEMO_PASSWORD=${DEMO_PASSWORD}
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
 GRAFANA_DB_PASSWORD=${GRAFANA_DB_PASSWORD}
 GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
+GRAFANA_VISOR_PASSWORD=${GRAFANA_VISOR_PASSWORD}
 INTERVALO_SEG=5
 PROB_RUPTURA=0.01
 GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -246,7 +250,7 @@ cat <<R
 
 ==> LISTO (los contenedores tardan ~5-8 minutos en construirse la primera vez)
     Aplicación : http://$EIP
-    Grafana    : http://$EIP:3000   (admin / clave en $ESTADO/secretos.env)
+    Grafana    : http://$EIP:3000   (requiere inicio de sesión: visor para mirar, admin para editar; claves en $ESTADO/secretos.env)
     Verificar  : curl http://$EIP/salud/
     SSH web    : ssh -i $ESTADO/${P}-key.pem ubuntu@$EIP
     Avance     : ssh ... 'sudo cloud-init status --wait && cd /opt/cofrial && docker compose -f aws/docker-compose.web.yml ps'

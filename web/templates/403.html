@@ -6,6 +6,6 @@
   <span class="chip alerta" style="margin-bottom:14px">Sin acceso</span>
   <h1>No puedes ver esta sección</h1>
   <p>{{ detalle|default:"Tu cuenta no tiene permiso para esta página." }}</p>
-  <div class="acciones"><a class="btn" href="/">Volver al inicio</a></div>
+  <div class="acciones"><a class="btn" href="{{ inicio_url|default:"/" }}">Ir a mi inicio</a></div>
 </div>
 {% endblock %}

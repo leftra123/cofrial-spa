@@ -197,4 +197,4 @@ class ClavesPersistentesTests(TestCase):
         self.client.logout()
         self.assertFalse(self.client.login(username="ana@correo.test", password="clave-demo-larga-71"))
         self.assertTrue(self.client.login(username="ana@correo.test", password="ana-nueva-clave-95"))
-        self.assertContains(self.client.get("/"), "/cuenta/clave/")                # enlace en el menú
+        self.assertContains(self.client.get("/catalogo/"), "/cuenta/clave/")       # enlace en el menú (con sesión «/» lleva al inicio del rol)

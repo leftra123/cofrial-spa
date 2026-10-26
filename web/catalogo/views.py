@@ -7,9 +7,11 @@ from django.db.models import Q
 from django.http import Http404
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente, TipoCliente
+from cofrial import entradas
 
 from . import avisos
 
@@ -93,10 +95,10 @@ def listado(request):
     productos = Producto.objects.filter(activo=True).select_related("categoria__rango_temperatura").order_by("categoria__nombre", "nombre")
     if q:
         productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q) | Q(categoria__nombre__icontains=q))
-    if cat.isdigit():
-        productos = productos.filter(categoria_id=int(cat))
-    if temp.isdigit():
-        productos = productos.filter(categoria__rango_temperatura_id=int(temp))
+    if entradas.es_entero(cat):
+        productos = productos.filter(categoria_id=entradas.entero(cat))
+    if entradas.es_entero(temp):
+        productos = productos.filter(categoria__rango_temperatura_id=entradas.entero(temp))
     if solo_stock:
         productos = productos.filter(stock_disponible__gt=0)
     filas = [_fila(p, precios) for p in productos]
@@ -122,19 +124,25 @@ def pedir_aviso(request):
     cliente = _cliente(request)
     if cliente is None:
         messages.error(request, "Ingresa con tu cuenta de cliente para pedir un aviso.")
-        return redirect("/cuenta/entrar/")
+        from cofrial.acceso import inicio_de
+        return redirect(inicio_de(request.user) if request.user.is_authenticated else "/cuenta/entrar/")
     try:
-        a = avisos.pedir(cliente, int(request.POST.get("producto", 0)), int(request.POST.get("cantidad", 0)))
+        a = avisos.pedir(cliente, entradas.entero(request.POST.get("producto", 0)), entradas.entero(request.POST.get("cantidad", 0)))
         messages.success(request, f"Listo: te avisaremos cuando haya al menos {a.cantidad_minima} de {a.producto.nombre}.")
     except (avisos.ErrorAviso, ValueError) as e:
         messages.error(request, str(e) if isinstance(e, avisos.ErrorAviso) else "Indica una cantidad válida.")
     destino = request.POST.get("volver") or "/avisos/"
-    return redirect(destino if destino.startswith("/") and not destino.startswith("//") else "/avisos/")
+    seguro = url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}, require_https=request.is_secure()) and destino.startswith("/")
+    return redirect(destino if seguro else "/avisos/")           # «/\\sitio.com» y «//sitio.com» no son del sitio: sin redirección abierta
 
 
 def mis_avisos(request):
     cliente = _cliente(request)
     if cliente is None:
+        if request.user.is_authenticated:           # una cuenta del equipo no tiene avisos de stock: va a su inicio, no al login (volvería a «/avisos/» en bucle)
+            from cofrial.acceso import inicio_de
+            messages.info(request, "Los avisos de stock son de las cuentas de clientes.")
+            return redirect(inicio_de(request.user))
         return redirect("/cuenta/entrar/?next=/avisos/")
     lista = list(avisos.pendientes(cliente))
     for a in lista:

@@ -1,13 +1,14 @@
 from functools import wraps
 
 from django.contrib import messages
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from catalogo.models import Producto
+from cofrial import entradas
 from clientes.models import Vendedor
 from pedidos import servicios as pedidos
 
@@ -78,15 +79,22 @@ def prospecto_nuevo(request):
             campo_error = "email"
         else:
             try:
-                monto = int(p["monto"]) if p.get("monto") else None
+                monto = entradas.entero(p["monto"]) if p.get("monto") else None
             except ValueError:
                 monto = None
-            nuevo = Prospecto.objects.create(
+            nuevo = Prospecto(
                 vendedor=vendedor, etapa=EtapaPipeline.objects.get(orden_etapa=1), nombre_contacto=p["nombre_contacto"].strip(),
                 empresa=p.get("empresa", "").strip(), email=p.get("email", "").strip(), telefono=p.get("telefono", "").strip(),
                 origen=p.get("origen", "otro"), monto_estimado_clp=monto)
-            messages.success(request, "Prospecto creado.")
-            return redirect("crm_prospecto", pk=nuevo.pk)
+            try:
+                nuevo.full_clean(exclude=["cliente"])          # largo de cada campo, correo y origen válidos: un dato malo es un aviso, no un 500
+            except ValidationError as e:
+                for campo, errores in e.message_dict.items():
+                    messages.error(request, f"{Prospecto._meta.get_field(campo).verbose_name.capitalize() if campo != '__all__' else 'Datos'}: {' '.join(errores)}")
+            else:
+                nuevo.save()
+                messages.success(request, "Prospecto creado.")
+                return redirect("crm_prospecto", pk=nuevo.pk)
     return render(request, "crm/prospecto_nuevo.html", _contexto(request, origenes=Prospecto.ORIGENES, vendedores=vendedores,
                                                                  es_admin=request.rol == "admin", v=request.POST, campo_error=campo_error))
 

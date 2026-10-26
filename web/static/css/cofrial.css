@@ -616,3 +616,9 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 /* accesibilidad: enlaces dentro de párrafos y listas se distinguen por subrayado (no solo por color) y los enlaces de la cuenta miden al menos 24 px de alto */
 .tarjeta-ui li a, .tarjeta-ui p a, .sub a { text-decoration: underline; text-underline-offset: 3px; }
 .enlace { display: inline-block; padding: 4px 0; min-height: 24px; }
+
+/* ---------- navegación por rol ---------- */
+.usuario-datos .rol-cuenta { display: block; color: var(--texto-3); font-size: .75rem; font-weight: 600; letter-spacing: .02em; }
+.accesos { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+.accesos a { padding: 9px 14px; min-height: 40px; display: inline-flex; align-items: center; border: 1px solid var(--borde-fuerte); border-radius: 999px; background: var(--tarjeta); color: var(--texto); font-weight: 600; font-size: .875rem; }
+.accesos a:hover { background: var(--fondo-2); text-decoration: none; }

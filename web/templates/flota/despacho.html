@@ -29,12 +29,16 @@
             {% if p.mixto %}<span class="chip alerta">Mezcla frío y congelado</span>{% else %}{% for r in p.rangos %}<span class="chip transito">{{ r }}</span>{% endfor %}{% endif %}
             {% if not p.ubicada %}<span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}{% if p.o.oc_pendiente %}<span class="chip pendiente">OC pendiente</span>{% endif %}</span></span>
       </label>
-      {% if not p.ubicada %}
+      {% if not p.ubicada and puede_despachar %}
       <button class="btn-sec" type="submit" formnovalidate formaction="/flota/despachar/ubicar/{{ p.o.direccion_id }}/" data-cargando="Ubicando…" style="margin:0 0 8px 26px">Ubicar «{{ p.o.direccion.calle_numero }}» en el mapa</button>
       {% endif %}
       {% empty %}{% include "componentes/vacio_estado.html" with plano=True compacto=True ico="caja" titulo="No hay pedidos por despachar" texto="Cuando un cliente genere una orden, aparecerá aquí lista para asignarle camión." %}{% endfor %}
     </div>
+    {% if puede_despachar %}
     <p><button class="btn" id="btn-despachar" data-cargando="Despachando…" {% if not camiones or not pedidos %}disabled aria-describedby="why-despachar"{% endif %}>Despachar y salir ahora</button>{% if not camiones or not pedidos %} <span class="frio" id="why-despachar">{% if not camiones %}Falta un camión libre.{% else %}Falta al menos un pedido por despachar.{% endif %}</span>{% endif %}</p>
+    {% else %}
+    <p class="sub">Gerencia ve los pedidos y la ruta sugerida; el despacho lo arman el despachador y el administrador.</p>
+    {% endif %}
   </div>
   <div>
     <div class="seccion"><h2>Ruta sugerida</h2></div>

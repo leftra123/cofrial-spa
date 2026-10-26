@@ -19,14 +19,14 @@
 {% with ruta=request.path %}
 <header class="tb">
   <div class="tb-fila">
-    <a class="tb-marca" href="/" aria-label="Cofrial, inicio"><img src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA" width="120" height="40"></a>
+    <a class="tb-marca" href="{{ inicio_url }}" aria-label="Cofrial, ir a mi inicio"><img src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA" width="120" height="40"></a>
     <form class="tb-buscar" action="/catalogo/" method="get" role="search" aria-label="Buscador del sitio">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos o SKU" aria-label="Buscar productos">
     </form>
     <nav class="tb-nav" aria-label="Principal">
       <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}>Catálogo</a>
       {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo"{% endif %}>Mis pedidos</a>{% endif %}
-      {% if not menu.cliente %}<a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>{% endif %}
+      {% if not user.is_authenticated %}<a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>{% endif %}   {# el cliente sigue sus pedidos en «Mis pedidos»; el equipo, en el CRM #}
       <a href="/guia/" {% if "/guia/" in ruta %}class="activo"{% endif %}>Guía</a>
       {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito<span class="tb-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
     </nav>
@@ -42,8 +42,9 @@
       {% if menu.cliente %}<a class="tema-btn tb-carro-movil" href="/carrito/" aria-label="Carrito{% if carrito_n %}, {{ carrito_n }} producto{{ carrito_n|pluralize }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg><span class="campana-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
       {% include "componentes/tema_btn.html" %}
       {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }}"><span>{{ cliente_tienda.nombre }}</span><b class="perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}">{{ cliente_tienda.tipo_cliente.codigo }}</b></span>{% endif %}
-      {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{% if menu.crm %}/crm/{% elif menu.flota %}/flota/{% else %}/admin/{% endif %}">Panel interno</a>{% endif %}
+      {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{{ inicio_url }}">Panel interno</a>{% endif %}
       {% if user.is_authenticated %}
+        {% if menu.crm or menu.flota or menu.admin %}<a class="tb-ingresar" href="/portada/" title="La portada que ven los visitantes">Portada pública</a>{% endif %}
         <a class="tb-ingresar" href="/cuenta/clave/">Mi clave</a>
         <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Salir</button></form>
       {% else %}

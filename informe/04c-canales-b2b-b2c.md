@@ -1,7 +1,5 @@
 # 4c. Arquitectura de canales: wireframes y user journeys B2B/B2C
 
-> Rúbrica H1-D4 (Logrado): user journeys **avanzados** del portal con diferenciación B2B/B2C y lógica de negocio detrás de cada pantalla.
-> **Estado: borrador de redacción**, pendiente de validación del equipo. Los clientes de los ejemplos son ficticios; las emociones de los journeys son estimaciones del equipo que se contrastan con entrevistas a clientes reales.
 
 ## Perfiles y qué los diferencia
 
@@ -17,8 +15,8 @@ El portal atiende a dos perfiles con la misma plataforma y la misma base de dato
 | Número de orden de compra | Se solicita; si falta, la orden queda «OC pendiente» | No aplica | RN-05 |
 | Vendedor asignado | Sí; ve sus pedidos en el CRM | No | RN-09 |
 | Compra recurrente | «Repetir mi último pedido» | Recompra desde el historial | RN-08 |
-| Pago | Factura posterior (simulado en el prototipo) | Pago inmediato (simulado) | Fuera de alcance |
-| Registro | Cuenta institucional creada con RUT de empresa | Cuenta rápida al comprar (RUT y correo) | |
+| Pago | Sin emisión tributaria integrada | Sin pasarela ni cobro electrónico | Fuera de alcance |
+| Registro | Alta institucional gestionada por el personal autorizado | Registro previo B2C con RUT, correo, dirección y clave | |
 
 *Nota.* Elaboración propia. La forma de solicitar la orden de compra (con la opción de dejarla pendiente) y la forma de pago son supuestos a validar con Cofrial.
 
@@ -33,7 +31,7 @@ La propuesta ofrece tres canales de entrada. Los tres terminan en la misma base 
 |---|---|---|---|
 | Portal web | Clientes B2B y B2C | Comprar, seguir el pedido y reportar un problema | `orden`, `requerimiento` |
 | CRM del vendedor | Vendedor | Gestionar su cartera y, durante la transición, ingresar un pedido a nombre del cliente (RN-15) | `orden`, `interaccion`, `prospecto` |
-| Atención por requerimientos | Clientes y visitantes | Enviar una consulta o un reclamo, clasificado por IA | `requerimiento` |
+| Atención por requerimientos | Clientes autenticados | Enviar una consulta o un reclamo, clasificado por IA | `requerimiento` |
 
 *Nota.* Elaboración propia.
 
@@ -46,7 +44,7 @@ Cada journey sigue a una persona ficticia a lo largo de seis etapas. Compara lo 
 
 ![User journey B2B](img/journey-b2b.png)
 
-*Nota.* Elaboración propia. Persona ficticia. Las emociones son estimaciones del equipo en una escala de 1 (frustrado) a 5 (satisfecho).
+*Nota.* Elaboración propia. Persona ficticia. Las emociones son estimaciones del equipo consultor en una escala de 1 (frustrado) a 5 (satisfecho).
 
 **Lectura del journey B2B.** La mayor brecha está en las etapas 4 y 5 (confirmar y seguir el despacho), donde hoy el cliente espera una confirmación por WhatsApp y no sabe en qué condiciones viaja la carga. Es también donde el cliente institucional más valora la plataforma: un hospital necesita demostrar que la cadena de frío se mantuvo. La compra recurrente (etapa 2) reduce el esfuerzo de un cliente que pide casi lo mismo cada semana.
 
@@ -55,9 +53,9 @@ Cada journey sigue a una persona ficticia a lo largo de seis etapas. Compara lo 
 
 ![User journey B2C](img/journey-b2c.png)
 
-*Nota.* Elaboración propia. Persona ficticia. Las emociones son estimaciones del equipo en una escala de 1 a 5.
+*Nota.* Elaboración propia. Persona ficticia. Las emociones son estimaciones del equipo consultor en una escala de 1 a 5.
 
-**Lectura del journey B2C.** Hoy no existe un canal para este perfil, por lo que la comparación es contra no poder comprar a distancia. La etapa crítica es el carrito y los datos (3): pedir demasiados datos antes de comprar es la causa más común de abandono, por eso la cuenta se crea una sola vez y con los campos mínimos.
+**Lectura del journey B2C.** Hoy no existe un canal para este perfil, por lo que la comparación es contra no poder comprar a distancia. La etapa crítica es el carrito y los datos (3): el equipo consultor considera que solicitar datos repetidos aumenta la fricción, por eso la cuenta se crea una sola vez y con los campos mínimos.
 
 ## Wireframes del portal
 
@@ -130,40 +128,42 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 | RN-07 | **Estados y cancelación.** La orden avanza según la Figura 9. Se puede cancelar antes de «Despachada»; el cliente solo mientras esté «Recibida», y el vendedor hasta «En preparación». Cancelar repone el stock. | W5, W6 |
 | RN-08 | **Compra recurrente.** «Repetir mi último pedido» copia al carrito las líneas de la última orden no cancelada; las cantidades se ajustan al stock disponible y se avisa de cada ajuste. | W2 |
 
-*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15) están en `04d-crm.md`.
+*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15) y la separación térmica del portal (RN-16) están en `04d-crm.md`.
 
-## Pendiente
 
-- [ ] Validar con una persona de Cofrial los supuestos de la Tabla 1 (orden de compra que puede quedar pendiente, forma de pago, quién puede cancelar).
-- [ ] Contrastar las emociones de los journeys con entrevistas breves a un cliente institucional y a uno particular.
-- [x] «Mis pedidos» (`/pedidos/`), inicio de sesión (`/cuenta/entrar/`) y registro B2C (`/cuenta/registro/`) existen en la aplicación `web/`.
-- [ ] Renumerar figuras y tablas al integrar el informe completo.
 
-## Notas del equipo
+## Implementación actual de los recorridos
 
-## Implementación frente a los wireframes (23-oct-2026)
+Los wireframes representan reglas y navegación, no una captura exacta del estilo actual. El sitio implementado utiliza plantillas Django, CSS propio, fuente Schibsted Grotesk autoalojada y JavaScript progresivo. El catálogo se puede consultar sin sesión con lista pública; la sesión determina el perfil institucional y sus precios. Comprar y enviar requerimientos exige una cuenta de cliente. La selección visual de perfil no cambia por sí sola los permisos ni la lista asignada a la cuenta.
 
-La parte del cliente se rehízo para que el prototipo coincida con W1 a W6: tienda pública con barra superior y sin menú lateral (el personal conserva su panel en «Panel interno»).
+**Tabla 4**
+*Recorridos implementados y controles por etapa*
 
-| Wireframe | Implementación | Dónde |
-|---|---|---|
-| W1 Portada | Buscador, «Seguir mi pedido», «Ingresar», tarjetas «Soy una institución» y «Soy cliente particular», y datos reales (productos, camiones, última lectura de la flota) | `/` |
-| W2 Catálogo | Tarjetas con ilustración por categoría, filtros (categoría, rango de temperatura, solo con stock), búsqueda por nombre o SKU, estado de stock (verde, ámbar, rojo), −1+ y «Agregar», y «Repetir mi último pedido» para B2B | `/catalogo/` |
-| W3 Detalle | Rango de conservación, descripción, stock y productos de la misma categoría | `/catalogo/<id>/` |
-| W4 y W5 | Carrito y confirmación con las validaciones RN-01 a RN-08 (sin cambios) | `/carrito/`, `/pedidos/<id>/` |
-| W6 Seguimiento | Mapa con la posición del camión, temperatura de la cámara con su franja permitida y gráfico de la última hora, aviso si hubo ruptura de frío y «Reportar un problema», que crea un requerimiento ligado a la orden y lo clasifica la IA | `/pedidos/<id>/` y `/api/pedidos/<id>/seguimiento/` |
-| Registro B2C | Formulario con RUT validado (módulo 11), correo, dirección y clave; crea cuenta, cliente B2C y dirección principal | `/cuenta/registro/` |
+| Etapa | B2B | B2C | Control implementado |
+|---|---|---|---|
+| Acceso | Cuenta institucional y vendedor asignado | Registro público con RUT, correo, dirección y clave | Autenticación Django; el rol de la cuenta gobierna el acceso |
+| Catálogo | Precios institucionales netos e IVA desglosado | Precios públicos con IVA incluido | Lista asociada al tipo de cliente; búsqueda y filtros |
+| Carrito | Recompra y número de OC opcional | Selección de productos y cantidades | Dirección propia, validación de stock y precios vigentes |
+| Confirmación | Si falta OC se genera WEB-año-número y queda pendiente | No aplica OC | Una transacción; una orden por rango de temperatura |
+| Seguimiento | Órdenes propias, referencia institucional y OC pendiente | Órdenes propias y estado de entrega | Mapa, última lectura, ETA aproximada y aviso de señal antigua |
+| Atención | Requerimiento asociado opcionalmente a una orden propia | Mismo canal de soporte | Persistencia previa a IA, bandeja CRM y resolución manual |
 
-El catálogo de demostración tiene 20 productos en 4 categorías (cárnicos refrigerados, aves, congelados, lácteos y embutidos). Las imágenes son ilustraciones propias por categoría, no fotografías de producto. El seguimiento se actualiza cada 5 s consultando la API; el mapa usa Leaflet con teselas de OpenStreetMap.
+Nota. Elaboración propia. Las emociones de los journeys son hipótesis de diseño; no corresponden a entrevistas realizadas.
 
-**Imágenes y rutas (23-oct-2026).** Las fotos de producto son referenciales y provienen de Wikimedia Commons (API pública sin cuenta ni clave), con licencias libres; el autor y la licencia se muestran en el detalle del producto y los productos sin foto adecuada usan una ilustración. Los mapas usan OpenStreetMap; las direcciones se ubican con Nominatim y las rutas se calculan con OSRM, ambos gratuitos y sin clave. El panel de flota propone el orden de entrega de cada viaje (recorrido de menor distancia desde el frigorífico central) y el cliente ve la ruta restante de su camión hasta su dirección.
+**RN-16 Separación térmica.** Un carrito puede contener refrigerados y congelados, pero la confirmación genera una orden por rango de conservación. Todas comparten la dirección y la OC institucional entregada; sin OC, cada orden B2B obtiene su propia referencia WEB. El stock se valida antes de crear el conjunto y el carrito se convierte una sola vez. El despacho comprueba nuevamente que la orden sea homogénea y compatible con el camión. El informe utiliza RN-16 para evitar colisión con RN-09, que identifica la cartera por vendedor en el CRM.
 
-**Ilustraciones generadas con IA y formato chileno (23-oct-2026).** Los productos sin foto libre adecuada (carne molida, merluza, mix de mariscos y mantequilla) usan una ilustración SVG creada con IA (Gemini, con Groq como respaldo) mediante `manage.py generar_ilustraciones`. El SVG se valida y se reconstruye con una lista blanca de etiquetas y atributos antes de guardarse, y el detalle del producto indica el modelo que lo creó. Los precios se muestran al modo chileno (`$34.990`, punto como separador de miles y sin «CLP»); a los clientes institucionales se les desglosa neto, IVA de 19 % y total.
+El número de OC se completa desde el detalle de una orden propia mientras no sea final. La falta de OC no impide crear ni despachar la orden: queda visible para la gestión comercial, sin afirmar un bloqueo que el código no realiza. El pedido asistido del CRM reutiliza el mismo servicio de compra; una compra mixta también puede producir varias órdenes, aunque el servicio de retorno identifica la primera.
 
-**Avisos de stock (24-oct-2026).** Cuando un producto está sin stock, el cliente con sesión puede pedir que se le avise al haber al menos la cantidad que necesita (por ejemplo, 5 cajas). El aviso se muestra en «Avisos» de la barra superior y como novedad en el catálogo en cuanto el stock alcanza esa cantidad, y se da por atendido cuando el cliente agrega el producto al carrito. No se envía correo electrónico; el equipo comercial ve la demanda en espera en el CRM (pestaña «Demanda en espera»), con los clientes que esperan, las unidades pedidas y si el stock alcanza.
+El seguimiento se actualiza cada cinco segundos y la campanita cada quince. La ETA utiliza distancia recta multiplicada por 1,3 y velocidad media configurable de 50 km/h, valores compartidos con el simulador. Si la señal tiene más de diez minutos, se omite la ETA. OSRM propone geometría vial cuando responde; el movimiento sintético sigue tramos rectos. El registro manual de llegada cierra el viaje y libera el camión. La temperatura actual y el antecedente de una ruptura reciente se muestran como datos distintos; el gráfico de seguimiento comprende la última hora del camión, mientras que CRM y BI vinculan lecturas al intervalo de cada despacho.
 
-**Imágenes de producto (24-oct-2026).** Las fotografías del catálogo son imágenes referenciales de cada producto en su envase, creadas con herramientas de inteligencia artificial generativa a partir de descripciones del producto, con etiqueta en blanco y sin marcas; no son fotografías de las cajas reales de Cofrial. Las ilustraciones y fotos de Wikimedia Commons que se usaron antes quedan como respaldo si falta una imagen. En la tienda las etiquetas de conservación muestran el rango de temperatura con un ícono (termómetro para refrigerado y copo para congelado) y el estado de stock se indica con texto, sin leyendas sobre cómo se creó la imagen.
+## Atención y asistente de inteligencia artificial
 
-**Orden de compra pendiente (25-oct-2026).** Por decisión del equipo, un cliente institucional puede comprar sin escribir su orden de compra: la orden se crea con la referencia propia WEB-año-número y el aviso «OC pendiente», que se ve en sus pedidos, en el detalle (con un campo para agregar la real), en la ficha del cliente y en un indicador del CRM, y se informa en la API de pedidos. La regla RN-05 cambió de «obligatoria» a «se solicita; si falta, queda pendiente» para no frenar la compra, sin perder el control de la facturación.
+El asistente de tienda está implementado en catálogo, detalle, carrito y seguimiento. Responde sobre productos, precios del perfil, conservación, stock y pedidos de la propia cuenta; no crea órdenes ni cambia datos. El servidor construye el contexto y omite nombre, RUT, correo, teléfono y dirección de ese contexto. El mensaje que escribe el usuario sí se envía al proveedor y puede contener información que la persona haya incluido. No se guardan los mensajes en los registros del asistente.
 
-**Estados de las pantallas (24-oct-2026).** Cada ruta del portal, del CRM y de la flota cubre ahora los estados que no son el camino feliz, con un mismo lenguaje: *vacío* (qué falta, por qué y qué hacer, con un botón), *carga* (el botón se deshabilita al tiro y muestra «Generando orden…», «Consultando a la IA…»), *error* (resumen de errores del formulario que conserva lo escrito y marca el campo; páginas 400, 403, 404, 500 y de formulario vencido con salida), *sin conexión* (los paneles que se refrescan solos, como el seguimiento del pedido, la flota y la campanita de avisos, muestran «En vivo», «Reintentando…» o «Sin conexión · último dato hace N s» y atenúan los datos viejos) y *confirmación* (cancelar una orden o marcar un prospecto como perdido pide un segundo toque). Además, la orden explica en qué etapa está y qué sigue, incluida la cancelada; el carrito bloquea «Generar orden» cuando un producto supera el stock, y «Seguir mi pedido» avisa si no hay pedidos en curso. Código: `web/static/js/estados.js` y los componentes `vacio_estado.html` y `resumen_errores.html`.
+El chat utiliza Groq y luego Gemini por defecto, con presupuesto nominal de diez segundos y configuración independiente del clasificador. Limita las entradas a 300 caracteres y usa contadores de seis mensajes por minuto y sesenta por hora por proceso. Como la caché es local a cada proceso Gunicorn, no es un límite global estricto para toda la instalación. Los controles rechazan intentos detectados de manipulación y montos ajenos al contexto, sin garantizar que todo riesgo de generación esté eliminado. Si falla el proveedor, la tienda sigue disponible y ofrece soporte.
+
+## Presentación y estados de interfaz
+
+El catálogo de demostración contiene veinte productos en cuatro categorías. Las imágenes prioritarias son representaciones referenciales generadas con IA y no fotografías de envases reales de Cofrial; los recursos previos quedan como respaldo. Se utilizan AVIF adaptables y JPG de respaldo, tipografía y Leaflet autoalojados. Los mapas conservan dependencias externas para teselas, geocodificación y rutas.
+
+Las pantallas contemplan vacío, carga, errores de formulario, confirmación de acciones y pérdida de conexión con señal de antigüedad. El cliente puede solicitar avisos de reposición por cantidad mínima; se muestran dentro del portal y el CRM consulta la demanda en espera. No se ha implementado correo de reposición, pasarela de pago, factura electrónica ni integración automática con el sistema contable.

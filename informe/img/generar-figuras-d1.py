@@ -240,7 +240,7 @@ PROCESOS["p1-tobe"] = dict(
         "g": (1, 4, "compuerta", "¿Hay stock?"),
         "a4": (1, 5, "tarea", "Informa y ofrece una alternativa", 55),
         "e2": (1, 6, "fin", "Orden no generada", 55),
-        "r1": (4, 5, "tarea", "Registra la orden y descuenta el stock"),
+        "r1": (4, 5, "tarea", "Crea órdenes por rango, OC diferida y descuenta stock"),
         "c1": (2, 6, "tarea", "Orden visible para el vendedor asignado"),
         "b1": (3, 6, "tarea", "Ve la orden y prepara el pedido"),
         "b2": (3, 7, "tarea", "Asigna camión y despacha"),
@@ -324,17 +324,17 @@ PROCESOS["p3-asis"] = dict(
 
 PROCESOS["p3-tobe"] = dict(
     titulo="Proceso 3 TO-BE: embudo comercial en el CRM",
-    carriles=["Prospecto", "IA (servicio externo)", "CRM", "Vendedor", "Gerencia"],
+    carriles=["Contacto comercial", "Revisión humana", "CRM", "Vendedor", "Gerencia"],
     nodos={
-        "s": (0, 0, "inicio", "Consulta en el portal o es ingresado"),
-        "a1": (0, 1, "tarea", "Envía su requerimiento"),
-        "i1": (1, 2, "tarea", "Clasifica el requerimiento"),
-        "c1": (2, 3, "tarea", "Registra el prospecto y asigna vendedor"),
-        "v1": (3, 4, "tarea", "Contacta y registra la interacción"),
-        "v2": (3, 5, "tarea", "Envía la propuesta"),
+        "s": (0, 0, "inicio", "Contacto comercial recibido"),
+        "a1": (0, 1, "tarea", "Entrega datos de contacto"),
+        "i1": (1, 2, "tarea", "Revisa datos; registro manual"),
+        "c1": (2, 3, "tarea", "Crea prospecto y asigna vendedor"),
+        "v1": (3, 4, "tarea", "Registra interacción y mueve a Contactado"),
+        "v2": (3, 5, "tarea", "Mueve a Propuesta enviada"),
         "v3": (3, 6, "tarea", "Negocia"),
         "g": (3, 7, "compuerta_b", "¿Acepta?"),
-        "c2": (2, 8, "tarea", "Convierte en cliente (Cliente ganado)", -55),
+        "c2": (2, 8, "tarea", "Correo y RUT no duplicado: Cliente ganado", -55),
         "c3": (2, 8, "tarea", "Cierra como Perdido, con el motivo", 55),
         "j": (2, 9, "compuerta", ""),
         "m1": (4, 10, "tarea", "Consulta la conversión en el dashboard"),
@@ -364,3 +364,8 @@ if __name__ == "__main__":
         archivo.write_text(xml, encoding="utf-8")
         exportar_drawio(archivo)
         print(f"  {archivo.name}")
+
+
+if __name__ == "__main__":
+    import runpy
+    runpy.run_path(str(IMG / "generar-figuras-vigentes.py"))["proceso_crm"]()

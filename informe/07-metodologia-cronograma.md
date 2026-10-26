@@ -2,7 +2,7 @@
 
 ## Metodología
 
-El equipo adopta Kanban (Anderson, 2010) como método de trabajo diario: el flujo se hace visible en un tablero y el trabajo en curso se limita. Los dos hitos de la pauta funcionan como cierres de iteración, de modo que se toma de Scrum solo la idea de revisar y ajustar en cada uno.
+El equipo consultor adopta Kanban (Anderson, 2010) como método de trabajo diario: el flujo se hace visible en un tablero y el trabajo en curso se limita. Los dos hitos de la pauta funcionan como cierres de iteración, de modo que se toma de Scrum solo la idea de revisar y ajustar en cada uno.
 
 **Tabla 1**
 *Enfoques de metodología considerados*
@@ -25,7 +25,7 @@ Tablero: https://trello.com/b/yrKII80H/cofrial-spa-transformaci%C3%B3n-digital
 | Lista | Uso |
 |---|---|
 | Inicio del proyecto | Kickoff, roles, herramientas |
-| Decisiones (elegir stack) | Alternativas por votar; al cerrarse pasan a `08-herramientas.md` |
+| Decisiones (elegir stack) | Registro de decisiones adoptadas y sus fundamentos |
 | Hito 1 · Informe | Backlog del informe, una tarjeta por sección |
 | Hito 2 · Despliegue | Backlog del prototipo |
 | En curso / En revisión / Terminado | Flujo Kanban |
@@ -46,44 +46,37 @@ Nota. Elaboración propia.
 
 Nota. Elaboración propia.
 
-## Cronograma (base para la carta Gantt)
+## Cronograma y carta Gantt
+
+El cronograma conserva el inicio académico planificado y actualiza el trabajo restante según el avance observado al 25-oct-2026. Las barras históricas representan ventanas de trabajo, no fechas certificadas de finalización. La instalación base tiene evidencia del 22 de octubre; las ampliaciones del 24 y 25 requieren su nueva comprobación en AWS. El Hito 1 se fija para el jueves 05-nov-2026, según el aviso del foro adoptado por el equipo consultor; se conserva el 12-nov-2026 para el Hito 2.
 
 **Tabla 4**
-*Cronograma de actividades*
+*Cronograma actualizado por avance y trabajo restante*
 
-| Actividad | Responsable | Inicio | Término | Semana |
+| Actividad | Responsable | Inicio | Término | Situación al corte |
 |---|---|---|---|---|
-| Kickoff, roles, herramientas | Ambos | 13-oct | 15-oct | S1 |
-| Elección de stack | Ambos | 13-oct | 15-oct | S1 |
-| Prueba de EC2 y RDS en el Learner Lab | Sergio | 14-oct | 18-oct | S1 |
-| Diagnóstico y BPMN AS-IS | Eric | 16-oct | 20-oct | S1-S2 |
-| Propuesta de valor y BPMN TO-BE | Eric | 20-oct | 22-oct | S2 |
-| Borrador del MER | Sergio | 19-oct | 23-oct | S2 |
-| Esqueleto del proyecto Django | Eric | 21-oct | 25-oct | S2 |
-| Evaluación de herramientas y memoria AWS | Sergio | 23-oct | 26-oct | S2-S3 |
-| Diagrama de arquitectura | Sergio | 24-oct | 26-oct | S3 |
-| MER 3FN final y diccionario | Sergio | 26-oct | 27-oct | S3 |
-| Casos de uso, wireframes y journeys | Eric | 26-oct | 29-oct | S3 |
-| Pipeline CRM | Eric | 28-oct | 29-oct | S3 |
-| Simulador IoT local | Sergio | 27-oct | 1-nov | S3 |
-| Integración y revisión del informe | Ambos | 30-oct | 2-nov | S3-S4 |
-| Entrega Hito 1 | Ambos | 4-nov | 4-nov | S4 |
-| VPC, EC2 y RDS definitivos | Sergio | 5-nov | 6-nov | S5 |
-| E-commerce y CRM conectados | Eric | 5-nov | 9-nov | S5 |
-| IoT en EC2 dedicada | Sergio | 6-nov | 9-nov | S5 |
-| Dashboard BI | Sergio | 9-nov | 10-nov | S5 |
-| Integración de IA | Eric | 9-nov | 10-nov | S5 |
-| Pruebas integrales y ensayo de defensa | Ambos | 10-nov | 11-nov | S5 |
-| Entrega Hito 2 y defensa | Ambos | 12-nov | 12-nov | S5 |
+| Inicio y decisiones técnicas | Ambos | 13-oct | 15-oct | Decisiones implementadas |
+| Diagnóstico, propuesta y procesos | Eric | 16-oct | 25-oct | Documentados; ajuste de consistencia |
+| Modelo y memoria de arquitectura | Sergio | 19-oct | 25-oct | Documentados; correspondencia física explícita |
+| Aplicación, CRM y clasificación IA | Eric | 20-oct | 25-oct | Implementados |
+| AWS, simulador y Grafana | Sergio | 20-oct | 25-oct | Base AWS registrada el 22; ampliaciones en código |
+| Asistente, OC diferida y compra mixta | Eric | 24-oct | 25-oct | Incorporados al repositorio |
+| Actualización e integración del informe | Ambos | 25-oct | 30-oct | En curso y cierre planificado |
+| Revalidación de la revisión actual en AWS | Ambos | 26-oct | 30-oct | Planificado |
+| Correcciones, evidencias y edición final | Ambos | 31-oct | 4-nov | Planificado |
+| Entrega Hito 1 | Ambos | 5-nov | 5-nov | Hito |
+| Estabilización y ensayo de recuperación | Sergio | 6-nov | 9-nov | Planificado |
+| Guion y ensayo de defensa integral | Ambos | 9-nov | 11-nov | Planificado |
+| Entrega Hito 2 y defensa | Ambos | 12-nov | 12-nov | Hito |
 
-Nota. Elaboración propia. La carta Gantt de la Figura 1 se genera a partir de esta tabla.
+Nota. Elaboración propia. Las fechas posteriores al corte son planificación del equipo consultor y pueden ajustarse al resultado de las verificaciones.
 
 **Figura 1**
-*Carta Gantt del proyecto*
+*Carta Gantt actualizada del proyecto*
 
-![Carta Gantt del proyecto](img/gantt.png)
+![Carta Gantt del proyecto al 25 de octubre](img/gantt.png)
 
-*Nota.* Elaboración propia a partir del cronograma de actividades. El color indica quién es responsable de cada actividad; las líneas rojas marcan los dos hitos de entrega.
+Nota. Elaboración propia a partir de la Tabla 4. La línea de corte diferencia el avance documentado de las actividades planificadas; los hitos se destacan el 5 y el 12 de noviembre.
 
 ## Equipo y matriz RACI
 
@@ -110,8 +103,8 @@ Nota. R: responsable, A: aprueba, C: consultado, I: informado. Elaboración prop
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|
 | La sesión del Learner Lab se cierra y detiene las instancias | Alta | Alto | Servicios con reinicio automático; guion para levantar todo en menos de 10 minutos antes de la defensa |
-| La IP pública cambia al reiniciar | Alta | Medio | Elastic IP o URL actualizada en el `.env` |
-| Solo hay 8 días entre los hitos | Alta | Alto | Adelantar el esqueleto del código y el simulador IoT a las semanas 2 y 3 |
+| La IP pública cambia al reiniciar | Alta | Medio | IP elástica de la web; comprobarla tras recrear los recursos |
+| Solo hay 7 días entre los hitos | Alta | Alto | Concentrar el período final en verificación, correcciones y defensa |
 | La API de IA gratuita alcanza su límite | Media | Medio | Manejo de error y una segunda API de respaldo (ver `08-herramientas.md`) |
 | Créditos de AWS Academy insuficientes | Baja | Alto | Instancias pequeñas y apagarlas al terminar cada sesión |
 | Errores de normalización en el MER | Media | Alto | Revisión cruzada contra la checklist de 3FN antes del 27-oct |

@@ -1,64 +1,32 @@
-# Código del sistema (Hito 2)
+# Sistema implementado Cofrial SpA
 
-Esqueleto funcional, probado en local con Docker. Sigue el diseño del informe (`informe/modelo/esquema.sql` y decisiones D-01 a D-04 de `docs/decisiones.md`).
+Estado al 25-oct-2026. La aplicación única está en `web/`; el scaffold `backend/` fue retirado.
 
-## Estructura
-
-| Carpeta | Contenido |
+| Área | Implementación vigente |
 |---|---|
-| `web/` | Django 5.2: una app por módulo del modelo (`catalogo`, `clientes`, `pedidos`, `flota`, `crm`), panel de administración como CRM base y vista de catálogo con precio según el perfil B2B o B2C |
-| `iot/` | Simulador de un camión (Python): lee su rango de temperatura de la base e inserta lecturas con los seis campos de la pauta |
-| `grafana/` | Tablero de BI: configuración de la fuente de datos, tablero provisionado y el script que lo genera |
-| `docker-compose.yml` | Entorno local completo: PostgreSQL, web, tres camiones y Grafana |
-| `.env.example` | Variables necesarias; se copia a `.env` (ignorado por git) |
+| Web | Django 5.2, plantillas, CSS propio, JavaScript progresivo, DRF y autenticación por sesión |
+| Datos | PostgreSQL 16; migraciones Django; diferencias del SQL lógico descritas en informe/04b |
+| Comercio | Catálogo por perfil, registro B2C, stock transaccional, compra por rango, OC diferida, historial y soporte con orden propia |
+| CRM | Cartera y prospectos, interacciones, avance secuencial, cierre ganado/perdido, pedidos asistidos y bandeja compartida |
+| IA | Clasificador Gemini/Groq y chat Groq/Gemini por defecto; configuración independiente, falla controlada y reintento manual |
+| Logística | Despacho compatible con el rango, seguimiento y ETA aproximada; cierre manual libera camión |
+| IoT | CAM-01 a CAM-50 en cinco contenedores de diez; lecturas cada cinco segundos y movimiento hacia paradas |
+| BI | Grafana con usuario de solo lectura, actualización cada cinco segundos y cruce ventas-frío |
+| AWS | VPC tres subredes, EC2 web y EC2 IoT, RDS privada Single-AZ; infraestructura definida en aws/ |
 
-## Dónde está en línea
+Para iniciar el entorno local se copia `.env.example` a `.env`, se completan secretos y se utiliza `docker compose up -d --build`. La aplicación publica localhost:8000 y Grafana localhost:3000. Las pruebas deben usar la contraseña de fixtures exclusivamente dentro del contenedor de pruebas, sin modificar las cuentas de la instalación ordinaria. El montaje del código actual evita ensayar una imagen antigua.
 
-Instalación en AWS (laboratorio de Eric): aplicación http://54.82.100.161, salud http://54.82.100.161/salud/ y tablero de BI http://54.82.100.161:3000. La IP es elástica (no cambia al reiniciar el laboratorio, pero sí al destruir y recrear los recursos: la vigente está en `aws/.estado/ip.txt` o con `bash aws/provision.sh estado`); el detalle y los usuarios de prueba están en `docs/guia-pruebas-aws.md`. Si el laboratorio está apagado, las direcciones no responden.
+El registro de AWS del 22 de octubre es histórico. Los cambios posteriores requieren revalidación con `aws/verificar.py` sobre la misma revisión desplegada. Véanse `docs/revision-hito1-2026-10-25.md` y `informe/04e-plan-despliegue.md` para resultados y límites.
 
-## Cómo se levanta en un computador del equipo
+## Utilidades locales del equipo
+
+Se conservan las utilidades incorporadas en la carpeta original durante esta revisión:
 
 ```bash
 cp .env.example .env        # completar DB_PASSWORD y DEMO_PASSWORD
-docker compose up -d --build
+docker compose --env-file .env up -d --build
+./scripts/estado-local.sh   # comprobar git, contenedores y URLs
+./scripts/logs-local.sh     # seguir web + flota en la terminal
 ```
 
-La web queda en `http://localhost:8000` (catálogo en `/catalogo/`, CRM en `/crm/`, administración en `/admin/`), el tablero en `http://localhost:3000` y la base en el puerto 5433. El contenedor web aplica las migraciones y carga datos de demostración al arrancar; los camiones esperan a que su registro exista y empiezan a insertar lecturas.
-
-Pruebas (con la base encendida): `docker compose up -d db && docker compose run --rm --no-deps web python manage.py test --noinput`.
-
-La lógica de negocio está en `web/pedidos/servicios.py` y `web/crm/servicios.py`; las vistas solo llaman a esas funciones. Usuarios de demo: `ana@correo.test` (B2C), `abastecimiento@hospital.test` (B2B), `vendedora@cofrial.cl`, `vendedor2@cofrial.cl`, `gerencia@cofrial.cl`, `despacho@cofrial.cl` y `admin`; la contraseña es `DEMO_PASSWORD` del `.env`.
-
-## Qué está hecho y qué falta
-
-| Parte | Estado |
-|---|---|
-| 25 tablas del modelo como modelos Django, con las restricciones del esquema (CHECK, únicos parciales) y las vistas `v_orden` y `v_orden_total` | Hecho y probado |
-| Simulador IoT: inserta `camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`; la alerta sale del rango del camión en la base; simula rupturas de frío | Hecho y probado con 3 camiones |
-| Catálogo con lista de precios por perfil | Hecho |
-| Imágenes construidas para x86 (las EC2 del laboratorio no son ARM) | Verificado con `--platform linux/amd64` |
-| Carrito y órdenes del portal: precio por perfil (RN-01), stock transaccional con bloqueo (RN-02), un carrito abierto (RN-03), dirección propia (RN-04), orden de compra B2B (RN-05), precio congelado (RN-06), cancelación por estado con reposición de stock (RN-07) y «repetir último pedido» (RN-08). Pantallas: catálogo con «Agregar», carrito, confirmación, mis pedidos, detalle y cancelación. El vendedor avanza o cancela órdenes desde el panel de administración | Hecho; 19 pruebas automáticas (incluida la compra simultánea de la última unidad) y prueba de punta a punta por HTTP |
-| Registro de clientes nuevos (B2C) desde el portal | Pendiente; hoy los clientes se crean desde el administrador o la carga de demo |
-| CRM (`/crm/`): panel con indicadores, embudo por etapas, ficha del prospecto con interacciones y movimiento de etapa, cartera y ficha del cliente con pedidos web y alerta de frío, pedido a nombre del cliente, bandeja de requerimientos con clasificación manual y seguimiento de alertas. Reglas RN-09 (cartera por vendedor), RN-10 (sin saltos de etapa), RN-11 (perder exige motivo; ganar crea el cliente B2B), RN-12 (interacciones), RN-13 (alerta de frío sobre las órdenes del viaje) y RN-15. Permisos por rol según la Tabla 2 del informe (vendedor, gerencia, despachador, administrador); los clientes del portal no entran | Hecho; 15 pruebas del CRM (34 en total) y verificación en vivo: una ruptura de frío del simulador aparece en la ficha del cliente y en la vista del despachador |
-| Clasificación automática con IA (Gemini, respaldo Groq; RN-14, umbral 0,60). Hoy el vendedor clasifica a mano | Pendiente |
-| Tablero Grafana en vivo (`grafana/`, puerto 3000): ventas por canal cruzadas con alertas de ruptura de frío en una misma línea de tiempo, ventas en riesgo, temperatura por camión, mapa de la flota y pedidos afectados. Se actualiza cada 5 s; lee la base con un usuario de solo lectura (`grafana_ro`) que crea `preparar_bi`; el tablero se regenera con `python3 grafana/generar_dashboard.py` | Hecho y verificado con datos reales del simulador |
-| Despliegue en AWS (VPC, EC2 web, EC2 IoT, RDS) | Pendiente; lo ejecutan Eric y Sergio con sus credenciales del laboratorio |
-
-## Estados de la interfaz
-Todo estado que no es el camino feliz se resuelve con piezas compartidas, para que cada ruta se comporte igual:
-
-| Estado | Pieza | Dónde se usa |
-|---|---|---|
-| Vacío | `templates/componentes/vacio_estado.html` (parámetros `ico`, `titulo`, `texto`, `url`, `cols`, `compacto`, `plano`) | listas, tablas y paneles de la tienda, el CRM y la flota |
-| Cargando | `data-carga` en el `<form>` y `data-cargando="texto"` en el botón (`static/js/estados.js`) | todos los formularios que envían datos; los lentos (IA, geocodificación) dicen qué esperan |
-| Confirmar | `data-confirmar="¿Seguro? …"` en el botón (dos toques, vence a los 5 s) | cancelar orden, marcar prospecto como perdido |
-| Error de formulario | `templates/componentes/resumen_errores.html` + `aria-invalid` de Django | ingreso y registro; en el CRM el formulario vuelve con lo escrito |
-| Sin conexión | `CofrialEstados.vivo(elemento, opciones)` (conectando, vivo, retraso, caído) | seguimiento del pedido, flota; la campanita muestra «Reintentar» |
-| Errores HTTP | `400.html`, `403.html`, `403_csrf.html` (`CSRF_FAILURE_VIEW`), `404.html` (cambia el texto según la ruta), `500.html` | toda la web |
-
-Las pruebas están en `pedidos/tests.py` (`EstadosDeLasRutas`) y `crm/tests.py` (`EstadosDelCrm`).
-
-## Diferencias deliberadas con el diseño
-
-- Las tablas de clave compuesta (`precio_producto`, `carrito_item`, `orden_item`) usan clave autogenerada más restricción de unicidad sobre el par, la salida que prevé D-03 (el panel de administración de Django 5.2 no soporta claves compuestas). La 3FN se mantiene.
-- La tabla `usuario` se reemplaza por la autenticación de Django; `vendedor` y `cliente` se enlazan a ese usuario.
+La dirección AWS documentada por el equipo es http://54.82.100.161 y Grafana utiliza el puerto 3000; puede no responder con el laboratorio detenido. La dirección vigente se consulta con el procedimiento de estado. Estas direcciones no se verificaron por red en la revisión documental.

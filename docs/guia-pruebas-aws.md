@@ -8,7 +8,7 @@ Para quien reciba el traspaso (Sergio) y para ensayar la defensa. Cada paso dice
 |---|---|
 | Aplicación | http://54.82.100.161 |
 | Estado de salud | http://54.82.100.161/salud/ (debe responder `{"estado": "ok"}`) |
-| Tablero de BI (Grafana) | http://54.82.100.161:3000 (se ve sin cuenta; para editar: usuario `admin` y la clave de Grafana) |
+| Tablero de BI (Grafana) | http://54.82.100.161:3000 (usuario `visor` y `GRAFANA_VISOR_PASSWORD` en `secretos.env`; edición con `admin` y `GRAFANA_PASSWORD`) |
 
 La IP es elástica: no cambia al reiniciar el laboratorio, **pero sí cambia si se destruyen y se vuelven a crear los recursos** (así pasó el 24-oct-2026: era 34.204.121.79 y ahora es 54.82.100.161). La dirección vigente siempre está en `aws/.estado/ip.txt` y la muestra `bash aws/provision.sh estado`; `aws/verificar.py` la lee de ahí solo. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
 
@@ -59,7 +59,7 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 13. Entrar como `gerencia@cofrial.cl`: ve el panel con ventas por canal, pero **no puede** crear prospectos (403 con la pantalla de "sin acceso").
 
 **D. Cadena de frío e IoT (14 a 17)** *(D3, D4)*
-14. Entrar como `admin@cofrial.cl` y abrir `/flota/`: tres camiones con temperatura, combustible y última lectura.
+14. Entrar como `admin@cofrial.cl` y abrir `/flota/`: cincuenta camiones con temperatura, combustible y última lectura.
 15. Dejar la pantalla abierta 15 segundos: **la hora de "Última lectura" y la temperatura deben cambiar solas** (llegan lecturas cada 5 segundos). Aparece "En vivo · cada 5 s".
 16. Si algún camión muestra **"Ruptura de frío"**, abrir `/crm/alertas/` como `despacho@cofrial.cl`: debe listar los pedidos afectados. (La ruptura es aleatoria y poco frecuente; si no ocurre, no es un fallo.)
 17. Como `admin@cofrial.cl`, abrir `/api/flota/`: debe devolver JSON con los camiones y la última lectura (campos `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`).
@@ -80,7 +80,7 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 24. Abrir `/pedidos/99999/`: pantalla "No encontramos esa página" (404).
 
 **H. Resiliencia (25 a 26)** *(D1: estable y persistente)*
-25. **IA apagada** (solo se puede hacer en local, no en AWS sin acceso a la instancia): con `GEMINI_API_KEY` vacía, enviar un requerimiento: se guarda "sin clasificar" y el portal responde normal. Las pruebas automáticas lo cubren (`python manage.py test crm`).
+25. **IA apagada** (solo se puede hacer en local, no en AWS sin acceso a la instancia): con ambas claves `GEMINI_API_KEY` y `GROQ_API_KEY` vacías, o proveedores simulados como indisponibles, enviar un requerimiento: se guarda "sin clasificar" y el portal responde normal. Las pruebas automáticas lo cubren (`python manage.py test crm`).
 26. **Apagado y encendido del laboratorio** (lo hace Eric): al terminar la sesión, AWS detiene las instancias y la base; al iniciar una sesión nueva hay que ejecutar el Paso 0 (`bash aws/provision.sh encender`). Comprobar que, sin tocar nada más, vuelven la aplicación, el IoT y Grafana, que la **IP es la misma** y que los datos siguen (órdenes, requerimientos y telemetría anterior). Medir cuánto tarda y anotarlo para el plan B de la defensa.
 
 ## Pruebas automáticas (sin AWS)
@@ -96,3 +96,7 @@ cd web && python manage.py test        # 57 pruebas, todas deben pasar
 ## Si Sergio quiere su propia instalación
 
 Cualquier integrante puede crear una réplica en **su** laboratorio con `bash aws/provision.sh` (ver `aws/README.md`): necesita las credenciales de su Learner Lab (AWS Details → AWS CLI → Show) y, opcionalmente, su propia clave gratuita de Gemini. Cada instalación es independiente y tiene sus propias claves en `aws/.estado/`.
+
+## Corte de revisión del 25-oct-2026
+
+La guía describe el recorrido a comprobar sobre la revisión desplegada. La prueba AWS del 22 de octubre es histórica. La ampliación a cincuenta camiones, chat, OC diferida y compra por rango no se considera verificada en AWS solo porque existan pruebas locales; ejecutar la guía y aws/verificar.py sobre la revisión actual.

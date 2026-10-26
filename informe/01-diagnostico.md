@@ -1,7 +1,5 @@
 # 1. Diagnóstico y análisis del dolor
 
-> Rúbrica H1-D1 (Logrado): analizar **en profundidad** (no repetir el caso) y argumentar con solidez técnica y de negocio.
-> **Estado: borrador de redacción**, pendiente de validación del equipo. Las cifras de la sección de impacto son supuestos ilustrativos, no datos de Cofrial; se marcan como tales y se validan con la empresa.
 
 ## Síntesis
 
@@ -22,7 +20,7 @@ Los tres focos críticos del caso no son tres problemas distintos, sino un mismo
 
 ## Método de análisis
 
-El equipo consultor usa tres herramientas, de lo general a lo específico: un **árbol de problemas**, propio de la metodología del marco lógico (Ortegón et al., 2005), para ubicar la causa raíz común; la técnica de los **cinco porqués** (Ohno, 1988) para profundizar en cada dolor; y un **ciclo de refuerzo** para mostrar cómo se alimentan entre sí. Las respuestas a los "porqués" son inferencias del equipo a partir del caso; se contrastan con Cofrial en la fase de validación.
+El equipo consultor usa tres herramientas, de lo general a lo específico: un **árbol de problemas**, propio de la metodología del marco lógico (Ortegón et al., 2005), para ubicar la causa raíz común; la técnica de los **cinco porqués** (Ohno, 1988) para profundizar en cada dolor; y un **ciclo de refuerzo** para mostrar cómo se alimentan entre sí. Las respuestas a los "porqués" son inferencias del equipo consultor a partir del caso; se contrastan con Cofrial en la fase de validación.
 
 **Figura 1**
 *Árbol de problemas de Cofrial SpA*
@@ -38,7 +36,7 @@ El equipo consultor usa tres herramientas, de lo general a lo específico: un **
 **Cinco porqués.**
 
 **Tabla 2**
-*Cinco porqués del dolor 1 (inferencias del equipo)*
+*Cinco porqués del dolor 1 (inferencias del equipo consultor)*
 
 | Nivel | Pregunta | Respuesta |
 |---|---|---|
@@ -64,7 +62,7 @@ El equipo consultor usa tres herramientas, de lo general a lo específico: un **
 **Cinco porqués.**
 
 **Tabla 3**
-*Cinco porqués del dolor 2 (inferencias del equipo)*
+*Cinco porqués del dolor 2 (inferencias del equipo consultor)*
 
 | Nivel | Pregunta | Respuesta |
 |---|---|---|
@@ -78,7 +76,7 @@ El equipo consultor usa tres herramientas, de lo general a lo específico: un **
 
 **Riesgos técnicos y regulatorios.**
 
-- **Sin evidencia de cumplimiento.** El Reglamento Sanitario de los Alimentos establece, en su artículo 68, que los alimentos perecibles que requieren frío solo pueden transportarse en vehículos de carrocería cerrada, con equipos que mantengan la temperatura exigida y termómetros legibles desde el exterior (Ministerio de Salud, 1997). Un termómetro exterior muestra la temperatura de un instante; sin un registro continuo, Cofrial no puede demostrar que la cadena de frío se mantuvo durante todo el viaje, ni ante una fiscalización ni ante un cliente hospitalario que se lo pida.
+- **Sin evidencia de cumplimiento.** El Reglamento Sanitario de los Alimentos establece, en su artículo 68, que los alimentos perecibles que requieren frío solo pueden transportarse en vehículos de carrocería cerrada, con equipos que mantengan la temperatura exigida y termómetros legibles desde el exterior (Ministerio de Salud, 1997). El registro continuo propuesto aporta trazabilidad del viaje y evidencia para revisar incidentes; esta es una justificación técnica del equipo consultor y no una obligación adicional de telemetría deducida de ese artículo.
 - **Riesgo sanitario real.** Un hospital que recibe carne con la cadena de frío cortada puede no notarlo a simple vista; el daño no es solo comercial.
 - **Datos de la empresa en cuentas personales.** Los chats de coordinación viven en teléfonos de las personas: si un conductor o un despachador se va, se va el historial, y no hay forma de auditar qué se acordó.
 - **Reacción tardía.** Cuando la ruptura se descubre, ocurre al abrir la carga en el cliente: la pérdida ya está hecha y el cliente ya la presenció.
@@ -90,7 +88,7 @@ El equipo consultor usa tres herramientas, de lo general a lo específico: un **
 **Cinco porqués.**
 
 **Tabla 4**
-*Cinco porqués del dolor 3 (inferencias del equipo)*
+*Cinco porqués del dolor 3 (inferencias del equipo consultor)*
 
 | Nivel | Pregunta | Respuesta |
 |---|---|---|
@@ -106,7 +104,7 @@ El equipo consultor usa tres herramientas, de lo general a lo específico: un **
 
 - **Fuga de cartera.** La cartera de clientes institucionales es el activo comercial más valioso y hoy no pertenece a la empresa en ningún sentido práctico.
 - **Decisiones a ciegas.** Sin embudo no se conoce la tasa de conversión, el tamaño medio del pedido ni la recurrencia de cada cliente; no se puede priorizar a quién visitar ni cuánto vender.
-- **Desventaja competitiva.** Los competidores digitalizados atienden pedidos a cualquier hora y muestran el estado del despacho. Los clientes institucionales tienden a preferir al proveedor que les entrega trazabilidad (inferencia del equipo, a validar con entrevistas a clientes).
+- **Desventaja competitiva.** Los competidores digitalizados atienden pedidos a cualquier hora y muestran el estado del despacho. Los clientes institucionales tienden a preferir al proveedor que les entrega trazabilidad (inferencia del equipo consultor, a validar con entrevistas a clientes).
 
 **Impacto de negocio.** Cada pedido mal anotado es una venta perdida o una entrega equivocada; cada prospecto sin seguimiento es una oportunidad que nadie mide.
 
@@ -135,9 +133,9 @@ Ni la pauta ni este equipo disponen de las cifras reales de Cofrial. Para no dej
 | Parámetro | Valor supuesto | Fundamento |
 |---|---|---|
 | Camiones en operación | 50 | Dato del caso |
-| Viajes por camión | 1 al día, 6 días a la semana | Supuesto del equipo |
+| Viajes por camión | 1 al día, 6 días a la semana | Supuesto del equipo consultor |
 | Viajes semanales | 300 | 50 camiones por 6 viajes |
-| Valor medio de la carga por viaje | 1 500 000 pesos | Supuesto del equipo |
+| Valor medio de la carga por viaje | 1 500 000 pesos | Supuesto del equipo consultor |
 | Fracción de la carga que se pierde si hay ruptura | 100 % (rechazo total) | Supuesto conservador de pérdida máxima |
 
 *Nota.* Elaboración propia. Fórmula: pérdida semanal = viajes semanales × proporción de viajes con ruptura no detectada × valor medio de la carga × fracción perdida.
@@ -179,10 +177,3 @@ La causa raíz común es la ausencia de un dato único, en línea y confiable. D
 1. **Un dato central y protegido**, para terminar con el servidor único y los silos.
 2. **Captura automática de lo que hoy no se mide** (temperatura, posición, combustible), para ver la última milla.
 3. **Un canal propio para pedidos y relación comercial**, para que la información de ventas pertenezca a la empresa.
-
-## Por verificar antes de la redacción final
-
-- [ ] Validar los supuestos de las Tablas 5 y 6 con los datos de la Tabla 7.
-- [ ] Contrastar las inferencias de los "cinco porqués" con una conversación con Cofrial.
-
-## Notas del equipo

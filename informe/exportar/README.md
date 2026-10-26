@@ -1,17 +1,11 @@
-# Generador del informe en Word
+# Generación del informe Hito 1
 
-Arma `informe/entrega/Informe_Hito1_Cofrial_SpA.docx` a partir de los `.md` de `informe/` (secciones 01 a 04d, más `informe/entrega/` para resumen, introducción, conclusiones, glosario y referencias) y los inyecta en la plantilla institucional de INACAP.
+El exportador integra todas las secciones del informe, los casos de uso en el Anexo D y el diccionario con sus extensiones físicas. Numeración continua de tablas/figuras y referencias cruzadas validadas al generar.
 
-```bash
-cd informe/exportar
-npm install                              # una sola vez (instala la librería docx; node_modules no se sube)
-node exportar-informe.js                 # escribe en "Entrega Hito 1/" (carpeta principal del proyecto)
-node exportar-informe.js --salida=/ruta  # o en otra carpeta
-node exportar-informe.js --compacto      # versión más corta
-```
+Requiere Node con docx y Python con lxml (pypdf para los índices y Pillow para las figuras). Se ejecuta `node informe/exportar/exportar-informe.js --plantilla=/ruta/plantilla.docx`. La salida por defecto es `informe/entrega/Informe_Hito1_Cofrial_SpA.docx`; `--salida=/ruta` permite otra carpeta y `COFRIAL_PYTHON` selecciona el intérprete Python.
 
-Requisitos:
-- **Plantilla `Carta-1-vert.docx`** en la carpeta principal del proyecto (la que contiene `.claude/` y `Entrega Hito 1/`). No está en el repositorio.
-- Node.js y Python 3.
-- Cada referencia de `entrega/referencias.md` necesita una regla de cita en `exportar-informe.js` (constante `CITAS`) y solo se imprime si el texto la cita.
-- Cada «Tabla N» o «Figura N» mencionada en un `.md` debe tener su título en ese mismo archivo, o el generador se detiene con «Referencia sin destino».
+Se busca Carta-1-vert.docx en la raíz. Si no existe, puede indicarse la plantilla INACAP adjunta; su formato no sustituye la pauta EVA2_3. Las instrucciones académicas de ejemplo de la plantilla se retiran del documento final.
+
+Las figuras de topología, Gantt, pipeline y normalización se regeneran con `informe/img/generar-figuras-vigentes.py` (Pillow). El Gantt lee la tabla del cronograma. El diseño SQL académico no se aplica a una base Django: la instalación utiliza sus migraciones.
+
+Los índices estáticos se obtienen del PDF de comprobación con `actualizar-indices.py /ruta/render.pdf` y se regenera el Word hasta estabilizar páginas. El DOCX definitivo no se guarda mediante LibreOffice; el render es solo una comprobación visual.

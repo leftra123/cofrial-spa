@@ -1,0 +1,556 @@
+{
+  "contenido": [
+    {
+      "titulo": "Resumen ejecutivo",
+      "pagina": 6
+    },
+    {
+      "titulo": "1. Introducción",
+      "pagina": 6
+    },
+    {
+      "titulo": "2. Diagnóstico y análisis del dolor",
+      "pagina": 7
+    },
+    {
+      "titulo": "3. Procesos actuales y propuestos",
+      "pagina": 15
+    },
+    {
+      "titulo": "4. Propuesta de valor y resolución de conflictos",
+      "pagina": 25
+    },
+    {
+      "titulo": "5. Metodología y cronograma",
+      "pagina": 30
+    },
+    {
+      "titulo": "6. Evaluación de herramientas",
+      "pagina": 36
+    },
+    {
+      "titulo": "7. Memoria de decisiones de arquitectura cloud",
+      "pagina": 43
+    },
+    {
+      "titulo": "8. Diagrama de arquitectura cloud",
+      "pagina": 47
+    },
+    {
+      "titulo": "9. Modelo de datos: MER en tercera forma normal",
+      "pagina": 50
+    },
+    {
+      "titulo": "10. Arquitectura de canales: wireframes y recorridos de usuario",
+      "pagina": 59
+    },
+    {
+      "titulo": "11. Arquitectura funcional del CRM y pipeline comercial",
+      "pagina": 74
+    },
+    {
+      "titulo": "12. Plan de despliegue y verificación",
+      "pagina": 87
+    },
+    {
+      "titulo": "13. Conclusiones",
+      "pagina": 88
+    },
+    {
+      "titulo": "Referencias",
+      "pagina": 90
+    },
+    {
+      "titulo": "Anexo A. Diccionario de datos",
+      "pagina": 91
+    },
+    {
+      "titulo": "Anexo B. Cuentas de prueba",
+      "pagina": 107
+    },
+    {
+      "titulo": "Anexo C Correspondencia con la pauta",
+      "pagina": 108
+    },
+    {
+      "titulo": "Anexo D Casos de uso",
+      "pagina": 109
+    },
+    {
+      "titulo": "Anexo E Glosario",
+      "pagina": 116
+    }
+  ],
+  "tablas": [
+    {
+      "titulo": "Tabla 1 Hechos del caso y su consecuencia de negocio",
+      "pagina": 7
+    },
+    {
+      "titulo": "Tabla 2 Cinco porqués del dolor 1 (inferencias del equipo consultor)",
+      "pagina": 9
+    },
+    {
+      "titulo": "Tabla 3 Cinco porqués del dolor 2 (inferencias del equipo consultor)",
+      "pagina": 10
+    },
+    {
+      "titulo": "Tabla 4 Cinco porqués del dolor 3 (inferencias del equipo consultor)",
+      "pagina": 11
+    },
+    {
+      "titulo": "Tabla 5 Modelo de pérdidas por ruptura de frío no detectada (supuestos ilustrativos)",
+      "pagina": 13
+    },
+    {
+      "titulo": "Tabla 6 Escenarios de pérdida semanal según la frecuencia de rupturas (ilustrativo)",
+      "pagina": 13
+    },
+    {
+      "titulo": "Tabla 7 Datos a solicitar a Cofrial para validar el diagnóstico",
+      "pagina": 14
+    },
+    {
+      "titulo": "Tabla 8 Comparación de notaciones de modelado de procesos",
+      "pagina": 15
+    },
+    {
+      "titulo": "Tabla 9 Proceso 1: de dónde viene el dolor y cómo lo resuelve el TO-BE",
+      "pagina": 18
+    },
+    {
+      "titulo": "Tabla 10 Proceso 2: de dónde viene el dolor y cómo lo resuelve el TO-BE",
+      "pagina": 21
+    },
+    {
+      "titulo": "Tabla 11 Proceso 3: de dónde viene el dolor y cómo lo resuelve el TO-BE",
+      "pagina": 24
+    },
+    {
+      "titulo": "Tabla 12 Componentes de la solución y el dolor que ataca cada uno",
+      "pagina": 25
+    },
+    {
+      "titulo": "Tabla 13 Cómo la arquitectura neutraliza cada dolor, con su evidencia en el prototipo y su indicador",
+      "pagina": 26
+    },
+    {
+      "titulo": "Tabla 14 Mecanismos para sustituir los canales informales",
+      "pagina": 27
+    },
+    {
+      "titulo": "Tabla 15 Ahorro semanal según la capacidad de reacción ante la alerta (ilustrativo)",
+      "pagina": 27
+    },
+    {
+      "titulo": "Tabla 16 Fases de adopción propuestas para Cofrial",
+      "pagina": 28
+    },
+    {
+      "titulo": "Tabla 17 Riesgos de adopción por grupo de usuarios",
+      "pagina": 28
+    },
+    {
+      "titulo": "Tabla 18 Enfoques de metodología considerados",
+      "pagina": 30
+    },
+    {
+      "titulo": "Tabla 19 Listas del tablero de Trello y su uso",
+      "pagina": 30
+    },
+    {
+      "titulo": "Tabla 20 Herramientas de gestión evaluadas",
+      "pagina": 31
+    },
+    {
+      "titulo": "Tabla 21 Cronograma actualizado por avance y trabajo restante",
+      "pagina": 31
+    },
+    {
+      "titulo": "Tabla 22 Matriz de responsabilidades (RACI)",
+      "pagina": 34
+    },
+    {
+      "titulo": "Tabla 23 Matriz de riesgos del proyecto",
+      "pagina": 34
+    },
+    {
+      "titulo": "Tabla 24 Criterios de evaluación y ponderación aplicados a todas las decisiones",
+      "pagina": 36
+    },
+    {
+      "titulo": "Tabla 25 Puntuación ponderada: cómputo del backend",
+      "pagina": 36
+    },
+    {
+      "titulo": "Tabla 26 Puntuación ponderada: base de datos relacional",
+      "pagina": 37
+    },
+    {
+      "titulo": "Tabla 27 Puntuación ponderada: framework web (e-commerce, crm y api)",
+      "pagina": 38
+    },
+    {
+      "titulo": "Tabla 28 Puntuación ponderada: simulación iot",
+      "pagina": 39
+    },
+    {
+      "titulo": "Tabla 29 Puntuación ponderada: dashboard de bi",
+      "pagina": 39
+    },
+    {
+      "titulo": "Tabla 30 Puntuación ponderada: servicio de ia de costo cero",
+      "pagina": 40
+    },
+    {
+      "titulo": "Tabla 31 Puntuación ponderada: herramienta para el diagrama de arquitectura cloud",
+      "pagina": 41
+    },
+    {
+      "titulo": "Tabla 32 Resumen de las decisiones adoptadas y sus alternativas descartadas",
+      "pagina": 42
+    },
+    {
+      "titulo": "Tabla 33 Decisiones de arquitectura y consecuencias para Cofrial",
+      "pagina": 43
+    },
+    {
+      "titulo": "Tabla 34 Límites implementados y evolución propuesta",
+      "pagina": 45
+    },
+    {
+      "titulo": "Tabla 35 Configuración implementada y alcance de la evidencia",
+      "pagina": 46
+    },
+    {
+      "titulo": "Tabla 36 Elementos de la topología implementada",
+      "pagina": 49
+    },
+    {
+      "titulo": "Tabla 37 Correspondencia entre la pauta y la tabla telemetria",
+      "pagina": 52
+    },
+    {
+      "titulo": "Tabla 38 Dependencias funcionales y resultado de la verificación en 3FN",
+      "pagina": 53
+    },
+    {
+      "titulo": "Tabla 39 Redundancias aparentes y su justificación",
+      "pagina": 55
+    },
+    {
+      "titulo": "Tabla 40 Diferencias deliberadas entre referencia lógica e implementación",
+      "pagina": 56
+    },
+    {
+      "titulo": "Tabla 41 Casos de uso y tablas que los soportan",
+      "pagina": 57
+    },
+    {
+      "titulo": "Tabla 42 Diferencias de negocio entre los perfiles B2B y B2C",
+      "pagina": 59
+    },
+    {
+      "titulo": "Tabla 43 Canales de entrada y dónde queda el registro",
+      "pagina": 60
+    },
+    {
+      "titulo": "Tabla 44 Reglas de negocio del e-commerce",
+      "pagina": 71
+    },
+    {
+      "titulo": "Tabla 45 Recorridos implementados y controles por etapa",
+      "pagina": 72
+    },
+    {
+      "titulo": "Tabla 46 Módulos del CRM, usuarios, datos y pantallas",
+      "pagina": 76
+    },
+    {
+      "titulo": "Tabla 47 Permisos por rol y módulo (L: leer, E: escribir, —: sin acceso)",
+      "pagina": 76
+    },
+    {
+      "titulo": "Tabla 48 Etapas del pipeline: criterio de entrada y salida",
+      "pagina": 79
+    },
+    {
+      "titulo": "Tabla 49 Reglas de negocio del CRM",
+      "pagina": 79
+    },
+    {
+      "titulo": "Tabla 50 Eventos entre componentes y su efecto en el CRM",
+      "pagina": 85
+    },
+    {
+      "titulo": "Tabla 51 Indicadores del CRM, fórmula y consulta",
+      "pagina": 85
+    },
+    {
+      "titulo": "Tabla 52 Prácticas informales sustituidas, mecanismo y control",
+      "pagina": 86
+    },
+    {
+      "titulo": "Tabla 53 Evidencias y límites de las verificaciones",
+      "pagina": 87
+    },
+    {
+      "titulo": "Tabla 54 Diccionario de datos: tabla region",
+      "pagina": 91
+    },
+    {
+      "titulo": "Tabla 55 Diccionario de datos: tabla comuna",
+      "pagina": 91
+    },
+    {
+      "titulo": "Tabla 56 Diccionario de datos: tabla rango_temperatura",
+      "pagina": 92
+    },
+    {
+      "titulo": "Tabla 57 Diccionario de datos: tabla categoria",
+      "pagina": 92
+    },
+    {
+      "titulo": "Tabla 58 Diccionario de datos: tabla producto",
+      "pagina": 93
+    },
+    {
+      "titulo": "Tabla 59 Diccionario de datos: tabla lista_precio",
+      "pagina": 93
+    },
+    {
+      "titulo": "Tabla 60 Diccionario de datos: tabla precio_producto",
+      "pagina": 94
+    },
+    {
+      "titulo": "Tabla 61 Diccionario de datos: tabla tipo_cliente",
+      "pagina": 94
+    },
+    {
+      "titulo": "Tabla 62 Diccionario de datos: tabla carrito",
+      "pagina": 95
+    },
+    {
+      "titulo": "Tabla 63 Diccionario de datos: tabla carrito_item",
+      "pagina": 95
+    },
+    {
+      "titulo": "Tabla 64 Diccionario de datos: tabla estado_orden",
+      "pagina": 96
+    },
+    {
+      "titulo": "Tabla 65 Diccionario de datos: tabla orden",
+      "pagina": 96
+    },
+    {
+      "titulo": "Tabla 66 Diccionario de datos: tabla orden_item",
+      "pagina": 97
+    },
+    {
+      "titulo": "Tabla 67 Diccionario de datos: tabla usuario",
+      "pagina": 97
+    },
+    {
+      "titulo": "Tabla 68 Diccionario de datos: tabla cliente",
+      "pagina": 98
+    },
+    {
+      "titulo": "Tabla 69 Diccionario de datos: tabla direccion",
+      "pagina": 98
+    },
+    {
+      "titulo": "Tabla 70 Diccionario de datos: tabla vendedor",
+      "pagina": 99
+    },
+    {
+      "titulo": "Tabla 71 Diccionario de datos: tabla etapa_pipeline",
+      "pagina": 100
+    },
+    {
+      "titulo": "Tabla 72 Diccionario de datos: tabla prospecto",
+      "pagina": 100
+    },
+    {
+      "titulo": "Tabla 73 Diccionario de datos: tabla interaccion",
+      "pagina": 101
+    },
+    {
+      "titulo": "Tabla 74 Diccionario de datos: tabla categoria_requerimiento",
+      "pagina": 102
+    },
+    {
+      "titulo": "Tabla 75 Diccionario de datos: tabla requerimiento",
+      "pagina": 102
+    },
+    {
+      "titulo": "Tabla 76 Diccionario de datos: tabla camion",
+      "pagina": 103
+    },
+    {
+      "titulo": "Tabla 77 Diccionario de datos: tabla despacho",
+      "pagina": 104
+    },
+    {
+      "titulo": "Tabla 78 Diccionario de datos: tabla telemetria",
+      "pagina": 104
+    },
+    {
+      "titulo": "Tabla 79 Campos físicos adicionales de dirección, orden y telemetría",
+      "pagina": 105
+    },
+    {
+      "titulo": "Tabla 80 Diccionario físico de aviso_stock",
+      "pagina": 105
+    },
+    {
+      "titulo": "Tabla 81 Adaptaciones de identidad y claves en la implementación",
+      "pagina": 106
+    },
+    {
+      "titulo": "Tabla 82 Cuentas de prueba del prototipo y lo que permite probar cada una",
+      "pagina": 107
+    },
+    {
+      "titulo": "Tabla 83 Trazabilidad entre dimensiones y evidencia del informe",
+      "pagina": 108
+    },
+    {
+      "titulo": "Tabla 84 Formatos de casos de uso considerados",
+      "pagina": 109
+    },
+    {
+      "titulo": "Tabla 85 Actores del ecosistema",
+      "pagina": 109
+    },
+    {
+      "titulo": "Tabla 86 Catálogo de casos de uso",
+      "pagina": 110
+    },
+    {
+      "titulo": "Tabla 87 Especificación del caso de uso CU-04",
+      "pagina": 112
+    },
+    {
+      "titulo": "Tabla 88 Especificación del caso de uso CU-07",
+      "pagina": 113
+    },
+    {
+      "titulo": "Tabla 89 Especificación vigente del caso de uso CU-09",
+      "pagina": 113
+    },
+    {
+      "titulo": "Tabla 90 Especificación del caso de uso CU-11",
+      "pagina": 114
+    }
+  ],
+  "figuras": [
+    {
+      "titulo": "Figura 1 Árbol de problemas de Cofrial SpA",
+      "pagina": 8
+    },
+    {
+      "titulo": "Figura 2 Ciclo de refuerzo de los tres dolores",
+      "pagina": 12
+    },
+    {
+      "titulo": "Figura 3 Proceso 1 AS-IS: pedido de un cliente institucional",
+      "pagina": 16
+    },
+    {
+      "titulo": "Figura 4 Proceso 1 TO-BE: pedido B2B en la plataforma",
+      "pagina": 17
+    },
+    {
+      "titulo": "Figura 5 Proceso 2 AS-IS: despacho con cadena de frío",
+      "pagina": 19
+    },
+    {
+      "titulo": "Figura 6 Proceso 2 TO-BE: despacho con telemetría y alerta de frío",
+      "pagina": 20
+    },
+    {
+      "titulo": "Figura 7 Proceso 3 AS-IS: gestión comercial de prospectos",
+      "pagina": 22
+    },
+    {
+      "titulo": "Figura 8 Proceso 3 TO-BE: embudo comercial en el CRM",
+      "pagina": 23
+    },
+    {
+      "titulo": "Figura 9 Carta Gantt actualizada del proyecto",
+      "pagina": 33
+    },
+    {
+      "titulo": "Figura 10 Arquitectura cloud implementada para el prototipo Cofrial SpA",
+      "pagina": 48
+    },
+    {
+      "titulo": "Figura 11 Modelo entidad-relación del ecosistema Cofrial (claves y campos de telemetría)",
+      "pagina": 51
+    },
+    {
+      "titulo": "Figura 12 Descomposición lógica de requerimientos y correspondencia física",
+      "pagina": 57
+    },
+    {
+      "titulo": "Figura 13 User journey B2B: encargada de abastecimiento de un hospital",
+      "pagina": 61
+    },
+    {
+      "titulo": "Figura 14 User journey B2C: cliente particular",
+      "pagina": 63
+    },
+    {
+      "titulo": "Figura 15 W1. Inicio y selección de perfil",
+      "pagina": 65
+    },
+    {
+      "titulo": "Figura 16 W2. Catálogo con filtros y precio según el perfil",
+      "pagina": 66
+    },
+    {
+      "titulo": "Figura 17 W3. Detalle de producto con rango de conservación",
+      "pagina": 67
+    },
+    {
+      "titulo": "Figura 18 W4. Carrito con validaciones de stock, dirección y orden de compra",
+      "pagina": 68
+    },
+    {
+      "titulo": "Figura 19 W5. Confirmación de la orden",
+      "pagina": 69
+    },
+    {
+      "titulo": "Figura 20 W6. Seguimiento del pedido con estado, posición y temperatura",
+      "pagina": 70
+    },
+    {
+      "titulo": "Figura 21 Estados de una orden y sus transiciones",
+      "pagina": 71
+    },
+    {
+      "titulo": "Figura 22 Arquitectura funcional del CRM",
+      "pagina": 75
+    },
+    {
+      "titulo": "Figura 23 Etapas del embudo comercial y transiciones permitidas",
+      "pagina": 78
+    },
+    {
+      "titulo": "Figura 24 W7. Embudo comercial con indicadores",
+      "pagina": 82
+    },
+    {
+      "titulo": "Figura 25 W8. Ficha de cliente con alertas de frío y pedidos",
+      "pagina": 83
+    },
+    {
+      "titulo": "Figura 26 W9. Bandeja de requerimientos clasificados por IA",
+      "pagina": 84
+    },
+    {
+      "titulo": "Figura 27 Diagrama de casos de uso del ecosistema Cofrial",
+      "pagina": 111
+    }
+  ]
+}

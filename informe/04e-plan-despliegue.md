@@ -1,69 +1,48 @@
-# Plan de construcción y despliegue en AWS
+# Despliegue y verificación del sistema
 
-> **Estado al 22-oct-2026.** Los pasos 1 a 7 de la Tabla 2 se ejecutaron antes de lo planificado y el sistema está desplegado y verificado de punta a punta en AWS Academy. Lo construido y sus diferencias con el diseño están en la Tabla 3 de `03-arquitectura-cloud.md` y en `09-verificacion-pauta.md`. Quedan el guion de la demostración y el ensayo del apagado y encendido del laboratorio.
+## Estado y alcance
 
-> Une el diseño con lo que se construirá en el Hito 2. Cada componente del diagrama de arquitectura tiene aquí su criterio de aceptación.
-
-## Qué significa "funcional"
-
-El Hito 2 no se cumple con una versión parcial. Para el equipo, el sistema está funcional cuando todo el ecosistema corre en AWS Academy, conectado entre sí y accesible desde un navegador, sin depender de ningún computador del equipo. Un cliente compra, la orden aparece en el CRM, los camiones envían telemetría, una ruptura de frío se ve en el tablero y la IA clasifica un requerimiento, todo en vivo y en una sola demostración.
-
-## Qué se construye y cómo se comprueba
+El equipo consultor registra una prueba integral en AWS Academy del 22-oct-2026. El código incorporado hasta el 25-oct-2026 amplía esa base con cincuenta camiones, asistente de tienda, cierre de viajes, OC diferida y separación de compras por temperatura. La presencia de estas funciones en el repositorio no se confunde con una nueva prueba de esa revisión en la nube.
 
 **Tabla 1**
-*Componentes del sistema, dónde corren en AWS y criterio de aceptación*
+*Componentes implementados y comprobación de aceptación*
 
-| Componente | Dónde corre | Criterio de aceptación |
+| Componente | Implementación | Comprobación |
 |---|---|---|
-| Red y seguridad | VPC `10.0.0.0/16`, cuatro subredes, Internet Gateway y tres Security Groups | RDS no responde desde internet; la EC2 web sí responde en el puerto 80 |
-| Base de datos | RDS PostgreSQL en la subred privada, con el esquema de las 25 tablas y datos de prueba | La aplicación y el nodo IoT se conectan; las consultas del tablero devuelven los montos esperados |
-| Aplicación web | EC2 web: Django con gunicorn y nginx, en Docker Compose con reinicio automático | Catálogo, carrito y orden funcionan para B2B y B2C; la orden queda en la base de datos |
-| CRM | La misma aplicación Django, con el panel de administración y las vistas del vendedor | Un prospecto avanza de etapa; una orden web aparece en la ficha del cliente |
-| Simulación IoT | EC2 dedicada: un contenedor Docker por camión, imagen para x86 | Cada contenedor inserta lecturas con los seis campos de la pauta, sin inserciones manuales |
-| Tablero de BI | Grafana en Docker, en la EC2 web, leyendo RDS en vivo | Ventas por canal y alertas de frío se actualizan solas cada pocos segundos |
-| Inteligencia artificial | Llamada desde la aplicación a la API gratuita de Gemini, con Groq de respaldo | Un requerimiento se clasifica; con la API apagada queda "sin clasificar" y el sistema sigue |
+| Red y persistencia | VPC con tres subredes, dos EC2 y RDS privada Single-AZ | Portal accesible; SQL solo desde grupos autorizados; estado RDS |
+| E-commerce | Precios por perfil, stock transaccional, carrito, órdenes por rango y OC diferida | Compra B2B/B2C, dirección propia, stock, división de órdenes y posterior OC |
+| CRM | Cartera, prospectos, interacciones, pedidos asistidos y requerimientos | Aislamiento por cartera, avance sin saltos, motivo de pérdida, creación de cliente y gestión de OC |
+| IoT | Cinco contenedores, diez camiones cada uno | Cincuenta camiones con lectura reciente y seis campos correctos |
+| BI | Grafana cada cinco segundos; usuario SQL de solo lectura | Cruce ventas-frío, filtros de camión y lecturas recientes |
+| IA | Clasificación y asistente separados, proveedores configurables | Respuesta válida, acceso solo a pedidos propios y continuidad ante proveedor caído |
+| Despacho | Camión activo y libre, compatibilidad térmica y cierre manual | Viaje creado; órdenes despachadas; llegada libera camión y entrega órdenes |
 
-*Nota.* Elaboración propia. Los criterios retoman los de las especificaciones de la sección 5 y la rúbrica del Hito 2 de la pauta (INACAP Sede Temuco, 2026).
+Nota. Elaboración propia. Se derivan los criterios de la pauta EVA2_3 y de las reglas implementadas, sin agregar exigencias de otra evaluación (INACAP Sede Temuco, 2026).
 
-## Secuencia de construcción
+## Procedimiento reproducible
 
-El orden sigue las dependencias técnicas. Primero se construye y prueba en los computadores del equipo con contenedores iguales a los de AWS, y luego se despliega.
+El entorno local se inicia con `docker-compose.yml`; AWS utiliza los compose separados de `aws/`. La EC2 web aplica las migraciones Django, carga datos ficticios de forma idempotente, prepara el usuario BI y arranca Gunicorn. La EC2 IoT inicia los cinco grupos de camiones. La instalación física se obtiene mediante migraciones y no ejecutando encima el SQL académico de referencia.
+
+`provision.sh encender` recupera las instancias del laboratorio. `recrear-web` y `recrear-iot` reemplazan solo el nodo correspondiente; el segundo conserva web, RDS e IP elástica y produce una interrupción breve de telemetría. El procedimiento `destruir` elimina datos sin snapshot final; no forma parte del ensayo ordinario de recuperación.
+
+## Evidencias de comprobación
 
 **Tabla 2**
-*Secuencia de construcción y despliegue en AWS*
+*Evidencias y límites de las verificaciones*
 
-| Paso | Qué se hace | Depende de | Cuándo | Responsable |
-|---|---|---|---|---|
-| 1 | Prueba temprana en el Learner Lab: red, una EC2 y una RDS con una página de prueba | Acceso al laboratorio | 14 al 18 de octubre | Sergio |
-| 2 | Esqueleto de Django con el modelo de datos, probado con PostgreSQL local en Docker | Esquema SQL del informe | 21 al 25 de octubre | Eric |
-| 3 | Simulador IoT en contenedores, probado en local contra PostgreSQL | Esquema SQL del informe | 27 de octubre al 1 de noviembre | Sergio |
-| 4 | Red, EC2 y RDS definitivas, con el esquema cargado | Paso 1 | 5 y 6 de noviembre | Sergio |
-| 5 | E-commerce y CRM desplegados y conectados a RDS | Pasos 2 y 4 | 5 al 9 de noviembre | Eric |
-| 6 | Nodo IoT desplegado en su EC2 dedicada | Pasos 3 y 4 | 6 al 9 de noviembre | Sergio |
-| 7 | Tablero de Grafana y conexión con la IA | Pasos 5 y 6 | 9 y 10 de noviembre | Sergio y Eric |
-| 8 | Pruebas integrales y ensayo del arranque completo | Todo lo anterior | 10 y 11 de noviembre | Ambos |
+| Evidencia | Fecha o alcance | Qué permite concluir |
+|---|---|---|
+| Registro de prueba integral AWS | 22-oct-2026 | Funcionamiento de la revisión instalada entonces; no certifica automáticamente cambios posteriores |
+| Clasificador con APIs reales | Registro histórico: veinte mensajes, veinte categorías correctas con respaldo | Resultado de esa muestra; no garantiza exactitud universal ni mide el chat |
+| Pruebas Django | Resultado de la ejecución local consignado en el registro técnico de esta revisión | Comportamiento de reglas y rutas bajo datos de prueba; IA externa simulada en las pruebas correspondientes |
+| Pruebas del simulador | Movimiento, paradas y velocidad compartida | Consistencia del movimiento sintético; no prueba sensores físicos |
+| Pruebas de recreación AWS | Doble de CLI sin recursos reales | Selección del nodo correcto y sintaxis del script; no prueba un despliegue en la cuenta |
+| Verificador de AWS | Script disponible, no ejecutado contra AWS en esta revisión | Procedimiento para revalidar compras, cincuenta camiones y consultas de Grafana |
 
-*Nota.* Elaboración propia a partir del cronograma de la sección 13. Los pasos 2 y 3 se hacen antes del Hito 1 para llegar al despliegue con el código probado.
+Nota. Elaboración propia. Los resultados completos se conservan en `docs/revision-hito1-2026-10-25.md`.
 
-## Cómo se mantiene funcional en el Learner Lab
+## Recorrido de defensa
 
-El laboratorio apaga las instancias al cerrar la sesión y cambia la IP pública al encenderlas, de modo que "funcional" exige que el sistema vuelva solo. Con esa condición se diseñó el despliegue:
+La demostración comienza con una compra institucional sin OC y un carrito con productos de dos rangos. Se muestran las órdenes resultantes, el stock y la OC pendiente en el CRM; luego se completa la referencia institucional. El vendedor registra una interacción y avanza un prospecto con las restricciones reales del embudo. El despachador selecciona camiones compatibles, crea el viaje y muestra el seguimiento con telemetría. Una ruptura del simulador o del modo de demostración se cruza con los pedidos afectados en CRM y Grafana. Finalmente se registra un requerimiento vinculado a una orden propia y se consulta al asistente, mostrando la continuidad del portal cuando la IA no está disponible. El cierre manual del viaje entrega las órdenes despachadas y libera el camión.
 
-- Los servicios arrancan con la instancia: Docker Compose con política de reinicio y una IP elástica asociada a la EC2 web.
-- La base de datos conserva los datos entre sesiones, y se toma un snapshot manual antes de cualquier borrado.
-- Existe un guion de arranque escrito, para levantar todo en menos de diez minutos antes de la defensa.
-- Las imágenes de Docker se construyen para x86 (`--platform linux/amd64`), porque los computadores del equipo tienen chip Apple y las EC2 del laboratorio no.
-- Antes de la defensa se ensaya apagar y volver a encender el laboratorio, para comprobar que nada requiere intervención manual.
-
-## Guion de la demostración
-
-La defensa recorre el sistema de extremo a extremo, en este orden:
-
-1. Un cliente institucional inicia sesión, ve su lista de precios y genera una orden.
-2. El vendedor ve la orden en su CRM y avanza un prospecto de etapa.
-3. El simulador envía lecturas de los camiones y una de ellas supera el rango de frío.
-4. El tablero muestra la alerta junto a las ventas por canal, y la ficha del cliente destaca el pedido afectado.
-5. Un cliente envía un reclamo y la IA lo clasifica; se repite con la API apagada para mostrar que el sistema sigue operando.
-6. Se muestra el diagrama de arquitectura y se explican las decisiones, apoyadas en la memoria y en las pruebas.
-
-## Notas del equipo
+El modo de demostración es una herramienta administrativa separada: inserta lecturas `forzada`, dura como máximo 180 s y permite retirar solo esas lecturas. Las mediciones ordinarias siguen siendo generadas por los contenedores. En la defensa se identifica qué origen produjo la alerta.

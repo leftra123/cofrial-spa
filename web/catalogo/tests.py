@@ -267,14 +267,10 @@ class PortadaYCategoriasTests(TestCase):
 
 
 class GuiaYMapaTests(TestCase):
-    def test_guia_publica_con_los_cuatro_flujos_y_el_estado(self):
-        call_command("cargar_demo", verbosity=0)
-        r = self.client.get("/guia/")
-        self.assertEqual(r.status_code, 200)
-        for texto in ("Un cliente compra y sigue su pedido", "Despacho arma un viaje", "Ventas atiende un reclamo", "Un producto sin stock",
-                      "esperando camión", "/flota/despachar/", "/crm/demanda/"):
-            self.assertContains(r, texto)
-        self.assertNotContains(r, "contraseña de prueba")                     # la guía no publica claves
+    def test_la_guia_de_flujos_no_se_publica(self):
+        """El recorrido de la demo es material del equipo (docs/guion-defensa.md), no una página del sitio."""
+        self.assertEqual(self.client.get("/guia/").status_code, 404)
+        self.assertNotContains(self.client.get("/catalogo/"), 'href="/guia/"')
 
     def test_el_mapa_dibuja_camion_destino_y_bodega(self):
         import re

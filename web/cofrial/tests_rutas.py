@@ -52,6 +52,8 @@ ESPERADO = {
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despachar/ubicar/999999/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 404 404'),
+    '/bi/': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),            # solo gerencia y admin; 502 porque en las pruebas no hay Grafana (ver test_bi)
+    '/bi/x': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),
     '/demo/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
     '/demo/pulso/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
     '/demo/apagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
@@ -100,6 +102,7 @@ def _rutas(resolver=None, prefijo=""):
 def _concreta(r):
     r = re.sub(r"<int:\w+>", "999999", r)
     r = re.sub(r"<str:\w+>", "NO-EXISTE", r)
+    r = re.sub(r"<path:\w+>", "x", r)
     return "/" + r.lstrip("^").replace("$", "")
 
 

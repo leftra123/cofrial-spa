@@ -4,7 +4,7 @@ from django.db import connection
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from . import vistas
+from . import bi, vistas
 from catalogo import views as catalogo_views
 from flota import demo as flota_demo
 
@@ -41,6 +41,8 @@ urlpatterns = [
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),
     path("flota/", include("flota.urls")),
+    path("bi/", bi.proxy, name="bi"),
+    path("bi/<path:ruta>", bi.proxy),
     path("demo/", flota_demo.pagina, name="demo"),
     path("demo/pulso/", flota_demo.pulso, name="demo_pulso"),
     path("demo/apagar/", flota_demo.apagar, name="demo_apagar"),

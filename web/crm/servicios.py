@@ -62,6 +62,50 @@ def puede_editar(usuario):
     return rol(usuario) in ("admin", "vendedor")
 
 
+# ---------------------------------------------------------------- solicitudes de cuenta de empresa (registro B2B)
+def solicitudes_empresa():
+    """Empresas que se registraron solas y esperan aprobación: cliente B2B sin vendedor y con la cuenta aún inactiva."""
+    return Cliente.objects.filter(tipo_cliente__codigo="B2B", vendedor__isnull=True, usuario__is_active=False)
+
+
+def _solicitud(usuario, cliente_id):
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol solo puede revisar las solicitudes; las aprueba un vendedor o el administrador.")
+    c = solicitudes_empresa().select_for_update(of=("self",)).filter(pk=cliente_id).first()
+    if c is None:
+        raise ErrorDeNegocio("Esa solicitud ya no está pendiente: otra persona la revisó.")
+    return c
+
+
+@transaction.atomic
+def aprobar_empresa(usuario, cliente_id, vendedor_id=None):
+    """Activa la cuenta de la empresa y la deja en una cartera: la del vendedor que aprueba, o la que elige el administrador."""
+    c = _solicitud(usuario, cliente_id)
+    if rol(usuario) == "vendedor":
+        vendedor = vendedor_de(usuario)
+    else:
+        vendedor = Vendedor.objects.filter(pk=entradas.entero(vendedor_id) if vendedor_id else None, activo=True).first()
+        if vendedor is None:
+            raise ErrorDeNegocio("Elige el vendedor que atenderá a esta empresa.")
+    c.vendedor = vendedor
+    c.save(update_fields=["vendedor"])
+    type(c.usuario).objects.filter(pk=c.usuario_id).update(is_active=True)
+    Interaccion.objects.create(vendedor=vendedor, cliente=c, tipo="nota",
+                               detalle=f"Cuenta de empresa aprobada por {usuario.get_username()}: ya puede comprar con la lista institucional.")
+    return c
+
+
+@transaction.atomic
+def rechazar_empresa(usuario, cliente_id):
+    """Borra la solicitud (cliente, dirección y cuenta): nunca compró, porque su cuenta no estaba activa."""
+    c = _solicitud(usuario, cliente_id)
+    cuenta = c.usuario
+    nombre = c.nombre
+    c.delete()
+    cuenta.delete()
+    return nombre
+
+
 # ---------------------------------------------------------------- RN-10 y RN-11: pipeline
 def transiciones_de(prospecto):
     """Etapas a las que puede pasar un prospecto: la siguiente del embudo o «Perdido» (Figura de pipeline)."""

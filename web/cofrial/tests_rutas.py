@@ -32,6 +32,9 @@ ESPERADO = {
     '/crm/prospectos/999999/mover/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/prospectos/999999/interaccion/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/clientes/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
+    '/crm/solicitudes/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
+    '/crm/solicitudes/999999/aprobar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/solicitudes/ →/crm/solicitudes/ 403 →/crm/solicitudes/'),
+    '/crm/solicitudes/999999/rechazar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/solicitudes/ →/crm/solicitudes/ 403 →/crm/solicitudes/'),
     '/crm/clientes/999999/': ('L 403 403 404 404 403 404', 'L 403 403 404 404 403 404'),
     '/crm/clientes/999999/interaccion/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/clientes/999999/pedido/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
@@ -77,6 +80,11 @@ ESPERADO = {
     '/pedidos/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 404 404 403 403 403 403'),
     '/cuenta/entrar/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
     '/cuenta/registro/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/cuenta/registro/empresa/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/cuenta/recuperar/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),          # con sesión también: no revela nada
+    '/cuenta/recuperar/enviado/': ('200 200 200 200 200 200 200', '405 405 405 405 405 405 405'),
+    '/cuenta/recuperar/NO-EXISTE/NO-EXISTE/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),   # «el enlace ya no sirve»
+    '/cuenta/recuperar/listo/': ('200 200 200 200 200 200 200', '405 405 405 405 405 405 405'),
     '/cuenta/clave/': ('L 200 200 200 200 200 200', 'L 200 200 200 200 200 200'),
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),

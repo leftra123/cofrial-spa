@@ -1,17 +1,19 @@
-"""Páginas generales de la tienda: portada, acceso con redirección según rol y registro de clientes particulares."""
+"""Páginas generales de la tienda: portada, acceso con redirección según rol, registro de clientes y recuperación de la clave."""
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
+from django import forms
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetView
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
 
 from catalogo.models import Categoria, Producto
-from clientes.forms import RegistroB2CForm
+from clientes.forms import RegistroB2CForm, RegistroEmpresaForm
 from .acceso import inicio_de
 from crm import servicios as crm
 from flota import servicios as flota
@@ -44,6 +46,17 @@ class FormularioEntrar(AuthenticationForm):
     error_messages = {**AuthenticationForm.error_messages,
                       "invalid_login": "El usuario o la clave no coinciden. Revisa que no tengas las mayúsculas activadas e inténtalo de nuevo."}
 
+    def clean(self):
+        """Con la clave correcta pero la cuenta inactiva (una empresa que espera aprobación) se explica eso, no «la clave no coincide»."""
+        try:
+            return super().clean()
+        except forms.ValidationError:
+            usuario = get_user_model().objects.filter(username__iexact=(self.cleaned_data.get("username") or "").strip()).first()
+            if usuario is not None and not usuario.is_active and usuario.check_password(self.cleaned_data.get("password") or ""):
+                raise forms.ValidationError("Tu cuenta aún no está activa. Si la pediste como empresa, el equipo de ventas la revisa y te "
+                                            "avisa al correo; mientras tanto puedes ver el catálogo sin ingresar.", code="inactive")
+            raise
+
 
 class Entrar(LoginView):
     template_name = "cuenta/entrar.html"
@@ -72,6 +85,33 @@ def registro(request):
             messages.warning(request, "No pudimos ubicar tu dirección en el mapa. Puedes comprar igual; revisaremos la dirección antes de despachar.")
         return redirect("catalogo")
     return render(request, "cuenta/registro.html", {"form": form})
+
+
+def registro_empresa(request):
+    """Una empresa pide su cuenta: queda pendiente hasta que ventas la aprueba en el CRM (crm/solicitudes)."""
+    if request.user.is_authenticated:
+        return redirect(inicio_de(request.user))
+    form = RegistroEmpresaForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        cliente = form.guardar()
+        return render(request, "cuenta/registro_empresa_enviado.html", {"cliente": cliente, "ubicada": form.ubicada})
+    return render(request, "cuenta/registro_empresa.html", {"form": form})
+
+
+class Recuperar(PasswordResetView):
+    """«¿Olvidaste tu clave?»: envía al correo de la cuenta un enlace de un solo uso que dura una hora (PASSWORD_RESET_TIMEOUT).
+    Responde lo mismo exista o no la cuenta, para no revelar qué correos están registrados. El enlace usa la dirección pública
+    (la primera de DJANGO_CSRF_ORIGINS) y no el Host del pedido, que alguien podría falsificar para que el enlace apunte a su sitio."""
+    template_name = "cuenta/recuperar.html"
+    email_template_name = "cuenta/recuperar_correo.txt"
+    subject_template_name = "cuenta/recuperar_asunto.txt"
+    success_url = "/cuenta/recuperar/enviado/"
+
+    def form_valid(self, form):
+        if settings.CSRF_TRUSTED_ORIGINS:
+            publica = urlsplit(settings.CSRF_TRUSTED_ORIGINS[0])
+            self.extra_email_context = {"domain": publica.netloc, "protocol": publica.scheme}
+        return super().form_valid(form)
 
 
 def guia(request):

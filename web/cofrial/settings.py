@@ -176,5 +176,22 @@ ACCESO_VENTANA_SEG = int(entorno("ACCESO_VENTANA_SEG") or 15 * 60)            # 
 ESCANEO_MAX_404 = int(entorno("ESCANEO_MAX_404") or 60)
 ESCANEO_VENTANA_SEG = int(entorno("ESCANEO_VENTANA_SEG") or 10 * 60)
 LIMITE_POST_POR_HORA = {"/cuenta/registro/": int(entorno("LIMITE_REGISTRO_HORA") or 10),     # envíos por IP: crean cuentas
+                        "/cuenta/registro/empresa/": int(entorno("LIMITE_REGISTRO_HORA") or 10),
+                        "/cuenta/recuperar/": int(entorno("LIMITE_RECUPERAR_HORA") or 10),  # mandan correos
                         "/soporte/": int(entorno("LIMITE_SOPORTE_HORA") or 20)}             # y gastan la cuota gratuita de la IA
+
+# ---- Correo, para recuperar la clave. Con EMAIL_HOST se envía por SMTP (p. ej. Gmail con clave de aplicación, ver
+# docs/credenciales-y-cuentas.md); sin él, el correo se escribe en el registro del contenedor (docker compose logs web), útil en local.
+EMAIL_HOST = entorno("EMAIL_HOST", "")
+EMAIL_HOST_USER = entorno("EMAIL_HOST_USER", "")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = int(entorno("EMAIL_PORT") or 587)
+    EMAIL_HOST_PASSWORD = entorno("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = entorno("EMAIL_USE_TLS", "1") == "1"
+    EMAIL_TIMEOUT = 10                             # un servidor de correo caído no deja colgada la página
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = entorno("EMAIL_REMITENTE") or (f"Cofrial SpA <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Cofrial SpA <no-responder@cofrial.cl>")
+PASSWORD_RESET_TIMEOUT = 60 * 60                   # el enlace para recuperar la clave dura una hora y sirve una sola vez
 CANTIDAD_MAXIMA_POR_LINEA = 10000      # unidades de un producto en una línea del carrito

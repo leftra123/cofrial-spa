@@ -1,0 +1,10 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Solicitud enviada | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth tarjeta-ui">
+  <h1>Solicitud enviada</h1>
+  <p>Recibimos la solicitud de <b>{{ cliente.nombre }}</b> ({{ cliente.rut }}). Un ejecutivo de ventas la revisará y activará la cuenta; podrá ingresar con <b>{{ cliente.email }}</b> y la clave que eligió.</p>
+  {% if not ubicada %}<p class="aviso warning">No pudimos ubicar la dirección en el mapa; ventas la revisará antes del primer despacho.</p>{% endif %}
+  <a class="btn" href="/catalogo/">Ver el catálogo mientras tanto</a>
+</div>
+{% endblock %}

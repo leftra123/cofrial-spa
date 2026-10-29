@@ -6,6 +6,7 @@
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
 
 Las claves se toman de DEMO_PASSWORD, ADMIN_PASSWORD y GRAFANA_VISOR_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
+Cada cuenta entra con su clave propia (web/clientes/cuentas_demo.py) y, si no, con la común de antes (despliegue anterior).
 Solo usa la biblioteca estándar de Python (sin instalar nada). Sale con código 0 si todo pasó y 1 si algo falló.
 """
 import base64
@@ -19,6 +20,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "clientes"))
+import cuentas_demo  # noqa: E402  (no usa Django)
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ESTADO = os.path.join(RAIZ, "aws", ".estado")
@@ -50,7 +54,8 @@ BASE = direccion()
 HOST = BASE.split("//", 1)[1].split("/")[0].split(":")[0]
 CLAVE = os.environ.get("DEMO_PASSWORD") or leer_estado("DEMO_PASSWORD")
 CLAVE_ADMIN = os.environ.get("ADMIN_PASSWORD") or leer_estado("ADMIN_PASSWORD") or CLAVE
-ADMINISTRADORES = ("admin@cofrial.cl", "eric@cofrial.cl")
+ADMINISTRADORES = cuentas_demo.ADMINISTRADORES
+MODO_CLAVE = ["propia"]
 
 
 class SinRedireccion(urllib.request.HTTPRedirectHandler):
@@ -83,9 +88,15 @@ class Sesion:
         return m.group(1) if m else ""
 
     def entrar(self, usuario):
-        t = self.token("/cuenta/entrar/")
-        st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": CLAVE_ADMIN if usuario in ADMINISTRADORES else CLAVE, "next": "/"})
-        return st == 200 and "/cuenta/salir/" in html          # el formulario de salida solo aparece con sesión iniciada
+        comun = CLAVE_ADMIN if usuario in ADMINISTRADORES else CLAVE
+        opciones = {"propia": cuentas_demo.clave_de(usuario, comun), "comun": comun}    # la común si el despliegue es anterior
+        for modo in sorted(opciones, key=lambda m: m != MODO_CLAVE[0]):            # primero la que ya funcionó: menos intentos fallidos
+            t = self.token("/cuenta/entrar/")
+            st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": opciones[modo], "next": "/"})
+            if st == 200 and "/cuenta/salir/" in html:        # el formulario de salida solo aparece con sesión iniciada
+                MODO_CLAVE[0] = modo
+                return True
+        return False
 
     def json(self, ruta):
         st, cuerpo, _ = self.pedir(ruta)

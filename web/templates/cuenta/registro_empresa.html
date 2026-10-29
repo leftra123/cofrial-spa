@@ -1,0 +1,14 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Cuenta de empresa | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth tarjeta-ui">
+  <h1>Pedir cuenta de empresa</h1>
+  <p class="muted">Para hospitales, hoteles, casinos y supermercados: lista de precios institucional y orden de compra. El equipo de ventas revisa la solicitud y activa la cuenta.</p>
+  {% include "componentes/resumen_errores.html" with titulo="Corrige estos datos para enviar la solicitud" %}
+  <form method="post" novalidate data-carga>{% csrf_token %}
+    {{ form.as_p }}
+    <button data-cargando="Enviando solicitud…">Enviar solicitud</button>
+  </form>
+  <p class="muted" style="margin-top:16px;text-align:center">¿Compra como persona? <a href="/cuenta/registro/">Cuenta de cliente particular</a> · ¿Ya tiene cuenta? <a href="/cuenta/entrar/">Ingresar</a></p>
+</div>
+{% endblock %}

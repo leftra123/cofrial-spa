@@ -1,0 +1,28 @@
+{% extends "crm/base.html" %}
+{% block titulo %}Solicitudes de empresas | Cofrial SpA{% endblock %}
+{% block crm %}
+<div class="pagina-cab"><div><h1>Solicitudes de empresas</h1>
+  <p class="sub">Empresas que pidieron su cuenta en la tienda. Al aprobarla queda activa, con la lista de precios institucional, y entra a una cartera; al rechazarla se borra.</p></div></div>
+{% if solicitudes %}
+<div class="tabla-caja"><table><thead><tr><th>Empresa</th><th>RUT</th><th>Contacto</th><th>Dirección</th><th>Pedida</th>{% if puede_editar %}<th>Decisión</th>{% endif %}</tr></thead><tbody>
+{% for c in solicitudes %}<tr>
+  <td><b>{{ c.nombre }}</b></td>
+  <td>{{ c.rut }}</td>
+  <td>{{ c.email }}{% if c.telefono %}<br><span class="muted">{{ c.telefono }}</span>{% endif %}</td>
+  <td>{% for d in c.direccion_set.all %}{{ d.calle_numero }}, {{ d.comuna.nombre }}{% endfor %}</td>
+  <td>{{ c.creado_en|date:"d-m-Y H:i" }}</td>
+  {% if puede_editar %}<td>
+    <form method="post" action="/crm/solicitudes/{{ c.cliente_id }}/aprobar/" style="display:inline-flex;gap:6px;align-items:center">{% csrf_token %}
+      {% if rol == "admin" %}<select name="vendedor" aria-label="Vendedor que atenderá a {{ c.nombre }}" required><option value="">Elegir vendedor</option>{% for v in vendedores %}<option value="{{ v.pk }}">{{ v.nombre }}</option>{% endfor %}</select>{% endif %}
+      <button data-cargando="Aprobando…">{% if rol == "vendedor" %}Aprobar y asignármela{% else %}Aprobar{% endif %}</button>
+    </form>
+    <form method="post" action="/crm/solicitudes/{{ c.cliente_id }}/rechazar/" style="display:inline">{% csrf_token %}
+      <button class="btn-peligro" data-confirmar="¿Rechazar y borrar la solicitud de {{ c.nombre }}?">Rechazar</button>
+    </form>
+  </td>{% endif %}
+</tr>{% endfor %}
+</tbody></table></div>
+{% else %}
+<div class="tarjeta-ui"><p>No hay solicitudes pendientes.</p><p class="muted">Una empresa la pide en <a href="/cuenta/registro/empresa/">/cuenta/registro/empresa/</a>; aparece aquí hasta que alguien la apruebe o la rechace.</p></div>
+{% endif %}
+{% endblock %}

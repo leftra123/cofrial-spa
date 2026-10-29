@@ -29,4 +29,8 @@ docker compose --env-file .env up -d --build
 ./scripts/logs-local.sh     # seguir web + flota en la terminal
 ```
 
+Con Docker Compose 5.5 (llegó con OrbStack 2.2.5 el 29-oct) `up --build` construye con *bake* y se detiene con «additional privileges requested: pass --allow=fs.read=…». Pasa con esta carpeta (probablemente por la «ó» de la ruta). Se construye igual con `BUILDX_BAKE_ENTITLEMENTS_FS=0 docker compose up -d --build`.
+
+Claves de las cuentas de prueba (una por cuenta): `python3 web/clientes/cuentas_demo.py --env .env --url http://localhost:8000` (ver `docs/cuentas-y-permisos.md`).
+
 La dirección AWS documentada por el equipo es http://54.82.100.161 y Grafana utiliza el puerto 3000; puede no responder con el laboratorio detenido. La dirección vigente se consulta con el procedimiento de estado. Estas direcciones no se verificaron por red en la revisión documental.

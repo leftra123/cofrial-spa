@@ -141,7 +141,7 @@ Los wireframes representan reglas y navegación, no una captura exacta del estil
 
 | Etapa | B2B | B2C | Control implementado |
 |---|---|---|---|
-| Acceso | Cuenta institucional y vendedor asignado | Registro público con RUT, correo, dirección y clave | Autenticación Django; el rol de la cuenta gobierna el acceso |
+| Acceso | Solicitud en el portal, aprobada por ventas, que asigna el vendedor | Registro público con RUT, correo, dirección y clave | Autenticación Django; el rol de la cuenta gobierna el acceso; recuperación de clave por correo con enlace de un solo uso |
 | Catálogo | Precios institucionales netos e IVA desglosado | Precios públicos con IVA incluido | Lista asociada al tipo de cliente; búsqueda y filtros |
 | Carrito | Recompra y número de OC opcional | Selección de productos y cantidades | Dirección propia, validación de stock y precios vigentes |
 | Confirmación | Si falta OC se genera WEB-año-número y queda pendiente | No aplica OC | Una transacción; una orden por rango de temperatura |

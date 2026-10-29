@@ -55,3 +55,10 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Pruebas de seguridad y caídas controladas (`cofrial/tests_seguridad.py`): entradas hostiles (ids no numéricos, bytes NUL, cantidades enormes y textos más largos que la columna) responden 400 o un aviso y no 500; si la base cae, 503 con reintento.
 - Límite de intentos (decisión del equipo): 10 claves malas bloquean esa cuenta 15 minutos y no hay límite por IP, porque en la defensa toda la sala sale por una sola IP pública. Un barrido de rutas inexistentes recibe 429 recién pasados 60 «no encontrado» en 10 minutos. Todo se ajusta por variables de entorno (`aws/.env.aws.example`).
 - Gerencia ve la flota y la pantalla de despacho, pero recibe 403 al armar un despacho o ubicar una dirección (Tabla 2 de `04d-crm.md`). Las cuentas del equipo reciben un 403 claro si intentan comprar, cancelar o abrir un reclamo como cliente.
+
+## 2026-10-29: cuentas para la defensa
+- Cada cuenta de prueba tiene su propia clave, derivada de `DEMO_PASSWORD` y del usuario (`web/clientes/cuentas_demo.py`); la hoja para el profesor se genera desde el `.env` y no se sube a git. Las cuentas que aún tenían la clave común pasan solas a la suya al arrancar; una clave cambiada por su dueño se respeta.
+- «¿Olvidaste tu clave?» envía un enlace de un solo uso que dura una hora, con la dirección pública y no la del encabezado `Host`, y responde igual exista o no el correo. Correo por SMTP (Gmail con clave de aplicación) o, sin configurar, al registro del contenedor.
+- Las empresas piden su cuenta en el portal y ventas la aprueba en la pestaña *Solicitudes* del CRM (`04d-crm.md`, Tabla 2).
+- Sesión «olvidada» al pulsar Inicio: en AWS corría una versión anterior al 25-oct, en la que «Inicio» del panel interno llevaba a la portada pública y parecía sin sesión. Ya estaba corregido en `main` (navegación por rol); falta volver a desplegar.
+

@@ -53,6 +53,11 @@ urlpatterns = [
     path("", include("pedidos.urls")),
     path("cuenta/entrar/", vistas.Entrar.as_view(), name="entrar"),
     path("cuenta/registro/", vistas.registro, name="registro"),
+    path("cuenta/recuperar/", vistas.Recuperar.as_view(), name="recuperar"),
+    path("cuenta/recuperar/enviado/", auth_views.PasswordResetDoneView.as_view(template_name="cuenta/recuperar_enviado.html"), name="recuperar_enviado"),
+    path("cuenta/recuperar/<str:uidb64>/<str:token>/", auth_views.PasswordResetConfirmView.as_view(
+        template_name="cuenta/recuperar_nueva.html", success_url="/cuenta/recuperar/listo/"), name="recuperar_nueva"),
+    path("cuenta/recuperar/listo/", auth_views.PasswordResetCompleteView.as_view(template_name="cuenta/recuperar_listo.html"), name="recuperar_listo"),
     path("cuenta/clave/", auth_views.PasswordChangeView.as_view(
         template_name="cuenta/clave.html", success_url="/cuenta/clave/hecho/"), name="cambiar_clave"),
     path("cuenta/clave/hecho/", auth_views.PasswordChangeDoneView.as_view(template_name="cuenta/clave_hecha.html"), name="clave_hecha"),

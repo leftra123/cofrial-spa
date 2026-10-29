@@ -178,7 +178,21 @@ ACCESO_VENTANA_SEG = int(entorno("ACCESO_VENTANA_SEG") or 15 * 60)            # 
 ESCANEO_MAX_404 = int(entorno("ESCANEO_MAX_404") or 60)
 ESCANEO_VENTANA_SEG = int(entorno("ESCANEO_VENTANA_SEG") or 10 * 60)
 LIMITE_POST_POR_HORA = {"/cuenta/registro/": int(entorno("LIMITE_REGISTRO_HORA") or 10),     # envíos por IP: crean cuentas
+                        "/cuenta/recuperar/": int(entorno("LIMITE_RECUPERAR_HORA") or 10),   # mandan correos
                         "/soporte/": int(entorno("LIMITE_SOPORTE_HORA") or 20)}             # y gastan la cuota gratuita de la IA
+# ---- Correo (recuperar la clave). Con EMAIL_HOST se envía por SMTP; si no, el backend de consola (ver logs del contenedor web).
+EMAIL_HOST = entorno("EMAIL_HOST", "")
+EMAIL_HOST_USER = entorno("EMAIL_HOST_USER", "")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = int(entorno("EMAIL_PORT") or 587)
+    EMAIL_HOST_PASSWORD = entorno("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = entorno("EMAIL_USE_TLS", "1") == "1"
+    EMAIL_TIMEOUT = 10
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = entorno("EMAIL_REMITENTE") or (f"Cofrial SpA <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Cofrial SpA <no-responder@cofrial.cl>")
+PASSWORD_RESET_TIMEOUT = 60 * 60                   # el enlace dura una hora y sirve una sola vez
 # Panel de BI: Grafana corre en la red interna de Docker y solo se alcanza por /bi/ (ver cofrial/bi.py), con sesión y rol de administración o gerencia.
 GRAFANA_INTERNA_URL = "http://127.0.0.1:1" if "test" in sys.argv else (entorno("GRAFANA_INTERNA_URL") or "http://grafana:3000")   # en pruebas no hay Grafana: 502 rápido
 GRAFANA_TIMEOUT_SEG = float(entorno("GRAFANA_TIMEOUT_SEG") or 30)

@@ -1,0 +1,14 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Recuperar mi clave | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth tarjeta-ui">
+  <h1>Recuperar mi clave</h1>
+  <p class="muted">Escriba el correo con el que ingresa. Le enviaremos un enlace para elegir una clave nueva; sirve una sola vez y dura una hora.</p>
+  {% include "componentes/resumen_errores.html" with titulo="Revisa el correo" %}
+  <form method="post" data-carga>{% csrf_token %}
+    {{ form.as_p }}
+    <button data-cargando="Enviando…">Enviar el enlace</button>
+  </form>
+  <p class="muted" style="margin-top:16px;text-align:center"><a href="/cuenta/entrar/">Volver a Ingresar</a></p>
+</div>
+{% endblock %}

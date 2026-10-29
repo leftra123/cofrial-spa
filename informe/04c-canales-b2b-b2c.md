@@ -155,7 +155,7 @@ El cliente no elige guías ni notas de crédito: son documentos que Cofrial emit
 
 ## Implementación actual de los recorridos
 
-Los wireframes representan reglas y navegación, no una captura exacta del estilo actual. El sitio implementado utiliza plantillas Django, CSS propio, fuente Schibsted Grotesk autoalojada y JavaScript progresivo. El catálogo se puede consultar sin sesión con lista pública; la sesión determina el perfil institucional y sus precios. Comprar y enviar requerimientos exige una cuenta de cliente. La selección visual de perfil no cambia por sí sola los permisos ni la lista asignada a la cuenta.
+Los wireframes representan reglas y navegación, no una captura exacta del estilo actual. El sitio implementado utiliza plantillas Django, CSS propio, fuente Schibsted Grotesk autoalojada y JavaScript progresivo. El catálogo se puede consultar sin sesión con lista pública; la sesión determina el perfil institucional y sus precios. Comprar y enviar requerimientos exige una cuenta de cliente. La selección visual de perfil no cambia por sí sola los permisos ni la lista asignada a la cuenta. Quien olvidó la clave puede solicitar un enlace de un solo uso al correo registrado (`/cuenta/recuperar/`); en el prototipo académico el mensaje se entrega por consola o SMTP según configuración, con reset administrativo como respaldo (documentación técnica en el repositorio: `docs/recuperacion-clave.md`).
 
 **Tabla 4**
 *Recorridos implementados y controles por etapa*

@@ -121,6 +121,15 @@
     {% if orden.despacho %}<div><dt>Camión</dt><dd>{{ orden.despacho.camion }}</dd></div>{% endif %}
   </dl>
 </div>
+{% if documentos %}
+<div class="seccion"><h2>Documentos y pago</h2></div>
+<div class="tabla-caja tabla-cards"><table>
+  <thead><tr><th>Documento</th><th>Emitido</th><th>Vence</th><th class="num">Monto</th><th>Estado</th></tr></thead>
+  <tbody>{% for d in documentos %}<tr><td data-label="Documento">{{ d }}{% if d.referencia %} <span class="frio">({{ d.motivo }})</span>{% endif %}</td><td data-label="Emitido">{{ d.emitido_en|date:"d/m/Y" }}</td><td data-label="Vence">{{ d.vence_en|date:"d/m/Y"|default:"–" }}</td><td class="num" data-label="Monto">{% if d.monto_clp %}{{ d.monto_clp|clp }}{% else %}–{% endif %}</td><td data-label="Estado">{% if d.estado_pago %}{% include "componentes/chip_pago.html" with estado=d.estado_pago %}{% else %}<span class="frio">{% if d.tipo == "guia_despacho" %}Acompaña la entrega{% else %}Rebaja de documento{% endif %}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% elif es_b2b and not orden.estado_orden.es_final %}
+<p class="frio">La guía de despacho sale con el camión y la factura se emite después de la entrega, con pago a {{ orden.direccion.cliente.tipo_cliente.dias_credito }} días.</p>
+{% endif %}
 <div class="seccion"><h2>Productos</h2></div>
 <div class="tabla-caja tabla-cards">
 <table>

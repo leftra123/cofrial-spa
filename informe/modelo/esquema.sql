@@ -62,7 +62,8 @@ CREATE TABLE tipo_cliente (
   tipo_cliente_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   codigo varchar(3) NOT NULL UNIQUE CHECK (codigo IN ('B2B','B2C')),
   nombre varchar(40) NOT NULL,
-  lista_precio_id integer NOT NULL REFERENCES lista_precio (lista_precio_id)
+  lista_precio_id integer NOT NULL REFERENCES lista_precio (lista_precio_id),
+  dias_credito smallint NOT NULL DEFAULT 0 CHECK (dias_credito >= 0)
 );
 
 -- Cuentas de acceso al portal, al CRM y al panel. Si el framework trae su propia autenticación, reemplaza esta tabla.
@@ -94,6 +95,7 @@ CREATE TABLE cliente (
   nombre varchar(120) NOT NULL,
   email varchar(120) NOT NULL,
   telefono varchar(20),
+  giro varchar(80),
   creado_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -159,6 +161,7 @@ CREATE TABLE orden (
   estado_orden_id integer NOT NULL REFERENCES estado_orden (estado_orden_id),
   despacho_id integer REFERENCES despacho (despacho_id),
   numero_oc varchar(30),
+  oc_pendiente boolean NOT NULL DEFAULT false,
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -169,6 +172,32 @@ CREATE TABLE orden_item (
   cantidad integer NOT NULL CHECK (cantidad > 0),
   precio_unitario_clp integer NOT NULL CHECK (precio_unitario_clp > 0),
   PRIMARY KEY (orden_id, producto_id)
+);
+
+-- Documentos tributarios simulados de una orden: boleta, factura, guía de despacho y nota de crédito. El monto es una foto de lo vendido, igual que el precio de la línea. Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre orden y tipo).
+CREATE TABLE documento (
+  documento_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  tipo varchar(14) NOT NULL CHECK (tipo IN ('boleta','factura','guia_despacho','nota_credito')),
+  folio integer NOT NULL,
+  orden_id integer NOT NULL REFERENCES orden (orden_id),
+  referencia_id integer REFERENCES documento (documento_id),
+  monto_clp integer,
+  vence_en date,
+  motivo varchar(200),
+  emitido_en timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tipo, folio),
+  CHECK (tipo <> 'nota_credito' OR (referencia_id IS NOT NULL AND motivo IS NOT NULL)),
+  CHECK (tipo = 'guia_despacho' OR monto_clp > 0)
+);
+
+-- Pagos recibidos contra una boleta o factura. El saldo de un documento es su monto menos los pagos y las notas de crédito. Un monto negativo es una devolución.
+CREATE TABLE pago (
+  pago_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  documento_id integer NOT NULL REFERENCES documento (documento_id),
+  monto_clp integer NOT NULL CHECK (monto_clp <> 0),
+  medio varchar(14) NOT NULL CHECK (medio IN ('webpay','transferencia','cheque','efectivo','devolucion')),
+  referencia varchar(60),
+  pagado_en timestamptz NOT NULL DEFAULT now()
 );
 
 -- Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige la pauta.

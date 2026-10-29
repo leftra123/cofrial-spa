@@ -16,7 +16,7 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Adoptada en la práctica (`aws/provision.sh`) |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Cubierta por `/flota/` y `/demo/`; sin mapa Leaflet dedicado |
 
-> El modelo de datos (25 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
+> El modelo de datos (27 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
 
 ## Por qué esta combinación
 - **Un solo lenguaje (Python)** para web, API, cálculos e IoT: lo que aprende uno le sirve al otro y el simulador comparte herramientas con la aplicación.
@@ -130,6 +130,13 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 
 ## Sobre FastAPI y otros stacks (25-oct-2026)
 El PDF de la evaluación no exige ningún framework, lenguaje ni API concreta; solo pide EC2, RDS, Docker, los seis campos de telemetría, BI en vivo e IA gratuita. FastAPI fue una opción mencionada en clase, no un requisito. Se mantiene Django + DRF (D-01) porque ya cubre toda la rúbrica del Hito 2 y reescribir el backend a una semana de la defensa no suma puntos. Si el docente confirma que FastAPI es obligatorio, habría que avisarlo antes del 04-nov.
+
+## Documentos tributarios y cobranza (24-oct-2026)
+- **Qué se agregó:** tablas `documento` (boleta, factura, guía de despacho y nota de crédito) y `pago`; `tipo_cliente.dias_credito` (B2B 30 días, B2C 0) y `cliente.giro`. Reglas RN-17 a RN-22 (`informe/04c-canales-b2b-b2c.md` y `04d-crm.md`).
+- **Qué elige el cliente:** nada. El canal decide el comprobante: B2C paga al comprar y recibe boleta; B2B recibe la guía al despacho y la factura después de la entrega, a 30 días. La guía y la nota de crédito las emite Cofrial.
+- **Por qué la factura no es automática al entregar:** así el CRM puede mostrar «entregado sin facturar», que es justo la pregunta de cobranza que motivó el cambio, y el vendedor puede agrupar o esperar la orden de compra si hace falta.
+- **Qué no se hizo:** conexión al SII (folios reales, firma electrónica), pasarela de pago real, factura única por varias guías, intereses por mora ni recordatorios de cobro. El saldo se calcula (monto menos pagos y notas de crédito) y no se guarda, para no tener un dato que pueda contradecir a los pagos.
+- **Datos de demostración:** `cargar_demo` agrega cuatro pedidos B2B históricos (pagado, por cobrar, vencido y entregado sin facturar). Dos pruebas anteriores que asumían un solo pedido del Hospital se ajustaron.
 
 ## Segunda revisión de CVEs y cadena de suministro (27-oct-2026)
 - **Estado de las dependencias en `main`:** Django 6.1.2, djangorestframework 3.18.3, gunicorn 26.2.0, psycopg 3.3.6, whitenoise 6.12.0 y docx 9.13.0 (subidas por Dependabot el 25-oct). `pip-audit` sin vulnerabilidades.

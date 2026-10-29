@@ -81,7 +81,8 @@ class ApiFlotaTests(TestCase):
         r = self.client.get("/api/pedidos/")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["cliente"], "Hospital Regional de Temuco")
-        self.assertEqual(len(r.json()["ordenes"]), 1)
+        self.assertEqual(len(r.json()["ordenes"]), 3)            # el pedido en ruta y dos entregados del historial de cobranza
+        self.assertIn("OC-2026-0457", {o["numero_oc"] for o in r.json()["ordenes"]})
         self.entrar("ana@correo.test")
         self.assertEqual(self.client.get("/api/pedidos/").json()["ordenes"], [])
 

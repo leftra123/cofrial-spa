@@ -16,6 +16,7 @@ El equipo consultor registra una prueba integral en AWS Academy del 22-oct-2026.
 | BI | Grafana cada cinco segundos; usuario SQL de solo lectura | Cruce ventas-frío, filtros de camión y lecturas recientes |
 | IA | Clasificación y asistente separados, proveedores configurables | Respuesta válida, acceso solo a pedidos propios y continuidad ante proveedor caído |
 | Despacho | Camión activo y libre, compatibilidad térmica y cierre manual | Viaje creado; órdenes despachadas; llegada libera camión y entrega órdenes |
+| Documentos y cobranza | Guía, boleta, factura a crédito, pagos y notas de crédito simulados (sin SII ni pasarela) | Boleta al comprar B2C, guía al despachar, factura tras la entrega B2B y cobranza en el CRM |
 
 Nota. Elaboración propia. Se derivan los criterios de la pauta EVA2_3 y de las reglas implementadas, sin agregar exigencias de otra evaluación (INACAP Sede Temuco, 2026).
 

@@ -34,6 +34,7 @@ class TipoCliente(models.Model):
     codigo = models.CharField(max_length=3, unique=True, choices=CODIGOS)
     nombre = models.CharField(max_length=40)
     lista_precio = models.ForeignKey(ListaPrecio, on_delete=models.PROTECT)
+    dias_credito = models.PositiveSmallIntegerField(default=0, db_default=0)       # plazo de pago de la factura; 0 = paga al comprar
 
     class Meta:
         db_table = "tipo_cliente"
@@ -67,6 +68,7 @@ class Cliente(models.Model):
     nombre = models.CharField(max_length=120)
     email = models.EmailField(max_length=120)
     telefono = models.CharField(max_length=20, blank=True)
+    giro = models.CharField(max_length=80, blank=True)           # actividad económica que exige la factura (B2B)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:

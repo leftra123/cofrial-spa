@@ -622,3 +622,8 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 .accesos { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
 .accesos a { padding: 9px 14px; min-height: 40px; display: inline-flex; align-items: center; border: 1px solid var(--borde-fuerte); border-radius: 999px; background: var(--tarjeta); color: var(--texto); font-weight: 600; font-size: .875rem; }
 .accesos a:hover { background: var(--fondo-2); text-decoration: none; }
+/* acciones sobre un documento (pago, nota de crédito): se despliegan dentro de la fila */
+.acc-doc { margin: 2px 0; }
+.acc-doc summary { cursor: pointer; color: var(--acento); font-size: .875rem; }
+.acc-doc form { margin-top: 6px; }
+.acc-doc input[type=number] { width: 7.5rem; }

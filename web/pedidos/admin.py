@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 
 from . import servicios
 
-from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
+from .models import Carrito, CarritoItem, Documento, EstadoOrden, Orden, OrdenItem, Pago
 
 
 class OrdenItemInline(admin.TabularInline):
@@ -46,3 +46,16 @@ class CarritoAdmin(admin.ModelAdmin):
 
 
 admin.site.register(EstadoOrden)
+
+
+@admin.register(Documento)
+class DocumentoAdmin(admin.ModelAdmin):
+    list_display = ("tipo", "folio", "orden", "monto_clp", "vence_en", "emitido_en")
+    list_filter = ("tipo",)
+    search_fields = ("folio", "orden__numero_oc")
+
+
+@admin.register(Pago)
+class PagoAdmin(admin.ModelAdmin):
+    list_display = ("pago_id", "documento", "monto_clp", "medio", "referencia", "pagado_en")
+    list_filter = ("medio",)

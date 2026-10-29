@@ -56,7 +56,7 @@
 
 ### 3. Cómputo: EC2 con Docker Compose
 
-**Decisión.** Una EC2 `t3.small` para la web y el backend (una aplicación Django servida con gunicorn detrás de nginx) y Grafana en un contenedor de la misma instancia, todo orquestado con Docker Compose y reinicio automático.
+**Decisión.** Una EC2 `t3.small` para la web y el backend (una aplicación Django servida con gunicorn directo en el puerto 80 y los archivos estáticos con WhiteNoise, sin nginx) y Grafana en un contenedor de la misma instancia, todo orquestado con Docker Compose y reinicio automático.
 
 **Alternativas.** Lambda no ofrece un backend persistente y obliga a rediseñar la aplicación en funciones. Elastic Beanstalk crea EC2 por debajo, pero oculta justamente la red y la seguridad que la rúbrica pide justificar, y en el Learner Lab hay que ajustar a mano el rol de servicio y el perfil de instancia para que funcione.
 

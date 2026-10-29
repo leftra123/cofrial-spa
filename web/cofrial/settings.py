@@ -177,4 +177,7 @@ ESCANEO_MAX_404 = int(entorno("ESCANEO_MAX_404") or 60)
 ESCANEO_VENTANA_SEG = int(entorno("ESCANEO_VENTANA_SEG") or 10 * 60)
 LIMITE_POST_POR_HORA = {"/cuenta/registro/": int(entorno("LIMITE_REGISTRO_HORA") or 10),     # envíos por IP: crean cuentas
                         "/soporte/": int(entorno("LIMITE_SOPORTE_HORA") or 20)}             # y gastan la cuota gratuita de la IA
+# Panel de BI: Grafana corre en la red interna de Docker y solo se alcanza por /bi/ (ver cofrial/bi.py), con sesión y rol de administración o gerencia.
+GRAFANA_INTERNA_URL = "http://127.0.0.1:1" if "test" in sys.argv else (entorno("GRAFANA_INTERNA_URL") or "http://grafana:3000")   # en pruebas no hay Grafana: 502 rápido
+GRAFANA_TIMEOUT_SEG = float(entorno("GRAFANA_TIMEOUT_SEG") or 30)
 CANTIDAD_MAXIMA_POR_LINEA = 10000      # unidades de un producto en una línea del carrito

@@ -13,7 +13,6 @@ import http.cookiejar
 import json
 import os
 import re
-import socket
 import sys
 import time
 import urllib.error
@@ -215,12 +214,12 @@ def main():
     for clave, quien in (("vendedora", "vendedora"), ("despachador", "despachador"), ("hospital", "cliente B2B")):
         if sesiones[clave]:
             chk(sesiones[clave].pedir("/bi/")[0] == 403, f"/bi/ responde 403 al {quien}", "debería negarse a este rol")
-    try:
-        abierto = socket.create_connection((HOST, 3000), timeout=5)
-        abierto.close()
-        chk(False, "El puerto 3000 de Grafana no está abierto a internet", "responde: cerrar la regla del Security Group sg-web")
-    except OSError:
-        marca("ok", "El puerto 3000 de Grafana no está abierto a internet")
+    try:                                                # no basta abrir el socket: algunas redes aceptan cualquier conexión TCP; se pide la salud de Grafana
+        r = urllib.request.urlopen(f"http://{HOST}:3000/api/health", timeout=6)
+        respondio = r.status == 200 and b"database" in r.read(2000)
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError):
+        respondio = False
+    chk(not respondio, "El puerto 3000 de Grafana no está abierto a internet", "Grafana responde: cerrar la regla del Security Group sg-web")
     for clave, quien in (("gerente", "gerencia"), ("admin", "administrador")):
         if not sesiones[clave]:
             continue

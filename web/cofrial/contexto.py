@@ -4,14 +4,14 @@ from django.conf import settings
 from catalogo import avisos
 from .acceso import ETIQUETAS, INICIOS, tipo_de
 from crm import servicios as crm
+from . import bi
 from pedidos import servicios as pedidos
 from pedidos.models import CarritoItem
 
 
-def _grafana(request):
-    """El tablero de Grafana corre en el mismo servidor (puerto 3000); GRAFANA_URL permite apuntarlo a otro lado."""
-    import os
-    return os.environ.get("GRAFANA_URL") or f"{request.scheme}://{request.get_host().split(':')[0]}:3000/"
+def _grafana(rol):
+    """El tablero de Grafana ya no se publica: se abre por /bi/ y solo lo ven los roles que cofrial.bi deja pasar."""
+    return "/bi/" if rol in bi.ROLES_BI else ""
 
 
 def menu(request):
@@ -32,4 +32,4 @@ def menu(request):
             "inicio_url": INICIOS[tipo], "tipo_cuenta": tipo, "etiqueta_cuenta": ETIQUETAS.get(tipo, ""),
             "carrito_n": n, "cliente_tienda": cliente,
             "avisos_n": avisos.cuantos_disponibles(cliente) if cliente is not None else 0,
-            "grafana_url": _grafana(request) if rol is not None or u.is_staff else "", **tiles}
+            "grafana_url": _grafana(rol), **tiles}

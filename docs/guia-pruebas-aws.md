@@ -18,7 +18,7 @@ Todos usan **la misma clave de demostración**. No está en el repositorio: est�
 
 | Usuario | Rol | Sirve para probar |
 |---|---|---|
-| `abastecimiento@hospital.test` | Cliente institucional (B2B), Hospital Regional de Temuco | Lista de precios institucional, orden de compra obligatoria, pedidos |
+| `abastecimiento@hospital.test` | Cliente institucional (B2B), Hospital Regional de Temuco | Lista de precios institucional, orden de compra (si falta, «OC pendiente»), pedidos |
 | `ana@correo.test` | Cliente público (B2C), Ana Pérez | Precio público, Soporte con IA |
 | `vendedora@cofrial.cl` | Vendedora (cartera: Hospital) | CRM, embudo, ficha de cliente; no ve la cartera ajena |
 | `vendedor2@cofrial.cl` | Vendedor (cartera: Supermercados del Sur) | Permisos entre vendedores |
@@ -48,7 +48,7 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 4. Entrar como `ana@correo.test` (B2C). Anotar el precio de un producto del catálogo.
 5. Agregar el producto al carrito, cambiar la cantidad a 2 y generar la orden. Debe aparecer "Orden N recibida" y su detalle con la línea de tiempo del envío.
 6. Entrar como `abastecimiento@hospital.test` (B2B). **El mismo producto debe tener otro precio** (lista institucional).
-7. Generar una orden: **debe exigir el número de orden de compra**. Probar enviarlo vacío (debe rechazar) y luego con uno cualquiera.
+7. Generar una orden **sin** número de orden de compra: se crea igual, con la referencia WEB-año-número y el aviso «OC pendiente» (RN-05); en el detalle de la orden se agrega la OC después. Repetir con un número cualquiera: esa orden no queda pendiente.
 8. En "Mis pedidos" deben aparecer las órdenes del cliente con sus estados y las pestañas con contador. Cancelar una orden recién creada y comprobar que el stock se repone (el catálogo vuelve a mostrarlo).
 
 **C. CRM (9 a 13)** *(D2)*

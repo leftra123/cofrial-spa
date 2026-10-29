@@ -1,0 +1,19 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}{% if validlink %}Elegir clave nueva{% else %}Enlace vencido{% endif %} | Cofrial SpA{% endblock %}
+{% block contenido %}
+<div class="auth tarjeta-ui">
+{% if validlink %}
+  <h1>Elegir clave nueva</h1>
+  <p class="muted">Escríbala dos veces. Al menos 8 caracteres y que no sea una clave común.</p>
+  {% include "componentes/resumen_errores.html" with titulo="Revisa la clave" %}
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button>Guardar la clave nueva</button>
+  </form>
+{% else %}
+  <h1>El enlace ya no sirve</h1>
+  <p>Los enlaces para recuperar la clave sirven una sola vez y duran una hora. Pida uno nuevo.</p>
+  <a class="btn" href="/cuenta/recuperar/">Pedir otro enlace</a>
+{% endif %}
+</div>
+{% endblock %}

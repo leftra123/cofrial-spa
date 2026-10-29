@@ -159,3 +159,9 @@ El PDF de la evaluación no exige ningún framework, lenguaje ni API concreta; s
 - **Control:** `REGISTRO_PRECARGA=0` oculta el botón y no carga el script; por defecto está activo mientras el sitio sea un prototipo.
 - **Límite:** las cuentas creadas siguen contando en el tope de registros por IP y hora.
 
+## Recuperación de clave por enlace al correo (29-oct-2026)
+- **Problema:** desde el login solo existían «Cambiar mi clave» (con sesión) y reset manual en `/admin/`; faltaba «olvidé mi clave». Muchos correos del prototipo (`@correo.test`) no tienen buzón real.
+- **Decisión:** flujo estándar de Django (`PasswordResetView`): el usuario indica su correo, recibe un enlace de un solo uso (1 h) y elige clave nueva con los mismos validadores que el registro. Enlace «¿Olvidaste tu clave?» en `/cuenta/entrar/`. Sin `EMAIL_HOST`, el mensaje va al backend **consola** (logs del contenedor); con SMTP, envío real. El enlace usa el primer valor de `DJANGO_CSRF_ORIGINS` si está definido, no el `Host` del pedido.
+- **Seguridad:** misma respuesta exista o no la cuenta; límite `LIMITE_RECUPERAR_HORA`; solo cuentas activas.
+- **Descartada por ahora:** cola en CRM con aprobación del admin antes de permitir cambio (mejor demo sin SMTP, más código); ver alternativa en `docs/recuperacion-clave.md`.
+- **Pruebas:** `manage.py test cofrial.tests_cuentas`. Detalle operativo: `docs/recuperacion-clave.md`.

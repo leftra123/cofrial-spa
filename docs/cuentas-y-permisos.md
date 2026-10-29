@@ -6,6 +6,7 @@ Este documento no contiene claves. Las claves viven solo en `aws/.estado/secreto
 
 - Cada clave se fija **solo al crear la cuenta** (`cargar_demo`): las cuentas `admin@` y `eric@` usan `ADMIN_PASSWORD` y el resto `DEMO_PASSWORD`. Reiniciar el contenedor no las cambia.
 - Cada persona cambia la suya en **Cambiar mi clave** (`/cuenta/clave/`, enlace en el menú de usuario).
+- Quien olvidó la clave puede pedir un enlace en **¿Olvidaste tu clave?** (`/cuenta/recuperar/` desde la pantalla de ingreso). Detalle del flujo, seguridad y demo vs producción: **`docs/recuperacion-clave.md`**.
 - El administrador crea, desactiva o cambia claves de cualquier cuenta en `/admin/` (Usuarios).
 - `python manage.py cambiar_clave_demo` es un comando manual para dejar todas las cuentas de demostración con una clave nueva.
 

@@ -1,11 +1,12 @@
-"""Páginas generales de la tienda: portada, acceso con redirección según rol y registro de clientes particulares."""
+"""Páginas generales de la tienda: portada, acceso con redirección según rol, registro de clientes y recuperación de la clave."""
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetView
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
@@ -71,6 +72,22 @@ def registro(request):
             messages.warning(request, "No pudimos ubicar tu dirección en el mapa. Puedes comprar igual; revisaremos la dirección antes de despachar.")
         return redirect("catalogo")
     return render(request, "cuenta/registro.html", {"form": form, "precarga": settings.REGISTRO_PRECARGA})
+
+
+class Recuperar(PasswordResetView):
+    """«¿Olvidaste tu clave?»: envía al correo de la cuenta un enlace de un solo uso que dura una hora (PASSWORD_RESET_TIMEOUT).
+    Responde lo mismo exista o no la cuenta, para no revelar qué correos están registrados. El enlace usa la dirección pública
+    (la primera de DJANGO_CSRF_ORIGINS) y no el Host del pedido, que alguien podría falsificar para que el enlace apunte a su sitio."""
+    template_name = "cuenta/recuperar.html"
+    email_template_name = "cuenta/recuperar_correo.txt"
+    subject_template_name = "cuenta/recuperar_asunto.txt"
+    success_url = "/cuenta/recuperar/enviado/"
+
+    def form_valid(self, form):
+        if settings.CSRF_TRUSTED_ORIGINS:
+            publica = urlsplit(settings.CSRF_TRUSTED_ORIGINS[0])
+            self.extra_email_context = {"domain": publica.netloc, "protocol": publica.scheme}
+        return super().form_valid(form)
 
 
 def csrf_fallo(request, reason=""):

@@ -142,3 +142,10 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 - **Condición de seguridad:** Grafana confía en esa cabecera, por eso su puerto no se publica nunca (ni compose ni Security Group). `provision.sh` cierra la regla 3000 en instalaciones previas.
 - **Costo:** sin websockets (Grafana Live apagado; el tablero actualiza por consultas cada 5 s) y el proxy ocupa un hilo de Gunicorn por consulta del tablero (13 cada 5 s por pantalla abierta), por eso Gunicorn pasó a 2 procesos × 8 hilos en ambos compose.
 - **Descartadas:** BI propio con gráficos en Django (rehacer tablero y mapa) y solo cerrar el puerto (no resuelve los roles).
+
+## Registro con datos de ejemplo precargados (29-oct-2026)
+- **Problema:** crear una cuenta de cliente particular exige ocho campos (nombre, RUT válido, correo, teléfono, dirección, comuna y clave dos veces), y mostrarlo en una demostración es lento.
+- **Decisión:** el registro (`/cuenta/registro/`) tiene el botón «Precargar datos de ejemplo» (`static/js/precarga.js`). Rellena el formulario con una persona ficticia: RUT con dígito verificador válido y único en cada clic, correo `@correo.test` (dominio reservado) y clave de ejemplo, que se muestra junto al botón. El formulario no se envía solo: quien presenta revisa y pulsa «Crear cuenta». Vuelve a pulsar para otra persona.
+- **Control:** `REGISTRO_PRECARGA=0` oculta el botón y no carga el script; por defecto está activo mientras el sitio sea un prototipo.
+- **Límite:** las cuentas creadas siguen contando en el tope de registros por IP y hora.
+

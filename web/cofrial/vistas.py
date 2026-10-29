@@ -71,7 +71,7 @@ def registro(request):
         if not form.ubicada:
             messages.warning(request, "No pudimos ubicar tu dirección en el mapa. Puedes comprar igual; revisaremos la dirección antes de despachar.")
         return redirect("catalogo")
-    return render(request, "cuenta/registro.html", {"form": form})
+    return render(request, "cuenta/registro.html", {"form": form, "precarga": settings.REGISTRO_PRECARGA})
 
 
 def guia(request):

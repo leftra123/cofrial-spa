@@ -703,3 +703,4 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
   .tb-cuenta .enlace, .t-pie nav a { min-height: 44px; display: inline-flex; align-items: center; }
 }
 .portada-hero h1 { max-width: 17ch; }
+.precarga { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; }

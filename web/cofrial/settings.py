@@ -125,6 +125,8 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Asistente de IA de la tienda (ASISTENTE_ACTIVO=0 lo apaga sin tocar el resto).
 ASISTENTE_ACTIVO = os.environ.get("ASISTENTE_ACTIVO", "1") == "1"
+# Botón «Precargar datos de ejemplo» en el registro (persona ficticia para mostrar el formulario sin escribirlo). REGISTRO_PRECARGA=0 lo oculta.
+REGISTRO_PRECARGA = os.environ.get("REGISTRO_PRECARGA", "1") == "1"
 
 # Mosaicos del mapa. Por defecto, OpenStreetMap (uso liviano, con Referer y atribución). Para otro proveedor, definir las variables
 # MAP_TILE_URL y MAP_TILE_ATTRIBUTION (y MAP_TILE_SUBDOMAINS / MAP_TILE_MAX_ZOOM si hace falta); las claves del proveedor, si las pide, van en la propia URL.

@@ -21,6 +21,41 @@
 | 5 | IoT y dashboard (3 min) | `/flota/` con "En vivo · cada 5 s"; `/api/flota/`; Grafana en `/bi/` con ventas por canal y alertas; hacer una compra y ver el gráfico cambiar en 5 a 10 s | Contenedores Docker en la EC2 dedicada insertan `camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct` y `alerta_ruptura_frio` directo en RDS; el tablero cruza ventas con cadena de frío | D3, D4 |
 | 6 | IA gratuita en vivo (2 min) | En el CRM, clasificar el requerimiento de ejemplo con el botón de IA | Gemini en free tier con respaldo Groq; guarda la confianza, umbral 0,60 y tope de 5 s; si falla, queda "sin clasificar" y no se pierde (RN-14). Medido: 20 de 20 con respaldo | D5 |
 
+## Recorrido por los cuatro flujos
+
+> Antes era la página pública `/guia/`; se sacó del sitio el 29-oct-2026 porque es conocimiento del equipo, no algo para cualquier visitante. Sirve para ensayar y para responder "muéstreme cómo funciona" sin improvisar.
+
+**1. Un cliente compra y sigue su pedido** (cliente institucional o particular)
+1. Ingresa con su cuenta; un particular nuevo puede crearla en `/cuenta/registro/`.
+2. En `/catalogo/` filtra o busca y pulsa **Agregar**: el precio cambia según el perfil.
+3. En `/carrito/` elige la dirección (la institución indica su orden de compra) y pulsa **Generar orden**.
+4. El pedido queda **Recibida**; pasa al flujo 2 para que salga en un camión.
+5. En `/seguimiento/` ve el camión en el mapa, la ruta que falta y la temperatura de la cámara; si algo sale mal, **Reportar un problema**.
+
+**2. Despacho arma un viaje con la mejor ruta** (despacho, gerencia o admin)
+1. Abre `/flota/`: camiones, temperatura y mapa.
+2. **Armar despacho** (`/flota/despachar/`): aparecen los pedidos sin camión y los camiones libres.
+3. Elige el camión y marca dos o más pedidos: el mapa traza la ruta más corta y numera el orden de entrega.
+4. **Despachar y salir ahora**: los pedidos pasan a **Despachada** y la ruta por calles queda guardada (la misma que ven el camión y el cliente).
+5. En la flota se ve cada camión: en base, en ruta, en la puerta del cliente o volviendo. El cliente ve su camión solo mientras va en camino.
+6. Al llegar, el pedido pasa solo a **Camión en la puerta**; el cliente confirma **Recibí mi pedido** o explica por qué no pudo (queda **Entrega no concretada** y llega a ventas). Si no responde, se confirma sola.
+- Regla de cadena de frío: no se mezclan refrigerado y congelado en un mismo camión.
+
+**3. Ventas atiende un reclamo con IA** (vendedor, gerencia o admin)
+1. Un cliente escribe en `/soporte/` o desde un pedido con «Reportar un problema».
+2. `/crm/requerimientos/` muestra quién la clasificó: la IA, una persona o nadie.
+3. En uno sin clasificar, **Clasificar con IA**: categoría y confianza en segundos.
+4. `/crm/ia/` prueba un mensaje en vivo y muestra lo que recibe cada proveedor (Gemini y Groq).
+5. `/crm/embudo/` sigue a los prospectos y `/crm/demanda/` muestra qué productos esperan los clientes.
+
+**4. Un producto sin stock y el aviso al cliente** (cliente y vendedor)
+1. El cliente abre un producto sin stock (por ejemplo, los camarones) en `/catalogo/`.
+2. Escribe cuántas unidades necesita y pulsa **Avisarme**.
+3. El equipo ve esa demanda en `/crm/demanda/` y repone el stock.
+4. Con stock suficiente, el cliente ve un contador en `/avisos/` y compra desde ahí.
+
+**Tablero BI:** Grafana en `/bi/` cruza ventas por canal con alertas de ruptura de frío y se refresca solo; lo ven admin (edita) y gerencia (solo mira), el resto recibe acceso denegado.
+
 ## Preguntas probables
 
 - **¿Por qué Django y no FastAPI, React o Node?** La pauta deja libre el stack y evalúa negocio, conexión a la base y estabilidad. Django entrega ORM con migraciones, autenticación, permisos por grupo y un admin que sirve de CRM base, con un solo lenguaje (Python) también para el simulador. La API JSON se expuso con Django REST Framework sin cambiar el modelo (`docs/decisiones.md`, D-01).

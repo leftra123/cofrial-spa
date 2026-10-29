@@ -80,7 +80,7 @@ class AccesoAnonimoTests(BaseSeguridad):
 
     def test_cada_ruta_del_proyecto_esta_cubierta_o_es_publica(self):
         """Si alguien agrega una ruta nueva, esta prueba obliga a decidir si es pública o privada."""
-        publicas = {"", "portada/", "guia/", "catalogo/", "catalogo/<int:producto_id>/", "cuenta/entrar/", "cuenta/registro/", "cuenta/salir/", "salud/",
+        publicas = {"", "portada/", "catalogo/", "catalogo/<int:producto_id>/", "cuenta/entrar/", "cuenta/registro/", "cuenta/salir/", "salud/",
                     "salud/bd/", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/"}
         cubiertas = {u.strip("/") for u in self.PRIVADAS_GET + self.PRIVADAS_POST}
         pendientes = []
@@ -507,7 +507,7 @@ class BarridoDeRutasTests(BaseSeguridad):
         c = self.anonimo()
         for i in range(30):
             self.assertEqual(c.get(f"/no-existe-{i}/").status_code, 404)
-        for url in ("/", "/catalogo/", "/guia/", "/cuenta/entrar/"):
+        for url in ("/", "/catalogo/", "/cuenta/entrar/"):
             self.assertEqual(c.get(url).status_code, 200, url)
 
 
@@ -604,7 +604,6 @@ class CaidasControladasTests(BaseSeguridad):
     def test_sin_lecturas_de_telemetria_las_pantallas_no_caen(self):
         Telemetria.objects.all().delete()
         self.assertEqual(self.anonimo().get("/").status_code, 200)
-        self.assertEqual(self.anonimo().get("/guia/").status_code, 200)
         d = self.entrar("despacho@cofrial.cl")
         self.assertEqual(d.get("/flota/").status_code, 200)
         self.assertEqual(d.get("/api/flota/").status_code, 200)

@@ -22,7 +22,6 @@ INICIO = {"B2B": "/catalogo/", "B2C": "/catalogo/", "vendedor": "/crm/", "gerenc
 ESPERADO = {
     '/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
     '/portada/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
-    '/guia/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/999999/': ('404 404 404 404 404 404 404', '404 404 404 404 404 404 404'),
     '/crm/': ('L 403 403 200 200 →/crm/alertas/ 200', 'L 403 403 200 200 →/crm/alertas/ 200'),
@@ -182,7 +181,7 @@ class InicioPorRol(Base):
 
     def test_el_logo_lleva_al_inicio_de_la_cuenta(self):
         for rol, destino in INICIO.items():
-            for url in ("/catalogo/", "/guia/", "/cuenta/clave/", "/crm/alertas/" if rol in ("vendedor", "gerencia", "despachador", "admin") else "/pedidos/"):
+            for url in ("/catalogo/", "/cuenta/clave/", "/crm/alertas/" if rol in ("vendedor", "gerencia", "despachador", "admin") else "/pedidos/"):
                 html = self.cliente(rol).get(url).content.decode()
                 self.assertIn(f'href="{destino}"', html, f"{rol} {url}")
                 self.assertNotRegex(html, r'class="(tb-marca|marca)" href="/"', f"{rol} {url}")

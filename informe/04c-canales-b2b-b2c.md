@@ -15,7 +15,7 @@ El portal atiende a dos perfiles con la misma plataforma y la misma base de dato
 | Número de orden de compra | Se solicita; si falta, la orden queda «OC pendiente» | No aplica | RN-05 |
 | Vendedor asignado | Sí; ve sus pedidos en el CRM | No | RN-09 |
 | Compra recurrente | «Repetir mi último pedido» | Recompra desde el historial | RN-08 |
-| Pago | Sin emisión tributaria integrada | Sin pasarela ni cobro electrónico | Fuera de alcance |
+| Pago | Factura a crédito después de la entrega (simulada) | Pago inmediato con boleta (simulado) | RN-18, RN-19 |
 | Registro | Alta institucional gestionada por el personal autorizado | Registro previo B2C con RUT, correo, dirección y clave | |
 
 *Nota.* Elaboración propia. La forma de solicitar la orden de compra (con la opción de dejarla pendiente) y la forma de pago son supuestos a validar con Cofrial.
@@ -103,6 +103,22 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 
 *Nota.* Elaboración propia.
 
+## Documentos tributarios y pago
+
+El cliente no elige guías ni notas de crédito: son documentos que Cofrial emite según lo que ocurre con el pedido. Lo único que cambia entre canales es el comprobante de venta y el momento del pago. Todo se simula (sin conexión al SII ni a una pasarela real): se guardan tipo, folio, monto, fechas y pagos.
+
+**Tabla 2b**
+*Documentos por canal, momento de emisión y pago*
+
+| Documento | Quién lo recibe | Cuándo se emite | Cuándo se paga |
+|---|---|---|---|
+| Boleta | Cliente B2C | Al comprar (RN-18) | Al comprar, con Webpay simulado |
+| Guía de despacho | Ambos canales | Al despachar (RN-17) | No se paga: ampara el traslado |
+| Factura | Cliente B2B (con RUT, razón social y giro) | Después de la entrega (RN-19) | A crédito, 30 días desde la factura |
+| Nota de crédito | Quien tenga un reclamo o una cancelación | Cuando el vendedor la emite (RN-21) | Rebaja la deuda o se devuelve lo pagado |
+
+*Nota.* Elaboración propia. Los plazos de pago y el momento de emisión de la factura son supuestos a validar con Cofrial; en la práctica algunas empresas facturan varias guías juntas a fin de mes. El CRM muestra qué se entregó y aún no se facturó, y qué facturas están por cobrar o vencidas (RN-22 de `04d-crm.md`).
+
 ## Ciclo de vida de una orden
 
 **Figura 9**
@@ -127,8 +143,13 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 | RN-06 | **Precio congelado.** Cada línea de la orden guarda el precio vigente al comprar; cambios posteriores de la lista no la alteran. | W5 |
 | RN-07 | **Estados y cancelación.** La orden avanza según la Figura 9. Se puede cancelar antes de «Despachada»; el cliente solo mientras esté «Recibida», y el vendedor hasta «En preparación». Cancelar repone el stock. | W5, W6 |
 | RN-08 | **Compra recurrente.** «Repetir mi último pedido» copia al carrito las líneas de la última orden no cancelada; las cantidades se ajustan al stock disponible y se avisa de cada ajuste. | W2 |
+| RN-17 | **Guía de despacho.** Cuando una orden pasa a «Despachada» se emite su guía de despacho, que ampara el traslado de la mercadería. No cobra nada y es única por orden. | W5 |
+| RN-18 | **El público paga al comprar.** Al generar una orden B2C se registra el pago (Webpay simulado) y se emite la boleta, con IVA incluido, ya pagada. | W4, W5 |
+| RN-19 | **Factura B2B.** Los clientes institucionales no pagan al comprar. La factura se emite una sola vez, cuando la orden ya fue entregada, con el IVA sumado al neto y el vencimiento según el crédito del tipo de cliente (30 días). | W5 |
+| RN-20 | **Pagos.** Un pago se registra contra una boleta o factura y no puede superar su saldo pendiente. El saldo se calcula (monto menos pagos y notas de crédito); no se guarda. | CRM |
+| RN-21 | **Nota de crédito.** Rebaja un documento por un reclamo, una ruptura de frío o una cancelación. Exige motivo y no puede superar lo que aún no se ha rebajado. Si el cliente ya había pagado, el excedente se le devuelve en el mismo acto. Cancelar una orden con boleta emitida la anula completa. | CRM, W5 |
 
-*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15) y la separación térmica del portal (RN-16) están en `04d-crm.md`.
+*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15 y RN-22) y la separación térmica del portal (RN-16) están en `04d-crm.md`.
 
 
 
@@ -147,6 +168,7 @@ Los wireframes representan reglas y navegación, no una captura exacta del estil
 | Confirmación | Si falta OC se genera WEB-año-número y queda pendiente | No aplica OC | Una transacción; una orden por rango de temperatura |
 | Seguimiento | Órdenes propias, referencia institucional y OC pendiente | Órdenes propias y estado de entrega | Mapa, última lectura, ETA aproximada y aviso de señal antigua |
 | Atención | Requerimiento asociado opcionalmente a una orden propia | Mismo canal de soporte | Persistencia previa a IA, bandeja CRM y resolución manual |
+| Pago y documentos | Guía al despachar; factura a 30 días tras la entrega | Pago simulado al comprar y boleta | Documentos en el detalle del pedido y cobranza en el CRM (RN-17 a RN-22) |
 
 Nota. Elaboración propia. Las emociones de los journeys son hipótesis de diseño; no corresponden a entrevistas realizadas.
 

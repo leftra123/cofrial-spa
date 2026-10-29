@@ -125,6 +125,8 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Asistente de IA de la tienda (ASISTENTE_ACTIVO=0 lo apaga sin tocar el resto).
 ASISTENTE_ACTIVO = os.environ.get("ASISTENTE_ACTIVO", "1") == "1"
+# Botón «Precargar datos de ejemplo» en el registro (persona ficticia para mostrar el formulario sin escribirlo). REGISTRO_PRECARGA=0 lo oculta.
+REGISTRO_PRECARGA = os.environ.get("REGISTRO_PRECARGA", "1") == "1"
 
 # Mosaicos del mapa. Por defecto, OpenStreetMap (uso liviano, con Referer y atribución). Para otro proveedor, definir las variables
 # MAP_TILE_URL y MAP_TILE_ATTRIBUTION (y MAP_TILE_SUBDOMAINS / MAP_TILE_MAX_ZOOM si hace falta); las claves del proveedor, si las pide, van en la propia URL.
@@ -179,6 +181,9 @@ LIMITE_POST_POR_HORA = {"/cuenta/registro/": int(entorno("LIMITE_REGISTRO_HORA")
                         "/cuenta/registro/empresa/": int(entorno("LIMITE_REGISTRO_HORA") or 10),
                         "/cuenta/recuperar/": int(entorno("LIMITE_RECUPERAR_HORA") or 10),  # mandan correos
                         "/soporte/": int(entorno("LIMITE_SOPORTE_HORA") or 20)}             # y gastan la cuota gratuita de la IA
+# Panel de BI: Grafana corre en la red interna de Docker y solo se alcanza por /bi/ (ver cofrial/bi.py), con sesión y rol de administración o gerencia.
+GRAFANA_INTERNA_URL = "http://127.0.0.1:1" if "test" in sys.argv else (entorno("GRAFANA_INTERNA_URL") or "http://grafana:3000")   # en pruebas no hay Grafana: 502 rápido
+GRAFANA_TIMEOUT_SEG = float(entorno("GRAFANA_TIMEOUT_SEG") or 30)
 
 # ---- Correo, para recuperar la clave. Con EMAIL_HOST se envía por SMTP (p. ej. Gmail con clave de aplicación, ver
 # docs/credenciales-y-cuentas.md); sin él, el correo se escribe en el registro del contenedor (docker compose logs web), útil en local.

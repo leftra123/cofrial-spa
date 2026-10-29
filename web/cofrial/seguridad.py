@@ -113,7 +113,7 @@ class ProteccionMiddleware:
         if bloqueo is not None:
             return bloqueo
         respuesta = self.get_response(request)
-        if respuesta.status_code == 404:
+        if respuesta.status_code == 404 and not request.path.startswith("/bi/"):      # los 404 de Grafana (ya detrás de la sesión) no son un barrido
             n = _contar(f"escaneo:{ip}", settings.ESCANEO_VENTANA_SEG)
             if n == settings.ESCANEO_MAX_404 + 1:
                 log.warning("Barrido de rutas desde %s: %s «no encontrado» en %s s (último: %s)", ip, n - 1, settings.ESCANEO_VENTANA_SEG, request.path[:80])

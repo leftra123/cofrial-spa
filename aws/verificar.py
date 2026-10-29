@@ -5,11 +5,10 @@
     python3 aws/verificar.py http://IP       # o una dirección explícita
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
 
-Las claves se toman de DEMO_PASSWORD, ADMIN_PASSWORD y GRAFANA_VISOR_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
+Las claves se toman de DEMO_PASSWORD y ADMIN_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
 Cada cuenta entra con su clave propia (web/clientes/cuentas_demo.py) y, si no, con la común de antes (despliegue anterior).
 Solo usa la biblioteca estándar de Python (sin instalar nada). Sale con código 0 si todo pasó y 1 si algo falló.
 """
-import base64
 import datetime
 import http.cookiejar
 import json
@@ -130,17 +129,14 @@ def precio(html, sku):
     return m.group(1) if m else None
 
 
-def consulta_grafana(sql):
+def consulta_grafana(sesion, sql):
+    """Consulta el tablero por /bi/ con la sesión de la aplicación (Grafana no se alcanza de otra forma)."""
     sql = sql.replace("$camion", "'CAM-01'")           # variable del selector de camiones del tablero: aquí se prueba con uno
     cuerpo = json.dumps({"queries": [{"refId": "A", "datasource": {"uid": "cofrial-pg"}, "rawSql": sql, "format": "table"}],
                          "from": "now-24h", "to": "now"}).encode()
-    cabeceras = {"Content-Type": "application/json"}
-    clave = os.environ.get("GRAFANA_VISOR_PASSWORD") or leer_estado("GRAFANA_VISOR_PASSWORD")
-    if clave:                                          # Grafana ya no admite acceso anónimo: se consulta con la cuenta visor
-        cabeceras["Authorization"] = "Basic " + base64.b64encode(f"visor:{clave}".encode()).decode()
-    pedido = urllib.request.Request(f"http://{HOST}:3000/api/ds/query", data=cuerpo, headers=cabeceras)
+    pedido = urllib.request.Request(f"{BASE}/bi/api/ds/query", data=cuerpo, headers={"Content-Type": "application/json", "Origin": BASE})
     try:
-        return json.loads(urllib.request.urlopen(pedido, timeout=30).read())["results"]["A"]
+        return json.loads(sesion.abre.open(pedido, timeout=30).read())["results"]["A"]
     except urllib.error.HTTPError as e:
         return json.loads(e.read())["results"]["A"]
 
@@ -223,20 +219,34 @@ def main():
         if sesiones["despachador"]:
             chk("Pedidos afectados" in sesiones["despachador"].pedir("/crm/alertas/")[1], "El despachador ve la pantalla de alertas de frío")
 
-    titulo("5. Tablero de BI (Grafana)")
-    gb = Sesion()
-    st, cuerpo, _ = gb.pedir("/api/health", base=f"http://{HOST}:3000")
-    if chk(st == 200 and re.search(r'"database":\s*"ok"', cuerpo), "Grafana responde y llega a la base", f"HTTP {st}"):
+    titulo("5. Tablero de BI (Grafana, solo por /bi/ y con rol)")
+    st, _, url = anon.pedir("/bi/")
+    chk("/cuenta/entrar/" in url, "Sin sesión, /bi/ lleva a la pantalla de entrar", f"terminó en {url}")
+    for clave, quien in (("vendedora", "vendedora"), ("despachador", "despachador"), ("hospital", "cliente B2B")):
+        if sesiones[clave]:
+            chk(sesiones[clave].pedir("/bi/")[0] == 403, f"/bi/ responde 403 al {quien}", "debería negarse a este rol")
+    try:                                                # no basta abrir el socket: algunas redes aceptan cualquier conexión TCP; se pide la salud de Grafana
+        r = urllib.request.urlopen(f"http://{HOST}:3000/api/health", timeout=6)
+        respondio = r.status == 200 and b"database" in r.read(2000)
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError):
+        respondio = False
+    chk(not respondio, "El puerto 3000 de Grafana no está abierto a internet", "Grafana responde: cerrar la regla del Security Group sg-web")
+    for clave, quien in (("gerente", "gerencia"), ("admin", "administrador")):
+        if not sesiones[clave]:
+            continue
+        st, cuerpo, _ = sesiones[clave].pedir("/bi/api/health")
+        chk(st == 200 and re.search(r'"database":\s*"ok"', cuerpo), f"El tablero abre por /bi/ para {quien} y llega a la base", f"HTTP {st}")
+    if sesiones["gerente"]:
         try:
             tablero = json.load(open(os.path.join(RAIZ, "grafana", "dashboards", "cofrial.json")))
             malas, n = [], 0
             for p in tablero["panels"]:
                 for t in p.get("targets", []):
                     n += 1
-                    if consulta_grafana(t["rawSql"]).get("error"):
+                    if consulta_grafana(sesiones["gerente"], t["rawSql"]).get("error"):
                         malas.append(p["title"])
             chk(not malas, f"Las {n} consultas del tablero responden", "fallan: " + ", ".join(sorted(set(malas))))
-            r = consulta_grafana("SELECT o.canal AS canal FROM v_orden o JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id "
+            r = consulta_grafana(sesiones["gerente"], "SELECT o.canal AS canal FROM v_orden o JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id "
                                  "WHERE e.nombre <> 'Cancelada' GROUP BY 1")
             v = r["frames"][0]["data"]["values"] if r.get("frames") else []
             canales = sorted(set(v[0])) if v else []

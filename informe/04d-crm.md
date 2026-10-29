@@ -91,8 +91,9 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 | RN-13 | **Alerta de frío.** Cuando una lectura trae `alerta_ruptura_frio` durante el viaje de un despacho, sus órdenes se consideran afectadas y aparecen destacadas en la ficha del cliente y en el seguimiento del pedido. | El vendedor actúa antes del reclamo |
 | RN-14 | **Clasificación con IA.** Cada requerimiento se clasifica con IA y se guarda con su confianza. Si la API falla o la confianza es menor que 0,60 (umbral supuesto), queda marcado para revisión manual. El servicio nunca pierde un requerimiento. | La IA ayuda, la persona decide |
 | RN-15 | **Pedido a nombre del cliente.** Durante la transición, el vendedor puede generar el pedido desde la ficha del cliente y debe registrar la interacción (llamada o correo) que lo originó. | Los clientes que aún llaman quedan dentro del sistema |
+| RN-22 | **Cobranza.** El CRM muestra lo que se entregó y todavía no se facturó (el vendedor emite la factura desde ahí), las facturas con saldo ordenadas por vencimiento y cuáles ya vencieron. El vendedor registra los pagos y emite notas de crédito dentro de su cartera; gerencia solo consulta. | Se sabe qué falta por cobrar y a quién |
 
-*Nota.* Elaboración propia. Las reglas del portal (RN-01 a RN-08) están en `04c-canales-b2b-b2c.md`.
+*Nota.* Elaboración propia. Las reglas del portal (RN-01 a RN-08) y las de documentos y pagos (RN-17 a RN-21) están en `04c-canales-b2b-b2c.md`.
 
 ## Verificación de la regla RN-14 en el prototipo
 

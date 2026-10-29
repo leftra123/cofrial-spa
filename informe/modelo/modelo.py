@@ -79,6 +79,7 @@ tabla("tipo_cliente", "Comercial", "Tipos de cliente. Cada tipo usa una lista de
     c("codigo", "varchar(3)", "Código del canal.", "B2B", uk=True, check="codigo IN ('B2B','B2C')"),
     c("nombre", "varchar(40)", "Nombre descriptivo.", "Institucional"),
     c("lista_precio_id", "integer", "Lista de precios que le corresponde.", "1", fk="lista_precio"),
+    c("dias_credito", "smallint", "Plazo de pago de la factura en días; 0 si se paga al comprar.", "30", check="dias_credito >= 0", default="0"),
 ])
 
 # ---------------------------------------------------------------- Usuarios y clientes
@@ -106,6 +107,7 @@ tabla("cliente", "Clientes", "Clientes B2B y B2C. Reemplaza la cartera que hoy v
     c("nombre", "varchar(120)", "Nombre de la persona o razón social.", "Hospital Regional de Temuco"),
     c("email", "varchar(120)", "Correo de contacto.", "abastecimiento@hospital.cl"),
     c("telefono", "varchar(20)", "Teléfono de contacto.", "+56452123456", nulo=True),
+    c("giro", "varchar(80)", "Actividad económica de la empresa, que exige la factura (B2B).", "Servicios de salud", nulo=True),
     c("creado_en", "timestamptz", "Fecha de alta.", "2026-10-12 09:30:00-03", default="now()"),
 ])
 tabla("direccion", "Clientes", "Direcciones de entrega de cada cliente.", [
@@ -154,7 +156,8 @@ tabla("orden", "Comercial", "Órdenes de compra generadas en el portal. El clien
     c("direccion_id", "integer", "Dirección de entrega. De ella se obtiene el cliente que compra.", "30", fk="direccion"),
     c("estado_orden_id", "integer", "Estado actual.", "1", fk="estado_orden"),
     c("despacho_id", "integer", "Despacho que la lleva (vacío hasta asignarla).", "88", fk="despacho", nulo=True),
-    c("numero_oc", "varchar(30)", "Número de orden de compra del cliente (B2B).", "OC-2026-0457", nulo=True),
+    c("numero_oc", "varchar(30)", "Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número.", "OC-2026-0457", nulo=True),
+    c("oc_pendiente", "boolean", "Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega.", "falso", default="false"),
     c("creada_en", "timestamptz", "Fecha y hora de la orden.", "2026-10-12 10:20:00-03", default="now()"),
 ])
 tabla("orden_item", "Comercial", "Líneas de una orden, con el precio vigente al momento de comprar.", [
@@ -163,6 +166,25 @@ tabla("orden_item", "Comercial", "Líneas de una orden, con el precio vigente al
     c("cantidad", "integer", "Cantidad comprada.", "10", check="cantidad > 0"),
     c("precio_unitario_clp", "integer", "Precio pagado por unidad, copiado de la lista al comprar.", "38990", check="precio_unitario_clp > 0"),
 ], pk_comp=["orden_id", "producto_id"])
+tabla("documento", "Comercial", "Documentos tributarios simulados de una orden: boleta, factura, guía de despacho y nota de crédito. El monto es una foto de lo vendido, igual que el precio de la línea. Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre orden y tipo).", [
+    pk("documento_id", "Identificador del documento.", "501"),
+    c("tipo", "varchar(14)", "Tipo de documento.", "factura", check="tipo IN ('boleta','factura','guia_despacho','nota_credito')"),
+    c("folio", "integer", "Número correlativo dentro de su tipo.", "1042"),
+    c("orden_id", "integer", "Orden a la que corresponde.", "1001", fk="orden"),
+    c("referencia_id", "integer", "Documento que rebaja (solo la nota de crédito).", "500", fk="documento", nulo=True),
+    c("monto_clp", "integer", "Total con IVA. La guía de despacho no cobra y va vacía.", "46399", nulo=True),
+    c("vence_en", "date", "Vencimiento de la factura a crédito.", "2026-11-12", nulo=True),
+    c("motivo", "varchar(200)", "Motivo de la nota de crédito.", "Cadena de frío rota: 2 cajas rechazadas", nulo=True),
+    c("emitido_en", "timestamptz", "Fecha y hora de emisión.", "2026-10-13 15:00:00-03", default="now()"),
+], extra=["UNIQUE (tipo, folio)", "CHECK (tipo <> 'nota_credito' OR (referencia_id IS NOT NULL AND motivo IS NOT NULL))", "CHECK (tipo = 'guia_despacho' OR monto_clp > 0)"])
+tabla("pago", "Comercial", "Pagos recibidos contra una boleta o factura. El saldo de un documento es su monto menos los pagos y las notas de crédito. Un monto negativo es una devolución.", [
+    pk("pago_id", "Identificador del pago.", "700"),
+    c("documento_id", "integer", "Boleta o factura que se paga.", "501", fk="documento"),
+    c("monto_clp", "integer", "Monto pagado (negativo si se devuelve al cliente).", "46399", check="monto_clp <> 0"),
+    c("medio", "varchar(14)", "Cómo se pagó.", "transferencia", check="medio IN ('webpay','transferencia','cheque','efectivo','devolucion')"),
+    c("referencia", "varchar(60)", "N.º de transferencia o de autorización.", "TRF-884201", nulo=True),
+    c("pagado_en", "timestamptz", "Fecha y hora del pago.", "2026-11-05 10:12:00-03", default="now()"),
+])
 
 # ---------------------------------------------------------------- IoT
 tabla("telemetria", "Logística e IoT", "Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige la pauta.", [
@@ -238,6 +260,7 @@ REL = [
     ("direccion", "||--o{", "orden", "recibe"),
     ("estado_orden", "||--o{", "orden", "describe"), ("despacho", "|o--o{", "orden", "transporta"),
     ("orden", "||--o{", "orden_item", "detalla"), ("producto", "||--o{", "orden_item", "se vende"),
+    ("orden", "||--o{", "documento", "origina"), ("documento", "|o--o{", "documento", "rebaja"), ("documento", "||--o{", "pago", "se paga con"),
     ("camion", "||--o{", "despacho", "realiza"), ("camion", "||--o{", "telemetria", "reporta"),
     ("vendedor", "||--o{", "prospecto", "gestiona"), ("etapa_pipeline", "||--o{", "prospecto", "ubica"),
     ("cliente", "|o--o{", "prospecto", "nace de"), ("vendedor", "||--o{", "interaccion", "registra"),

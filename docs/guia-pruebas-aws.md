@@ -8,7 +8,7 @@ Para quien reciba el traspaso (Sergio) y para ensayar la defensa. Cada paso dice
 |---|---|
 | Aplicación | http://54.82.100.161 |
 | Estado de salud | http://54.82.100.161/salud/ (debe responder `{"estado": "ok"}`) |
-| Tablero de BI (Grafana) | http://54.82.100.161:3000 (usuario `visor` y `GRAFANA_VISOR_PASSWORD` en `secretos.env`; edición con `admin` y `GRAFANA_PASSWORD`) |
+| Tablero de BI (Grafana) | http://54.82.100.161/bi/ (con sesión de `gerencia@cofrial.cl` para mirar o `admin@cofrial.cl` para editar; el puerto 3000 ya no está abierto) |
 
 La IP es elástica: no cambia al reiniciar el laboratorio, **pero sí cambia si se destruyen y se vuelven a crear los recursos** (así pasó el 24-oct-2026: era 34.204.121.79 y ahora es 54.82.100.161). La dirección vigente siempre está en `aws/.estado/ip.txt` y la muestra `bash aws/provision.sh estado`; `aws/verificar.py` la lee de ahí solo. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
 
@@ -65,7 +65,7 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 17. Como `admin@cofrial.cl`, abrir `/api/flota/`: debe devolver JSON con los camiones y la última lectura (campos `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`).
 
 **E. Tablero de BI (18 a 19)** *(D4)*
-18. Abrir Grafana (`:3000`). **Esperar hasta 15 segundos la primera vez.** Deben verse: ventas del período, pedidos, alertas, ventas por canal, temperatura por camión y el mapa de la flota.
+18. Entrar como gerencia y abrir «Panel BI» (`/bi/`); con la vendedora o el despachador debe dar «acceso denegado» y `:3000` no debe responder. **Esperar hasta 15 segundos la primera vez.** Deben verse: ventas del período, pedidos, alertas, ventas por canal, temperatura por camión y el mapa de la flota.
 19. Hacer una compra nueva como B2B y otra como B2C y esperar 5 a 10 segundos: **las ventas y el gráfico "Ventas por canal" deben cambiar** con ambos canales. *(Cruce ventas contra alertas de frío.)*
 
 **F. IA (20 a 22)** *(D5)*

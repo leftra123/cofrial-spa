@@ -8,8 +8,8 @@ from catalogo.models import ListaPrecio
 from clientes.models import Cliente, TipoCliente, Vendedor
 from cofrial import entradas
 from flota.models import Telemetria
-from pedidos import servicios as pedidos
-from pedidos.models import Orden
+from pedidos import documentos, servicios as pedidos
+from pedidos.models import Documento, Orden
 
 from . import ia
 from .models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
@@ -333,6 +333,7 @@ def indicadores(usuario):
     n_cerrados = cerrados.count()
     abiertos = prospectos.filter(etapa__es_final=False)
     ordenes = Orden.objects.filter(direccion__cliente__in=clientes_visibles(usuario)).exclude(estado_orden__nombre="Cancelada")
+    cobro = documentos.resumen_cobranza(clientes_visibles(usuario))
     por_canal = {}
     for o in ordenes.select_related("direccion__cliente__tipo_cliente"):
         canal = o.direccion.cliente.tipo_cliente.codigo
@@ -345,6 +346,44 @@ def indicadores(usuario):
         "ventas_por_canal": sorted(por_canal.items()),
         "pedidos_afectados": len(ordenes_afectadas(usuario)),
         "oc_pendientes": ordenes.filter(oc_pendiente=True).count(),
+        "por_cobrar": cobro["por_cobrar"], "vencido": cobro["vencido"], "n_vencidas": cobro["n_vencidas"],
+        "sin_facturar": len(cobro["sin_facturar"]),
         "requerimientos_pendientes": Requerimiento.objects.filter(estado="sin_clasificar").count(),
         "por_etapa": list(abiertos.values("etapa__nombre", "etapa__orden_etapa").annotate(n=Count("pk"), monto=Sum("monto_estimado_clp")).order_by("etapa__orden_etapa")),
     }
+
+
+# ---------------------------------------------------------------- RN-17 a RN-22: documentos y cobranza
+def cobranza(usuario):
+    """Lo entregado que falta facturar y las facturas por cobrar, dentro de la cartera que el usuario puede ver."""
+    return documentos.resumen_cobranza(clientes_visibles(usuario))
+
+
+def _exigir_edicion(usuario):
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol no puede emitir documentos ni registrar pagos.")
+
+
+def facturar(usuario, orden_id):
+    _exigir_edicion(usuario)
+    orden = Orden.objects.filter(pk=orden_id, direccion__cliente__in=clientes_visibles(usuario)).first()
+    if orden is None:
+        raise ErrorDeNegocio("Orden no encontrada en tu cartera.")
+    return documentos.emitir_factura(orden)
+
+
+def _documento_visible(usuario, documento_id):
+    doc = Documento.objects.filter(pk=documento_id, orden__direccion__cliente__in=clientes_visibles(usuario)).first()
+    if doc is None:
+        raise ErrorDeNegocio("Documento no encontrado en tu cartera.")
+    return doc
+
+
+def registrar_pago(usuario, documento_id, monto, medio, referencia=""):
+    _exigir_edicion(usuario)
+    return documentos.registrar_pago(_documento_visible(usuario, documento_id).pk, monto, medio, referencia)
+
+
+def emitir_nota_credito(usuario, documento_id, monto, motivo):
+    _exigir_edicion(usuario)
+    return documentos.emitir_nota_credito(_documento_visible(usuario, documento_id).pk, monto, motivo)

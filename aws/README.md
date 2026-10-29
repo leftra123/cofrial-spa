@@ -6,7 +6,7 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
-| EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80) y Grafana (3000) |
+| EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80) y Grafana (solo red interna, se abre en `/bi/`) |
 | EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
 | RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, Single-AZ | Base `cofrial` |
 
@@ -39,7 +39,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 
 1. **Red.** VPC con una subred pública y dos privadas (RDS exige un grupo de subredes con dos zonas), Internet Gateway y tabla de ruteo de la subred pública.
 2. **Security Groups encadenados** (no abrir RDS a internet):
-   - `sg-web`: entrada 80 y 3000 desde internet; 22 solo desde tu IP.
+   - `sg-web`: entrada 80 desde internet; 22 solo desde tu IP. El 3000 de Grafana no se abre (`provision.sh` lo cierra si una instalación previa lo tenía).
    - `sg-iot`: sin entradas públicas; 22 solo desde tu IP.
    - `sg-rds`: entrada 5432 **únicamente desde `sg-web` y `sg-iot`**.
 3. **RDS.** PostgreSQL 16, Single-AZ, sin acceso público, base inicial `cofrial`, usuario `cofrial`. Anota el endpoint.
@@ -73,7 +73,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 - [ ] Entrar con `abastecimiento@hospital.test` (B2B) y con `ana@correo.test` (B2C): precios distintos en el catálogo, carrito y orden generada.
 - [ ] En el CRM (`vendedora@cofrial.cl`) aparece el pedido web y el embudo.
 - [ ] `docker compose -f aws/docker-compose.iot.yml logs -f` muestra una inserción cada 5 s por camión (50 camiones, en 5 contenedores); en `/flota/` las tarjetas cambian solas.
-- [ ] `http://IP-WEB:3000` muestra el tablero con ventas por canal, alertas y mapa.
+- [ ] `http://IP-WEB/bi/`, con sesión de gerencia o administración, muestra el tablero con ventas por canal, alertas y mapa; `:3000` no responde.
 - [ ] IA: `docker compose -f aws/docker-compose.web.yml exec web python manage.py probar_ia` responde «IA operativa». Enviar una consulta desde **Soporte** y verla clasificada en `/crm/requerimientos/`.
 - [ ] IA: `... exec web python manage.py evaluar_ia` da más de 85 % (meta del informe).
 - [ ] Plan B: probar también la demo con `GEMINI_API_KEY` vacía; el sistema sigue funcionando y deja el requerimiento «sin clasificar».

@@ -16,8 +16,8 @@ from clientes import cuentas_demo
 from clientes.models import Cliente, Comuna, Direccion, Region, TipoCliente, Vendedor
 from crm.models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 from flota.models import Camion, Despacho
-from pedidos import servicios as pedidos
-from pedidos.models import EstadoOrden, Orden
+from pedidos import documentos, servicios as pedidos
+from pedidos.models import Documento, EstadoOrden, Orden
 
 PRODUCTOS = [
     ("VAC-LOM-5K", "Lomo vetado de vacuno 5 kg", "Cárnicos refrigerados", "caja", 120, 38990, 45990),
@@ -148,7 +148,7 @@ class Command(BaseCommand):
             if cambios:
                 Producto.objects.filter(pk=p.pk).update(**cambios)
 
-        tipo_b2b, _ = TipoCliente.objects.get_or_create(codigo="B2B", defaults=dict(nombre="Institucional", lista_precio=b2b))
+        tipo_b2b, _ = TipoCliente.objects.get_or_create(codigo="B2B", defaults=dict(nombre="Institucional", lista_precio=b2b, dias_credito=30))
         tipo_b2c, _ = TipoCliente.objects.get_or_create(codigo="B2C", defaults=dict(nombre="Público general", lista_precio=b2c))
 
         for i, (nombre, flujo_final) in enumerate(ESTADOS_ORDEN, start=1):
@@ -254,6 +254,9 @@ class Command(BaseCommand):
             orden.save(update_fields=["despacho"])
             pedidos.avanzar(orden)
 
+        if not Documento.objects.filter(tipo="factura").exists():
+            self.historial_de_cobranza(Cliente.objects.get(rut="61.973.200-4"), sur)
+
         if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
             Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_para("admin@cofrial.cl"))
         if por_cuenta:      # las cuentas que siguen con la clave común de antes pasan a la suya; una clave cambiada por su dueño no se toca
@@ -273,3 +276,31 @@ class Command(BaseCommand):
         except Exception as e:                      # sin red o sin OSRM: se calculan al despachar, con respaldo en línea recta
             self.stdout.write(self.style.WARNING(f"No se precalcularon las rutas de la demostración: {e}"))
         self.stdout.write(self.style.SUCCESS("Datos de demostración listos (claves de las cuentas: python3 web/clientes/cuentas_demo.py --env .env)."))
+
+    def historial_de_cobranza(self, hospital, sur):
+        """Cuatro pedidos B2B ya entregados en el pasado, para que la cobranza del CRM tenga qué mostrar:
+        uno pagado, uno por cobrar, uno vencido y uno entregado que todavía no se factura."""
+        hoy = timezone.localdate()
+        camion = Camion.objects.get(camion_id="CAM-03")
+        for cliente, sku, cantidad, oc, hace_dias, factura in (
+                (hospital, "VAC-MOL-5K", 6, "OC-2026-0301", 62, "pagada"),
+                (hospital, "POL-TRU-8K", 10, "OC-2026-0388", 45, "vencida"),
+                (sur, "POL-ENT-10K", 8, "OC-SUR-102", 12, "por_cobrar"),
+                (sur, "CER-LOM-4K", 4, "OC-SUR-117", 2, None)):
+            llegada = timezone.now() - timedelta(days=hace_dias)
+            despacho = Despacho.objects.create(camion=camion, programado_para=llegada - timedelta(hours=3), salida_en=llegada - timedelta(hours=2), llegada_en=llegada,
+                                               regreso_en=llegada + timedelta(hours=1), fase="volviendo")     # viaje cerrado: el camión ya volvió y queda libre
+            pedidos.agregar(cliente, Producto.objects.get(sku=sku).pk, cantidad)
+            orden = pedidos.generar_orden(cliente, cliente.direccion_set.first().pk, oc)
+            Orden.objects.filter(pk=orden.pk).update(despacho=despacho, creada_en=llegada - timedelta(days=1))
+            orden.refresh_from_db()
+            for _ in range(4):                                             # Confirmada, En preparación, Despachada, Entregada
+                pedidos.avanzar(orden)
+            Documento.objects.filter(orden=orden, tipo="guia_despacho").update(emitido_en=llegada - timedelta(hours=2))
+            if factura is None:
+                continue
+            f = documentos.emitir_factura(orden)
+            vence = llegada.date() + timedelta(days=cliente.tipo_cliente.dias_credito)
+            Documento.objects.filter(pk=f.pk).update(emitido_en=llegada + timedelta(hours=4), vence_en=vence)
+            if factura == "pagada":
+                documentos.registrar_pago(f.pk, f.monto_clp, "transferencia", "TRF-884201")

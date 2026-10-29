@@ -10,7 +10,7 @@ from cofrial import entradas
 from crm import servicios as crm
 from crm.models import Requerimiento
 
-from . import servicios as s
+from . import documentos, servicios as s
 
 
 def solo_clientes(vista):
@@ -104,9 +104,13 @@ def confirmar(request, cliente):
     orden = ordenes[0]
     if len(ordenes) > 1:
         numeros = " y ".join(f"N.º {o.orden_id}" for o in ordenes)
-        messages.success(request, f"Tu compra se dividió en {len(ordenes)} pedidos, uno por rango de temperatura, porque cada uno viaja en su camión: {numeros}.")
+        mensaje = f"Tu compra se dividió en {len(ordenes)} pedidos, uno por rango de temperatura, porque cada uno viaja en su camión: {numeros}."
     else:
-        messages.success(request, f"Orden {orden.orden_id} recibida.")
+        mensaje = f"Orden {orden.orden_id} recibida."
+    boletas = list(documentos.Documento.objects.filter(orden__in=ordenes, tipo="boleta").order_by("folio").values_list("folio", flat=True))
+    if boletas:
+        mensaje += " Pago aprobado y " + ("boleta N.º " if len(boletas) == 1 else "boletas N.º ") + " y ".join(str(f) for f in boletas) + (" emitida." if len(boletas) == 1 else " emitidas.")
+    messages.success(request, mensaje)
     return redirect(f"/pedidos/{orden.orden_id}/?nueva=1")
 
 
@@ -141,7 +145,7 @@ def _orden_del_cliente(cliente, orden_id):
 def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     return render(request, "pedidos/detalle.html", {
-        "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "documentos": documentos.documentos_de_orden(orden), "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
         "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
 

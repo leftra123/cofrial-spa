@@ -42,7 +42,7 @@
 
 ### 2. Seguridad: Security Groups encadenados
 
-**Decisión.** Tres grupos: `sg-web` (80 público; 22 y 3000 solo desde la IP del equipo), `sg-iot` (sin entradas públicas) y `sg-rds`, que acepta el puerto 5432 únicamente desde `sg-web` y `sg-iot`, referenciados por grupo y no por rango de direcciones.
+**Decisión.** Tres grupos: `sg-web` (80 público; 22 solo desde la IP del equipo; el 3000 de Grafana no se abre), `sg-iot` (sin entradas públicas) y `sg-rds`, que acepta el puerto 5432 únicamente desde `sg-web` y `sg-iot`, referenciados por grupo y no por rango de direcciones.
 
 **Qué se gana.** Una regla por rango de IP (por ejemplo, toda la subred `10.0.1.0/24`) dejaría pasar a cualquier máquina que se cree allí; la regla por grupo admite solo a las instancias que pertenecen a `sg-web` o `sg-iot`, aunque cambien o se reemplacen. Es el mínimo privilegio posible entre capas y evita la tentación de abrir el puerto "para que funcione" cuando se reconstruye una instancia.
 
@@ -56,7 +56,7 @@
 
 ### 3. Cómputo: EC2 con Docker Compose
 
-**Decisión.** Una EC2 `t3.small` para la web y el backend (una aplicación Django servida con gunicorn detrás de nginx) y Grafana en un contenedor de la misma instancia, todo orquestado con Docker Compose y reinicio automático.
+**Decisión.** Una EC2 `t3.small` para la web y el backend (una aplicación Django servida con gunicorn directo en el puerto 80 y los archivos estáticos con WhiteNoise, sin nginx) y Grafana en un contenedor de la misma instancia, todo orquestado con Docker Compose y reinicio automático.
 
 **Alternativas.** Lambda no ofrece un backend persistente y obliga a rediseñar la aplicación en funciones. Elastic Beanstalk crea EC2 por debajo, pero oculta justamente la red y la seguridad que la rúbrica pide justificar, y en el Learner Lab hay que ajustar a mano el rol de servicio y el perfil de instancia para que funcione.
 
@@ -147,7 +147,7 @@ El diseño anterior se construyó en el Learner Lab con el script `aws/provision
 | Aspecto | Diseño | Desplegado | Motivo o consecuencia |
 |---|---|---|---|
 | Subredes | Dos públicas (web `10.0.1.0/24` e IoT `10.0.2.0/24`) y dos privadas (`10.0.11.0/24` y `10.0.12.0/24`) | Una pública (`10.0.1.0/24`) compartida por web e IoT y dos privadas (`10.0.2.0/24` y `10.0.3.0/24`) | Se simplificó el script; la separación efectiva entre web e IoT la siguen dando los Security Groups, como anticipa el diseño |
-| Acceso al tablero de Grafana | Puerto 3000 solo desde la IP del equipo | Puerto 3000 abierto a internet, con acceso anónimo desactivado: todo ingreso exige cuenta (`visor` con rol Viewer para mirar; `admin` para editar). El usuario de base de Grafana es de solo lectura | Permite mostrar el tablero en vivo en la defensa entregando la cuenta `visor`. El puerto sigue más expuesto que lo diseñado, pero sin lectura ni edición sin credenciales |
+| Acceso al tablero de Grafana | Puerto 3000 solo desde la IP del equipo | Grafana no se publica: corre en la red interna de Docker y se abre en `/bi/` desde la aplicación, que exige sesión y rol (administración edita, gerencia mira) y le pasa la identidad en modo «auth proxy». El usuario de base de Grafana es de solo lectura | El tablero queda bajo los mismos roles que el resto del sitio, sin cuenta compartida ni puerto adicional abierto. Al mostrarlo en la defensa se entra con una cuenta de gerencia o administración |
 | Servidor de la aplicación | Gunicorn detrás de nginx | Gunicorn directo en el puerto 80, con los archivos estáticos servidos por WhiteNoise | Una pieza menos que mantener; sin la capa de nginx ante peticiones lentas o malformadas |
 | Respaldos de RDS | Automáticos más un snapshot manual antes de cualquier borrado | Retención automática de un día; el borrado con `provision.sh destruir` no toma snapshot final | Mínimo para el laboratorio; la base no se podría recuperar tras destruirla |
 | Administración remota | Session Manager con `LabInstanceProfile`, sin abrir el puerto 22 | SSH con llave y puerto 22 abierto solo a la IP del equipo, sin perfil de instancia | El script no asocia el perfil; el SSH de la instancia web recreada llegó a rechazar conexiones |

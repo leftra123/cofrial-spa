@@ -1,0 +1,5 @@
+{% comment %}Chip del estado de pago de una boleta o factura. Recibe `estado` (por_cobrar, vencido, pagado, anulado); no pinta nada si viene vacío.{% endcomment %}
+{% if estado == "por_cobrar" %}<span class="chip pendiente">Por cobrar</span>
+{% elif estado == "vencido" %}<span class="chip alerta">Vencida</span>
+{% elif estado == "pagado" %}<span class="chip entregado">Pagada</span>
+{% elif estado == "anulado" %}<span class="chip cancelado">Anulada</span>{% endif %}

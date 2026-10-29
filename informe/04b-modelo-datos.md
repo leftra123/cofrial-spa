@@ -3,14 +3,14 @@
 
 ## Alcance y supuestos
 
-El diseño de referencia tiene **25 entidades** en cinco módulos: geografía y cadena de frío, comercial (catálogo, precios, carrito y órdenes), clientes y accesos, CRM y logística e IoT. Reglas del prototipo y supuestos de negocio:
+El diseño de referencia tiene **27 entidades** en cinco módulos: geografía y cadena de frío, comercial (catálogo, precios, carrito y órdenes), clientes y accesos, CRM y logística e IoT. Reglas del prototipo y supuestos de negocio:
 
 - Los montos son pesos chilenos enteros, sin decimales.
 - Cada tipo de cliente (B2B o B2C) usa una lista de precios; un precio por producto y lista. El historial de precios queda en las líneas de cada orden.
 - Un cliente puede tener varias direcciones y un solo carrito abierto.
 - Un despacho (viaje de un camión) lleva varias órdenes; una orden va en un solo despacho.
 - La telemetría llega cada 5 segundos por camión (estimación: unas 864 000 lecturas diarias con 50 camiones).
-- El pago queda fuera del alcance: B2B con OC o referencia temporal y OC pendiente; no se integra una pasarela de pago ni emisión tributaria.
+- B2B compra con OC o con referencia temporal y OC pendiente. Los documentos tributarios (boleta, factura, guía de despacho y nota de crédito) y los pagos se simulan: se guardan tipo, folio, monto, fechas y pagos, sin conexión al SII ni a una pasarela real. Las reglas están en `04c-canales-b2b-b2c.md` (RN-17 a RN-21) y `04d-crm.md` (RN-22).
 - La implementación usa un ID autogenerado y una restricción UNIQUE sobre el par en precio_producto, carrito_item y orden_item. Utiliza autenticación Django en lugar de la tabla lógica usuario (Django Software Foundation, 2025). El diccionario distingue el diseño de referencia de sus extensiones físicas.
 
 ## Diagrama entidad-relación
@@ -49,6 +49,9 @@ erDiagram
   despacho |o--o{ orden : "transporta"
   orden ||--o{ orden_item : "detalla"
   producto ||--o{ orden_item : "se vende"
+  orden ||--o{ documento : "origina"
+  documento |o--o{ documento : "rebaja"
+  documento ||--o{ pago : "se paga con"
   camion ||--o{ despacho : "realiza"
   camion ||--o{ telemetria : "reporta"
   vendedor ||--o{ prospecto : "gestiona"
@@ -136,6 +139,15 @@ erDiagram
     integer orden_id PK
     integer producto_id PK
   }
+  documento {
+    integer documento_id PK
+    integer orden_id FK
+    integer referencia_id FK
+  }
+  pago {
+    integer pago_id PK
+    integer documento_id FK
+  }
   telemetria {
     bigint telemetria_id PK
     varchar camion_id FK
@@ -222,10 +234,10 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 | `producto` | `producto_id` | → `sku`, `nombre`, `categoria_id`, `unidad_medida`, `stock_disponible`; sin atributos de la categoría | 3FN |
 | `lista_precio` | `lista_precio_id` | → `nombre` | 3FN |
 | `precio_producto` | (`lista_precio_id`, `producto_id`) | clave completa → `precio_clp` | 3FN |
-| `tipo_cliente` | `tipo_cliente_id` | → `codigo`, `nombre`, `lista_precio_id` | 3FN |
+| `tipo_cliente` | `tipo_cliente_id` | → `codigo`, `nombre`, `lista_precio_id`, `dias_credito` (el plazo de pago depende del canal, no del cliente) | 3FN |
 | `usuario` | `usuario_id` | → `email`, `password_hash`, `rol`, `activo` | 3FN |
 | `vendedor` | `vendedor_id` | → `usuario_id`, `nombre`, `telefono` | 3FN |
-| `cliente` | `cliente_id` | → `tipo_cliente_id`, `vendedor_id`, `rut`, `nombre`; sin la lista de precios | 3FN |
+| `cliente` | `cliente_id` | → `tipo_cliente_id`, `vendedor_id`, `rut`, `nombre`, `giro`; sin la lista de precios ni el plazo de pago | 3FN |
 | `direccion` | `direccion_id` | → `cliente_id`, `calle_numero`, `comuna_id`; sin la región | 3FN |
 | `carrito` | `carrito_id` | → `cliente_id`, `estado`, `creado_en` | 3FN |
 | `carrito_item` | (`carrito_id`, `producto_id`) | clave completa → `cantidad` | 3FN |
@@ -234,6 +246,8 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 | `despacho` | `despacho_id` | → `camion_id`, `programado_para`, `salida_en`, `llegada_en` | 3FN |
 | `orden` | `orden_id` | → `direccion_id`, `estado_orden_id`, `despacho_id`, `numero_oc`, `creada_en`; sin cliente, canal ni total | 3FN |
 | `orden_item` | (`orden_id`, `producto_id`) | clave completa → `cantidad`, `precio_unitario_clp` | 3FN |
+| `documento` | `documento_id` | → `tipo`, `folio`, `orden_id`, `referencia_id`, `monto_clp`, `vence_en`, `motivo`, `emitido_en`; (`tipo`, `folio`) es clave candidata; sin cliente ni saldo | 3FN, ver D4 |
+| `pago` | `pago_id` | → `documento_id`, `monto_clp`, `medio`, `referencia`, `pagado_en`; el saldo no se guarda | 3FN |
 | `telemetria` | `telemetria_id` | → todas las lecturas; (`camion_id`, `registrado_en`) es clave candidata | 3FN, ver D1 |
 | `etapa_pipeline` | `etapa_id` | → `nombre`, `orden_etapa`, `es_final`, `es_ganada` | 3FN |
 | `prospecto` | `prospecto_id` | → `vendedor_id`, `etapa_id`, `cliente_id`, datos de contacto, `origen`, `monto_estimado_clp`, `cerrado_en`, `motivo_perdida` | 3FN |
@@ -245,7 +259,7 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 
 ### Desnormalizaciones controladas
 
-Tres datos parecen repetir información y se mantienen a propósito. Cada uno tiene una razón y un control:
+Cuatro datos parecen repetir información y se mantienen a propósito. Cada uno tiene una razón y un control:
 
 **Tabla 3**
 *Redundancias aparentes y su justificación*
@@ -255,6 +269,7 @@ Tres datos parecen repetir información y se mantienen a propósito. Cada uno ti
 | **D1.** `telemetria.alerta_ruptura_frio` | Se puede calcular comparando `temp_camara` con el rango del camión | La pauta exige guardarlo. Además registra el resultado con el rango vigente al momento de la lectura, y la consulta 5 detecta cualquier inconsistencia | El simulador lo calcula al insertar; `consultas_bi.sql` incluye un control que debe devolver cero filas |
 | **D2.** `orden_item.precio_unitario_clp` | Existe `precio_producto.precio_clp` | Es un hecho histórico: el precio pagado no cambia si después se modifica la lista. Depende de la orden y del producto, no del producto solo | Se copia de la lista dentro de la misma transacción que crea la orden |
 | **D3.** `producto.stock_disponible` | Sería la suma de movimientos de inventario | No hay tabla de movimientos; el stock es el dato primario y se descuenta al generar la orden | Descuento dentro de la transacción de la orden, con restricción de no negativo. Limitación: no deja historial de movimientos |
+| **D4.** `documento.monto_clp` | Se puede calcular con las líneas de la orden (`orden_item`) y el IVA | Un documento tributario es una foto de lo facturado: si después se corrige una línea o cambia el IVA, el documento emitido no cambia. La nota de crédito, además, tiene un monto propio que no coincide con la orden | Se calcula una sola vez al emitir, dentro de la transacción; el saldo (monto menos pagos y notas de crédito) nunca se guarda: se calcula |
 
 *Nota.* Elaboración propia.
 
@@ -271,10 +286,11 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 - Al ganar un prospecto se crea el cliente, se completa `prospecto.cliente_id` y la etapa pasa a "Cliente ganado".
 - Al perder un prospecto, la etapa «Perdido» exige `motivo_perdida` y `cerrado_en`; la base solo impide un motivo sin fecha de cierre, por lo que la exigencia completa se valida en la aplicación (RN-11 de `04d-crm.md`).
 - La clasificación de un requerimiento no es obligatoria: si la IA no responde, queda `sin_clasificar`.
+- Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre `orden_id` y `tipo`); la boleta solo existe en canal B2C y la factura solo en B2B ya entregada (RN-18 y RN-19). Un pago no puede superar el saldo del documento (RN-20) y una nota de crédito no puede rebajar más de lo que queda (RN-21).
 
 ## Correspondencia entre diseño lógico y modelo físico
 
-El MER principal y el SQL representan el diseño de referencia de veinticinco entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veinticinco modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock; además Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
+El MER principal y el SQL representan el diseño de referencia de veintisiete entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veintisiete modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock; además Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
 
 **Tabla 5**
 *Diferencias deliberadas entre referencia lógica e implementación*
@@ -295,7 +311,7 @@ Nota. Elaboración propia. La separación de órdenes por rango y el cierre manu
 
 La implementación conserva requerimiento.cliente_id y requerimiento.orden_id para admitir consultas generales y reclamos ligados a compras. En el subconjunto de reclamos con orden, orden_id determina al cliente a través de orden → direccion → cliente. Repetirlo es una decisión física de acceso y no una demostración de 3FN estricta. La relación reclamo–pedido se mantiene: retirarla eliminaría una función que ya utiliza el portal.
 
-Para expresar el mismo significado sin esa dependencia, el diseño lógico se descompone por origen en dos relaciones disjuntas: requerimiento_general(requerimiento_id, cliente_id, asunto, descripcion, categoria_id, confianza, estado, fechas) y requerimiento_pedido(requerimiento_id, orden_id, asunto, descripcion, categoria_id, confianza, estado, fechas). En la segunda el cliente se obtiene por la orden; en la primera no hay orden que lo determine. La representación lógica resultante contiene veintiséis relaciones en lugar de veinticinco; no es un recuento de tablas físicas instaladas. requerimiento_id es clave en ambas, los atributos de atención dependen de esa clave y los datos del pedido no se copian. La reconstrucción del registro físico usa unión de ambos tipos y deriva el cliente únicamente en el segundo; la partición por orden nula/no nula conserva todos los registros y evita duplicarlos si se cumple la coincidencia de cliente y orden. Una fila física que contradiga esa regla requiere depuración antes de reconstruir el mismo dato.
+Para expresar el mismo significado sin esa dependencia, el diseño lógico se descompone por origen en dos relaciones disjuntas: requerimiento_general(requerimiento_id, cliente_id, asunto, descripcion, categoria_id, confianza, estado, fechas) y requerimiento_pedido(requerimiento_id, orden_id, asunto, descripcion, categoria_id, confianza, estado, fechas). En la segunda el cliente se obtiene por la orden; en la primera no hay orden que lo determine. La representación lógica resultante contiene veintiocho relaciones en lugar de veintisiete; no es un recuento de tablas físicas instaladas. requerimiento_id es clave en ambas, los atributos de atención dependen de esa clave y los datos del pedido no se copian. La reconstrucción del registro físico usa unión de ambos tipos y deriva el cliente únicamente en el segundo; la partición por orden nula/no nula conserva todos los registros y evita duplicarlos si se cumple la coincidencia de cliente y orden. Una fila física que contradiga esa regla requiere depuración antes de reconstruir el mismo dato.
 
 **Figura 2**
 *Descomposición lógica de requerimientos y correspondencia física*
@@ -316,7 +332,7 @@ Esta distinción permite evaluar con precisión el diseño en 3FN y la decisión
 | CU-01 Perfil e inicio de sesión | `usuario`, `cliente`, `tipo_cliente` |
 | CU-02 Catálogo con precio por perfil | `producto`, `categoria`, `precio_producto`, `lista_precio`, `tipo_cliente` |
 | CU-03 Carrito | `carrito`, `carrito_item` |
-| CU-04 Generar orden | `orden`, `orden_item`, `direccion`, `estado_orden`, `producto` (stock) |
+| CU-04 Generar orden | `orden`, `orden_item`, `direccion`, `estado_orden`, `producto` (stock), `documento` y `pago` (boleta pagada en B2C) |
 | CU-05 y CU-08 Seguimiento del pedido | `orden`, `estado_orden`, `despacho`, `telemetria` |
 | CU-06 y CU-07 Clientes y prospectos | `cliente`, `prospecto`, `etapa_pipeline`, `interaccion`, `vendedor` |
 | CU-09 Requerimiento con IA | `requerimiento`, `categoria_requerimiento` |
@@ -330,7 +346,7 @@ Esta distinción permite evaluar con precisión el diseño en 3FN y la decisión
 
 La verificación histórica del esquema de referencia (archivo `esquema.sql` del repositorio del proyecto; Aguayo Quintriqueo y Vásquez Marimán, 2026) se realizó en PostgreSQL 16, en un contenedor temporal; no certifica la revisión actual de las migraciones Django:
 
-- El script `esquema.sql` crea sin errores las 25 tablas y 2 vistas.
+- El script `esquema.sql` crea sin errores las 27 tablas y 2 vistas.
 - `datos_prueba.sql` carga datos ficticios coherentes (hospital B2B, cliente B2C, camiones, órdenes, lecturas con una alerta, pipeline y un requerimiento).
 - `consultas_bi.sql` entrega ventas por día y canal, alertas por día, el cruce de ambas y las órdenes afectadas por una ruptura de frío. Los montos coinciden con el cálculo manual (por ejemplo, 10 × 38 990 + 5 × 29 990 = 539 850 pesos para la orden B2B).
 - 15 inserciones inválidas fueron rechazadas por la base de datos: orden sin dirección o con dirección inexistente, combustible fuera de 0 a 100, latitud imposible, camión inexistente, lectura duplicada, precio negativo, interacción sin destinatario, etapa ganada que no cierra, segundo carrito abierto, producto repetido en una orden, despacho que llega sin haber salido, dos direcciones principales, un motivo de pérdida en un prospecto sin cerrar y una respuesta anterior a la creación del requerimiento.
@@ -446,8 +462,9 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `codigo` | varchar(3) | No | UK | Código del canal. | B2B |
 | `nombre` | varchar(40) | No | — | Nombre descriptivo. | Institucional |
 | `lista_precio_id` | integer | No | FK → lista_precio | Lista de precios que le corresponde. | 1 |
+| `dias_credito` | smallint | No | — | Plazo de pago de la factura en días; 0 si se paga al comprar. | 30 |
 
-*Restricciones adicionales:* `codigo IN ('B2B','B2C')`.
+*Restricciones adicionales:* `codigo IN ('B2B','B2C')`; `dias_credito >= 0`.
 
 *Nota.* Elaboración propia.
 
@@ -519,9 +536,44 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
+**Tabla D14**  
+*`documento`: Documentos tributarios simulados de una orden: boleta, factura, guía de despacho y nota de crédito. El monto es una foto de lo vendido, igual que el precio de la línea. Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre orden y tipo).*
+
+| Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
+|---|---|---|---|---|---|
+| `documento_id` | integer | No | PK | Identificador del documento. | 501 |
+| `tipo` | varchar(14) | No | — | Tipo de documento. | factura |
+| `folio` | integer | No | — | Número correlativo dentro de su tipo. | 1042 |
+| `orden_id` | integer | No | FK → orden | Orden a la que corresponde. | 1001 |
+| `referencia_id` | integer | Sí | FK → documento | Documento que rebaja (solo la nota de crédito). | 500 |
+| `monto_clp` | integer | Sí | — | Total con IVA. La guía de despacho no cobra y va vacía. | 46399 |
+| `vence_en` | date | Sí | — | Vencimiento de la factura a crédito. | 2026-11-12 |
+| `motivo` | varchar(200) | Sí | — | Motivo de la nota de crédito. | Cadena de frío rota: 2 cajas rechazadas |
+| `emitido_en` | timestamptz | No | — | Fecha y hora de emisión. | 2026-10-13 15:00:00-03 |
+
+*Restricciones adicionales:* `UNIQUE (tipo, folio)`; `CHECK (tipo <> 'nota_credito' OR (referencia_id IS NOT NULL AND motivo IS NOT NULL))`; `CHECK (tipo = 'guia_despacho' OR monto_clp > 0)`; `tipo IN ('boleta','factura','guia_despacho','nota_credito')`.
+
+*Nota.* Elaboración propia.
+
+**Tabla D15**  
+*`pago`: Pagos recibidos contra una boleta o factura. El saldo de un documento es su monto menos los pagos y las notas de crédito. Un monto negativo es una devolución.*
+
+| Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
+|---|---|---|---|---|---|
+| `pago_id` | integer | No | PK | Identificador del pago. | 700 |
+| `documento_id` | integer | No | FK → documento | Boleta o factura que se paga. | 501 |
+| `monto_clp` | integer | No | — | Monto pagado (negativo si se devuelve al cliente). | 46399 |
+| `medio` | varchar(14) | No | — | Cómo se pagó. | transferencia |
+| `referencia` | varchar(60) | Sí | — | N.º de transferencia o de autorización. | TRF-884201 |
+| `pagado_en` | timestamptz | No | — | Fecha y hora del pago. | 2026-11-05 10:12:00-03 |
+
+*Restricciones adicionales:* `monto_clp <> 0`; `medio IN ('webpay','transferencia','cheque','efectivo','devolucion')`.
+
+*Nota.* Elaboración propia.
+
 ### Tablas de Clientes
 
-**Tabla D14**  
+**Tabla D16**  
 *`usuario`: Cuentas de acceso al portal, al CRM y al panel. Si el framework trae su propia autenticación, reemplaza esta tabla.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -537,7 +589,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D15**  
+**Tabla D17**  
 *`cliente`: Clientes B2B y B2C. Reemplaza la cartera que hoy vive en los celulares de los vendedores.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -550,11 +602,12 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `nombre` | varchar(120) | No | — | Nombre de la persona o razón social. | Hospital Regional de Temuco |
 | `email` | varchar(120) | No | — | Correo de contacto. | abastecimiento@hospital.cl |
 | `telefono` | varchar(20) | Sí | — | Teléfono de contacto. | +56452123456 |
+| `giro` | varchar(80) | Sí | — | Actividad económica de la empresa, que exige la factura (B2B). | Servicios de salud |
 | `creado_en` | timestamptz | No | — | Fecha de alta. | 2026-10-12 09:30:00-03 |
 
 *Nota.* Elaboración propia.
 
-**Tabla D16**  
+**Tabla D18**  
 *`direccion`: Direcciones de entrega de cada cliente.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -572,7 +625,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 ### Tablas de CRM
 
-**Tabla D17**  
+**Tabla D19**  
 *`vendedor`: Vendedores que administran la cartera de clientes y los prospectos.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -585,7 +638,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D18**  
+**Tabla D20**  
 *`etapa_pipeline`: Etapas del embudo comercial.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -600,7 +653,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D19**  
+**Tabla D21**  
 *`prospecto`: Posibles clientes que sigue un vendedor a lo largo del embudo.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -623,7 +676,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D20**  
+**Tabla D22**  
 *`interaccion`: Llamadas, correos, reuniones y notas registradas en la ficha de un prospecto o cliente.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -640,7 +693,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D21**  
+**Tabla D23**  
 *`categoria_requerimiento`: Categorías con las que se clasifican consultas y reclamos.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -650,7 +703,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D22**  
+**Tabla D24**  
 *`requerimiento`: Consultas y reclamos de clientes, clasificados por la IA.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -672,7 +725,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 ### Tablas de Logística
 
-**Tabla D23**  
+**Tabla D25**  
 *`camion`: Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según la pauta).*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -687,7 +740,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 *Nota.* Elaboración propia.
 
-**Tabla D24**  
+**Tabla D26**  
 *`despacho`: Viaje de un camión con una o más órdenes. Su estado se deduce de las marcas de tiempo.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
@@ -704,7 +757,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 
 ### Tablas de Logística e IoT
 
-**Tabla D25**  
+**Tabla D27**  
 *`telemetria`: Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige la pauta.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |

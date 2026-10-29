@@ -11,15 +11,9 @@ from catalogo.models import Categoria, PrecioProducto, Producto
 from clientes.models import Cliente, Direccion
 from cofrial import entradas
 
+from . import documentos
+from .documentos import ErrorDeNegocio     # una regla de negocio impide la operación; el mensaje se muestra tal cual al usuario
 from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
-
-
-class ErrorDeNegocio(Exception):
-    """Una regla de negocio impide la operación; el mensaje se muestra tal cual al usuario."""
-
-    def __init__(self, *mensajes):
-        super().__init__(" ".join(mensajes))
-        self.mensajes = list(mensajes)
 
 
 def cliente_de(usuario):
@@ -140,6 +134,8 @@ def generar_ordenes(cliente, direccion_id, numero_oc=""):
             OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
                                      precio_unitario_clp=precios[i.producto_id])        # RN-06: precio congelado
             Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
+        if cliente.tipo_cliente.codigo == "B2C":
+            documentos.cobrar_b2c(orden)                                           # RN-18: el público paga al comprar y recibe su boleta
         ordenes.append(orden)
     carrito.estado = "convertido"                                                  # RN-03
     carrito.save(update_fields=["estado"])
@@ -198,6 +194,7 @@ def cancelar(orden, como="cliente"):
         Producto.objects.filter(pk=item.producto_id).update(stock_disponible=F("stock_disponible") + item.cantidad)
     orden.estado_orden = EstadoOrden.objects.get(nombre="Cancelada")
     orden.save(update_fields=["estado_orden"])
+    documentos.anular_por_cancelacion(orden)                                       # RN-21: si ya se pagó (boleta), se anula y se devuelve
     return orden
 
 
@@ -216,6 +213,8 @@ def avanzar(orden):
         raise ErrorDeNegocio("Asigna un despacho antes de marcar la orden como despachada.")
     orden.estado_orden = siguiente
     orden.save(update_fields=["estado_orden"])
+    if siguiente.nombre == "Despachada":
+        documentos.emitir_guia(orden)                                              # RN-17: el camión sale con su guía de despacho
     return orden
 
 

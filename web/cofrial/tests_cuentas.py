@@ -55,7 +55,7 @@ class RegistroEmpresaTests(TestCase):
         call_command("cargar_demo", verbosity=0)
 
     def datos(self, **cambios):
-        return {"nombre": "Hotel Villarrica SpA", "rut": "77.123.456-9", "email": "Compras@HotelVillarrica.test", "telefono": "",
+        return {"nombre": "Hotel Villarrica SpA", "rut": "77.123.456-9", "giro": "Hotelería", "email": "Compras@HotelVillarrica.test", "telefono": "",
                 "direccion": "Pedro de Valdivia 100", "comuna": Comuna.objects.get(nombre="Temuco").pk,
                 "clave": "hotel-clave-larga-73", "clave2": "hotel-clave-larga-73", **cambios}
 
@@ -67,7 +67,9 @@ class RegistroEmpresaTests(TestCase):
     def test_la_solicitud_queda_inactiva_y_sin_vendedor_y_lo_explica_al_ingresar(self):
         self.assertContains(self.client.get("/cuenta/entrar/"), 'href="/cuenta/registro/empresa/"')
         c = self.pedir()
-        self.assertEqual((c.tipo_cliente.codigo, c.vendedor, c.usuario.is_active, c.usuario.username), ("B2B", None, False, "compras@hotelvillarrica.test"))
+        self.assertEqual((c.tipo_cliente.codigo, c.giro, c.vendedor, c.usuario.is_active, c.usuario.username),
+                         ("B2B", "Hotelería", None, False, "compras@hotelvillarrica.test"))
+        self.assertEqual(c.tipo_cliente.dias_credito, 30)                  # al aprobarse compra con crédito a 30 días (RN de cobranza)
         r = self.client.post("/cuenta/entrar/", {"username": "compras@hotelvillarrica.test", "password": "hotel-clave-larga-73"})
         self.assertContains(r, "aún no está activa")
         r = self.client.post("/cuenta/entrar/", {"username": "compras@hotelvillarrica.test", "password": "otra-clave-mala-1"})

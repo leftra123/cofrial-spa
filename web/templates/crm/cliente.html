@@ -10,6 +10,13 @@
 {% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}{% if o.oc_pendiente %} <span class="chip pendiente" title="Este pedido aún no tiene el número de orden de compra de la institución">OC pendiente</span>{% endif %}</td><td>{{ o.creada_en|date:"d/m/Y H:i" }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td>{{ o.despacho.camion|default:"–" }}</td><td class="num">{{ o.total|clp }}</td>
   <td>{% if o.alertas_frio %}<span class="alerta">Alerta de frío: {{ o.alertas_frio }} lecturas fuera de rango</span>{% endif %}</td></tr>{% empty %}{% include "componentes/vacio_estado.html" with cols=6 compacto=True ico="caja" titulo="Este cliente aún no ha pedido por la web" texto="Sus órdenes aparecerán aquí con estado y alertas de frío." %}{% endfor %}
 </tbody></table></div>
+<div class="seccion"><h2>Documentos y pagos</h2><p class="sub" style="margin:0">Saldo pendiente: <b>{{ saldo_total|clp }}</b>{% if c.tipo_cliente.dias_credito %} · crédito a {{ c.tipo_cliente.dias_credito }} días{% else %} · paga al comprar{% endif %}</p></div>
+<div class="tabla-caja"><table><thead><tr><th>Documento</th><th>Orden</th><th>Emitido</th><th>Vence</th><th>Estado</th><th class="num">Monto</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
+{% for d in documentos %}<tr><td class="id-orden">{{ d }}{% if d.referencia %} <span class="frio">sobre {{ d.referencia }}: {{ d.motivo }}</span>{% endif %}</td><td>N.º {{ d.orden_id }}</td><td>{{ d.emitido_en|date:"d/m/Y" }}</td><td>{{ d.vence_en|date:"d/m/Y"|default:"–" }}</td>
+  <td>{% include "componentes/chip_pago.html" with estado=d.estado_pago %}</td><td class="num">{% if d.monto_clp %}{{ d.monto_clp|clp }}{% else %}–{% endif %}</td><td class="num">{% if d.saldo is not None %}{{ d.saldo|clp }}{% else %}–{% endif %}</td>
+  <td>{% if puede_editar and d.estado_pago %}{% include "crm/_acciones_documento.html" with d=d volver=request.path %}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="8" class="vacio">Sin documentos todavía.</td></tr>{% endfor %}
+</tbody></table></div>
 <div class="seccion"><h2>Interacciones</h2></div>
 {% if puede_editar %}<div class="tarjeta-ui" style="margin-bottom:16px"><form class="en-linea" method="post" action="/crm/clientes/{{ c.cliente_id }}/interaccion/" data-carga>{% csrf_token %}
   <select name="tipo" aria-label="Tipo"><option>llamada</option><option>correo</option><option>reunion</option><option>nota</option></select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button data-cargando="Registrando…">Registrar</button></form></div>{% endif %}

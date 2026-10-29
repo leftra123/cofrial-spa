@@ -46,7 +46,8 @@
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
       {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
-      <button class="confirmar" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% endif %}>Generar orden</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
+      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega.{% else %}Pagas ahora (Webpay, simulado) y recibes tu boleta en seguida.{% endif %}</p>
+      <button class="confirmar" data-cargando="{% if pide_oc %}Generando orden…{% else %}Procesando pago…{% endif %}"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>{% if pide_oc %}Generar orden{% else %}Pagar y generar orden{% endif %}</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
     </form>
     <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde "Mis pedidos"</p>
   </aside>

@@ -6,7 +6,7 @@
 {% if solicitudes %}
 <div class="tabla-caja"><table><thead><tr><th>Empresa</th><th>RUT</th><th>Contacto</th><th>Dirección</th><th>Pedida</th>{% if puede_editar %}<th>Decisión</th>{% endif %}</tr></thead><tbody>
 {% for c in solicitudes %}<tr>
-  <td><b>{{ c.nombre }}</b></td>
+  <td><b>{{ c.nombre }}</b>{% if c.giro %}<br><span class="muted">{{ c.giro }}</span>{% endif %}</td>
   <td>{{ c.rut }}</td>
   <td>{{ c.email }}{% if c.telefono %}<br><span class="muted">{{ c.telefono }}</span>{% endif %}</td>
   <td>{% for d in c.direccion_set.all %}{{ d.calle_numero }}, {{ d.comuna.nombre }}{% endfor %}</td>

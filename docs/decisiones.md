@@ -11,12 +11,12 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-02 | Motor de BD en RDS | **PostgreSQL** | MySQL | Adoptada (sin objeciones; Django y Grafana lo soportan de forma nativa) |
 | D-03 | Acceso a datos | **ORM de Django con migraciones**. `informe/modelo/esquema.sql` queda como diseño de referencia validado | SQL directo / Drizzle / Prisma | **Adoptada** el 15-oct, consecuencia de D-01 |
 | D-04 | Simulador IoT | **Python en Docker**, `docker compose` con varios contenedores (camiones) | Node/TypeScript en Docker | **Adoptada** el 15-oct, consecuencia de D-01 (un solo lenguaje) |
-| D-05 | Dashboard BI | **Grafana** en Docker (gratis, actualización cada 5 s, mapa para `lat`/`long`) + torre de control propia como extra | Metabase (más simple, refresco más lento) / Chart.js propio | Por confirmar |
-| D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Por confirmar |
-| D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Por confirmar |
-| D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Por confirmar |
+| D-05 | Dashboard BI | **Grafana** en Docker (gratis, actualización cada 5 s, mapa para `lat`/`long`) + torre de control propia como extra | Metabase (más simple, refresco más lento) / Chart.js propio | Adoptada en la práctica (Grafana en producción en AWS; Sergio confirma) |
+| D-06 | IA gratuita | **Google Gemini API (free tier)** para clasificar requerimientos y asistente del catálogo | Groq (Llama, free tier) / Hugging Face | Adoptada en la práctica (Gemini con respaldo Groq, 20 de 20 medido) |
+| D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Adoptada en la práctica (`aws/provision.sh`) |
+| D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Cubierta por `/flota/` y `/demo/`; sin mapa Leaflet dedicado |
 
-> El modelo de datos (25 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
+> El modelo de datos (27 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
 
 ## Por qué esta combinación
 - **Un solo lenguaje (Python)** para web, API, cálculos e IoT: lo que aprende uno le sirve al otro y el simulador comparte herramientas con la aplicación.
@@ -130,7 +130,17 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 - Evaluación con APIs reales (`manage.py evaluar_desglose`, 15 textos): 1.ª corrida motivo 73 % y urgencia 80 %; tras definir motivos y rúbrica en el prompt, 15/15 y 15/15 (optimista, se ajustó con esos mismos textos). Con 8 textos nuevos: motivo 7/8, urgencia 8/8.
 - Categoría «Problema en la entrega» (seed idempotente en `cargar_demo`): `crear_requerimiento(..., categoria_nombre=CATEGORIA_ENTREGA)` la asigna sin consultar a la IA, que solo afina el motivo en el desglose; se muestra con el chip «Por entrega», no como «Manual». El prompt del desglose suma un desempate temperatura vs producto dañado. Evaluación con 12 textos nuevos no usados para ajustar (formal, coloquial, con faltas): motivo 12/12 y urgencia 12/12 (`evaluar_desglose --conjunto nuevo`).
 - Pantalla del cliente «Estamos afuera» (pedido y campanita): la respuesta se envía a `POST /pedidos/<id>/entrega/` sin recarga y, sin JavaScript, los mismos formularios (`<details>`) funcionan por redirección. La cuenta regresiva es suave (barra y texto redondeado, sin segundos que cambian) y se reajusta con `GET /pedidos/<id>/entrega/`. El requerimiento que crea «No pude recibirlo» queda en la categoría «Problema en la entrega» sin pasar por la clasificación de la IA (`crear_requerimiento` la elige si el pedido está «Entrega no concretada»); la IA solo desglosa el motivo. El asistente conoce los dos estados nuevos («con el camión en la puerta», «con la entrega sin concretar») y sabe qué responder.
-- **Varios stacks locales (25-oct-2026):** los puertos del `docker-compose.yml` local son variables (`WEB_PUERTO`, `GRAFANA_PUERTO`, `DB_PUERTO`, por defecto 8000, 3000 y 5433) y cada `.env` puede fijar `COMPOSE_PROJECT_NAME`. El stack principal usa los valores por defecto y cada worktree usa otros puertos y otro nombre, con lo que los volúmenes y contenedores no se mezclan. Revisión adicional: `npm audit` sin vulnerabilidades, sin secretos en el historial de git, `check --deploy` solo advierte de HSTS para subdominios y precarga (no se activan a propósito), SSH restringido a la IP del equipo y RDS sin acceso público.
+- **Varios stacks locales (25-oct-2026):** los puertos del `docker-compose.yml` local son variables (`WEB_PUERTO` y `DB_PUERTO`, por defecto 8000 y 5433; Grafana ya no publica puerto, ver la decisión del 29-oct) y cada `.env` puede fijar `COMPOSE_PROJECT_NAME`. El stack principal usa los valores por defecto y cada worktree usa otros puertos y otro nombre, con lo que los volúmenes y contenedores no se mezclan. Revisión adicional: `npm audit` sin vulnerabilidades, sin secretos en el historial de git, `check --deploy` solo advierte de HSTS para subdominios y precarga (no se activan a propósito), SSH restringido a la IP del equipo y RDS sin acceso público.
+
+## Sobre FastAPI y otros stacks (25-oct-2026)
+El PDF de la evaluación no exige ningún framework, lenguaje ni API concreta; solo pide EC2, RDS, Docker, los seis campos de telemetría, BI en vivo e IA gratuita. FastAPI fue una opción mencionada en clase, no un requisito. Se mantiene Django + DRF (D-01) porque ya cubre toda la rúbrica del Hito 2 y reescribir el backend a una semana de la defensa no suma puntos. Si el docente confirma que FastAPI es obligatorio, habría que avisarlo antes del 04-nov.
+
+## Documentos tributarios y cobranza (24-oct-2026)
+- **Qué se agregó:** tablas `documento` (boleta, factura, guía de despacho y nota de crédito) y `pago`; `tipo_cliente.dias_credito` (B2B 30 días, B2C 0) y `cliente.giro`. Reglas RN-17 a RN-22 (`informe/04c-canales-b2b-b2c.md` y `04d-crm.md`).
+- **Qué elige el cliente:** nada. El canal decide el comprobante: B2C paga al comprar y recibe boleta; B2B recibe la guía al despacho y la factura después de la entrega, a 30 días. La guía y la nota de crédito las emite Cofrial.
+- **Por qué la factura no es automática al entregar:** así el CRM puede mostrar «entregado sin facturar», que es justo la pregunta de cobranza que motivó el cambio, y el vendedor puede agrupar o esperar la orden de compra si hace falta.
+- **Qué no se hizo:** conexión al SII (folios reales, firma electrónica), pasarela de pago real, factura única por varias guías, intereses por mora ni recordatorios de cobro. El saldo se calcula (monto menos pagos y notas de crédito) y no se guarda, para no tener un dato que pueda contradecir a los pagos.
+- **Datos de demostración:** `cargar_demo` agrega cuatro pedidos B2B históricos (pagado, por cobrar, vencido y entregado sin facturar). Dos pruebas anteriores que asumían un solo pedido del Hospital se ajustaron.
 
 ## Segunda revisión de CVEs y cadena de suministro (27-oct-2026)
 - **Estado de las dependencias en `main`:** Django 6.1.2, djangorestframework 3.18.3, gunicorn 26.2.0, psycopg 3.3.6, whitenoise 6.12.0 y docx 9.13.0 (subidas por Dependabot el 25-oct). `pip-audit` sin vulnerabilidades.
@@ -139,3 +149,17 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 - **Ventana de exposición:** el `package-lock.json` del informe se creó el 22-oct y se actualizó el 25-oct (docx 9.11.0 a 9.13.0), es decir, después de todas las ventanas anteriores. Ningún paquete del lock tiene scripts de instalación (`hasInstallScript`). No hay CI en el repo, así que no hubo instalaciones automáticas en esas fechas. Sin indicios de exposición ni credenciales que rotar.
 - **Sin novedades desde el 25-oct** para Django, Grafana 11.6 (última: 11.6.16) ni Python 3.12.
 - **Pendiente:** la rama 11.6 de Grafana es antigua (la estable ya es la 13.x), conviene planificar el salto a 12 o 13 con el tablero provisionado.
+
+## Panel de BI detrás de los roles (29-oct-2026)
+- **Problema:** Grafana tenía su propio inicio de sesión (cuenta `visor` compartida y `admin`) y el puerto 3000 abierto a internet; cualquiera podía probar claves y el sitio no sabía quién era quién.
+- **Decisión:** Grafana corre solo en la red interna de Docker y se abre en `/bi/` desde la aplicación Django (`cofrial/bi.py`), que comprueba sesión y rol y reenvía la petición con la cabecera `X-WEBAUTH-USER` (modo auth proxy de Grafana). Administración entra como Admin (edita) y gerencia como Viewer (mira); los demás roles reciben 403. Las cabeceras `X-WEBAUTH-*`, `Authorization` y `X-Forwarded-*` del navegador se descartan, las cookies de Django no llegan a Grafana y una escritura con `Origin` ajeno se rechaza.
+- **Condición de seguridad:** Grafana confía en esa cabecera, por eso su puerto no se publica nunca (ni compose ni Security Group). `provision.sh` cierra la regla 3000 en instalaciones previas.
+- **Costo:** sin websockets (Grafana Live apagado; el tablero actualiza por consultas cada 5 s) y el proxy ocupa un hilo de Gunicorn por consulta del tablero (13 cada 5 s por pantalla abierta), por eso Gunicorn pasó a 2 procesos × 8 hilos en ambos compose.
+- **Descartadas:** BI propio con gráficos en Django (rehacer tablero y mapa) y solo cerrar el puerto (no resuelve los roles).
+
+## Registro con datos de ejemplo precargados (29-oct-2026)
+- **Problema:** crear una cuenta de cliente particular exige ocho campos (nombre, RUT válido, correo, teléfono, dirección, comuna y clave dos veces), y mostrarlo en una demostración es lento.
+- **Decisión:** el registro (`/cuenta/registro/`) tiene el botón «Precargar datos de ejemplo» (`static/js/precarga.js`). Rellena el formulario con una persona ficticia: RUT con dígito verificador válido y único en cada clic, correo `@correo.test` (dominio reservado) y clave de ejemplo, que se muestra junto al botón. El formulario no se envía solo: quien presenta revisa y pulsa «Crear cuenta». Vuelve a pulsar para otra persona.
+- **Control:** `REGISTRO_PRECARGA=0` oculta el botón y no carga el script; por defecto está activo mientras el sitio sea un prototipo.
+- **Límite:** las cuentas creadas siguen contando en el tope de registros por IP y hora.
+

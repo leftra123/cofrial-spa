@@ -20,6 +20,9 @@ erDiagram
   despacho |o--o{ orden : "transporta"
   orden ||--o{ orden_item : "detalla"
   producto ||--o{ orden_item : "se vende"
+  orden ||--o{ documento : "origina"
+  documento |o--o{ documento : "rebaja"
+  documento ||--o{ pago : "se paga con"
   camion ||--o{ despacho : "realiza"
   camion ||--o{ telemetria : "reporta"
   vendedor ||--o{ prospecto : "gestiona"
@@ -106,6 +109,15 @@ erDiagram
   orden_item {
     integer orden_id PK
     integer producto_id PK
+  }
+  documento {
+    integer documento_id PK
+    integer orden_id FK
+    integer referencia_id FK
+  }
+  pago {
+    integer pago_id PK
+    integer documento_id FK
   }
   telemetria {
     bigint telemetria_id PK

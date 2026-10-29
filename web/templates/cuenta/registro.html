@@ -1,10 +1,12 @@
 {% extends "tienda/base.html" %}
+{% load static %}
 {% block titulo %}Crear cuenta | Cofrial SpA{% endblock %}
 {% block contenido %}
 <div class="auth tarjeta-ui">
   <h1>Crear cuenta de cliente particular</h1>
   <p class="muted">Con ella compra con los precios del público general y sigue sus pedidos.</p>
   {% include "componentes/resumen_errores.html" with titulo="Corrige estos datos para crear tu cuenta" %}
+  {% if precarga %}<div class="precarga"><button type="button" class="btn-sec" id="precargar-registro">Precargar datos de ejemplo</button><span class="muted" id="precarga-nota" aria-live="polite">Rellena el formulario con una persona ficticia.</span></div>{% endif %}
   <form method="post" novalidate data-carga>{% csrf_token %}
     {{ form.as_p }}
     <button data-cargando="Creando cuenta…">Crear cuenta</button>
@@ -12,3 +14,4 @@
   <p class="muted" style="margin-top:16px;text-align:center">¿Ya tiene cuenta? <a href="/cuenta/entrar/">Ingresar</a></p>
 </div>
 {% endblock %}
+{% block scripts %}{% if precarga %}<script src="{% static 'js/precarga.js' %}"></script>{% endif %}{% endblock %}

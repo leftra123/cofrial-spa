@@ -53,3 +53,30 @@ class RegistroB2CForm(forms.Form):
         dir_ = Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)
         self.ubicada = geo.ubicar(dir_)
         return u
+
+
+class RegistroEmpresaForm(RegistroB2CForm):
+    """Solicitud de cuenta de una empresa (perfil B2B). Queda inactiva y sin vendedor hasta que ventas la aprueba en el CRM
+    (crm/solicitudes): así la lista de precios institucional y el crédito no se entregan a cualquiera que se registre."""
+
+    giro = forms.CharField(label="Giro", max_length=80, help_text="Actividad económica, tal como va en la factura (p. ej. «Hotelería»).")
+    field_order = ["nombre", "rut", "giro", "email", "telefono", "direccion", "comuna", "clave", "clave2"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo, etiqueta, ayuda in (("nombre", "Razón social", None), ("rut", "RUT de la empresa", "Con o sin puntos, con dígito verificador."),
+                                       ("email", "Correo de compras", "Con este correo se ingresa y llegan los avisos de los pedidos."),
+                                       ("telefono", "Teléfono de contacto (opcional)", None), ("direccion", "Dirección de despacho", None)):
+            self.fields[campo].label = etiqueta
+            if ayuda:
+                self.fields[campo].help_text = ayuda
+
+    @transaction.atomic
+    def guardar(self):
+        d = self.cleaned_data
+        u = get_user_model().objects.create_user(d["email"], email=d["email"], password=d["clave"], is_active=False)
+        c = Cliente.objects.create(usuario=u, tipo_cliente=TipoCliente.objects.get(codigo="B2B"), rut=d["rut"], giro=d["giro"],
+                                   nombre=d["nombre"], email=d["email"], telefono=d["telefono"])
+        dir_ = Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)
+        self.ubicada = geo.ubicar(dir_)
+        return c

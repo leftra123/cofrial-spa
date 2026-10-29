@@ -45,11 +45,14 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 | Pedidos web (de sus clientes) | L | — | L | L, E |
 | Crear pedido a nombre del cliente | E | — | — | E |
 | Requerimientos | L, E | — | L | L, E |
+| Solicitudes de cuenta de empresa | L, E (queda en su cartera) | — | L | L, E (elige el vendedor) |
 | Alertas de frío | L | L | L | L |
 | Flota y armar despacho | — | L, E | L | L, E |
 | Reportes | L (propios) | — | L (todos) | L (todos) |
 
 *Nota.* Elaboración propia. Los clientes B2B y B2C no entran al CRM: usan solo el portal.
+
+**Alta de empresas desde el portal.** Una empresa puede pedir su cuenta en `/cuenta/registro/empresa/`. La cuenta nace inactiva y sin vendedor y aparece en la pestaña *Solicitudes* del CRM, con un contador. El vendedor que la aprueba la recibe en su cartera; el administrador la asigna a un vendedor; gerencia solo la consulta. La aprobación activa la cuenta y deja una interacción en la ficha, de modo que la decisión queda registrada y la lista institucional no se entrega a quien se registre sin revisión.
 
 ## Pipeline comercial
 

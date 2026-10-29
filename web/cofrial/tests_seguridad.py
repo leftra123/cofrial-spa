@@ -49,12 +49,12 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
-                    "/crm/cobranza/"]
+                    "/crm/cobranza/", "/crm/solicitudes/"]
     PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
                      "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/limpiar/",
-                     "/pedidos/1/oc/", "/bi/x", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/"]
+                     "/pedidos/1/oc/", "/bi/x", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
         for url in self.PRIVADAS_GET:
@@ -81,6 +81,8 @@ class AccesoAnonimoTests(BaseSeguridad):
     def test_cada_ruta_del_proyecto_esta_cubierta_o_es_publica(self):
         """Si alguien agrega una ruta nueva, esta prueba obliga a decidir si es pública o privada."""
         publicas = {"", "portada/", "guia/", "catalogo/", "catalogo/<int:producto_id>/", "cuenta/entrar/", "cuenta/registro/", "cuenta/salir/", "salud/",
+                    "cuenta/registro/empresa/", "cuenta/recuperar/", "cuenta/recuperar/enviado/", "cuenta/recuperar/<str:uidb64>/<str:token>/",
+                    "cuenta/recuperar/listo/",        # pedir cuenta y recuperar la clave son para quien no puede entrar
                     "salud/bd/", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/"}
         cubiertas = {u.strip("/") for u in self.PRIVADAS_GET + self.PRIVADAS_POST}
         pendientes = []
@@ -517,6 +519,13 @@ class LimiteDeEnviosTests(BaseSeguridad):
         tope = settings.LIMITE_POST_POR_HORA["/cuenta/registro/"]
         codigos = [c.post("/cuenta/registro/", {"nombre": "x"}).status_code for _ in range(tope + 2)]
         self.assertEqual(codigos[:tope], [200] * tope)
+        self.assertEqual(codigos[tope:], [429, 429])
+
+    def test_recuperar_la_clave_tiene_tope_para_no_usar_el_sitio_como_buzon_de_spam(self):
+        c = self.anonimo()
+        tope = settings.LIMITE_POST_POR_HORA["/cuenta/recuperar/"]
+        codigos = [c.post("/cuenta/recuperar/", {"email": "ana@correo.test"}).status_code for _ in range(tope + 2)]
+        self.assertEqual(codigos[:tope], [302] * tope)
         self.assertEqual(codigos[tope:], [429, 429])
 
     def test_soporte_tiene_tope_para_proteger_la_cuota_de_la_ia(self):

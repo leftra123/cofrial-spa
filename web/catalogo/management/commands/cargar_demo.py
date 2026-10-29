@@ -12,6 +12,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from catalogo.models import Categoria, ListaPrecio, PrecioProducto, Producto, RangoTemperatura
+from clientes import cuentas_demo
 from clientes.models import Cliente, Comuna, Direccion, Region, TipoCliente, Vendedor
 from crm.models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 from flota.models import Camion, Despacho
@@ -103,6 +104,15 @@ class Command(BaseCommand):
         # La clave se fija SOLO al crear una cuenta: una clave cambiada desde adentro (administración o «Cambiar mi clave») nunca se pisa,
         # aunque este comando corra en cada arranque. Las cuentas administradoras usan ADMIN_PASSWORD si está definida.
         clave_admin = os.environ.get("ADMIN_PASSWORD") or clave
+        # Con DEMO_PASSWORD definida cada cuenta tiene su propia clave, derivada de ella (clientes/cuentas_demo.py: la hoja para el
+        # profesor se calcula con el mismo .env); sin ella (pruebas, o clave al azar) todas comparten la común.
+        por_cuenta = bool(os.environ.get("DEMO_PASSWORD"))
+
+        def comun_de(usuario):
+            return clave_admin if usuario in cuentas_demo.ADMINISTRADORES else clave
+
+        def clave_para(usuario):
+            return cuentas_demo.clave_de(usuario, comun_de(usuario)) if por_cuenta else comun_de(usuario)
         Usuario = get_user_model()
         # cuentas del personal con correos simples @cofrial.cl; si existen con el nombre anterior se renombran (conservan sus datos)
         for viejo, nuevo in (("admin", "admin@cofrial.cl"), ("vendedora@cofrial.test", "vendedora@cofrial.cl"),
@@ -154,7 +164,7 @@ class Command(BaseCommand):
         grupo_vendedores, _ = Group.objects.get_or_create(name="vendedores")
         u_vend, nuevo = Usuario.objects.get_or_create(username="vendedora@cofrial.cl", defaults=dict(email="vendedora@cofrial.cl", is_staff=True))
         if nuevo:
-            u_vend.set_password(clave)
+            u_vend.set_password(clave_para(u_vend.username))
             u_vend.save()
         u_vend.groups.add(grupo_vendedores)
         vendedora, _ = Vendedor.objects.get_or_create(usuario=u_vend, defaults=dict(nombre="María Paz Soto", telefono="+56912345678"))
@@ -165,7 +175,7 @@ class Command(BaseCommand):
         ]:
             u, nuevo = Usuario.objects.get_or_create(username=username, defaults=dict(email=username))
             if nuevo:
-                u.set_password(clave)
+                u.set_password(clave_para(username))
                 u.save()
             cliente, _ = Cliente.objects.get_or_create(rut=rut, defaults=dict(usuario=u, tipo_cliente=tipo, vendedor=vendedor, nombre=nombre, email=username))
             if not cliente.direccion_set.exists():
@@ -177,12 +187,12 @@ class Command(BaseCommand):
         for username, grupo in (("gerencia@cofrial.cl", grupo_gerencia), ("despacho@cofrial.cl", grupo_despacho)):
             u, nuevo = Usuario.objects.get_or_create(username=username, defaults=dict(email=username, is_staff=True))
             if nuevo:
-                u.set_password(clave)
+                u.set_password(clave_para(username))
                 u.save()
             u.groups.add(grupo)
         u2, nuevo = Usuario.objects.get_or_create(username="vendedor2@cofrial.cl", defaults=dict(email="vendedor2@cofrial.cl", is_staff=True))
         if nuevo:
-            u2.set_password(clave)
+            u2.set_password(clave_para(u2.username))
             u2.save()
         u2.groups.add(grupo_vendedores)
         pedro, _ = Vendedor.objects.get_or_create(usuario=u2, defaults=dict(nombre="Pedro Núñez", telefono="+56987654321"))
@@ -202,13 +212,13 @@ class Command(BaseCommand):
                 ("sergio@cofrial.cl", "Sergio Vásquez", "19.876.543-0", tipo_b2c, None, "Av. Caupolicán 0500", -38.73336, -72.58870)):
             u, nuevo = Usuario.objects.get_or_create(username=username, defaults=dict(email=username))
             if nuevo:
-                u.set_password(clave)
+                u.set_password(clave_para(username))
                 u.save()
             cliente, _ = Cliente.objects.get_or_create(rut=rut, defaults=dict(usuario=u, tipo_cliente=tipo, vendedor=vendedor_, nombre=nombre, email=username))
             if not cliente.direccion_set.exists():
                 Direccion.objects.create(cliente=cliente, calle_numero=calle, comuna=temuco, es_principal=True, lat=lat, long=lon)
         if not Usuario.objects.filter(username="eric@cofrial.cl").exists():
-            Usuario.objects.create_superuser("eric@cofrial.cl", "eric@cofrial.cl", clave_admin)
+            Usuario.objects.create_superuser("eric@cofrial.cl", "eric@cofrial.cl", clave_para("eric@cofrial.cl"))
 
         etapas = {e.nombre: e for e in EtapaPipeline.objects.all()}
         for nombre, empresa, email, etapa, monto, v in [
@@ -248,7 +258,16 @@ class Command(BaseCommand):
             self.historial_de_cobranza(Cliente.objects.get(rut="61.973.200-4"), sur)
 
         if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
-            Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_admin)
+            Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_para("admin@cofrial.cl"))
+        if por_cuenta:      # las cuentas que siguen con la clave común de antes pasan a la suya; una clave cambiada por su dueño no se toca
+            pasadas = 0
+            for u in Usuario.objects.filter(username__in=cuentas_demo.USUARIOS):
+                if u.check_password(comun_de(u.username)):
+                    u.set_password(clave_para(u.username))
+                    u.save(update_fields=["password"])
+                    pasadas += 1
+            if pasadas:
+                self.stdout.write(f"{pasadas} cuenta(s) de demostración pasaron de la clave común a su clave propia.")
         try:                                        # las rutas por calles de la demostración quedan calculadas y en caché: la defensa no depende de la red
             from flota import rutas
             for despacho in Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True, ruta_geojson__isnull=True):
@@ -256,7 +275,7 @@ class Command(BaseCommand):
             rutas.precalcular_demo()
         except Exception as e:                      # sin red o sin OSRM: se calculan al despachar, con respaldo en línea recta
             self.stdout.write(self.style.WARNING(f"No se precalcularon las rutas de la demostración: {e}"))
-        self.stdout.write(self.style.SUCCESS("Datos de demostración listos (usuarios de prueba: contraseña en DEMO_PASSWORD)."))
+        self.stdout.write(self.style.SUCCESS("Datos de demostración listos (claves de las cuentas: python3 web/clientes/cuentas_demo.py --env .env)."))
 
     def historial_de_cobranza(self, hospital, sur):
         """Cuatro pedidos B2B ya entregados en el pasado, para que la cobranza del CRM tenga qué mostrar:

@@ -18,7 +18,7 @@ def menu(request):
     u = request.user
     tiles = {"mapa_tiles": settings.MAPA_TILES, "asistente_activo": settings.ASISTENTE_ACTIVO}
     if not u.is_authenticated:
-        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "demo": False, "tienda": True, "comercial": False}, "inicio_url": "/", "tipo_cuenta": "anonimo", "etiqueta_cuenta": "", "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "grafana_url": "", **tiles}
+        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "demo": False, "tienda": True, "comercial": False}, "inicio_url": "/", "tipo_cuenta": "anonimo", "etiqueta_cuenta": "", "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "solicitudes_n": 0, "grafana_url": "", **tiles}
     rol = crm.rol(u)
     cliente = pedidos.cliente_de(u)
     n = 0
@@ -32,4 +32,5 @@ def menu(request):
             "inicio_url": INICIOS[tipo], "tipo_cuenta": tipo, "etiqueta_cuenta": ETIQUETAS.get(tipo, ""),
             "carrito_n": n, "cliente_tienda": cliente,
             "avisos_n": avisos.cuantos_disponibles(cliente) if cliente is not None else 0,
+            "solicitudes_n": crm.solicitudes_empresa().count() if rol in ("admin", "gerencia", "vendedor") else 0,   # empresas por aprobar
             "grafana_url": _grafana(rol), **tiles}

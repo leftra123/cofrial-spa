@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.15-slim
 ENV PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir "psycopg[binary]>=3.2"

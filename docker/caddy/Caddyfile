@@ -1,0 +1,11 @@
+# TLS local: certificados generados con scripts/generar-certs-local.sh (mkcert).
+# El contenedor escucha 443; en el host se publica como HTTPS_PUERTO (p. ej. 8443).
+
+{
+	auto_https off
+}
+
+:443 {
+	tls /certs/local.pem /certs/local-key.pem
+	reverse_proxy web:8000
+}

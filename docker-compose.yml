@@ -54,6 +54,9 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODELS: ${GROQ_MODELS:-}
       IA_PROVEEDORES: ${IA_PROVEEDORES:-}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
+      MERCADOPAGO_PUBLIC_KEY: ${MERCADOPAGO_PUBLIC_KEY:-}
+      MERCADOPAGO_PUBLIC_URL: ${MERCADOPAGO_PUBLIC_URL:-}
     ports: ["${WEB_PUERTO:-8000}:8000"]
     depends_on:
       db: {condition: service_healthy}

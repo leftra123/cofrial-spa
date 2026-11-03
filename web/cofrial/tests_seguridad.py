@@ -642,11 +642,31 @@ class ConfiguracionDeProduccionTests(TestCase):
             self.assertTrue(nuevos.SESSION_COOKIE_SECURE and nuevos.CSRF_COOKIE_SECURE)
             self.assertGreaterEqual(nuevos.SECURE_HSTS_SECONDS, 31536000)
             self.assertEqual(nuevos.SECURE_PROXY_SSL_HEADER, ("HTTP_X_FORWARDED_PROTO", "https"))
+            self.assertTrue(nuevos.SECURE_SSL_REDIRECT)
         finally:
             if anterior is None:
                 os.environ.pop("DJANGO_HTTPS", None)
             else:
                 os.environ["DJANGO_HTTPS"] = anterior
+            importlib.reload(ajustes)
+
+    def test_https_sin_redireccion_cuando_django_https_redirect_es_cero(self):
+        """Caddy en :8443 y Gunicorn en :8000: cookies seguras sin forzar SSL en el puerto HTTP."""
+        import importlib, os
+        import cofrial.settings as ajustes
+        guardados = {k: os.environ.get(k) for k in ("DJANGO_HTTPS", "DJANGO_HTTPS_REDIRECT")}
+        os.environ["DJANGO_HTTPS"] = "1"
+        os.environ["DJANGO_HTTPS_REDIRECT"] = "0"
+        try:
+            nuevos = importlib.reload(ajustes)
+            self.assertFalse(nuevos.SECURE_SSL_REDIRECT)
+            self.assertTrue(nuevos.SESSION_COOKIE_SECURE)
+        finally:
+            for k, v in guardados.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
             importlib.reload(ajustes)
 
     def test_los_limites_de_intentos_se_ajustan_por_entorno(self):

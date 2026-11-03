@@ -106,11 +106,13 @@ def emitir_guia(orden):
 
 
 @transaction.atomic
-def cobrar_b2c(orden):
-    """RN-18: el cliente B2C paga al comprar (Webpay simulado): se emite la boleta y queda pagada."""
+def cobrar_b2c(orden, medio="webpay", referencia=None):
+    """RN-18: el cliente B2C paga al comprar: se emite la boleta y queda pagada (Webpay simulado o Mercado Pago)."""
     monto = monto_con_iva(orden)
     boleta = _emitir(orden, "boleta", monto)
-    Pago.objects.create(documento=boleta, monto_clp=monto, medio="webpay", referencia=f"AUT-{orden.orden_id:06d}")
+    if referencia is None:
+        referencia = f"AUT-{orden.orden_id:06d}"
+    Pago.objects.create(documento=boleta, monto_clp=monto, medio=medio, referencia=str(referencia)[:60])
     return boleta
 
 

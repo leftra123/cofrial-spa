@@ -69,13 +69,13 @@
 <div class="tarjeta-ui">
   <h2>Seguimiento del envío</h2>
   {% with f=orden.estado_orden.orden_flujo %}
-  <ol class="pasos" style="list-style:none;padding:0" aria-label="Etapas del pedido">
-    <li class="paso {% if f >= 1 %}hecho{% endif %}{% if f == 1 %} actual{% endif %}" {% if f == 1 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Recibida<small>{{ orden.creada_en|date:"d/m H:i" }}</small></li>
-    <li class="paso {% if f >= 2 %}hecho{% endif %}{% if f == 2 %} actual{% endif %}" {% if f == 2 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Confirmada</li>
-    <li class="paso {% if f >= 3 %}hecho{% endif %}{% if f == 3 %} actual{% endif %}" {% if f == 3 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>En preparación</li>
-    <li class="paso {% if f >= 4 %}hecho{% endif %}{% if f == 4 %} actual{% endif %}" {% if f == 4 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Despachada</li>
-    <li class="paso {% if f >= 5 and f != 7 %}hecho{% endif %}{% if f == 5 %} actual{% endif %}" {% if f == 5 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>Camión en la puerta</li>
-    <li class="paso {% if f == 6 %}hecho actual{% endif %}" {% if f == 6 %}aria-current="step"{% endif %}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>{% if f == 7 %}Entrega no concretada{% else %}Entregada{% endif %}</li>
+  <ol class="pasos pasos-envio" aria-label="Etapas del pedido">
+    {% include "pedidos/_paso_envio.html" with n=1 etiqueta="Recibida" fecha=orden.creada_en|date:"d/m H:i" %}
+    {% include "pedidos/_paso_envio.html" with n=2 etiqueta="Confirmada" %}
+    {% include "pedidos/_paso_envio.html" with n=3 etiqueta="En preparación" %}
+    {% include "pedidos/_paso_envio.html" with n=4 etiqueta="Despachada" %}
+    {% include "pedidos/_paso_envio.html" with n=5 etiqueta="Camión en la puerta" %}
+    {% if f == 7 %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Entrega no concretada" %}{% else %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Entregada" %}{% endif %}
   </ol>
   {% endwith %}
 </div>
@@ -201,9 +201,9 @@
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
           mapa = CofrialMapa.crear("mapa", cam, 14);
-          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
+          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom()), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
           if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(s.destino.direccion);
-        } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id)); }
+        } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom())); }
         if (dest && s.ruta_url && Date.now() - ultimaRuta > 60000) {       // la ruta por calles la calculó y guardó el servidor: se pide una vez por minuto
           ultimaRuta = Date.now();
           fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {

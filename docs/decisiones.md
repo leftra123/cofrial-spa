@@ -135,7 +135,8 @@ El PDF de la evaluación no exige ningún framework, lenguaje ni API concreta; s
 - **Qué se agregó:** tablas `documento` (boleta, factura, guía de despacho y nota de crédito) y `pago`; `tipo_cliente.dias_credito` (B2B 30 días, B2C 0) y `cliente.giro`. Reglas RN-17 a RN-22 (`informe/04c-canales-b2b-b2c.md` y `04d-crm.md`).
 - **Qué elige el cliente:** nada. El canal decide el comprobante: B2C paga al comprar y recibe boleta; B2B recibe la guía al despacho y la factura después de la entrega, a 30 días. La guía y la nota de crédito las emite Cofrial.
 - **Por qué la factura no es automática al entregar:** así el CRM puede mostrar «entregado sin facturar», que es justo la pregunta de cobranza que motivó el cambio, y el vendedor puede agrupar o esperar la orden de compra si hace falta.
-- **Qué no se hizo:** conexión al SII (folios reales, firma electrónica), pasarela de pago real, factura única por varias guías, intereses por mora ni recordatorios de cobro. El saldo se calcula (monto menos pagos y notas de crédito) y no se guarda, para no tener un dato que pueda contradecir a los pagos.
+- **Qué no se hizo:** conexión al SII (folios reales, firma electrónica), factura única por varias guías, intereses por mora ni recordatorios de cobro. El saldo se calcula (monto menos pagos y notas de crédito) y no se guarda, para no tener un dato que pueda contradecir a los pagos.
+- **Pasarela B2C (02-nov-2026):** Mercado Pago **Payment Brick** embebido en el carrito (modo prueba: `MERCADOPAGO_ACCESS_TOKEN` + `MERCADOPAGO_PUBLIC_KEY`). Orden y boleta solo con pago `approved`; tabla `checkout_pago`. Sin credenciales → Webpay simulado. Guía: `docs/mercadopago-checkout.md`.
 - **Datos de demostración:** `cargar_demo` agrega cuatro pedidos B2B históricos (pagado, por cobrar, vencido y entregado sin facturar). Dos pruebas anteriores que asumían un solo pedido del Hospital se ajustaron.
 
 ## Segunda revisión de CVEs y cadena de suministro (27-oct-2026)

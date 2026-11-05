@@ -33,24 +33,24 @@ Nota. Elaboración propia.
 **Tabla 3**
 *Catálogo de casos de uso*
 
-| ID | Caso de uso | Actor | Módulo | Prioridad | Rúbrica |
+| ID | Caso de uso | Actor | Módulo | Prioridad | Requerimiento de Cofrial |
 |---|---|---|---|---|---|
-| CU-01 | Seleccionar perfil e iniciar sesión (B2B/B2C) | Cliente B2B, B2C | E-commerce | Obligatorio | H2-D2 |
-| CU-02 | Consultar el catálogo de refrigerados con precio según perfil | Cliente B2B, B2C | E-commerce | Obligatorio | H2-D2 |
-| CU-03 | Gestionar el carrito de compras | Cliente B2B, B2C | E-commerce | Obligatorio | H2-D2 |
-| CU-04 | Generar órdenes por rango de temperatura | Cliente B2B, B2C | E-commerce | Obligatorio | H2-D2 |
-| CU-05 | Seguir el estado del pedido | Cliente B2B, B2C | E-commerce | Extra | H2-D5 |
-| CU-06 | Gestionar clientes | Vendedor | CRM | Obligatorio | H2-D2 |
-| CU-07 | Gestionar prospectos y avanzar etapas del pipeline | Vendedor | CRM | Obligatorio | H2-D2 |
-| CU-08 | Hacer seguimiento de pedidos web | Vendedor | CRM | Obligatorio | H2-D2 |
-| CU-09 | Registrar un requerimiento y clasificarlo con IA | Cliente, Servicio de IA | CRM / E-commerce | Obligatorio | H2-D5 |
-| CU-10 | Enviar telemetría del camión | Simulador IoT | IoT | Obligatorio | H2-D3 |
-| CU-11 | Detectar la ruptura de cadena de frío | Simulador IoT | IoT | Obligatorio | H2-D3 |
-| CU-12 | Monitorear la flota y sus alertas | Despachador | Torre de control | Extra | H2-D4 |
-| CU-13 | Consultar el dashboard de ventas y cadena de frío | Gerencia | BI | Obligatorio | H2-D4 |
-| CU-14 | Consultar al asistente de tienda | Visitante o cliente autenticado | E-commerce e IA | Complementario | H2-D5 |
+| CU-01 | Seleccionar perfil e iniciar sesión (B2B/B2C) | Cliente B2B, B2C | E-commerce | Obligatorio | E-commerce y CRM |
+| CU-02 | Consultar el catálogo de refrigerados con precio según perfil | Cliente B2B, B2C | E-commerce | Obligatorio | E-commerce y CRM |
+| CU-03 | Gestionar el carrito de compras | Cliente B2B, B2C | E-commerce | Obligatorio | E-commerce y CRM |
+| CU-04 | Generar órdenes por rango de temperatura | Cliente B2B, B2C | E-commerce | Obligatorio | E-commerce y CRM |
+| CU-05 | Seguir el estado del pedido | Cliente B2B, B2C | E-commerce | Extra | IA y demostración |
+| CU-06 | Gestionar clientes | Vendedor | CRM | Obligatorio | E-commerce y CRM |
+| CU-07 | Gestionar prospectos y avanzar etapas del pipeline | Vendedor | CRM | Obligatorio | E-commerce y CRM |
+| CU-08 | Hacer seguimiento de pedidos web | Vendedor | CRM | Obligatorio | E-commerce y CRM |
+| CU-09 | Registrar un requerimiento y clasificarlo con IA | Cliente, Servicio de IA | CRM / E-commerce | Obligatorio | IA y demostración |
+| CU-10 | Enviar telemetría del camión | Simulador IoT | IoT | Obligatorio | IoT con Docker |
+| CU-11 | Detectar la ruptura de cadena de frío | Simulador IoT | IoT | Obligatorio | IoT con Docker |
+| CU-12 | Monitorear la flota y sus alertas | Despachador | Torre de control | Extra | Dashboard BI |
+| CU-13 | Consultar el dashboard de ventas y cadena de frío | Gerencia | BI | Obligatorio | Dashboard BI |
+| CU-14 | Consultar al asistente de tienda | Visitante o cliente autenticado | E-commerce e IA | Complementario | IA y demostración |
 
-Nota. Elaboración propia. "Obligatorio" se refiere a lo que exige la pauta del Hito 2.
+Nota. Elaboración propia. "Obligatorio" se refiere a lo que Cofrial requiere en el Hito 2.
 
 ## Diagrama de casos de uso
 
@@ -65,7 +65,7 @@ El diagrama sigue la idea del modelo de casos de uso del Lenguaje Unificado de M
 
 ## Especificaciones de los casos críticos
 
-Se especifican cuatro casos: los tres que la pauta hace más sensibles (orden, IA y ruptura de frío) y el pipeline comercial, que concentra la lógica del CRM. Las reglas citadas (RN-xx) están en `04c-canales-b2b-b2c.md` y `04d-crm.md`.
+Se especifican cuatro casos: los tres más sensibles para los requerimientos de Cofrial (orden, IA y ruptura de frío) y el pipeline comercial, que concentra la lógica del CRM. Las reglas citadas (RN-xx) están en `04c-canales-b2b-b2c.md` y `04d-crm.md`.
 
 ### CU-04 Generar una orden
 

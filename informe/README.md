@@ -6,6 +6,6 @@ Las fuentes de las secciones 01 a 08 y 04a a 04e se integran con los textos de e
 
 El código de web/, iot/, grafana/ y aws/ sustenta el comportamiento actual. docs/decisiones.md registra decisiones adoptadas y docs/revision-hito1-2026-10-25.md conserva la evidencia y el alcance de pruebas. 99-bitacora.md es histórico y no se incorpora como estado vigente del informe.
 
-Se escribe en tercera persona, sin emojis, con captions y notas APA 7. Las alternativas ponderadas son un fundamento del equipo consultor, no requisitos adicionales de la rúbrica. La matriz de cobertura está en 09-verificacion-pauta.md.
+Se escribe en tercera persona, sin emojis, con captions y notas APA 7. Las alternativas ponderadas son un fundamento del equipo consultor, no requisitos adicionales de la rúbrica. La matriz de cobertura está en 09-verificacion-pauta.md. El texto exportado no nombra la pauta ni la rúbrica: esas exigencias se redactan como requerimientos de Cofrial, sin códigos D1-D4 ni H2-Dx. Las líneas que empiezan con `>` no se exportan.
 
 Fecha de Hito 1 adoptada: jueves 05-nov-2026. El Word actualizado se guarda en entrega/Informe_Hito1_Cofrial_SpA.docx. El Gantt se regenera desde la tabla de 07-metodologia-cronograma.md. Instrucciones de exportación en exportar/README.md.

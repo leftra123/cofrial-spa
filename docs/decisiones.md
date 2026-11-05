@@ -170,3 +170,7 @@ El PDF de la evaluación no exige ningún framework, lenguaje ni API concreta; s
 - **Control:** `REGISTRO_PRECARGA=0` oculta el botón y no carga el script; por defecto está activo mientras el sitio sea un prototipo.
 - **Límite:** las cuentas creadas siguen contando en el tope de registros por IP y hora.
 
+
+## El informe no cita la pauta (5-nov-2026)
+
+El texto exportado nombra esas exigencias como requerimientos de Cofrial, sin códigos de dimensión. El criterio C1 de las evaluaciones de herramientas pasa a «Cumplimiento de los requerimientos», con los mismos pesos y puntajes; el Anexo C pasa a «Correspondencia con los requerimientos de Cofrial», y la referencia a la pauta sale de la lista porque ya nada la cita. La trazabilidad contra la rúbrica sigue en `informe/09-verificacion-pauta.md`, que no se exporta.

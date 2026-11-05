@@ -187,10 +187,10 @@ erDiagram
 
 </details>
 
-## Telemetría IoT: nombres exactos exigidos por la pauta
+## Telemetría IoT: nombres exactos del requerimiento de Cofrial
 
 **Tabla 1**
-*Correspondencia entre la pauta y la tabla `telemetria`*
+*Correspondencia entre el requerimiento de Cofrial y la tabla `telemetria`*
 
 | Campo exigido | Tipo exigido | Columna | Tipo en PostgreSQL | Control |
 |---|---|---|---|---|
@@ -266,14 +266,14 @@ Cuatro datos parecen repetir información y se mantienen a propósito. Cada uno 
 
 | Dato | Por qué parece redundante | Justificación | Control |
 |---|---|---|---|
-| **D1.** `telemetria.alerta_ruptura_frio` | Se puede calcular comparando `temp_camara` con el rango del camión | La pauta exige guardarlo. Además registra el resultado con el rango vigente al momento de la lectura, y la consulta 5 detecta cualquier inconsistencia | El simulador lo calcula al insertar; `consultas_bi.sql` incluye un control que debe devolver cero filas |
+| **D1.** `telemetria.alerta_ruptura_frio` | Se puede calcular comparando `temp_camara` con el rango del camión | Cofrial requiere guardarlo. Además registra el resultado con el rango vigente al momento de la lectura, y la consulta 5 detecta cualquier inconsistencia | El simulador lo calcula al insertar; `consultas_bi.sql` incluye un control que debe devolver cero filas |
 | **D2.** `orden_item.precio_unitario_clp` | Existe `precio_producto.precio_clp` | Es un hecho histórico: el precio pagado no cambia si después se modifica la lista. Depende de la orden y del producto, no del producto solo | Se copia de la lista dentro de la misma transacción que crea la orden |
 | **D3.** `producto.stock_disponible` | Sería la suma de movimientos de inventario | No hay tabla de movimientos; el stock es el dato primario y se descuenta al generar la orden | Descuento dentro de la transacción de la orden, con restricción de no negativo. Limitación: no deja historial de movimientos |
 | **D4.** `documento.monto_clp` | Se puede calcular con las líneas de la orden (`orden_item`) y el IVA | Un documento tributario es una foto de lo facturado: si después se corrige una línea o cambia el IVA, el documento emitido no cambia. La nota de crédito, además, tiene un monto propio que no coincide con la orden | Se calcula una sola vez al emitir, dentro de la transacción; el saldo (monto menos pagos y notas de crédito) nunca se guarda: se calcula |
 
 *Nota.* Elaboración propia.
 
-**Clave natural en `camion`.** La pauta pide que `camion_id` sea un string, por eso la clave de `camion` es ese código (por ejemplo `CAM-01`) y no un entero autogenerado. La patente queda como segunda clave candidata.
+**Clave natural en `camion`.** El requerimiento de Cofrial pide que `camion_id` sea un string, por eso la clave de `camion` es ese código (por ejemplo `CAM-01`) y no un entero autogenerado. La patente queda como segunda clave candidata.
 
 ### Reglas de negocio que el esquema no puede garantizar
 
@@ -322,7 +322,7 @@ Nota. Elaboración propia. La parte superior es una representación lógica norm
 
 Esta distinción permite evaluar con precisión el diseño en 3FN y la decisión física del prototipo. La correspondencia se documenta sin cambiar código ni eliminar referencias a pedidos. Una migración física futura requeriría adaptar servicios y consultas; no forma parte de esta actualización documental.
 
-## Cómo responde el modelo a la rúbrica y a los casos de uso
+## Cómo responde el modelo a los requerimientos de Cofrial y a los casos de uso
 
 **Tabla 4**
 *Casos de uso y tablas que los soportan*
@@ -726,7 +726,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 ### Tablas de Logística
 
 **Tabla D25**  
-*`camion`: Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según la pauta).*
+*`camion`: Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según el requerimiento de Cofrial).*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
 |---|---|---|---|---|---|
@@ -758,7 +758,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 ### Tablas de Logística e IoT
 
 **Tabla D27**  
-*`telemetria`: Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige la pauta.*
+*`telemetria`: Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige el requerimiento de Cofrial.*
 
 | Campo | Tipo | Nulo | Clave | Descripción | Ejemplo |
 |---|---|---|---|---|---|
@@ -792,7 +792,7 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas administrativas de demostración |
 
-Nota. Elaboración propia. La demostración no cambia los seis campos exigidos por la pauta.
+Nota. Elaboración propia. La demostración no cambia los seis campos exigidos por el requerimiento de Cofrial.
 
 **Tabla D27**
 *Diccionario físico de aviso_stock*

@@ -58,7 +58,7 @@
 
 **Decisión.** Una EC2 `t3.small` para la web y el backend (una aplicación Django servida con gunicorn directo en el puerto 80 y los archivos estáticos con WhiteNoise, sin nginx) y Grafana en un contenedor de la misma instancia, todo orquestado con Docker Compose y reinicio automático.
 
-**Alternativas.** Lambda no ofrece un backend persistente y obliga a rediseñar la aplicación en funciones. Elastic Beanstalk crea EC2 por debajo, pero oculta justamente la red y la seguridad que la rúbrica pide justificar, y en el Learner Lab hay que ajustar a mano el rol de servicio y el perfil de instancia para que funcione.
+**Alternativas.** Lambda no ofrece un backend persistente y obliga a rediseñar la aplicación en funciones. Elastic Beanstalk crea EC2 por debajo, pero oculta justamente la red y la seguridad que el requerimiento de Cofrial pide justificar, y en el Learner Lab hay que ajustar a mano el rol de servicio y el perfil de instancia para que funcione.
 
 **Qué se gana.** Control visible de cada capa, un proceso persistente conectado a RDS y un entorno idéntico al que se probará localmente, porque Docker empaqueta la aplicación.
 
@@ -74,7 +74,7 @@
 
 **Qué se cede.** No hay acceso al sistema operativo del servidor y los parámetros se ajustan por grupos de parámetros. Además cuesta más que autogestionarla y hereda las restricciones del laboratorio: tamaños nano a medium, disco de hasta 100 GB, sin Multi-AZ y sin monitoreo mejorado.
 
-**Por qué PostgreSQL y no MySQL.** Ambos cumplen la pauta y puntúan casi igual en la evaluación ponderada. PostgreSQL gana por su manejo de fechas y coordenadas, útil para la telemetría, y porque Grafana y Django lo soportan de forma nativa.
+**Por qué PostgreSQL y no MySQL.** Ambos cumplen los requerimientos de Cofrial y puntúan casi igual en la evaluación ponderada. PostgreSQL gana por su manejo de fechas y coordenadas, útil para la telemetría, y porque Grafana y Django lo soportan de forma nativa.
 
 **Riesgo: telemetría y transacciones en la misma base.** Con 50 camiones reportando cada 5 segundos se insertan unas 10 filas por segundo, cerca de 864 000 al día (estimación). Si se deja correr durante semanas, la tabla de telemetría crece mucho más que las de pedidos y compite con ellas. Mitigación: índices por camión y fecha, una política de retención (por ejemplo, conservar el detalle por 7 días y agregar por hora) y, en producción, separar la telemetría en una base de series de tiempo.
 
@@ -82,11 +82,11 @@
 
 **Decisión.** Una EC2 aparte donde Docker Compose levanta cinco contenedores de diez camiones cada uno (los 50 camiones del caso), cada uno insertando telemetría en RDS con una sola conexión por contenedor.
 
-**Qué se gana.** Aislamiento de fallas y de carga: cinco contenedores generando datos de 50 camiones no compiten por CPU y memoria con la web durante la demostración. Además `sg-iot` puede ser mucho más restrictivo que `sg-web`. La pauta exige este nodo dedicado.
+**Qué se gana.** Aislamiento de fallas y de carga: cinco contenedores generando datos de 50 camiones no compiten por CPU y memoria con la web durante la demostración. Además `sg-iot` puede ser mucho más restrictivo que `sg-web`. El requerimiento de Cofrial exige este nodo dedicado.
 
 **Qué se cede.** Una instancia más que consume créditos (aporta 2 vCPU de los 32 permitidos) y otra máquina que levantar tras cada reinicio del laboratorio.
 
-**Limitación del prototipo.** Los camiones reales no insertarían directamente en la base de datos: lo harían a través de un gateway o un protocolo de mensajería (por ejemplo MQTT) con una API de ingesta que valide y limite el tráfico. Insertar directo acopla el dispositivo a la base. Se acepta porque la pauta pide la inyección automatizada a la BD y el nodo simula justamente el borde.
+**Limitación del prototipo.** Los camiones reales no insertarían directamente en la base de datos: lo harían a través de un gateway o un protocolo de mensajería (por ejemplo MQTT) con una API de ingesta que valide y limite el tráfico. Insertar directo acopla el dispositivo a la base. Se acepta porque Cofrial requiere la inyección automatizada a la BD y el nodo simula justamente el borde.
 
 ### 6. Disponibilidad: Single-AZ en el prototipo
 
@@ -118,7 +118,7 @@
 | Permisos amplios | Solo se puede usar `LabRole` | Security Groups estrictos | Un rol por servicio con permisos mínimos |
 | Nodo IoT en subred pública | Sin NAT para ahorrar créditos | `sg-iot` sin entradas | Subred privada con salida controlada |
 | Telemetría y pedidos en la misma base | Una sola instancia RDS | Índices y retención de datos | Base de series de tiempo separada |
-| Inserción directa a la base | La pauta pide inyección automatizada a la BD | Credenciales fuera del repositorio | Gateway o MQTT y API de ingesta |
+| Inserción directa a la base | Cofrial requiere inyección automatizada a la BD | Credenciales fuera del repositorio | Gateway o MQTT y API de ingesta |
 
 *Nota.* Elaboración propia.
 
@@ -139,7 +139,7 @@ Las restricciones siguientes provienen del documento técnico de AWS para el Lea
 
 ## Despliegue realizado en AWS Academy (22 de octubre de 2026)
 
-El diseño anterior se construyó en el Learner Lab con el script `aws/provision.sh`, que crea la red, la base de datos y las dos instancias de forma repetible. La **Tabla 3** contrasta lo diseñado con lo desplegado. El prototipo cumple lo que exige la pauta, pero se apartó del diseño en los puntos que se indican; todos son limitaciones declaradas y ninguno compromete un requisito de la pauta.
+El diseño anterior se construyó en el Learner Lab con el script `aws/provision.sh`, que crea la red, la base de datos y las dos instancias de forma repetible. La **Tabla 3** contrasta lo diseñado con lo desplegado. El prototipo cumple los requerimientos de Cofrial, pero se apartó del diseño en los puntos que se indican; todos son limitaciones declaradas y ninguno compromete un requerimiento.
 
 **Tabla 3**
 *Diseño frente a lo desplegado en AWS Academy*

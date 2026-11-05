@@ -18,6 +18,10 @@ MERCADOPAGO_PUBLIC_URL=http://localhost:8000   # webhook en AWS (HTTPS); en loca
 
 `activo()` exige **ACCESS_TOKEN y PUBLIC_KEY**.
 
+## En AWS
+
+Agregar `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY` y `MERCADOPAGO_PAYER_EMAIL` a `aws/.estado/secretos.env` (claves `TEST-`, nunca en git) y ejecutar `bash aws/provision.sh recrear-web`. El pago va directo a `/v1/payments`, sin webhook, por lo que funciona con el sitio en HTTP. Sin esas claves el carrito vuelve al cobro simulado.
+
 ## Flujo
 
 1. Cliente B2C abre el carrito (resumen con total y dirección).

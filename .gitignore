@@ -51,3 +51,6 @@ web/db.sqlite3
 # Estado local del aprovisionamiento (llaves y claves generadas): nunca se sube
 aws/.estado/
 cuentas-demo.txt
+
+# Hoja de cuentas de prueba con sus claves (web/clientes/cuentas_demo.py): nunca se sube
+hoja-cuentas*.md

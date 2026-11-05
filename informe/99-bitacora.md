@@ -63,6 +63,13 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - La figura del MER se regeneró con las 27 tablas. Pendiente: rearmar el Word de entrega (`informe/exportar/`), que aún cuenta 25 tablas.
 - Al integrarlo sobre `main` (25-oct) la migración pasa a `pedidos/0006_documentos_pagos` (después de `0004_ciclo_entrega` y `0005_estados_ciclo_entrega`) y las reglas se renumeran a RN-17 a RN-22, porque RN-16 ya es la separación térmica del portal. La B2C con carrito mixto recibe una boleta por cada orden.
 
+## 2026-10-29: cuentas para la defensa
+- Cada cuenta de prueba tiene su propia clave, derivada de `DEMO_PASSWORD` y del usuario (`web/clientes/cuentas_demo.py`); la hoja para el profesor se genera desde el `.env` y no se sube a git. Las cuentas que aún tenían la clave común pasan solas a la suya al arrancar; una clave cambiada por su dueño se respeta.
+- «¿Olvidaste tu clave?» envía un enlace de un solo uso que dura una hora, con la dirección pública y no la del encabezado `Host`, y responde igual exista o no el correo. Correo por SMTP (Gmail con clave de aplicación) o, sin configurar, al registro del contenedor.
+- Las empresas piden su cuenta en el portal y ventas la aprueba en la pestaña *Solicitudes* del CRM (`04d-crm.md`, Tabla 2).
+- Sergio implementó el mismo «¿Olvidaste tu clave?» en un PR aparte (#50). Se cerró para no duplicar el flujo y su documento quedó en `docs/recuperacion-clave.md`.
+- Sesión «olvidada» al pulsar Inicio: en AWS corría una versión anterior al 25-oct, en la que «Inicio» del panel interno llevaba a la portada pública y parecía sin sesión. Ya estaba corregido en `main` (navegación por rol); falta volver a desplegar.
+
 ## 2026-11-02 (Sergio — tienda B2C / Mercado Pago; **pendiente de PR**)
 - **Pago con Mercado Pago (modo prueba):** Payment Brick en el carrito vía HTTPS local (`docker-compose.https.yml`, `https://localhost:8443`). Tras pago `approved`, redirect a `/pedidos/{id}/?nueva=1` con banner «¡Listo! Recibimos tu pedido…» y orden en estado Recibida (comportamiento esperado). Variable `MERCADOPAGO_PAYER_EMAIL` obligatoria para cuentas demo `@correo.test` (`web/pedidos/mercadopago.py`, `docs/mercadopago-checkout.md`).
 - **Corrección UX iconos:** la regla global `button:not(#mp-brick-container button)` pisaba `.tema-btn`, `.cant button` y similares (iconos en cuadrados azules). Excepciones con mayor especificidad en `web/static/css/cofrial.css`; badges de temperatura con SVG visible otra vez en `tienda.css`.

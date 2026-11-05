@@ -28,7 +28,8 @@
   <div class="perfil">
     <h2>Soy una institución</h2>
     <p>Hospitales, hoteles, casinos y supermercados: lista de precios institucional (neto), orden de compra y "repetir mi último pedido".</p>
-    <div class="acciones">{% if menu.cliente %}<a class="btn" href="/catalogo/">Ir al catálogo institucional</a>{% else %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/">Ingresar con la cuenta de la empresa</a>{% endif %}</div>
+    <div class="acciones">{% if menu.cliente %}<a class="btn" href="/catalogo/">Ir al catálogo institucional</a>{% else %}<a class="btn" href="/cuenta/entrar/?next=/catalogo/">Ingresar con la cuenta de la empresa</a>{% if not user.is_authenticated %}
+    <a class="btn btn-sec" href="/cuenta/registro/empresa/">Pedir cuenta de empresa</a>{% endif %}{% endif %}</div>
   </div>
   <div class="perfil">
     <h2>Soy cliente particular</h2>

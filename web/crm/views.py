@@ -146,6 +146,35 @@ def clientes(request):
     return render(request, "crm/clientes.html", _contexto(request, clientes=s.clientes_visibles(request.user).order_by("nombre")))
 
 
+@con_rol(*COMERCIAL)
+def solicitudes(request):
+    """Empresas que pidieron su cuenta desde /cuenta/registro/empresa/: el vendedor la aprueba (queda en su cartera) o la rechaza."""
+    return render(request, "crm/solicitudes.html", _contexto(
+        request, solicitudes=s.solicitudes_empresa().select_related("usuario").prefetch_related("direccion_set__comuna").order_by("creado_en"),
+        vendedores=Vendedor.objects.filter(activo=True).order_by("nombre")))
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def solicitud_aprobar(request, pk):
+    try:
+        c = s.aprobar_empresa(request.user, pk, request.POST.get("vendedor"))
+        messages.success(request, f"{c.nombre} ya puede ingresar y comprar con la lista institucional. Quedó en la cartera de {c.vendedor.nombre}.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_solicitudes")
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def solicitud_rechazar(request, pk):
+    try:
+        messages.success(request, f"Solicitud de {s.rechazar_empresa(request.user, pk)} rechazada y eliminada.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_solicitudes")
+
+
 def _cliente(request, pk):
     c = s.clientes_visibles(request.user).filter(pk=pk).first()
     if c is None:

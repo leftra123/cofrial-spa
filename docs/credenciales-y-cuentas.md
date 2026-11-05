@@ -68,12 +68,19 @@ Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los no
 | `abastecimiento@hospital.test` | Cliente institucional B2B (Hospital Regional de Temuco) |
 | `ana@correo.test` | Cliente particular B2C (Ana Pérez) |
 
-Las claves se fijan solo al crear cada cuenta (`DEMO_PASSWORD`; las administradoras, `ADMIN_PASSWORD`) y no se pisan al reiniciar; cada persona la cambia en `/cuenta/clave/` y el administrador desde `/admin/`. Detalle en `docs/cuentas-y-permisos.md`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
+Cada cuenta tiene su propia clave, derivada de `DEMO_PASSWORD` (las administradoras, de `ADMIN_PASSWORD`); se fija al crear la cuenta y no se pisa al reiniciar. La hoja con todas se genera con `python3 web/clientes/cuentas_demo.py --env aws/.estado/secretos.env --url http://IP --salida aws/.estado/hoja-cuentas.md`; cada persona la cambia en `/cuenta/clave/` y el administrador desde `/admin/`. Detalle en `docs/cuentas-y-permisos.md`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
 
-**Rotar la clave de demostración** (por ejemplo, tras compartirla por error):
-1. Editar `DEMO_PASSWORD` en `aws/.estado/secretos.env` (mínimo 8 caracteres, no una clave común).
-2. `bash aws/provision.sh recrear-web`. El contenedor web ejecuta `cambiar_clave_demo` en cada arranque y actualiza **solo** esas siete cuentas. Cualquier cuenta que se haya creado a mano conserva su clave.
-3. En local: `DEMO_PASSWORD=la-nueva python manage.py cambiar_clave_demo`.
+**Si una clave de prueba se filtró:** las claves viven en la base (RDS), no en el contenedor, así que recrear la EC2 no las cambia.
+1. La cuenta afectada la cambia en `/cuenta/clave/`, o el administrador desde `/admin/` (Usuarios, «Cambiar contraseña»). Avisar el cambio por mensaje directo.
+2. Para rotarlas todas a la vez hace falta ejecutar `cambiar_clave_demo` contra la base: en local, `DEMO_PASSWORD=la-nueva docker compose exec -e DEMO_PASSWORD web python manage.py cambiar_clave_demo`; en AWS no hay SSH, así que se hace cuenta por cuenta desde `/admin/`.
+3. Después, regenerar la hoja con el `DEMO_PASSWORD` nuevo.
+
+### Correo (para «¿Olvidaste tu clave?»)
+Sin configurar, el enlace de recuperación se escribe en el registro del contenedor (`docker compose logs web`): sirve en local, pero en AWS nadie lo lee. Para enviarlo de verdad, con una cuenta de Gmail del equipo (gratis):
+1. En esa cuenta, activar la verificación en dos pasos y crear una **clave de aplicación** en https://myaccount.google.com/apppasswords (16 letras; no es la clave de Gmail).
+2. Agregar a `aws/.estado/secretos.env` (y al `.env` local si se quiere probar): `EMAIL_HOST=smtp.gmail.com`, `EMAIL_PORT=587`, `EMAIL_HOST_USER=la-cuenta@gmail.com`, `EMAIL_HOST_PASSWORD=la-clave-de-aplicacion`.
+3. `bash aws/provision.sh recrear-web`. AWS bloquea el puerto 25, no el 587 que usa Gmail.
+La clave de aplicación se revoca en la misma página si se filtra. Gmail gratuito permite unos 500 correos al día, de sobra para la demostración.
 
 ## 4. Consola web de AWS
 

@@ -1,0 +1,10 @@
+{% autoescape off %}Hola:
+
+Alguien pidió recuperar la clave de la cuenta {{ user.get_username }} en Cofrial SpA. Para elegir una clave nueva, abra este enlace:
+
+{{ protocol }}://{{ domain }}{% url 'recuperar_nueva' uidb64=uid token=token %}
+
+El enlace sirve una sola vez y dura una hora. Si usted no lo pidió, ignore este mensaje: su clave no cambia.
+
+Cofrial SpA, distribución y cadena de frío
+{% endautoescape %}

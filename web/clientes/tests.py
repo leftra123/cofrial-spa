@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 
+from clientes import cuentas_demo
+from clientes.cuentas_demo import clave_de
 from clientes.models import Cliente
 from crm import servicios as crm
 from pedidos import servicios as pedidos
@@ -68,7 +70,8 @@ class CuentasTests(TestCase):
         with patch.dict("os.environ", {"DEMO_PASSWORD": CLAVE_NUEVA}):
             call_command("cambiar_clave_demo")
         for u in ("admin@cofrial.cl", "ana@correo.test", "vendedora@cofrial.cl", "despacho@cofrial.cl"):
-            self.assertTrue(self.entra(u), u)
+            self.assertTrue(self.entra(u, clave=clave_de(u, CLAVE_NUEVA)), u)          # cada cuenta con su clave propia
+            self.assertFalse(self.entra(u), u)                                         # la base no sirve como clave
         self.assertFalse(self.entra("ana@correo.test", clave="demo-cofrial-2026"))
 
     def test_cambiar_clave_demo_no_toca_cuentas_ajenas_ni_actua_sin_clave_si_se_pide(self):
@@ -78,14 +81,14 @@ class CuentasTests(TestCase):
         self.assertTrue(self.entra("otra@t.test"))                   # su clave no cambió
         with patch.dict("os.environ", {}, clear=True):
             call_command("cambiar_clave_demo", "--si-hay-clave")      # sin variable no hace nada ni falla
-        self.assertTrue(self.entra("ana@correo.test", clave="otra-clave-larga-9"))
+        self.assertTrue(self.entra("ana@correo.test", clave=clave_de("ana@correo.test", "otra-clave-larga-9")))
 
     def test_clave_debil_se_rechaza_salvo_que_se_pida_expresamente(self):
         with patch.dict("os.environ", {"DEMO_PASSWORD": "12345678"}):
             with self.assertRaisesMessage(CommandError, "permitir-clave-debil"):
                 call_command("cambiar_clave_demo")
             self.assertTrue(self.entra("ana@correo.test", clave="demo-cofrial-2026"))      # no cambió nada al rechazarla
-            call_command("cambiar_clave_demo", "--permitir-clave-debil")
+            call_command("cambiar_clave_demo", "--permitir-clave-debil", "--misma")
         for u in ("admin@cofrial.cl", "ana@correo.test", "abastecimiento@hospital.test", "vendedora@cofrial.cl", "vendedor2@cofrial.cl",
                   "gerencia@cofrial.cl", "despacho@cofrial.cl"):
             self.assertTrue(self.entra(u, clave="12345678"), u)
@@ -173,9 +176,8 @@ class ClavesPersistentesTests(TestCase):
         with patch.dict("os.environ", {"DEMO_PASSWORD": "clave-demo-larga-71", "ADMIN_PASSWORD": "clave-admin-larga-72"}):
             call_command("cargar_demo", verbosity=0)
             User = get_user_model()
-            self.assertTrue(User.objects.get(username="admin@cofrial.cl").check_password("clave-admin-larga-72"))
-            self.assertTrue(User.objects.get(username="eric@cofrial.cl").check_password("clave-admin-larga-72"))
-            self.assertTrue(User.objects.get(username="ana@correo.test").check_password("clave-demo-larga-71"))
+            for u, base in (("admin@cofrial.cl", "clave-admin-larga-72"), ("eric@cofrial.cl", "clave-admin-larga-72"), ("ana@correo.test", "clave-demo-larga-71")):
+                self.assertTrue(User.objects.get(username=u).check_password(clave_de(u, base)), u)
             for u, nueva in (("ana@correo.test", "ana-cambio-clave-83"), ("admin@cofrial.cl", "admin-cambio-clave-84")):
                 x = User.objects.get(username=u)
                 x.set_password(nueva)
@@ -188,13 +190,57 @@ class ClavesPersistentesTests(TestCase):
         with patch.dict("os.environ", {"DEMO_PASSWORD": "clave-demo-larga-71"}):
             call_command("cargar_demo", verbosity=0)
         self.assertEqual(self.client.get("/cuenta/clave/").status_code, 302)       # exige sesión
-        self.assertTrue(self.client.login(username="ana@correo.test", password="clave-demo-larga-71"))
+        clave_ana = clave_de("ana@correo.test", "clave-demo-larga-71")
+        self.assertTrue(self.client.login(username="ana@correo.test", password=clave_ana))
         r = self.client.get("/cuenta/clave/")
         self.assertContains(r, "Cambiar mi clave")
-        r = self.client.post("/cuenta/clave/", {"old_password": "clave-demo-larga-71", "new_password1": "ana-nueva-clave-95", "new_password2": "ana-nueva-clave-95"})
+        r = self.client.post("/cuenta/clave/", {"old_password": clave_ana, "new_password1": "ana-nueva-clave-95", "new_password2": "ana-nueva-clave-95"})
         self.assertRedirects(r, "/cuenta/clave/hecho/")
         self.assertContains(self.client.get("/cuenta/clave/hecho/"), "Clave actualizada")
         self.client.logout()
-        self.assertFalse(self.client.login(username="ana@correo.test", password="clave-demo-larga-71"))
+        self.assertFalse(self.client.login(username="ana@correo.test", password=clave_ana))
         self.assertTrue(self.client.login(username="ana@correo.test", password="ana-nueva-clave-95"))
         self.assertContains(self.client.get("/catalogo/"), "/cuenta/clave/")       # enlace en el menú (con sesión «/» lleva al inicio del rol)
+
+
+class ClavePropiaPorCuentaTests(TestCase):
+    """Cada cuenta de demostración tiene su clave, derivada de DEMO_PASSWORD; la hoja para el profesor se calcula con el mismo .env."""
+
+    def test_claves_distintas_estables_y_que_dependen_de_la_base(self):
+        c = cuentas_demo.claves("base-larga-de-prueba-1")
+        self.assertEqual(len(set(c.values())), len(cuentas_demo.USUARIOS))       # ninguna se repite
+        self.assertEqual(c, cuentas_demo.claves("base-larga-de-prueba-1"))        # siempre las mismas
+        self.assertNotEqual(c["ana@correo.test"], cuentas_demo.claves("otra-base-larga-2")["ana@correo.test"])
+        self.assertRegex(c["ana@correo.test"], r"^[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$")
+        con_admin = cuentas_demo.claves("base-larga-de-prueba-1", "base-admin-larga-3")
+        self.assertNotEqual(con_admin["admin@cofrial.cl"], c["admin@cofrial.cl"])  # las administradoras salen de ADMIN_PASSWORD
+        self.assertEqual(con_admin["ana@correo.test"], c["ana@correo.test"])
+
+    def test_las_cuentas_con_la_clave_comun_pasan_a_la_propia_sin_pisar_una_cambiada(self):
+        User = get_user_model()
+        with patch.dict("os.environ", {"DEMO_PASSWORD": "base-comun-larga-44"}):
+            call_command("cargar_demo", verbosity=0)
+            call_command("cambiar_clave_demo", "--misma")                       # como quedó AWS antes: todas con la común
+            gerencia = User.objects.get(username="gerencia@cofrial.cl")
+            gerencia.set_password("gerencia-la-cambio-55")
+            gerencia.save()
+            call_command("cargar_demo", verbosity=0)                            # el siguiente arranque
+        for u in ("ana@correo.test", "vendedora@cofrial.cl", "admin@cofrial.cl", "eric@cofrial.cl"):
+            self.assertTrue(User.objects.get(username=u).check_password(clave_de(u, "base-comun-larga-44")), u)
+        self.assertTrue(User.objects.get(username="gerencia@cofrial.cl").check_password("gerencia-la-cambio-55"))
+
+    def test_la_hoja_trae_cada_cuenta_con_su_clave_y_queda_privada(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            env, salida = os.path.join(d, ".env"), os.path.join(d, "hoja-cuentas.md")
+            with open(env, "w") as f:
+                f.write("# comentario\nDEMO_PASSWORD='base-de-la-hoja-66'\nADMIN_PASSWORD=\n")
+            cuentas_demo.main(["--env", env, "--url", "http://10.0.0.1/", "--salida", salida])
+            texto = open(salida, encoding="utf-8").read()
+            self.assertEqual(os.stat(salida).st_mode & 0o777, 0o600)
+        for u, clave in cuentas_demo.claves("base-de-la-hoja-66").items():
+            self.assertIn(f"`{u}`", texto)
+            self.assertIn(f"`{clave}`", texto)
+        self.assertIn("http://10.0.0.1/cuenta/registro/empresa/", texto)
+        self.assertNotIn("base-de-la-hoja-66", texto)                          # la base nunca aparece

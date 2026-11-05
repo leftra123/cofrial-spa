@@ -14,7 +14,7 @@ La IP es elástica: no cambia al reiniciar el laboratorio, **pero sí cambia si 
 
 ## Usuarios de prueba
 
-Todos usan **la misma clave de demostración**. No está en el repositorio: está en `aws/.estado/secretos.env` (variable `DEMO_PASSWORD`) en el computador de Eric. Compartirla por mensaje directo o gestor de contraseñas, **nunca** por GitHub ni Trello.
+Cada cuenta tiene **su propia clave**. No están en el repositorio: se calculan desde `aws/.estado/secretos.env` (`DEMO_PASSWORD`) en el computador de Eric con `python3 web/clientes/cuentas_demo.py --env aws/.estado/secretos.env --url http://IP --salida aws/.estado/hoja-cuentas.md`, que deja la hoja lista para imprimir y entregar al profesor. Compartirla por mensaje directo o gestor de contraseñas, **nunca** por GitHub ni Trello.
 
 | Usuario | Rol | Sirve para probar |
 |---|---|---|
@@ -82,6 +82,11 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 **H. Resiliencia (25 a 26)** *(D1: estable y persistente)*
 25. **IA apagada** (solo se puede hacer en local, no en AWS sin acceso a la instancia): con ambas claves `GEMINI_API_KEY` y `GROQ_API_KEY` vacías, o proveedores simulados como indisponibles, enviar un requerimiento: se guarda "sin clasificar" y el portal responde normal. Las pruebas automáticas lo cubren (`python manage.py test crm`).
 26. **Apagado y encendido del laboratorio** (lo hace Eric): al terminar la sesión, AWS detiene las instancias y la base; al iniciar una sesión nueva hay que ejecutar el Paso 0 (`bash aws/provision.sh encender`). Comprobar que, sin tocar nada más, vuelven la aplicación, el IoT y Grafana, que la **IP es la misma** y que los datos siguen (órdenes, requerimientos y telemetría anterior). Medir cuánto tarda y anotarlo para el plan B de la defensa.
+
+**I. Cuentas que crea el propio usuario (27 a 29)**
+27. Sin sesión, en Ingresar, «¿Compra para una institución? Pida la cuenta de su empresa»: completar `/cuenta/registro/empresa/` con un RUT válido. Debe decir **Solicitud enviada**. Al intentar entrar con esa cuenta: «Tu cuenta aún no está activa».
+28. Como `vendedora@cofrial.cl`, la pestaña **Solicitudes** del CRM muestra un contador y la empresa; **Aprobar y asignármela**. La empresa ya entra, con el distintivo B2B y la lista institucional; en su ficha queda la nota «Cuenta de empresa aprobada». Con `gerencia@` la solicitud se ve pero no hay botones.
+29. En Ingresar, **¿Olvidaste tu clave?** con un correo real de una cuenta creada en el paso anterior o en `/cuenta/registro/`: llega un enlace (si `EMAIL_HOST` está configurado; si no, queda en `docker compose logs web`). El enlace permite elegir una clave nueva **una sola vez**; al abrirlo de nuevo dice «El enlace ya no sirve».
 
 ## Pruebas automáticas (sin AWS)
 

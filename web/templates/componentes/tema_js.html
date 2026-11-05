@@ -1,17 +1,41 @@
-<script>
+<script id="cofrial-tema-js">
   (function () {
+    if (window.CofrialTema && window.CofrialTema.iniciado) return;
     var raiz = document.documentElement;
-    function oscuro() { var t = raiz.getAttribute("data-tema"); return t ? t === "oscuro" : matchMedia("(prefers-color-scheme: dark)").matches; }
-    document.querySelectorAll("[data-tema-btn]").forEach(function (b) {
-      b.setAttribute("aria-pressed", oscuro());
-      b.addEventListener("click", function () {
-        var n = oscuro() ? "claro" : "oscuro"; raiz.setAttribute("data-tema", n);
-        try { localStorage.setItem("cofrial-tema", n); } catch (e) {}
-        document.querySelectorAll("[data-tema-btn]").forEach(function (x) { x.setAttribute("aria-pressed", n === "oscuro"); });
+    function oscuro() {
+      var t = raiz.getAttribute("data-tema");
+      return t ? t === "oscuro" : matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function sincronizarBotones() {
+      var pres = oscuro();
+      document.querySelectorAll("[data-tema-btn]").forEach(function (x) {
+        x.setAttribute("aria-pressed", pres ? "true" : "false");
       });
+    }
+    function alternar() {
+      if (document.body.classList.contains("mp-modal-abierto")) return;
+      var n = oscuro() ? "claro" : "oscuro";
+      raiz.setAttribute("data-tema", n);
+      try { localStorage.setItem("cofrial-tema", n); } catch (e) {}
+      sincronizarBotones();
+      if (window.cofrialMpBrick && window.cofrialMpBrick.sincronizarTema) {
+        window.cofrialMpBrick.sincronizarTema();
+      }
+    }
+    sincronizarBotones();
+    document.addEventListener("click", function (ev) {
+      if (!ev.target.closest("[data-tema-btn]")) return;
+      alternar();
     });
+    window.CofrialTema = { iniciado: true, oscuro: oscuro, alternar: alternar, sincronizarBotones: sincronizarBotones };
   })();
   document.querySelectorAll(".tabla-caja").forEach(function (t) {
-    if (t.scrollWidth > t.clientWidth + 1) { t.tabIndex = 0; t.setAttribute("role", "region"); t.setAttribute("aria-label", "Tabla con desplazamiento horizontal"); }
+    if (t.dataset.tablaScroll) return;
+    if (t.scrollWidth > t.clientWidth + 1) {
+      t.tabIndex = 0;
+      t.setAttribute("role", "region");
+      t.setAttribute("aria-label", "Tabla con desplazamiento horizontal");
+      t.dataset.tablaScroll = "1";
+    }
   });
 </script>

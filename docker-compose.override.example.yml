@@ -1,0 +1,17 @@
+# Copia a docker-compose.override.yml para desarrollo local:
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#   docker compose up -d web
+#
+# Monta el código de ./web en vivo y regenera estáticos al arrancar (sin rebuild por cada cambio).
+services:
+  web:
+    volumes:
+      - ./web:/app
+    environment:
+      DJANGO_DEBUG: "1"
+    command: >
+      sh -c "python manage.py migrate --noinput
+      && python manage.py cargar_demo
+      && python manage.py preparar_bi
+      && python manage.py collectstatic --noinput
+      && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 8"

@@ -60,6 +60,7 @@ class Orden(models.Model):
     entrega_resuelta_en = models.DateTimeField(null=True, blank=True)        # cuando el cliente (o el tiempo) cerró la entrega
     entrega_motivo = models.TextField(blank=True)                            # por qué el cliente no pudo recibir
     entrega_automatica = models.BooleanField(default=False, db_default=False)    # se dio por entregada sola al vencer el plazo
+    checkout_pago = models.ForeignKey("CheckoutPago", null=True, blank=True, on_delete=models.SET_NULL, related_name="ordenes")
 
     class Meta:
         db_table = "orden"
@@ -114,9 +115,30 @@ class Documento(models.Model):
         return f"{self.get_tipo_display()} N.º {self.folio}"
 
 
+class CheckoutPago(models.Model):
+    """Intento de pago B2C vía Mercado Pago antes de materializar órdenes en la BD."""
+    ESTADOS = [("pendiente", "Esperando pago"), ("completado", "Completado"), ("fallido", "Fallido")]
+    checkout_id = models.AutoField(primary_key=True)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
+    direccion = models.ForeignKey(Direccion, on_delete=models.PROTECT)
+    numero_oc = models.CharField(max_length=30, blank=True)
+    monto_clp = models.IntegerField()
+    preference_id = models.CharField(max_length=64, blank=True)
+    external_reference = models.CharField(max_length=64, unique=True)
+    payment_id = models.CharField(max_length=64, blank=True)
+    estado = models.CharField(max_length=12, choices=ESTADOS, default="pendiente")
+    primera_orden_id = models.IntegerField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "checkout_pago"
+
+
 class Pago(models.Model):
     """Pago recibido contra una boleta o factura. Un monto negativo es una devolución al cliente."""
-    MEDIOS = [("webpay", "Webpay (simulado)"), ("transferencia", "Transferencia"), ("cheque", "Cheque"), ("efectivo", "Efectivo"), ("devolucion", "Devolución")]
+    MEDIOS = [("webpay", "Webpay (simulado)"), ("mercadopago", "Mercado Pago"), ("transferencia", "Transferencia"),
+              ("cheque", "Cheque"), ("efectivo", "Efectivo"), ("devolucion", "Devolución")]
     pago_id = models.AutoField(primary_key=True)
     documento = models.ForeignKey(Documento, on_delete=models.PROTECT)
     monto_clp = models.IntegerField()

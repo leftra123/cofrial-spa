@@ -19,11 +19,27 @@ if not SECRET_KEY:
     SECRET_KEY = "clave-solo-para-desarrollo"
 ALLOWED_HOSTS = [h for h in entorno("DJANGO_ALLOWED_HOSTS", "*").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in entorno("DJANGO_CSRF_ORIGINS", "").split(",") if o]
+# Brick MP en Caddy (:8443): si DJANGO_CSRF_ORIGINS no llega al contenedor, Django rechaza POST con 403 HTML.
+if DEBUG and "test" not in sys.argv:
+    CSRF_TRUSTED_ORIGINS = list(
+        dict.fromkeys(
+            CSRF_TRUSTED_ORIGINS
+            + [
+                "https://localhost:8443",
+                "http://localhost:8000",
+                "https://127.0.0.1:8443",
+                "http://127.0.0.1:8000",
+            ]
+        )
+    )
 CSRF_FAILURE_VIEW = "cofrial.vistas.csrf_fallo"
 # Ruta del panel de administración. En producción conviene una propia (DJANGO_ADMIN_URL=panel-9f3k/) para que /admin/ no exista.
 ADMIN_URL = entorno("DJANGO_ADMIN_URL", "admin/").strip("/") + "/"
 # Detrás de un balanceador (ALB/nginx) que agrega X-Forwarded-For: DJANGO_CONFIAR_PROXY=1 usa esa IP en los límites de intentos.
 CONFIAR_PROXY = entorno("DJANGO_CONFIAR_PROXY", "0") == "1"
+# Caddy/ALB terminan TLS hacia gunicorn por HTTP: sin esto request.is_secure() es falso y falla CSRF con Origin https.
+if CONFIAR_PROXY or entorno("DJANGO_PROXY_SSL", "0") == "1" or (DEBUG and "test" not in sys.argv):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -110,8 +126,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 if entorno("DJANGO_HTTPS", "0") == "1":
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
-    SECURE_SSL_REDIRECT = True
+    # nginx/Caddy terminan TLS y pasan HTTP a gunicorn: sin esto Django cree que todo llega por HTTP y redirige en bucle.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # En local con Caddy en :8443 y Gunicorn aún en :8000, desactivar redirección (DJANGO_HTTPS_REDIRECT=0).
+    SECURE_SSL_REDIRECT = entorno("DJANGO_HTTPS_REDIRECT", "1") == "1"
 SESSION_COOKIE_SAMESITE = "Lax"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
@@ -200,3 +218,9 @@ else:
 DEFAULT_FROM_EMAIL = entorno("EMAIL_REMITENTE") or (f"Cofrial SpA <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Cofrial SpA <no-responder@cofrial.cl>")
 PASSWORD_RESET_TIMEOUT = 60 * 60                   # el enlace para recuperar la clave dura una hora y sirve una sola vez
 CANTIDAD_MAXIMA_POR_LINEA = 10000      # unidades de un producto en una línea del carrito
+# Mercado Pago Payment Brick (B2C). Requiere ACCESS_TOKEN y PUBLIC_KEY de prueba; sin ellos, Webpay simulado.
+MERCADOPAGO_ACCESS_TOKEN = entorno("MERCADOPAGO_ACCESS_TOKEN", "")
+MERCADOPAGO_PUBLIC_KEY = entorno("MERCADOPAGO_PUBLIC_KEY", "")
+MERCADOPAGO_PUBLIC_URL = entorno("MERCADOPAGO_PUBLIC_URL", "")
+# Correo del comprador de prueba (panel de Mercado Pago). Obligatorio si el cliente usa un correo .test.
+MERCADOPAGO_PAYER_EMAIL = entorno("MERCADOPAGO_PAYER_EMAIL", "")

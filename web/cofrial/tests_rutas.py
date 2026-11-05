@@ -22,7 +22,6 @@ INICIO = {"B2B": "/catalogo/", "B2C": "/catalogo/", "vendedor": "/crm/", "gerenc
 ESPERADO = {
     '/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
     '/portada/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
-    '/guia/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/999999/': ('404 404 404 404 404 404 404', '404 404 404 404 404 404 404'),
     '/crm/': ('L 403 403 200 200 →/crm/alertas/ 200', 'L 403 403 200 200 →/crm/alertas/ 200'),
@@ -73,6 +72,11 @@ ESPERADO = {
     '/carrito/actualizar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/repetir/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/confirmar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
+    '/carrito/mp/pagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 403'),  # B2C da 403 en pruebas porque Mercado Pago no tiene claves; B2B nunca paga con MP
+    '/carrito/mp/webhook/': ('405 405 405 405 405 405 405', '204 204 204 204 204 204 204'),  # público: lo llama Mercado Pago sin sesión; sin claves responde 204 y no hace nada
+    '/carrito/mp/vuelta/exito/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
+    '/carrito/mp/vuelta/fallo/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
+    '/carrito/mp/vuelta/pendiente/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
     '/api/avisos/': ('403 200 200 403 403 403 403', '403 200 200 403 403 403 403'),
     '/avisos/': ('L 200 200 →/crm/ →/crm/ →/flota/ →/crm/', 'L 200 200 →/crm/ →/crm/ →/flota/ →/crm/'),
     '/avisos/pedir/': ('405 405 405 405 405 405 405', 'L →/avisos/ →/avisos/ →/crm/ →/crm/ →/flota/ →/crm/'),
@@ -190,7 +194,7 @@ class InicioPorRol(Base):
 
     def test_el_logo_lleva_al_inicio_de_la_cuenta(self):
         for rol, destino in INICIO.items():
-            for url in ("/catalogo/", "/guia/", "/cuenta/clave/", "/crm/alertas/" if rol in ("vendedor", "gerencia", "despachador", "admin") else "/pedidos/"):
+            for url in ("/catalogo/", "/cuenta/clave/", "/crm/alertas/" if rol in ("vendedor", "gerencia", "despachador", "admin") else "/pedidos/"):
                 html = self.cliente(rol).get(url).content.decode()
                 self.assertIn(f'href="{destino}"', html, f"{rol} {url}")
                 self.assertNotRegex(html, r'class="(tb-marca|marca)" href="/"', f"{rol} {url}")

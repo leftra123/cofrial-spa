@@ -21,14 +21,14 @@
   <div class="tb-fila">
     <a class="tb-marca" href="{{ inicio_url }}" aria-label="Cofrial, ir a mi inicio"><img src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA" width="120" height="40"></a>
     <form class="tb-buscar" action="/catalogo/" method="get" role="search" aria-label="Buscador del sitio">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar productos o SKU" aria-label="Buscar productos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar SKU o producto" aria-label="Buscar productos o SKU" autocomplete="off">
     </form>
     <nav class="tb-nav" aria-label="Principal">
-      <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}>Catálogo</a>
-      {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo"{% endif %}>Mis pedidos</a>{% endif %}
+      <span class="tb-nav-ind" id="tb-nav-ind" hidden aria-hidden="true"></span>
+      <a href="/catalogo/" data-nav-slide{% if "/catalogo/" in ruta %} class="activo" aria-current="page"{% endif %}>Catálogo</a>
+      {% if menu.cliente %}<a href="/pedidos/" data-nav-slide{% if "/pedidos/" in ruta %} class="activo"{% endif %}>Mis pedidos</a>{% endif %}
       {% if not user.is_authenticated %}<a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>{% endif %}   {# el cliente sigue sus pedidos en «Mis pedidos»; el equipo, en el CRM #}
-      <a href="/guia/" {% if "/guia/" in ruta %}class="activo"{% endif %}>Guía</a>
-      {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito<span class="tb-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
+      {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/" data-nav-slide><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito<span class="tb-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
     </nav>
     <div class="tb-cuenta">
       {% if menu.cliente %}<div class="campana" id="campana">
@@ -39,14 +39,13 @@
           <a class="campana-pie" href="/avisos/">Avisos de stock{% if avisos_n %} <span class="tb-n" title="Productos que esperabas y ya tienen stock">{{ avisos_n }}</span>{% endif %}</a>
         </div>
       </div>{% endif %}
-      {% if menu.cliente %}<a class="tema-btn tb-carro-movil" href="/carrito/" aria-label="Carrito{% if carrito_n %}, {{ carrito_n }} producto{{ carrito_n|pluralize }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg><span class="campana-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
       {% include "componentes/tema_btn.html" %}
-      {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }}"><span>{{ cliente_tienda.nombre }}</span><b class="perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}">{{ cliente_tienda.tipo_cliente.codigo }}</b></span>{% endif %}
+      {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }} · {{ cliente_tienda.tipo_cliente.codigo }}"><span class="tb-perfil-nombre">{{ cliente_tienda.nombre }}</span><span class="tb-perfil-tipo perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}"{% if cliente_tienda.tipo_cliente.codigo == 'B2C' %} title="Lista de precios: {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% elif cliente_tienda.tipo_cliente.codigo == 'B2B' %} title="Cliente institucional · lista {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% endif %}>{{ cliente_tienda.tipo_cliente.codigo }}</span></span>{% endif %}
       {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{{ inicio_url }}">Panel interno</a>{% endif %}
       {% if user.is_authenticated %}
         {% if menu.crm or menu.flota or menu.admin %}<a class="tb-ingresar" href="/portada/" title="La portada que ven los visitantes">Portada pública</a>{% endif %}
-        <a class="tb-ingresar" href="/cuenta/clave/">Mi clave</a>
-        <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Salir</button></form>
+        <a class="tb-clave" href="/cuenta/clave/">Mi clave</a>
+        <form method="post" action="/cuenta/salir/" class="tb-salir-form">{% csrf_token %}<button type="submit" class="tema-btn tb-salir" aria-label="Salir de la cuenta" title="Salir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></form>
       {% else %}
         <a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>
       {% endif %}
@@ -54,21 +53,32 @@
   </div>
 </header>
 <main class="t-main" id="contenido">
+  <div class="t-pagina-escena" id="t-pagina-escena">
+  <div class="t-pagina" id="t-pagina">
   {% if messages %}<div class="avisos" role="status">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
   {% block cabecera %}{% endblock %}
   {% block contenido %}{% endblock %}
+  </div>
+  </div>
 </main>
-{% block asistente %}{% endblock %}
+<div class="dock-flotante" id="dock-flotante">
+  <div id="dock-asistente">{% block asistente %}{% endblock %}</div>
+  {% include "componentes/carrito_flotante.html" %}
+</div>
 <footer class="t-pie"><div class="t-pie-fila">
   <div class="t-pie-logo"><span class="logo-chip"><img src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA, distribución y cadena de frío" width="162" height="54"></span><small>Frigorífico y distribución en cadena de frío · La Araucanía</small></div>
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
   <div>Prototipo académico INACAP Temuco</div></div></footer>
+{% block mp_modal_portal %}{% endblock %}
+{% if menu.cliente %}<template id="nav-skeleton-catalogo">{% include "catalogo/_skeleton_nav.html" %}</template>
+<template id="nav-skeleton-pedidos">{% include "pedidos/_skeleton_nav.html" %}</template>
+<template id="nav-skeleton-carrito">{% include "pedidos/_skeleton_carrito_nav.html" %}</template>{% endif %}
 {% endwith %}
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
 <script src="{% static 'js/tienda.js' %}"></script>
-{% if menu.cliente %}<script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
+{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-skel-3p-v2"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

@@ -37,7 +37,6 @@ handler500 = "cofrial.seguridad.error_500"
 urlpatterns = [
     path("", vistas.inicio, name="inicio"),
     path("portada/", lambda request: vistas.inicio(request, portada=True), name="portada"),
-    path("guia/", vistas.guia, name="guia"),
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),
     path("flota/", include("flota.urls")),

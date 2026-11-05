@@ -6,7 +6,6 @@ from .acceso import ETIQUETAS, INICIOS, tipo_de
 from crm import servicios as crm
 from . import bi
 from pedidos import servicios as pedidos
-from pedidos.models import CarritoItem
 
 
 def _grafana(rol):
@@ -23,7 +22,7 @@ def menu(request):
     cliente = pedidos.cliente_de(u)
     n = 0
     if cliente is not None:
-        n = sum(CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto").values_list("cantidad", flat=True))
+        n = pedidos.lineas_en_carrito(cliente)
     tipo = tipo_de(u)
     return {"menu": {"cliente": cliente is not None, "crm": rol is not None,
                      "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_superuser, "demo": u.is_superuser,

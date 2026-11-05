@@ -16,8 +16,7 @@ from catalogo.models import Categoria, Producto
 from clientes.forms import RegistroB2CForm, RegistroEmpresaForm
 from .acceso import inicio_de
 from crm import servicios as crm
-from flota import servicios as flota
-from flota.models import Camion, Despacho, Telemetria
+from flota.models import Camion, Telemetria
 
 
 def _imagen_de_categoria(nombre):
@@ -112,16 +111,6 @@ class Recuperar(PasswordResetView):
             publica = urlsplit(settings.CSRF_TRUSTED_ORIGINS[0])
             self.extra_email_context = {"domain": publica.netloc, "protocol": publica.scheme}
         return super().form_valid(form)
-
-
-def guia(request):
-    """Guía de flujos: qué hace cada perfil, paso a paso, con enlaces y el estado actual del sistema para guiar una demostración."""
-    from catalogo.models import AvisoStock, Producto
-    en_ruta = Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).count()
-    estado = {"por_despachar": flota.pedidos_por_despachar().count(), "camiones_libres": flota.camiones_libres().count(),
-              "en_ruta": en_ruta, "sin_stock": Producto.objects.filter(activo=True, stock_disponible__lte=0).count(),
-              "avisos": AvisoStock.objects.filter(atendido_en__isnull=True).count()}
-    return render(request, "guia.html", {"estado": estado})
 
 
 def csrf_fallo(request, reason=""):

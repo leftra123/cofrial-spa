@@ -97,7 +97,7 @@ class RegistroEmpresaTests(TestCase):
         self.assertTrue(Interaccion.objects.filter(cliente=c, detalle__contains="aprobada").exists())
         self.client.logout()
         self.assertTrue(self.client.login(username="compras@hotelvillarrica.test", password="hotel-clave-larga-73"))
-        self.assertContains(self.client.get("/catalogo/"), 'class="perfil-b2b"')          # compra con el perfil institucional
+        self.assertContains(self.client.get("/catalogo/"), 'class="tb-perfil-tipo perfil-b2b"')          # compra con el perfil institucional
 
     def test_gerencia_solo_mira_y_el_admin_elige_el_vendedor(self):
         c = self.pedir()

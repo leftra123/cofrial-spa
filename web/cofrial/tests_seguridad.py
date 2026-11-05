@@ -49,12 +49,12 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
-                    "/crm/cobranza/", "/crm/solicitudes/"]
+                    "/crm/cobranza/", "/crm/solicitudes/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/"]
     PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
                      "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/limpiar/",
-                     "/pedidos/1/oc/", "/bi/x", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/"]
+                     "/pedidos/1/oc/", "/bi/x", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
         for url in self.PRIVADAS_GET:
@@ -80,10 +80,11 @@ class AccesoAnonimoTests(BaseSeguridad):
 
     def test_cada_ruta_del_proyecto_esta_cubierta_o_es_publica(self):
         """Si alguien agrega una ruta nueva, esta prueba obliga a decidir si es pública o privada."""
-        publicas = {"", "portada/", "guia/", "catalogo/", "catalogo/<int:producto_id>/", "cuenta/entrar/", "cuenta/registro/", "cuenta/salir/", "salud/",
+        publicas = {"", "portada/", "catalogo/", "catalogo/<int:producto_id>/", "cuenta/entrar/", "cuenta/registro/", "cuenta/salir/", "salud/",
                     "cuenta/registro/empresa/", "cuenta/recuperar/", "cuenta/recuperar/enviado/", "cuenta/recuperar/<str:uidb64>/<str:token>/",
                     "cuenta/recuperar/listo/",        # pedir cuenta y recuperar la clave son para quien no puede entrar
-                    "salud/bd/", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/"}
+                    "salud/bd/", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/",
+                    "carrito/mp/webhook/"}   # lo llama Mercado Pago sin sesión; solo consulta el pago en la API de MP, no confía en el cuerpo
         cubiertas = {u.strip("/") for u in self.PRIVADAS_GET + self.PRIVADAS_POST}
         pendientes = []
         for p in get_resolver().url_patterns:
@@ -509,7 +510,7 @@ class BarridoDeRutasTests(BaseSeguridad):
         c = self.anonimo()
         for i in range(30):
             self.assertEqual(c.get(f"/no-existe-{i}/").status_code, 404)
-        for url in ("/", "/catalogo/", "/guia/", "/cuenta/entrar/"):
+        for url in ("/", "/catalogo/", "/cuenta/entrar/"):
             self.assertEqual(c.get(url).status_code, 200, url)
 
 
@@ -613,7 +614,6 @@ class CaidasControladasTests(BaseSeguridad):
     def test_sin_lecturas_de_telemetria_las_pantallas_no_caen(self):
         Telemetria.objects.all().delete()
         self.assertEqual(self.anonimo().get("/").status_code, 200)
-        self.assertEqual(self.anonimo().get("/guia/").status_code, 200)
         d = self.entrar("despacho@cofrial.cl")
         self.assertEqual(d.get("/flota/").status_code, 200)
         self.assertEqual(d.get("/api/flota/").status_code, 200)
@@ -652,11 +652,31 @@ class ConfiguracionDeProduccionTests(TestCase):
             self.assertTrue(nuevos.SESSION_COOKIE_SECURE and nuevos.CSRF_COOKIE_SECURE)
             self.assertGreaterEqual(nuevos.SECURE_HSTS_SECONDS, 31536000)
             self.assertEqual(nuevos.SECURE_PROXY_SSL_HEADER, ("HTTP_X_FORWARDED_PROTO", "https"))
+            self.assertTrue(nuevos.SECURE_SSL_REDIRECT)
         finally:
             if anterior is None:
                 os.environ.pop("DJANGO_HTTPS", None)
             else:
                 os.environ["DJANGO_HTTPS"] = anterior
+            importlib.reload(ajustes)
+
+    def test_https_sin_redireccion_cuando_django_https_redirect_es_cero(self):
+        """Caddy en :8443 y Gunicorn en :8000: cookies seguras sin forzar SSL en el puerto HTTP."""
+        import importlib, os
+        import cofrial.settings as ajustes
+        guardados = {k: os.environ.get(k) for k in ("DJANGO_HTTPS", "DJANGO_HTTPS_REDIRECT")}
+        os.environ["DJANGO_HTTPS"] = "1"
+        os.environ["DJANGO_HTTPS_REDIRECT"] = "0"
+        try:
+            nuevos = importlib.reload(ajustes)
+            self.assertFalse(nuevos.SECURE_SSL_REDIRECT)
+            self.assertTrue(nuevos.SESSION_COOKIE_SECURE)
+        finally:
+            for k, v in guardados.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
             importlib.reload(ajustes)
 
     def test_los_limites_de_intentos_se_ajustan_por_entorno(self):

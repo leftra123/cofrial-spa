@@ -126,6 +126,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 if entorno("DJANGO_HTTPS", "0") == "1":
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
+    # nginx/Caddy terminan TLS y pasan HTTP a gunicorn: sin esto Django cree que todo llega por HTTP y redirige en bucle.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     # En local con Caddy en :8443 y Gunicorn aún en :8000, desactivar redirección (DJANGO_HTTPS_REDIRECT=0).
     SECURE_SSL_REDIRECT = entorno("DJANGO_HTTPS_REDIRECT", "1") == "1"
 SESSION_COOKIE_SAMESITE = "Lax"

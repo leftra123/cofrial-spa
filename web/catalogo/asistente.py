@@ -309,7 +309,7 @@ def _interpretar(crudo):
 
 def _orden_chat():
     """Proveedores del chat. Groq primero porque responde en ~0,6 s (Gemini, 2 a 6 s) y en un chat se nota; IA_CHAT_PROVEEDORES lo cambia."""
-    return [n.strip() for n in (os.environ.get("IA_CHAT_PROVEEDORES") or "groq,gemini").split(",") if n.strip()]
+    return [n.strip() for n in (os.environ.get("IA_CHAT_PROVEEDORES") or ia.con_claude("groq,gemini")).split(",") if n.strip()]
 
 
 # ---------------------------------------------------------------------------------------------------------- entrada

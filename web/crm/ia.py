@@ -1,7 +1,8 @@
 """Clasificación de requerimientos con IA externa gratuita (RN-14 y CU-09 del informe).
 
 Gemini (free tier) es el proveedor principal y Groq el respaldo. Las claves vienen del entorno
-(GEMINI_API_KEY, GROQ_API_KEY) y nunca del código. Solo se usa la biblioteca estándar: sin dependencias nuevas.
+(GEMINI_API_KEY, GROQ_API_KEY) y nunca del código. Gemini y Groq usan solo la biblioteca estándar.
+Claude es un tercer proveedor opcional y de pago: entra al final del orden solo si existe ANTHROPIC_API_KEY.
 Cualquier falla (sin clave, red, tiempo, respuesta inválida) se informa como ErrorIA y el servicio la trata
 como «sin clasificar»: un requerimiento nunca se pierde.
 """
@@ -136,10 +137,56 @@ def _groq(prompt, plazo_total):
     raise ErrorIA("; ".join(errores))
 
 
+# Modelos de Claude en orden de preferencia; configurables con CLAUDE_MODELS (lista separada por coma).
+CLAUDE_MODELOS_POR_DEFECTO = "claude-opus-5-5"
+
+
+def _modelos_claude():
+    lista = os.environ.get("CLAUDE_MODELS") or CLAUDE_MODELOS_POR_DEFECTO
+    return [m.strip() for m in lista.split(",") if m.strip()]
+
+
+def con_claude(orden):
+    """Agrega Claude al final de un orden por defecto solo si hay clave: sin ella, los proveedores gratuitos conservan todo su tiempo."""
+    return orden + ",claude" if os.environ.get("ANTHROPIC_API_KEY") else orden
+
+
+def _claude(prompt, plazo_total):
+    global ultimo_modelo
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise ErrorIA("ANTHROPIC_API_KEY no está definida")
+    import anthropic                                             # solo se carga si Claude está en uso
+    cliente = anthropic.Anthropic(max_retries=0)                 # el respaldo lo decide _llamar, no los reintentos del SDK
+    inicio, errores = time.monotonic(), []
+    for modelo in _modelos_claude():
+        restante = plazo_total - (time.monotonic() - inicio)
+        if restante < 1:
+            errores.append("sin tiempo")
+            break
+        opciones = {} if "haiku" in modelo else {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}    # Haiku no tiene respaldo en el servidor
+        try:
+            respuesta = cliente.with_options(timeout=restante).beta.messages.create(
+                model=modelo, max_tokens=4096, output_config={"effort": "low"},       # la tarea es clasificar o responder corto
+                messages=[{"role": "user", "content": prompt}], **opciones)
+        except anthropic.APIError as e:
+            errores.append(f"{modelo}: {type(e).__name__}")
+            continue
+        if respuesta.stop_reason == "refusal":
+            errores.append(f"{modelo}: rechazó la solicitud")
+            continue
+        texto = "".join(b.text for b in respuesta.content if b.type == "text").strip()
+        if not texto:
+            errores.append(f"{modelo}: respuesta sin texto")
+            continue
+        ultimo_modelo = _hilo.modelo = "Claude " + modelo
+        return texto
+    raise ErrorIA("; ".join(errores))
+
+
 def _proveedores(orden=None):
     """Orden de los proveedores: IA_PROVEEDORES=groq,gemini lo invierte (Groq responde en ~1 s; Gemini tarda 4 a 7 s). `orden` lo fuerza (lista de nombres)."""
-    disponibles = {"gemini": _gemini, "groq": _groq}
-    orden = [n.strip().lower() for n in (orden or (os.environ.get("IA_PROVEEDORES") or "gemini,groq").split(","))]
+    disponibles = {"gemini": _gemini, "groq": _groq, "claude": _claude}
+    orden = [n.strip().lower() for n in (orden or (os.environ.get("IA_PROVEEDORES") or con_claude("gemini,groq")).split(","))]
     return [disponibles[n] for n in orden if n in disponibles] or [_gemini, _groq]
 
 
@@ -193,6 +240,7 @@ def redactar(prompt, plazo=8):
 def estado():
     """Configuración visible de la IA para el panel del CRM. Nunca incluye las claves, solo si existen."""
     return {"gemini": bool(os.environ.get("GEMINI_API_KEY")), "groq": bool(os.environ.get("GROQ_API_KEY")),
+            "claude": bool(os.environ.get("ANTHROPIC_API_KEY")), "modelos_claude": _modelos_claude(),
             "orden": [getattr(f, "__name__", "?").lstrip("_").capitalize() for f in _proveedores()],
             "modelos_gemini": _modelos(), "modelos_groq": _modelos_groq(),
             "presupuesto": _presupuesto(), "parte_con_respaldo": int(PARTE_MAXIMA_CON_RESPALDO * 100)}

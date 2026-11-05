@@ -10,7 +10,7 @@
 {% if not ordenes %}
 {% include "componentes/vacio_estado.html" with ico="caja" titulo="Aún no tienes pedidos" texto="Cuando generes tu primera orden aparecerá aquí, con su seguimiento paso a paso." url="/catalogo/" accion="Explorar el catálogo" %}
 {% else %}
-<div class="tabs" role="group" aria-label="Filtrar por estado" id="filtros" hidden>
+<div class="tabs" role="group" aria-label="Filtrar por estado" id="filtros">
   <button type="button" class="tab activo" data-filtro="todos" aria-pressed="true">Todos <span class="n" data-cuenta="todos">{{ ordenes|length }}</span></button>
   <button type="button" class="tab" data-filtro="pendiente" aria-pressed="false">Pendientes <span class="n" data-cuenta="pendiente">0</span></button>
   <button type="button" class="tab" data-filtro="asignado" aria-pressed="false">En preparación <span class="n" data-cuenta="asignado">0</span></button>
@@ -49,7 +49,8 @@
   (function () {
     var barra = document.getElementById("filtros"), filas = document.querySelectorAll("#filas-pedidos tr[data-estado], #lista-movil [data-estado]");
     if (!barra || !filas.length) return;
-    barra.hidden = false;
+    if (barra.dataset.filtrosListo === "1") return;
+    barra.dataset.filtrosListo = "1";
     var cuentas = {todos: 0, pendiente: 0, asignado: 0, transito: 0, entregado: 0, otro: 0};
     document.querySelectorAll("#filas-pedidos tr[data-estado]").forEach(function (f) { cuentas.todos++; if (cuentas[f.dataset.estado] !== undefined) cuentas[f.dataset.estado]++; });
     Object.keys(cuentas).forEach(function (k) { barra.querySelector('[data-cuenta="' + k + '"]').textContent = cuentas[k]; });

@@ -1,0 +1,24 @@
+# HTTPS local para probar Mercado Pago (contexto seguro, autofill, cookies Secure).
+# Requisito: certs/local.pem y certs/local-key.pem (ver scripts/generar-certs-local.sh).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d
+#   Abrir https://localhost:8443  (no http://localhost:8000 para el checkout)
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports: ["127.0.0.1:${HTTPS_PUERTO:-8443}:443"]
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+    depends_on:
+      db: {condition: service_healthy}
+      web: {condition: service_started}
+    restart: unless-stopped
+
+  web:
+    environment:
+      DJANGO_HTTPS: "0"
+      DJANGO_CONFIAR_PROXY: "1"
+      DJANGO_PROXY_SSL: "1"
+      DJANGO_CSRF_ORIGINS: "https://localhost:8443,http://localhost:8000,https://127.0.0.1:8443,http://127.0.0.1:8000"
+      MERCADOPAGO_PUBLIC_URL: "https://localhost:8443"

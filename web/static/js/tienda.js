@@ -30,11 +30,26 @@
     var t = document.createElement("div"); t.className = "toast t-" + (tipo || "info"); t.setAttribute("role", tipo === "error" ? "alert" : "status"); t.textContent = texto;
     toasts.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 300); }, tipo === "error" ? 7000 : 4000);
   }
+  function leerContador() {
+    var el = document.querySelector(".tb-carro .tb-n");
+    if (!el || el.hidden) return 0;
+    return parseInt(el.textContent, 10) || 0;
+  }
+
   function contador(n) {
     document.querySelectorAll("[data-carrito-n]").forEach(function (e) {
       var antes = e.textContent; e.textContent = n; e.hidden = !n;
       if (n && antes !== String(n)) { e.classList.remove("pop"); void e.offsetWidth; e.classList.add("pop"); }
     });
+    var fab = document.getElementById("fab-carrito");
+    if (fab) {
+      var enCarrito = /^\/carrito\/?/.test(location.pathname);
+      fab.hidden = !n || enCarrito;
+      fab.setAttribute("aria-label", n && !enCarrito ? "Ir al carrito, " + n + " producto" + (n === 1 ? "" : "s") : "Ir al carrito");
+    }
+    if (window.CofrialNavSlide && window.CofrialNavSlide.invalidar) {
+      window.CofrialNavSlide.invalidar("/carrito/");
+    }
   }
 
   function pedir(form, extra) {
@@ -54,7 +69,10 @@
     }).then(function (d) {
       if (!d) return;
       var errores = d.mensajes.filter(function (m) { return m.tipo === "error"; });
-      if (d.ok) { fin("Agregado", MUESTRA_OK); contador(d.carrito_n); anunciar("Producto agregado al carrito. Hay " + d.carrito_n + " en total."); }
+      if (d.ok) {
+        fin("Agregado", MUESTRA_OK); contador(d.carrito_n);
+        anunciar("Producto agregado al carrito. Llevas " + d.carrito_n + " producto" + (d.carrito_n === 1 ? "" : "s") + " distinto" + (d.carrito_n === 1 ? "" : "s") + ".");
+      }
       else { fin(); var t = errores.map(function (m) { return m.texto; }).join(" ") || ERROR_RED; aviso(t, "error"); anunciar(t); }
     }).catch(function () { fin(); aviso(ERROR_RED, "error"); anunciar(ERROR_RED); });
   }
@@ -64,9 +82,21 @@
     var linea = form.closest(".linea"), fin = ocupar(boton, "Actualizando…");
     if (linea) linea.classList.add("cargando");
     pedir(form, {"Accept": "text/html"}).then(function (r) { return r.text(); }).then(function (html) {
-      var doc = new DOMParser().parseFromString(html, "text/html"), nuevo = doc.getElementById("contenido"), actual = document.getElementById("contenido");
+      var doc = new DOMParser().parseFromString(html, "text/html"), nuevo = doc.getElementById("t-pagina"), actual = document.getElementById("t-pagina");
       if (!nuevo || !actual) throw new Error("sin contenido");
       actual.innerHTML = nuevo.innerHTML; iniciarCant(actual);
+      var cfg = doc.getElementById("mp-brick-cfg");
+      if (cfg) {
+        var cfgViejo = document.getElementById("mp-brick-cfg");
+        if (cfgViejo) cfgViejo.remove();
+        document.body.appendChild(cfg.cloneNode(true));
+      }
+      if (window.cofrialMpBrick && window.cofrialMpBrick.arrancarDesdeDom) {
+        window.cofrialMpBrick.arrancarDesdeDom();
+      }
+      if (window.CofrialNavSlide && window.CofrialNavSlide.invalidar) {
+        window.CofrialNavSlide.invalidar("/carrito/");
+      }
       var n = doc.querySelector("[data-carrito-n]"); if (n) contador(parseInt(n.textContent, 10) || 0);
       anunciar("Carrito actualizado.");
     }).catch(function () { fin(); if (linea) linea.classList.remove("cargando"); aviso(ERROR_RED, "error"); anunciar(ERROR_RED); });
@@ -78,5 +108,20 @@
     if (f.matches('form[action="/carrito/agregar/"]')) { e.preventDefault(); if (!b || !b.disabled) agregar(f, f.querySelector(".agregar") || b); }
     else if (f.matches('.linea-form[action="/carrito/actualizar/"]')) { e.preventDefault(); if (!b || !b.disabled) actualizarCarrito(f, f.querySelector(".btn-sec")); }
   });
-  window.CofrialTienda = {iniciarCant: iniciarCant};
+  contador(leerContador());
+  window.CofrialTienda = {iniciarCant: iniciarCant, contador: contador};
+
+  document.querySelectorAll(".tb-salir").forEach(function (btn) {
+    if (btn.dataset.listo) return;
+    btn.dataset.listo = "1";
+    btn.addEventListener("click", function (e) {
+      var form = btn.closest("form");
+      if (!form || btn.classList.contains("tb-salir--sale")) return;
+      e.preventDefault();
+      btn.classList.add("tb-salir--sale");
+      btn.setAttribute("aria-busy", "true");
+      var ms = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 420;
+      window.setTimeout(function () { form.submit(); }, ms);
+    });
+  });
 })();

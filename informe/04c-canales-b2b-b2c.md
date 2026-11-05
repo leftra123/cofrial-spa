@@ -15,7 +15,7 @@ El portal atiende a dos perfiles con la misma plataforma y la misma base de dato
 | Número de orden de compra | Se solicita; si falta, la orden queda «OC pendiente» | No aplica | RN-05 |
 | Vendedor asignado | Sí; ve sus pedidos en el CRM | No | RN-09 |
 | Compra recurrente | «Repetir mi último pedido» | Recompra desde el historial | RN-08 |
-| Pago | Factura a crédito después de la entrega (simulada) | Pago inmediato con boleta (simulado) | RN-18, RN-19 |
+| Pago | Factura a crédito después de la entrega (simulada) | Pago inmediato con boleta (MP prueba o Webpay simulado) | RN-18, RN-19 |
 | Registro | Alta institucional gestionada por el personal autorizado | Registro previo B2C con RUT, correo, dirección y clave | |
 
 *Nota.* Elaboración propia. La forma de solicitar la orden de compra (con la opción de dejarla pendiente) y la forma de pago son supuestos a validar con Cofrial.
@@ -105,14 +105,14 @@ Los wireframes son de baja fidelidad (escala de grises) y llevan anotaciones num
 
 ## Documentos tributarios y pago
 
-El cliente no elige guías ni notas de crédito: son documentos que Cofrial emite según lo que ocurre con el pedido. Lo único que cambia entre canales es el comprobante de venta y el momento del pago. Todo se simula (sin conexión al SII ni a una pasarela real): se guardan tipo, folio, monto, fechas y pagos.
+El cliente no elige guías ni notas de crédito: son documentos que Cofrial emite según lo que ocurre con el pedido. Lo único que cambia entre canales es el comprobante de venta y el momento del pago. Se simula la emisión tributaria (sin SII). En B2C, con **Mercado Pago Checkout Pro en modo prueba** configurado, la orden y la boleta se crean solo tras pago aprobado; sin token de MP se mantiene Webpay simulado al confirmar el carrito (ver `docs/mercadopago-checkout.md`).
 
 **Tabla 2b**
 *Documentos por canal, momento de emisión y pago*
 
 | Documento | Quién lo recibe | Cuándo se emite | Cuándo se paga |
 |---|---|---|---|
-| Boleta | Cliente B2C | Al comprar (RN-18) | Al comprar, con Webpay simulado |
+| Boleta | Cliente B2C | Tras pago aprobado (RN-18) | Mercado Pago (prueba) o Webpay simulado si MP no está configurado |
 | Guía de despacho | Ambos canales | Al despachar (RN-17) | No se paga: ampara el traslado |
 | Factura | Cliente B2B (con RUT, razón social y giro) | Después de la entrega (RN-19) | A crédito, 30 días desde la factura |
 | Nota de crédito | Quien tenga un reclamo o una cancelación | Cuando el vendedor la emite (RN-21) | Rebaja la deuda o se devuelve lo pagado |
@@ -144,7 +144,7 @@ El cliente no elige guías ni notas de crédito: son documentos que Cofrial emit
 | RN-07 | **Estados y cancelación.** La orden avanza según la Figura 9. Se puede cancelar antes de «Despachada»; el cliente solo mientras esté «Recibida», y el vendedor hasta «En preparación». Cancelar repone el stock. | W5, W6 |
 | RN-08 | **Compra recurrente.** «Repetir mi último pedido» copia al carrito las líneas de la última orden no cancelada; las cantidades se ajustan al stock disponible y se avisa de cada ajuste. | W2 |
 | RN-17 | **Guía de despacho.** Cuando una orden pasa a «Despachada» se emite su guía de despacho, que ampara el traslado de la mercadería. No cobra nada y es única por orden. | W5 |
-| RN-18 | **El público paga al comprar.** Al generar una orden B2C se registra el pago (Webpay simulado) y se emite la boleta, con IVA incluido, ya pagada. | W4, W5 |
+| RN-18 | **El público paga al comprar.** Con Mercado Pago **Payment Brick** (modo prueba), el pago ocurre en el carrito; la orden B2C y la boleta (IVA incluido) se crean cuando el pago queda `approved`. Sin credenciales MP, el cobro sigue simulado con Webpay al confirmar. | W4, W5 |
 | RN-19 | **Factura B2B.** Los clientes institucionales no pagan al comprar. La factura se emite una sola vez, cuando la orden ya fue entregada, con el IVA sumado al neto y el vencimiento según el crédito del tipo de cliente (30 días). | W5 |
 | RN-20 | **Pagos.** Un pago se registra contra una boleta o factura y no puede superar su saldo pendiente. El saldo se calcula (monto menos pagos y notas de crédito); no se guarda. | CRM |
 | RN-21 | **Nota de crédito.** Rebaja un documento por un reclamo, una ruptura de frío o una cancelación. Exige motivo y no puede superar lo que aún no se ha rebajado. Si el cliente ya había pagado, el excedente se le devuelve en el mismo acto. Cancelar una orden con boleta emitida la anula completa. | CRM, W5 |

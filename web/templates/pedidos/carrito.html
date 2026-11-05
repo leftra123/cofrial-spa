@@ -42,13 +42,23 @@
       <div class="total"><dt>Total con IVA</dt><dd>{{ total|con_iva }}</dd></div>
     {% else %}<div class="total"><dt>Total (IVA incluido)</dt><dd>{{ total|clp }}</dd></div>{% endif %}
     </dl>
+    {% if mp_brick %}
+    <div class="checkout-mp" data-checkout="mp-modal-v4">{% csrf_token %}
+      <label for="direccion">Dirección de entrega</label>
+      <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      <p class="ayuda" id="ayuda-pago">Elige dirección y abre el checkout seguro. El formulario aparece en un modal centrado (Mercado Pago, modo prueba).</p>
+      <button type="button" class="confirmar" id="mp-mostrar-pago" aria-haspopup="dialog" aria-controls="mp-pago-modal"{% if sin_stock %} disabled{% endif %}>Continuar al pago · {{ total|clp }}</button>
+      <p class="ayuda mp-inline-error" id="mp-inline-error" hidden role="alert"></p>
+    </div>
+    {% else %}
     <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
       {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
-      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega.{% else %}Pagas ahora (Webpay, simulado) y recibes tu boleta en seguida.{% endif %}</p>
+      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega.{% else %}Pagas ahora (Webpay simulado) y recibes tu boleta en seguida.{% endif %}</p>
       <button class="confirmar" data-cargando="{% if pide_oc %}Generando orden…{% else %}Procesando pago…{% endif %}"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>{% if pide_oc %}Generar orden{% else %}Pagar y generar orden{% endif %}</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
     </form>
+    {% endif %}
     <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde "Mis pedidos"</p>
   </aside>
 </div>
@@ -56,4 +66,95 @@
 <div class="tarjeta-ui vacio-caja">{% include "componentes/vacio.html" with ico="carro" %}<h2>Tu carrito está vacío</h2><p>Agregue productos del catálogo para generar su orden.</p><a class="btn" href="/catalogo/">Ver catálogo</a></div>
 {% endif %}
 {% endblock %}
+{% if mp_brick %}{% block mp_modal_portal %}
+<div id="mp-pago-modal" class="mp-modal" hidden role="dialog" aria-modal="true" aria-labelledby="mp-pago-titulo" aria-describedby="mp-pago-sub">
+  <div class="mp-modal__backdrop" data-mp-cerrar tabindex="-1"></div>
+  <div class="mp-modal__panel">
+    <div class="mp-modal__estado" id="mp-modal-estado" hidden role="status" aria-live="polite">
+      <div class="mp-modal__estado-ico" id="mp-modal-estado-ico" aria-hidden="true">
+        <span class="mp-marca mp-marca--ok" data-marca="ok" hidden></span>
+        <span class="mp-marca mp-marca--off" data-marca="off" hidden></span>
+        <span class="mp-marca mp-marca--err" data-marca="err" hidden></span>
+        <span class="mp-marca mp-marca--carga" data-marca="carga" hidden></span>
+      </div>
+      <p class="mp-modal__estado-t" id="mp-modal-estado-t"></p>
+      <p class="mp-modal__estado-sub" id="mp-modal-estado-sub"></p>
+      <div class="mp-modal__estado-acc" id="mp-modal-estado-acc" hidden>
+        <button type="button" class="btn" id="mp-estado-reintentar">Reintentar pago</button>
+        <button type="button" class="btn-sec" id="mp-estado-carrito">Volver al carrito</button>
+      </div>
+    </div>
+    <header class="mp-modal__cab">
+      <div>
+        <p class="mp-modal__etiq">Pago seguro</p>
+        <h2 id="mp-pago-titulo">Pago con tarjeta</h2>
+        <p class="ayuda" id="mp-pago-sub">Total {{ total|clp }} · crédito o débito · Mercado Pago (modo prueba)</p>
+      </div>
+      <button type="button" class="mp-modal__cerrar" data-mp-cerrar aria-label="Cerrar">×</button>
+    </header>
+    <p class="aviso warning mp-modal__error" id="mp-brick-error" hidden role="alert"></p>
+    <div class="mp-modal__cuerpo">
+        <div class="mp-brick-shell" data-mp-tema="claro">
+        <div class="mp-brick-skeleton" id="mp-brick-skeleton" aria-hidden="true" aria-label="Cargando formulario de pago">
+          <div class="mp-brick-skeleton__head">
+            <span class="mp-skel-line mp-skel-line--tit skeleton"></span>
+            <span class="mp-skel-line mp-skel-line--icons skeleton"></span>
+          </div>
+          <div class="mp-brick-skeleton__field">
+            <span class="mp-skel-line mp-skel-line--label skeleton"></span>
+            <span class="mp-skel-line mp-skel-line--input skeleton"></span>
+          </div>
+          <div class="mp-brick-skeleton__duo">
+            <div class="mp-brick-skeleton__field mp-brick-skeleton__field--half">
+              <span class="mp-skel-line mp-skel-line--label skeleton"></span>
+              <span class="mp-skel-line mp-skel-line--input skeleton"></span>
+            </div>
+            <div class="mp-brick-skeleton__field mp-brick-skeleton__field--half">
+              <span class="mp-skel-line mp-skel-line--label skeleton"></span>
+              <span class="mp-skel-line mp-skel-line--input skeleton"></span>
+            </div>
+          </div>
+          <div class="mp-brick-skeleton__field">
+            <span class="mp-skel-line mp-skel-line--label skeleton"></span>
+            <span class="mp-skel-line mp-skel-line--input skeleton"></span>
+          </div>
+          <div class="mp-brick-skeleton__field mp-brick-skeleton__field--doc">
+            <span class="mp-skel-line mp-skel-line--label skeleton"></span>
+            <span class="mp-brick-skeleton__doc-fila">
+              <span class="mp-skel-line mp-skel-line--doc-tipo skeleton"></span>
+              <span class="mp-skel-line mp-skel-line--input skeleton"></span>
+            </span>
+          </div>
+          <span class="mp-skel-line mp-skel-line--seccion skeleton"></span>
+          <div class="mp-brick-skeleton__field">
+            <span class="mp-skel-line mp-skel-line--label skeleton"></span>
+            <span class="mp-skel-line mp-skel-line--input skeleton"></span>
+          </div>
+          <span class="mp-skel-line mp-skel-line--btn skeleton"></span>
+        </div>
+        <div class="mp-brick-escala" id="mp-brick-escala">
+          <div id="mp-brick-container" class="mp-brick mp-brick--loading" aria-busy="true" aria-label="Formulario Mercado Pago"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}{% endif %}
+{% block scripts %}{% load static %}{% if mp_brick %}{{ mp_brick_cfg|json_script:"mp-brick-cfg" }}
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script src="{% static 'js/mp-brick.js' %}?v=mp-skel-tema-v2"></script>
+<script>
+(function () {
+  function arrancar() {
+    if (window.cofrialMpBrick && window.cofrialMpBrick.arrancarDesdeDom) {
+      window.cofrialMpBrick.arrancarDesdeDom();
+    }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", arrancar);
+  } else {
+    arrancar();
+  }
+})();
+</script>{% endif %}{% endblock %}
 {% block asistente %}{% include "componentes/asistente.html" with pagina="carrito" %}{% endblock %}

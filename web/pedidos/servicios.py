@@ -35,6 +35,11 @@ def carrito_abierto(cliente):
     return carrito
 
 
+def lineas_en_carrito(cliente):
+    """Productos distintos en el carrito abierto (líneas), no la suma de unidades."""
+    return CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto").count()
+
+
 def _validar_cantidad(cantidad):
     if cantidad < 1:
         raise ErrorDeNegocio("La cantidad debe ser al menos 1.")
@@ -83,61 +88,67 @@ def total(filas):
     return sum(f["subtotal"] for f in filas)
 
 
-# ------------------------------------------------------------------------------------ órdenes
-@transaction.atomic
-def generar_ordenes(cliente, direccion_id, numero_oc=""):
-    """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
-
-    RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
-    (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección y la misma OC. Devuelve la lista.
-    """
+def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
+    """Valida dirección, carrito, stock y precios; devuelve el contexto para generar órdenes o un checkout MP."""
     numero_oc = (numero_oc or "").strip()[:30]
-    pendiente = cliente.tipo_cliente.codigo == "B2B" and not numero_oc      # RN-05: sin OC la orden se crea igual, marcada «OC pendiente»
+    pendiente = cliente.tipo_cliente.codigo == "B2B" and not numero_oc
     try:
-        direccion_id = entradas.entero(direccion_id)          # un id no numérico es «dirección ajena», no un 500
+        direccion_id = entradas.entero(direccion_id)
     except ValueError:
         direccion_id = 0
-    direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()    # RN-04
+    direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()
     if direccion is None:
         raise ErrorDeNegocio("Elige una dirección de entrega que pertenezca a tu cuenta.")
     carrito = Carrito.objects.select_for_update().filter(cliente=cliente, estado="abierto").first()
-    items = list(CarritoItem.objects.filter(carrito=carrito)) if carrito else []
+    items = list(CarritoItem.objects.filter(carrito=carrito).select_related("producto")) if carrito else []
     if not items:
         raise ErrorDeNegocio("Tu carrito está vacío.")
-
-    # RN-02: se bloquean los productos (en orden de id, para no provocar bloqueos cruzados) antes de validar el stock
     productos = {p.pk: p for p in Producto.objects.select_for_update().filter(pk__in=[i.producto_id for i in items]).order_by("pk")}
     faltantes = [f"{productos[i.producto_id].nombre}: pides {i.cantidad} y quedan {productos[i.producto_id].stock_disponible}."
                  for i in items if i.cantidad > productos[i.producto_id].stock_disponible]
     if faltantes:
         raise ErrorDeNegocio("No hay stock suficiente para generar la orden.", *faltantes)
-
     precios = {i.producto_id: precio_de(cliente, i.producto_id) for i in items}
     sin_precio = [productos[pid].nombre for pid, pr in precios.items() if pr is None]
     if sin_precio:
         raise ErrorDeNegocio("Productos sin precio en tu lista: " + ", ".join(sin_precio) + ".")
-
     rango_de_categoria = dict(Categoria.objects.filter(pk__in={p.categoria_id for p in productos.values()})
                               .values_list("pk", "rango_temperatura_id"))
     grupos = {}
-    for i in items:                                                                # RN-09: un grupo por rango de temperatura
+    for i in items:
         grupos.setdefault(rango_de_categoria[productos[i.producto_id].categoria_id], []).append(i)
+    return {"direccion": direccion, "carrito": carrito, "items": items, "productos": productos, "precios": precios,
+            "grupos": grupos, "pendiente": pendiente, "numero_oc": numero_oc}
+
+
+# ------------------------------------------------------------------------------------ órdenes
+@transaction.atomic
+def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None):
+    """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
+
+    RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
+    (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección y la misma OC. Devuelve la lista.
+    """
+    ctx = _contexto_desde_carrito(cliente, direccion_id, numero_oc)
+    direccion, carrito, items, productos, precios, grupos = ctx["direccion"], ctx["carrito"], ctx["items"], ctx["productos"], ctx["precios"], ctx["grupos"]
+    pendiente, numero_oc = ctx["pendiente"], ctx["numero_oc"]
 
     estado = EstadoOrden.objects.get(orden_flujo=1)
     ordenes = []
     for rango_id in sorted(grupos):
-        orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado)
+        orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado,
+                                     checkout_pago=checkout_pago)
         if pendiente:
             orden.numero_oc = referencia_web(orden)
             orden.save(update_fields=["numero_oc"])
         for i in grupos[rango_id]:
             OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
-                                     precio_unitario_clp=precios[i.producto_id])        # RN-06: precio congelado
+                                     precio_unitario_clp=precios[i.producto_id])
             Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
-        if cliente.tipo_cliente.codigo == "B2C":
-            documentos.cobrar_b2c(orden)                                           # RN-18: el público paga al comprar y recibe su boleta
+        if cliente.tipo_cliente.codigo == "B2C" and cobrar_b2c_al_crear:
+            documentos.cobrar_b2c(orden)
         ordenes.append(orden)
-    carrito.estado = "convertido"                                                  # RN-03
+    carrito.estado = "convertido"
     carrito.save(update_fields=["estado"])
     return ordenes
 

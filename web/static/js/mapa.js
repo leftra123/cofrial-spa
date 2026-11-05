@@ -13,27 +13,52 @@ window.CofrialMapa = (function () {
     L.tileLayer(MOSAICOS.url, {
       maxZoom: MOSAICOS.maxZoom, subdomains: MOSAICOS.subdomains, attribution: MOSAICOS.attribution,
       referrerPolicy: "strict-origin-when-cross-origin"}).addTo(m);          // OSM exige el Referer: sin él responde «403 Access blocked»
+    m.on("zoomend", function () { redimensionarCamiones(m); });
     m.on("moveend zoomend layeradd", function () { agendarSeparacion(m); });
     return m;
   }
 
-  /* Camiones cercanos: cada ícono pesa 64x58 px, así que dos camiones a pocos metros se taparían. Tras cada movimiento se reparten en pantalla
-     (solo el dibujo, nunca la posición real) y se dejan debajo de las paradas y la bodega para no taparlas. */
-  var HUECOS = [[0, 0], [72, 0], [-72, 0], [0, -62], [0, 62], [72, -62], [-72, -62], [72, 62], [-72, 62]];
+  /* Tamaño del camión según el zoom: en la calle cabe en una cuadra; al alejar se achica de verdad (el ícono de Leaflet, no un scale CSS). */
+  function medidasCamion(zoom) {
+    if (zoom == null) return {w: 32, imgH: 20, mostrarEtq: false};
+    var w = Math.round(Math.max(24, Math.min(44, 10 + zoom * 1.85)));
+    return {w: w, imgH: Math.max(14, Math.round(w * 5 / 8)), mostrarEtq: zoom >= 13};
+  }
+  function esCamion(l) {
+    var o = l && l.options && l.options.icon && l.options.icon.options;
+    return !!(l && l._icon && o && (o.className || "").indexOf("pin-camion") >= 0);
+  }
+  function redimensionarCamiones(m) {
+    var z = m.getZoom();
+    m.eachLayer(function (l) {
+      if (!esCamion(l)) return;
+      var o = l.options.icon.options;
+      if (o.cofrialZoom === z) return;
+      l.setIcon(camion(o.className.indexOf("alerta") >= 0, o.cofrialEtiqueta || "", z));
+    });
+  }
+  /* Camiones cercanos: se reparten en pantalla (solo el dibujo) para no taparse, y quedan debajo de paradas y bodega. */
   var pendiente = new WeakSet();
   function separarCamiones(m) {
+    var med = medidasCamion(m.getZoom()), pasoX = med.w + 10, pasoY = med.imgH + 14;
+    var huecos = [[0, 0], [pasoX, 0], [-pasoX, 0], [0, -pasoY], [0, pasoY], [pasoX, -pasoY], [-pasoX, -pasoY], [pasoX, pasoY], [-pasoX, pasoY]];
     var camiones = [];
-    m.eachLayer(function (l) {
-      var o = l.options && l.options.icon && l.options.icon.options;
-      if (l._icon && o && (o.className || "").indexOf("pin-camion") >= 0) camiones.push(l);
-    });
+    m.eachLayer(function (l) { if (esCamion(l)) camiones.push(l); });
+    if (!camiones.length) return;
     camiones.sort(function (a, b) { return String(a._icon.textContent).localeCompare(String(b._icon.textContent)); });
+    if (camiones.length === 1) {
+      var solo = camiones[0], o0 = solo.options.icon.options;
+      solo._icon.style.marginLeft = (-o0.iconAnchor[0]) + "px";
+      solo._icon.style.marginTop = (-o0.iconAnchor[1]) + "px";
+      solo.setZIndexOffset(0);
+      return;
+    }
     var colocados = [];
     camiones.forEach(function (l) {
-      var p = m.latLngToContainerPoint(l.getLatLng()), o = l.options.icon.options, elegido = HUECOS[0];
-      for (var h = 0; h < HUECOS.length; h++) {
-        var x = p.x + HUECOS[h][0], y = p.y + HUECOS[h][1];
-        if (!colocados.some(function (c) { return Math.abs(c[0] - x) < 68 && Math.abs(c[1] - y) < 58; })) { elegido = HUECOS[h]; break; }
+      var p = m.latLngToContainerPoint(l.getLatLng()), o = l.options.icon.options, elegido = huecos[0];
+      for (var h = 0; h < huecos.length; h++) {
+        var x = p.x + huecos[h][0], y = p.y + huecos[h][1];
+        if (!colocados.some(function (c) { return Math.abs(c[0] - x) < med.w && Math.abs(c[1] - y) < med.imgH + 8; })) { elegido = huecos[h]; break; }
       }
       colocados.push([p.x + elegido[0], p.y + elegido[1]]);
       l._icon.style.marginLeft = (-o.iconAnchor[0] + elegido[0]) + "px";
@@ -63,10 +88,21 @@ window.CofrialMapa = (function () {
     var t = document.querySelector('script[src*="js/mapa.js"]');
     return t ? t.getAttribute("src").replace(/js\/mapa\.js.*$/, "img/marca/") : "/static/img/marca/";
   })();
-  function camion(alerta, etiqueta) {
-    var img = '<img src="' + BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png") + '" width="64" height="40" alt="" draggable="false">';
-    return L.divIcon({className: "pin-camion" + (alerta ? " alerta" : ""), iconSize: [64, 58], iconAnchor: [32, 32], popupAnchor: [0, -30],
-      html: img + (etiqueta ? '<b class="pin-etq">' + etiqueta + "</b>" : "")});
+  function camion(alerta, etiqueta, zoom) {
+    var med = medidasCamion(zoom), etq = etiqueta || "";
+    var url = BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png");
+    var etqH = etq && med.mostrarEtq ? 16 : 0;
+    var cajaH = med.imgH + etqH;
+    /* PNG de 512×320: <img> + reglas globales lo pintaban casi a tamaño real; fondo en caja fija = escala de mapa */
+    var html = '<span class="pin-camion-graf" role="presentation" aria-hidden="true" style="width:' + med.w + "px;height:" + med.imgH + "px;background-image:url('" + url + "')\"></span>";
+    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + etq + "</b>";
+    return L.divIcon({
+      className: "pin-camion" + (alerta ? " alerta" : ""),
+      iconSize: [med.w, cajaH],
+      iconAnchor: [Math.round(med.w / 2), med.imgH],
+      popupAnchor: [0, -med.imgH - 4],
+      cofrialZoom: zoom == null ? null : zoom, cofrialEtiqueta: etq,
+      html: html});
   }
 
   /* Destino de entrega: gota verde con una casa. */

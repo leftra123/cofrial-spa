@@ -1,0 +1,6 @@
+{% if menu.cliente %}
+<a class="fab-carrito" id="fab-carrito" href="/carrito/" aria-label="Ir al carrito{% if carrito_n %}, {{ carrito_n }} producto{{ carrito_n|pluralize }}{% endif %}"{% if not carrito_n or "/carrito/" in request.path %} hidden{% endif %}>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.5" fill="currentColor" stroke="none"/><path d="M2 3h3l2.5 12h11L21 7H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span class="fab-carrito-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span>
+</a>
+{% endif %}

@@ -254,7 +254,7 @@ class AgregarSinRecargar(TestCase):
         self.assertEqual(r.status_code, 200)
         d = r.json()
         self.assertTrue(d["ok"])
-        self.assertEqual(d["carrito_n"], 2)
+        self.assertEqual(d["carrito_n"], 1)          # una línea aunque la cantidad sea 2
         self.assertEqual(d["mensajes"][0]["tipo"], "success")
         self.assertNotContains(self.client.get("/catalogo/"), "Producto agregado al carrito")      # el mensaje no reaparece en la página siguiente
 

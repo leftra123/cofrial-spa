@@ -2,15 +2,17 @@ from functools import wraps
 
 from django.contrib import messages
 from django.http import Http404
+from django.middleware.csrf import get_token
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.http import require_GET, require_POST
 
 from cofrial import entradas
 from crm import servicios as crm
 from crm.models import Requerimiento
 
-from . import documentos, servicios as s
+from . import documentos, mercadopago as mp, servicios as s
 
 
 def solo_clientes(vista):
@@ -39,9 +41,8 @@ def _respuesta_json(request, cliente):
     """Mismo resultado que la redirección, en JSON: los mensajes (que así no reaparecen en la página siguiente) y cuántos productos hay en el carrito."""
     from django.contrib.messages import get_messages
     from django.http import JsonResponse
-    from .models import CarritoItem
     mensajes = [{"tipo": m.level_tag, "texto": str(m)} for m in get_messages(request)]
-    n = sum(CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto").values_list("cantidad", flat=True))
+    n = s.lineas_en_carrito(cliente)
     return JsonResponse({"ok": not any(m["tipo"] == "error" for m in mensajes), "mensajes": mensajes, "carrito_n": n}, json_dumps_params={"ensure_ascii": False})
 
 
@@ -60,13 +61,30 @@ def agregar(request, cliente):
     return redirect(destino if seguro else "/catalogo/")           # misma validación que /avisos/pedir/: sin redirección abierta
 
 
+@ensure_csrf_cookie
 @solo_clientes
 def ver_carrito(request, cliente):
     filas = s.lineas(cliente)
-    return render(request, "pedidos/carrito.html", {"filas": filas, "total": s.total(filas), "cliente": cliente,
-                                                    "sin_stock": [f for f in filas if not f["hay_stock"]],
-                                                    "direcciones": cliente.direccion_set.select_related("comuna"),
-                                                    "pide_oc": cliente.tipo_cliente.codigo == "B2B"})
+    sin_stock = [f for f in filas if not f["hay_stock"]]
+    es_b2c = cliente.tipo_cliente.codigo == "B2C"
+    mp_brick = es_b2c and mp.activo() and filas and not sin_stock
+    total = s.total(filas)
+    ctx = {
+        "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
+        "direcciones": cliente.direccion_set.select_related("comuna"),
+        "pide_oc": cliente.tipo_cliente.codigo == "B2B",
+        "mp_brick": mp_brick,
+    }
+    if mp_brick:
+        ctx["mp_brick_cfg"] = {
+            "publicKey": mp.clave_publica(),
+            "amount": total,
+            "email": mp.email_cliente_mp(cliente),
+            "csrf": get_token(request),
+            "urlPago": "/carrito/mp/pagar/",
+            "sinStock": False,
+        }
+    return render(request, "pedidos/carrito.html", ctx)
 
 
 @require_POST
@@ -93,14 +111,7 @@ def repetir(request, cliente):
     return redirect("carrito")
 
 
-@require_POST
-@solo_clientes
-def confirmar(request, cliente):
-    try:
-        ordenes = s.generar_ordenes(cliente, request.POST.get("direccion") or 0, request.POST.get("numero_oc", ""))
-    except s.ErrorDeNegocio as e:
-        _mostrar_errores(request, e)
-        return redirect("carrito")
+def _mensaje_ordenes_creadas(ordenes):
     orden = ordenes[0]
     if len(ordenes) > 1:
         numeros = " y ".join(f"N.º {o.orden_id}" for o in ordenes)
@@ -110,8 +121,46 @@ def confirmar(request, cliente):
     boletas = list(documentos.Documento.objects.filter(orden__in=ordenes, tipo="boleta").order_by("folio").values_list("folio", flat=True))
     if boletas:
         mensaje += " Pago aprobado y " + ("boleta N.º " if len(boletas) == 1 else "boletas N.º ") + " y ".join(str(f) for f in boletas) + (" emitida." if len(boletas) == 1 else " emitidas.")
+    return mensaje, orden
+
+
+@require_POST
+@solo_clientes
+def confirmar(request, cliente):
+    direccion = request.POST.get("direccion") or 0
+    numero_oc = request.POST.get("numero_oc", "")
+    if cliente.tipo_cliente.codigo == "B2C" and mp.activo():
+        messages.info(request, "Completa el pago con Mercado Pago en el formulario del carrito.")
+        return redirect("carrito")
+    try:
+        ordenes = s.generar_ordenes(cliente, direccion, numero_oc)
+    except s.ErrorDeNegocio as e:
+        _mostrar_errores(request, e)
+        return redirect("carrito")
+    mensaje, orden = _mensaje_ordenes_creadas(ordenes)
     messages.success(request, mensaje)
     return redirect(f"/pedidos/{orden.orden_id}/?nueva=1")
+
+
+@require_POST
+@solo_clientes
+def mp_pagar_brick(request, cliente):
+    """Recibe el formData del Payment Brick y crea el pago en MP."""
+    import json
+    from django.http import JsonResponse
+    if cliente.tipo_cliente.codigo != "B2C" or not mp.activo():
+        return JsonResponse({"ok": False, "mensaje": "El pago con Mercado Pago no está disponible."}, status=403)
+    try:
+        datos = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "mensaje": "Solicitud no válida."}, status=400)
+    try:
+        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {})
+        return JsonResponse({"ok": True, "redirect": f"/pedidos/{checkout.primera_orden_id}/?nueva=1"},
+                            json_dumps_params={"ensure_ascii": False})
+    except s.ErrorDeNegocio as e:
+        return JsonResponse({"ok": False, "mensaje": " ".join(e.mensajes)}, status=400,
+                            json_dumps_params={"ensure_ascii": False})
 
 
 @solo_clientes
@@ -222,3 +271,88 @@ def entrega(request, cliente, orden_id):
                             json_dumps_params={"ensure_ascii": False})
     (messages.success if ok else messages.error)(request, mensaje)
     return redirect("orden", orden_id=orden_id)
+
+
+def _checkout_del_cliente(cliente, request):
+    ref = request.GET.get("external_reference") or request.GET.get("external_reference_id") or ""
+    checkout = mp.checkout_por_referencia(ref) if ref else None
+    if checkout and checkout.cliente_id != cliente.cliente_id:
+        raise Http404("Checkout no encontrado")
+    payment_id = request.GET.get("payment_id") or request.GET.get("collection_id")
+    if checkout is None and payment_id and mp.activo():
+        try:
+            checkout = mp.procesar_pago_mp(str(payment_id))
+        except s.ErrorDeNegocio:
+            checkout = None
+    elif checkout and payment_id and checkout.estado == "pendiente" and mp.activo():
+        try:
+            checkout = mp.procesar_pago_mp(str(payment_id))
+        except s.ErrorDeNegocio:
+            pass
+    return checkout
+
+
+def _redirigir_tras_mp(request, cliente, checkout, ok_default, err_default):
+    if checkout and checkout.estado == "completado" and checkout.primera_orden_id:
+        ordenes = list(checkout.ordenes.order_by("orden_id"))
+        if ordenes:
+            messages.success(request, _mensaje_ordenes_creadas(ordenes)[0])
+            return redirect(f"/pedidos/{checkout.primera_orden_id}/?nueva=1")
+    if checkout and checkout.estado == "fallido":
+        messages.error(request, err_default)
+    elif checkout and checkout.estado == "pendiente":
+        messages.info(request, "Tu pago está pendiente de confirmación. Cuando Mercado Pago lo apruebe, crearemos tu pedido.")
+    else:
+        messages.info(request, ok_default if checkout is None else err_default)
+    return redirect("carrito")
+
+
+@require_GET
+@solo_clientes
+def mp_vuelta_exito(request, cliente):
+    checkout = _checkout_del_cliente(cliente, request)
+    return _redirigir_tras_mp(request, cliente, checkout,
+                              "Gracias. Estamos confirmando tu pago.",
+                              "No pudimos confirmar el pago. Revisa tu carrito e intenta de nuevo.")
+
+
+@require_GET
+@solo_clientes
+def mp_vuelta_fallo(request, cliente):
+    checkout = _checkout_del_cliente(cliente, request)
+    if checkout and checkout.estado == "pendiente" and mp.activo():
+        payment_id = request.GET.get("payment_id") or request.GET.get("collection_id")
+        if payment_id:
+            try:
+                checkout = mp.procesar_pago_mp(str(payment_id))
+            except s.ErrorDeNegocio:
+                pass
+    return _redirigir_tras_mp(request, cliente, checkout,
+                              "Volviste del checkout de pago.",
+                              "El pago no fue aprobado. Tu carrito sigue disponible.")
+
+
+@require_GET
+@solo_clientes
+def mp_vuelta_pendiente(request, cliente):
+    checkout = _checkout_del_cliente(cliente, request)
+    return _redirigir_tras_mp(request, cliente, checkout,
+                              "Tu pago quedó pendiente.",
+                              "El pago no fue aprobado. Tu carrito sigue disponible.")
+
+
+@csrf_exempt
+def mp_webhook(request):
+    """Notificaciones IPN/Webhook de Mercado Pago (sin sesión)."""
+    from django.http import HttpResponse
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    if not mp.activo():
+        return HttpResponse(status=204)
+    payment_id = request.GET.get("data.id") or request.GET.get("id")
+    try:
+        mp.procesar_notificacion_webhook(request.body, payment_id_query=payment_id)
+    except s.ErrorDeNegocio as e:
+        logger = __import__("logging").getLogger("cofrial.mercadopago")
+        logger.warning("Webhook MP: %s", " ".join(e.mensajes))
+    return HttpResponse(status=200)

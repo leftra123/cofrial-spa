@@ -125,7 +125,7 @@
     var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
     L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
     d.camiones.forEach(function (c) {
-      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
+      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id, m.getZoom()), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
     });
     var todos = [base];
     d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });          // el encuadre incluye a los camiones, no solo la bodega y las paradas
@@ -147,10 +147,8 @@
           "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b> · " + v.situacion + ", ruta por calles: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.filter(Boolean).join("") + "</ol>");
       })();
     });
-    if (todos.length > 1) m.fitBounds(todos, {paddingTopLeft: [44, 56], paddingBottomRight: [44, 64], maxZoom: 15});   // margen para el camión (64x40) y su código; sin acercarse de más
+    if (todos.length > 1) m.fitBounds(todos, {padding: [36, 36], maxZoom: 15});
     var puntosRutas = todos.slice();
-    function ajustarIconos() { document.getElementById("mapa-flota").classList.toggle("zoom-lejos", m.getZoom() <= 11); }
-    m.on("zoomend", ajustarIconos); ajustarIconos();
     document.getElementById("ver-flota").addEventListener("click", function () {      // toda la flota, incluidos los camiones en viajes lejanos
       var pts = [base].concat(d.camiones.map(function (c) { return [c.lat, c.long]; }));
       Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].getLatLng()); });
@@ -158,7 +156,7 @@
     });
     document.getElementById("ver-rutas").addEventListener("click", function () { m.fitBounds(puntosRutas.length > 1 ? puntosRutas : [base], {padding: [40, 40], maxZoom: 14}); });
     window.moverCamion = function (id, lat, lon, alerta) {
-      if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.camion(alerta, id)); }
+      if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.camion(alerta, id, m.getZoom())); }
     };
   })();
 </script>

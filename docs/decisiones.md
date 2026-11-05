@@ -54,6 +54,7 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 
 ## IA y despliegue (22-oct-2026)
 - **IA (D-06):** Gemini (free tier) como proveedor principal y Groq de respaldo, con solo la biblioteca estándar (`urllib`), sin dependencias nuevas. Modelo configurable con `GEMINI_MODEL` porque la oferta gratuita de Google cambia; no se fijó en código. Cumple RN-14: confianza guardada, umbral 0,60, tiempo máximo de 5 s y, ante cualquier falla, el requerimiento queda «sin clasificar» y nunca se pierde.
+- **Claude como tercer proveedor (5-nov-2026):** opcional y de pago, detrás de Gemini y Groq, que siguen cumpliendo el requisito de IA gratuita. Entra al orden solo si existe `ANTHROPIC_API_KEY`; sin ella, nada cambia. Usa el SDK oficial `anthropic` (la única dependencia nueva de IA) y `CLAUDE_MODELS` para elegir el modelo; por defecto `claude-opus-5-5`, con esfuerzo bajo.
 - **Cómo se prueba:** `manage.py probar_ia` verifica la clave contra la API real y `manage.py evaluar_ia` mide el acierto sobre 20 mensajes etiquetados frente a la meta de 85 % de CU-09. **Ninguno de los dos se ejecutó todavía con una clave real**; las pruebas automáticas usan la API simulada.
 - **Despliegue:** `aws/` separa el compose en EC2 web e IoT, con `DB_SSLMODE=require` contra RDS. Se probó en local; falta ejecutarlo en el Learner Lab.
 

@@ -24,9 +24,11 @@
     <div class="tabla-caja texto" style="box-shadow:none"><table><tbody>
       <tr><th>Gemini (Google)</th><td>{% if ia.gemini %}<span class="chip entregado">Clave configurada</span>{% else %}<span class="chip alerta">Sin clave</span>{% endif %}</td></tr>
       <tr><th>Groq (respaldo)</th><td>{% if ia.groq %}<span class="chip entregado">Clave configurada</span>{% else %}<span class="chip alerta">Sin clave</span>{% endif %}</td></tr>
+      <tr><th>Claude (opcional, de pago)</th><td>{% if ia.claude %}<span class="chip entregado">Clave configurada</span>{% else %}<span class="chip">Sin clave</span>{% endif %}</td></tr>
       <tr><th>Orden de uso</th><td>{{ ia.orden|join:" → " }} <span class="frio">(si el primero falla, prueba el siguiente)</span></td></tr>
       <tr><th>Modelos de Gemini</th><td class="frio">{{ ia.modelos_gemini|join:", " }}</td></tr>
       <tr><th>Modelos de Groq</th><td class="frio">{{ ia.modelos_groq|join:", " }}</td></tr>
+      {% if ia.claude %}<tr><th>Modelos de Claude</th><td class="frio">{{ ia.modelos_claude|join:", " }}</td></tr>{% endif %}
       <tr><th>Tiempo máximo</th><td>{{ ia.presupuesto|floatformat:0 }} s en total; el primer proveedor usa a lo más el {{ ia.parte_con_respaldo }} %, para dejar tiempo al respaldo</td></tr>
       <tr><th>Umbral de confianza</th><td>{{ umbral|floatformat:2 }}</td></tr>
     </tbody></table></div>

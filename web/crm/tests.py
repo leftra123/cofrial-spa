@@ -366,6 +366,30 @@ class ClienteGroq(TestCase):
         with patch.dict("os.environ", {}, clear=True):
             self.assertEqual(ia._modelos_groq()[0], "openai/gpt-oss-20b")
 
+    def test_claude_solo_entra_al_orden_con_clave_y_al_final(self):
+        from unittest.mock import patch
+        from crm import ia
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(ia._proveedores(), [ia._gemini, ia._groq])
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "SECRETA"}, clear=True):
+            self.assertEqual(ia._proveedores(), [ia._gemini, ia._groq, ia._claude])
+            self.assertNotIn("SECRETA", str(ia.estado()))
+
+    def test_claude_devuelve_el_texto_y_trata_el_rechazo_como_falla(self):
+        from types import SimpleNamespace as N
+        from unittest.mock import patch
+        from crm import ia
+        ok = N(stop_reason="end_turn", content=[N(type="thinking", thinking=""), N(type="text", text='{"categoria":"x"}')])
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "SECRETA"}, clear=True), patch("anthropic.Anthropic") as Cliente:
+            crear = Cliente.return_value.with_options.return_value.beta.messages.create
+            crear.return_value = ok
+            self.assertEqual(ia._claude("p", 12), '{"categoria":"x"}')
+            self.assertEqual(ia.modelo_del_hilo(), "Claude claude-opus-5-5")
+            self.assertEqual(crear.call_args.kwargs["fallbacks"], "default")
+            crear.return_value = N(stop_reason="refusal", content=[])
+            with self.assertRaises(ia.ErrorIA):
+                ia._claude("p", 12)
+
     def test_todas_las_llamadas_llevan_identificador_propio(self):
         from unittest.mock import patch, MagicMock
         from crm import ia

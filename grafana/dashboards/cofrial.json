@@ -37,7 +37,7 @@
   },
   {
    "id": 2,
-   "title": "Ventas (CLP)",
+   "title": "Ventas",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -59,7 +59,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT coalesce(sum(t.total_clp),0) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
     }
    ],
    "description": "Suma de todas las órdenes creadas en el período, B2B y B2C, sin las canceladas.",
@@ -76,8 +76,7 @@
         "value": null
        }
       ]
-     },
-     "unit": "prefix:$"
+     }
     },
     "overrides": []
    },
@@ -86,7 +85,8 @@
      "calcs": [
       "lastNotNull"
      ],
-     "values": false
+     "values": false,
+     "fields": "/.*/"
     },
     "colorMode": "value",
     "graphMode": "none"
@@ -330,7 +330,7 @@
   },
   {
    "id": 7,
-   "title": "Ventas en riesgo (CLP)",
+   "title": "Ventas en riesgo",
    "type": "stat",
    "datasource": {
     "type": "postgres",
@@ -352,7 +352,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT coalesce(sum(t.total_clp),0) AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio\n  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio\n  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"
     }
    ],
    "description": "Monto de los pedidos afectados: lo que la ruptura de frío pone en juego.",
@@ -365,16 +365,23 @@
       "mode": "absolute",
       "steps": [
        {
-        "color": "green",
-        "value": null
-       },
-       {
         "color": "red",
-        "value": 1
+        "value": null
        }
       ]
      },
-     "unit": "prefix:$"
+     "mappings": [
+      {
+       "type": "regex",
+       "options": {
+        "pattern": "^\\$0$",
+        "result": {
+         "color": "green",
+         "index": 0
+        }
+       }
+      }
+     ]
     },
     "overrides": []
    },
@@ -383,7 +390,8 @@
      "calcs": [
       "lastNotNull"
      ],
-     "values": false
+     "values": false,
+     "fields": "/.*/"
     },
     "colorMode": "value",
     "graphMode": "none"
@@ -392,7 +400,7 @@
   {
    "id": 8,
    "type": "row",
-   "title": "2 · El cruce que pide la pauta: ventas por canal junto a las alertas de ruptura de frío",
+   "title": "2 · Cruce de ventas por canal con las alertas de ruptura de frío",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -448,7 +456,7 @@
       "fillOpacity": 60,
       "lineWidth": 1
      },
-     "unit": "short"
+     "unit": "currency:$"
     },
     "overrides": [
      {
@@ -457,6 +465,10 @@
        "options": "Alertas de frío"
       },
       "properties": [
+       {
+        "id": "unit",
+        "value": "short"
+       },
        {
         "id": "custom.drawStyle",
         "value": "line"
@@ -522,14 +534,12 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.canal AS canal, sum(t.total_clp) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY 1"
+     "rawSql": "SELECT o.canal || ': ' || '$' || replace(to_char(sum(t.total_clp), 'FM999,999,999,999,990'), ',', '.') AS canal, sum(t.total_clp) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY o.canal ORDER BY o.canal"
     }
    ],
    "description": "Cuánto del total vendido vino de cada canal: B2B (instituciones con lista de precios) y B2C (público general).",
    "fieldConfig": {
-    "defaults": {
-     "unit": "prefix:$"
-    },
+    "defaults": {},
     "overrides": []
    },
    "options": {
@@ -537,9 +547,11 @@
      "displayMode": "table",
      "placement": "bottom",
      "values": [
-      "value",
       "percent"
      ]
+    },
+    "tooltip": {
+     "mode": "none"
     },
     "pieType": "donut",
     "reduceOptions": {
@@ -836,7 +848,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", t.total_clp AS \"Monto (CLP)\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now())\nWHERE d.salida_en IS NOT NULL GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
+     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now())\nWHERE d.salida_en IS NOT NULL GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó temperatura fuera de rango mientras iba en ruta. Más lecturas con alerta = más tiempo expuesto al calor.",
@@ -851,12 +863,12 @@
      {
       "matcher": {
        "id": "byName",
-       "options": "Monto (CLP)"
+       "options": "Monto"
       },
       "properties": [
        {
-        "id": "unit",
-        "value": "prefix:$"
+        "id": "custom.align",
+        "value": "right"
        }
       ]
      },

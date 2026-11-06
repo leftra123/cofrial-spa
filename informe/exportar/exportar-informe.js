@@ -485,7 +485,7 @@ function main() {
 
   agregar(tituloH1("Anexo B. Cuentas de prueba"));
   renderBloques(anexoCuentas, "entrega/anexo-cuentas.md", 0);
-  agregar(tituloH1("Anexo C Correspondencia con la pauta"));
+  agregar(tituloH1("Anexo C Correspondencia con los requerimientos de Cofrial"));
   renderBloques(pautaC, "entrega/anexo-pauta.md", 0);
   agregar(tituloH1("Anexo D Casos de uso"));
   renderBloques(casos, "06-casos-de-uso.md", 0);

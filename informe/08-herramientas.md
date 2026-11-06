@@ -3,14 +3,14 @@
 
 ## Criterios
 
-Cada decisión de herramienta se evalúa con los mismos seis criterios, definidos y ponderados antes de puntuar. Las alternativas se califican de 1 a 5 y el puntaje final es el promedio ponderado. Un puntaje de 2 o menos en el cumplimiento de la pauta es eliminatorio: la alternativa se descarta aunque sume más puntos en el resto.
+Cada decisión de herramienta se evalúa con los mismos seis criterios, definidos y ponderados antes de puntuar. Las alternativas se califican de 1 a 5 y el puntaje final es el promedio ponderado. Un puntaje de 2 o menos en el cumplimiento de los requerimientos de Cofrial es eliminatorio: la alternativa se descarta aunque sume más puntos en el resto.
 
 **Tabla 1**
 *Criterios de evaluación y ponderación aplicados a todas las decisiones*
 
 | Criterio | Qué mide | Peso |
 |---|---|---|
-| C1 Cumplimiento de la pauta | Si cumple lo que la pauta exige. Puntaje 2 o menos es eliminatorio: la alternativa se descarta aunque sume más. | 30 % |
+| C1 Cumplimiento de los requerimientos | Si cumple lo que Cofrial requiere. Puntaje 2 o menos es eliminatorio: la alternativa se descarta aunque sume más. | 30 % |
 | C2 Viabilidad en el plazo | Si se puede construir y probar antes del 12 de noviembre. | 20 % |
 | C3 Facilidad de aprendizaje | Esfuerzo para un equipo de dos personas que aprende mientras construye. | 15 % |
 | C4 Costo cero | Que no genere gastos fuera de los créditos de AWS Academy. | 15 % |
@@ -26,7 +26,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | Amazon EC2 | Elastic Beanstalk | AWS Lambda | Servidor local |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 3 | 2 | 1 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 3 | 2 | 1 |
 | C2 Viabilidad en el plazo (20 %) | 4 | 4 | 3 | 3 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 3 | 2 | 3 |
 | C4 Costo cero (15 %) | 5 | 5 | 5 | 2 |
@@ -37,7 +37,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige EC2 con el backend persistente. Beanstalk crea EC2 por debajo, pero oculta la configuración que la rúbrica pide justificar (subredes y seguridad). Lambda no es un backend persistente. El servidor local es justamente el dolor que se busca eliminar.
+**Conclusión.** Cofrial requiere EC2 con el backend persistente. Beanstalk crea EC2 por debajo, pero oculta la configuración que el requerimiento pide justificar (subredes y seguridad). Lambda no es un backend persistente. El servidor local es justamente el dolor que se busca eliminar.
 
 ## Base de datos relacional
 
@@ -46,7 +46,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | RDS PostgreSQL | RDS MySQL | PostgreSQL en EC2 | DynamoDB |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 2 | 1 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 5 | 2 | 1 |
 | C2 Viabilidad en el plazo (20 %) | 4 | 4 | 3 | 3 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 3 | 2 |
 | C4 Costo cero (15 %) | 5 | 5 | 5 | 5 |
@@ -57,7 +57,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige RDS relacional. PostgreSQL y MySQL quedan casi empatados; PostgreSQL gana por su manejo de datos geográficos y series de tiempo, útiles para la telemetría, y por su integración con Grafana. Instalar la BD en EC2 obliga a gestionar respaldos a mano, que es el dolor original. DynamoDB no es relacional.
+**Conclusión.** Cofrial requiere RDS relacional. PostgreSQL y MySQL quedan casi empatados; PostgreSQL gana por su manejo de datos geográficos y series de tiempo, útiles para la telemetría, y por su integración con Grafana. Instalar la BD en EC2 obliga a gestionar respaldos a mano, que es el dolor original. DynamoDB no es relacional.
 
 ## Framework web (e-commerce, CRM y API)
 
@@ -66,7 +66,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | Django + plantillas, CSS propio y JavaScript | React + Django REST Framework | Next.js (React y Tailwind) | Astro (modo servidor) |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 5 | 5 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 5 | 5 | 5 |
 | C2 Viabilidad en el plazo (20 %) | 5 | 4 | 3 | 3 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 3 | 4 |
 | C4 Costo cero (15 %) | 5 | 5 | 5 | 5 |
@@ -86,7 +86,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | Docker + Node/TypeScript | Docker + Python | AWS IoT Core | Inserción manual o Excel |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 2 | 1 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 5 | 2 | 1 |
 | C2 Viabilidad en el plazo (20 %) | 4 | 5 | 2 | 5 |
 | C3 Facilidad de aprendizaje (15 %) | 3 | 5 | 2 | 5 |
 | C4 Costo cero (15 %) | 5 | 5 | 4 | 5 |
@@ -97,7 +97,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige contenedores Docker en una EC2 dedicada con inyección automatizada. Con Django adoptado para la web (Tabla 4), Python gana porque web e IoT comparten lenguaje: el equipo consultor aprende una sola herramienta, el simulador usa una imagen ligera de Python y se ahorra mantener una segunda cadena de dependencias. Antes de elegir Django, Node/TypeScript puntuaba más (4,75 contra 4,55) solo por esa misma razón. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual baja la nota a 60 %.
+**Conclusión.** Cofrial requiere contenedores Docker en una EC2 dedicada con inyección automatizada. Con Django adoptado para la web (Tabla 4), Python gana porque web e IoT comparten lenguaje: el equipo consultor aprende una sola herramienta, el simulador usa una imagen ligera de Python y se ahorra mantener una segunda cadena de dependencias. Antes de elegir Django, Node/TypeScript puntuaba más (4,75 contra 4,55) solo por esa misma razón. IoT Core es el servicio de producción, pero no reemplaza el requisito de Docker y sus permisos en el Learner Lab son inciertos. La carga manual no cumple el requerimiento de inyección automatizada.
 
 ## Dashboard de BI
 
@@ -106,7 +106,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | Grafana | Metabase | Gráficos propios (Chart.js) | Amazon QuickSight |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 4 | 4 | 3 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 4 | 4 | 3 |
 | C2 Viabilidad en el plazo (20 %) | 4 | 5 | 3 | 2 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 5 | 3 | 2 |
 | C4 Costo cero (15 %) | 5 | 5 | 5 | 1 |
@@ -117,7 +117,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** Grafana y Metabase quedan casi empatados. Grafana gana en lo que pesa más, la rúbrica: refresco cada pocos segundos ("en vivo") y un panel de mapa para lat/long. Metabase es más simple de armar. Los gráficos propios se reservan para la torre de control. QuickSight es de pago y su disponibilidad en el Learner Lab no está garantizada.
+**Conclusión.** Grafana y Metabase quedan casi empatados. Grafana gana en lo que pesa más, los requerimientos de Cofrial: refresco cada pocos segundos ("en vivo") y un panel de mapa para lat/long. Metabase es más simple de armar. Los gráficos propios se reservan para la torre de control. QuickSight es de pago y su disponibilidad en el Learner Lab no está garantizada.
 
 ## Servicio de IA de costo cero
 
@@ -126,7 +126,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | Google Gemini API (free tier) | Groq (free tier) | Hugging Face Inference | OpenAI API |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 5 | 4 | 1 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 5 | 4 | 1 |
 | C2 Viabilidad en el plazo (20 %) | 5 | 5 | 3 | 5 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 3 | 4 |
 | C4 Costo cero (15 %) | 5 | 5 | 5 | 1 |
@@ -137,7 +137,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 *Nota.* Elaboración propia.
 
-**Conclusión.** La pauta exige costo cero. Gemini y Groq ofrecen capas gratuitas con buena calidad en español; Groq queda como respaldo si se alcanza el límite. OpenAI no tiene capa gratuita permanente, por lo que incumple el requisito.
+**Conclusión.** Cofrial requiere costo cero. Gemini y Groq ofrecen capas gratuitas con buena calidad en español; Groq queda como respaldo si se alcanza el límite. OpenAI no tiene capa gratuita permanente, por lo que incumple el requisito.
 
 **Resultado de la implementación.** El clasificador usa Gemini y Groq en orden configurable y conserva el requerimiento antes de invocar al proveedor. El asistente de tienda reutiliza la integración, con Groq primero por defecto, contexto del perfil y pedidos propios, controles de respuesta y modo de solo lectura. Los modelos no se consideran contratos permanentes de disponibilidad: se configuran y prueban por proveedor. El resultado histórico de veinte clasificaciones correctas corresponde a una muestra registrada el 22-oct-2026 y no a la precisión general del asistente. El presupuesto nominal es de doce segundos para clasificación y diez para chat, sin garantía de plazo extremo a extremo.
 
@@ -148,7 +148,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Criterio (peso) | draw.io | Lucidchart (plan gratuito) | Mermaid | archify (HTML interactivo) |
 |---|---|---|---|---|
-| C1 Cumplimiento de la pauta (30 %) | 5 | 4 | 4 | 3 |
+| C1 Cumplimiento de los requerimientos (30 %) | 5 | 4 | 4 | 3 |
 | C2 Viabilidad en el plazo (20 %) | 5 | 4 | 5 | 4 |
 | C3 Facilidad de aprendizaje (15 %) | 4 | 4 | 4 | 4 |
 | C4 Costo cero (15 %) | 5 | 2 | 5 | 5 |
@@ -157,7 +157,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 | **Puntaje ponderado** | **4,75** | **3,70** | **4,35** | **3,85** |
 | **Decisión** | Adoptada | Descartada | Complementaria para modelos | Complementaria (defensa en vivo) |
 
-*Nota.* Elaboración propia. Borrador pendiente de validación del equipo consultor. En C1 se evaluó si genera un diagrama de topología con los íconos oficiales de AWS, elegidos por el equipo consultor para mejorar la lectura; la rúbrica H1-D3 exige claridad profesional, no una biblioteca de íconos específica. En C5 todas puntúan 5 porque ninguna depende de los permisos del Learner Lab. El puntaje de archify en C1 se verificó probándolo con el mismo diagrama: no incluye íconos oficiales de AWS y solo agrupa por región y Security Group, sin cajas de VPC, subredes ni zonas de disponibilidad. A cambio entrega un HTML interactivo (zoom, modo claro y oscuro, exportar) que pasó sus 9 validaciones de calidad.
+*Nota.* Elaboración propia. Borrador pendiente de validación del equipo consultor. En C1 se evaluó si genera un diagrama de topología con los íconos oficiales de AWS, elegidos por el equipo consultor para mejorar la lectura; el requerimiento de Cofrial exige claridad profesional, no una biblioteca de íconos específica. En C5 todas puntúan 5 porque ninguna depende de los permisos del Learner Lab. El puntaje de archify en C1 se verificó probándolo con el mismo diagrama: no incluye íconos oficiales de AWS y solo agrupa por región y Security Group, sin cajas de VPC, subredes ni zonas de disponibilidad. A cambio entrega un HTML interactivo (zoom, modo claro y oscuro, exportar) que pasó sus 9 validaciones de calidad.
 
 **Conclusión.** draw.io gana porque es gratuito, trae la librería oficial de íconos AWS y guarda el diagrama como archivo `.drawio` editable que se versiona en git, de modo que cualquiera del equipo consultor lo corrige sin depender de la herramienta que lo generó. Mermaid es una alternativa válida para modelos y se utiliza en el MER; el equipo consultor prefiere un archivo draw.io editable para la topología. Lucidchart pierde por el límite de su plan gratuito. archify queda como complemento para animar el flujo en la defensa del Hito 2.
 
@@ -168,7 +168,7 @@ Cada decisión de herramienta se evalúa con los mismos seis criterios, definido
 
 | Componente | Adoptada | Alternativa más cercana | Por qué se prefiere |
 |---|---|---|---|
-| Cómputo | Amazon EC2 | Elastic Beanstalk | Lo exige la pauta y deja visible la configuración de red y seguridad |
+| Cómputo | Amazon EC2 | Elastic Beanstalk | Lo exige el requerimiento de Cofrial y deja visible la configuración de red y seguridad |
 | Base de datos | RDS PostgreSQL | RDS MySQL | Datos geográficos, series de tiempo e integración con Grafana |
 | Web | Django + plantillas, CSS propio y JavaScript | React + Django REST Framework | ORM, autenticación y panel de administración incluidos; Python para cálculos e IoT |
 | IoT | Docker + Python | Docker + Node/TypeScript | Mismo lenguaje que la web (Django) y menos dependencias que mantener |

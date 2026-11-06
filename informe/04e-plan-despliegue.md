@@ -18,7 +18,7 @@ El equipo consultor registra una prueba integral en AWS Academy del 22-oct-2026.
 | Despacho | Camión activo y libre, compatibilidad térmica y cierre manual | Viaje creado; órdenes despachadas; llegada libera camión y entrega órdenes |
 | Documentos y cobranza | Guía, boleta, factura a crédito, pagos y notas de crédito simulados (sin SII ni pasarela) | Boleta al comprar B2C, guía al despachar, factura tras la entrega B2B y cobranza en el CRM |
 
-Nota. Elaboración propia. Se derivan los criterios de la pauta EVA2_3 y de las reglas implementadas, sin agregar exigencias de otra evaluación (INACAP Sede Temuco, 2026).
+Nota. Elaboración propia. Los criterios se derivan de los requerimientos de Cofrial y de las reglas implementadas, sin agregar exigencias ajenas al proyecto.
 
 ## Procedimiento reproducible
 

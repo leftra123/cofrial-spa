@@ -5,7 +5,7 @@
 
 Los tres focos críticos del caso no son tres problemas distintos, sino un mismo problema visto desde tres ángulos: **Cofrial no tiene un dato único, en línea y confiable de su operación**. El servidor en la bodega guarda datos que nadie reconcilia, los camiones no emiten ninguna información y los pedidos y la cartera de clientes viven en canales y dispositivos personales. Cada dolor alimenta a los otros dos, de modo que atender uno solo no resuelve la situación: un camión con GPS seguiría recibiendo rutas por WhatsApp, y un portal de ventas seguiría escribiendo en un servidor sin respaldo. Por eso el análisis busca la causa raíz común y no solo los síntomas.
 
-## Datos del caso (fuente: pauta)
+## Datos del caso
 
 **Tabla 1**
 *Hechos del caso y su consecuencia de negocio*
@@ -16,7 +16,7 @@ Los tres focos críticos del caso no son tres problemas distintos, sino un mismo
 | Última milla a ciegas y Shadow IT | 50 camiones sin GPS ni registro de temperatura; coordinación por llamadas y WhatsApp personales | Entregas fallidas; mermas millonarias semanales por ruptura de frío no detectada |
 | Sin canales digitales ni CRM | Sin web transaccional ni portal; pedidos por teléfono o correo; cartera en celulares de vendedores | Pedidos perdidos o mal registrados; sin embudo ni métricas de conversión; la cartera se va con el vendedor |
 
-*Nota.* Elaboración propia a partir de la pauta del curso (INACAP Sede Temuco, 2026).
+*Nota.* Elaboración propia a partir de los antecedentes del caso.
 
 ## Método de análisis
 
@@ -125,7 +125,7 @@ El ciclo tiene dos consecuencias para el diseño de la solución. Primero, hay q
 
 ## Impacto estimado con supuestos explícitos
 
-Ni la pauta ni este equipo disponen de las cifras reales de Cofrial. Para no dejar el análisis en lo cualitativo, se propone un modelo con parámetros que se reemplazan por datos reales apenas existan. **Los valores de la tabla son ilustrativos.**
+Ni el caso ni el equipo consultor disponen de las cifras reales de Cofrial. Para no dejar el análisis en lo cualitativo, se propone un modelo con parámetros que se reemplazan por datos reales apenas existan. **Los valores de la tabla son ilustrativos.**
 
 **Tabla 5**
 *Modelo de pérdidas por ruptura de frío no detectada (supuestos ilustrativos)*

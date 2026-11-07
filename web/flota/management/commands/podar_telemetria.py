@@ -4,23 +4,13 @@ import time
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
-from flota.models import Despacho, Telemetria
+from flota.models import Telemetria
+from flota.servicios import lecturas_prescindibles
 
 DIAS_POR_DEFECTO = 7
 PAUSA_ENTRE_LOTES_SEG = 0.2      # deja respirar a la base: el simulador y el tablero siguen trabajando mientras tanto
-
-
-def lecturas_prescindibles(corte):
-    """Lecturas normales anteriores al corte. Se conservan las alertas (RN-13 y el tablero), las forzadas de la demostración,
-    las tomadas durante un viaje (se cruzan con los reclamos) y la última de cada camión (la usa la flota)."""
-    durante_un_viaje = Despacho.objects.filter(camion_id=OuterRef("camion_id"), salida_en__lte=OuterRef("registrado_en")).filter(
-        Q(llegada_en__isnull=True) | Q(llegada_en__gte=OuterRef("registrado_en")))
-    ultimas = Telemetria.objects.order_by("camion_id", "-registrado_en").distinct("camion_id").values_list("pk", flat=True)
-    return (Telemetria.objects.filter(registrado_en__lt=corte, alerta_ruptura_frio=False, forzada=False)
-            .exclude(pk__in=list(ultimas)).filter(~Exists(durante_un_viaje)))
 
 
 class Command(BaseCommand):

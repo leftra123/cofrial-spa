@@ -284,3 +284,15 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
   - La distancia restante podía medirse sobre la vuelta o sobre un tramo ya recorrido. Ahora se mide solo entre la última parada atendida y la de destino.
 - **Qué se cede:** la detención de una parada anterior no se suma a la hora de llegada, porque la web no conoce `DETENCION_LECTURAS`; a 60× son 30 s por parada, dentro de la ventana de 2 minutos solo si hay una o dos. Reiniciar el simulador en medio de un viaje largo lo hace recomenzar desde la base, como ya ocurría, y eso pesa más en un viaje de 3 horas.
 
+## Panel del administrador sin Django (7-nov-2026)
+
+Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
+
+- **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
+- **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
+- **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».
+- **Datos de demostración solo la primera vez:** `cargar_demo --solo-primera-vez`. Antes corría en cada arranque y, con el panel, una etapa renombrada impedía partir al sitio. `FORZAR_CARGA_DEMO=1` carga lo nuevo, antes de editar datos.
+- **Solicitudes de empresa:** se reconocen por ser B2B, sin vendedor y con cuenta inactiva. Activar y desactivar respeta esa cola para no aprobar ni borrar por error.
+- **Sin edición manual de telemetría, despachos, carritos, documentos ni pagos:** los genera el flujo y editarlos rompe la trazabilidad.
+- **Íconos:** el juego Lucide de `react-icons`, generado una vez a `catalogo/iconos.json` con `herramientas/iconos/generar.mjs`. La app sigue sin React y Docker no usa Node.
+- **CRM de 5 entradas:** Panel, Ventas, Clientes, Atención y Alertas de frío, con subpestañas dentro de cada grupo. Las URL no cambiaron.

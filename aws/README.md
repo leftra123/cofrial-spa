@@ -60,6 +60,9 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
    ```
 7. **Verificar** (ver la lista de abajo) y ensayar apagar y encender el laboratorio.
 
+## Datos de demostración y reinicios
+`cargar_demo` corre con `--solo-primera-vez`: si RDS ya tiene productos no toca nada, para que un reinicio del lab no deshaga lo editado en `/operacion/`. Si el repositorio trae datos nuevos que RDS aún no tiene (por ejemplo el reparto regional), agregar `FORZAR_CARGA_DEMO=1` a `aws/.estado/secretos.env` y ejecutar `recrear-web`. La variable queda en la EC2 y actúa en cada arranque, así que después hay que quitarla de `secretos.env` y ejecutar `recrear-web` otra vez; mientras esté activa, lo borrado en el panel vuelve. Hacerlo antes de editar datos: si la carga choca con algo editado, el sitio igual parte, pero la carga no se aplica y el motivo sale en el registro.
+
 ## Reglas del Learner Lab que importan
 
 - Al cerrar la sesión (4 horas) AWS detiene las EC2 y la base. En la primera prueba real (22-oct) la base y las EC2 estaban de nuevo encendidas al iniciar la sesión siguiente, pero no hay garantía documentada; `bash aws/provision.sh estado` lo muestra y `bash aws/provision.sh encender` arranca lo que esté apagado (primero RDS, luego las EC2, y espera a que la aplicación responda). La IP elástica no cambia y `restart: unless-stopped` hace que los contenedores vuelvan solos una vez encendida la EC2. `bash aws/provision.sh estado` muestra cómo están.

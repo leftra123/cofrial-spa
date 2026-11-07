@@ -93,9 +93,9 @@ Los nombres de algunas pruebas conservan una numeración antigua de reglas (`rn0
 | E-29 | Cliente ganado sin cuenta del portal | Vivo | **Abierto** (derivar a admin-operacion): no puede entrar; solo compra por su vendedor | Sin prueba |
 | E-30 | Cuenta B2B sin vendedor | Vivo con `felipe@cofrial.cl` | **Abierto, datos de demo.** Sus pedidos solo los ven gerencia y admin. **No usar esa cuenta para mostrar el CRM del vendedor.** Asignarla exige cambiar `crm/tests.py` (`rn09_...`), por eso se dejó | Sin prueba |
 | E-31 | Reclamo sin cierre | Vivo | **Corregido.** «Marcar como resuelto»; ningún flujo llenaba `respondido_en` ni el estado «resuelto». **Límite:** el cliente ve el estado, no un texto de respuesta | `tests_casos_cartera` |
-| E-32 | Quién confirma y prepara un pedido | Código | **Límite.** «Confirmada» y «En preparación» solo se pasan en el admin de Django; despachar las recorre automáticamente | `pedidos/tests.py` |
+| E-32 | Quién confirma y prepara un pedido | Código | **Resuelto (7-nov-2026).** «Confirmada» y «En preparación» se pasan en `/operacion/ordenes/`; despachar las recorre automáticamente | `pedidos/tests.py` |
 | E-33 | Reprogramar una entrega fallida | Auto | ✓ **Límite:** `orden.despacho` apunta al último viaje, y las alertas del primero dejan de contar para esa orden | `pedidos/tests_entrega.py` |
-| E-34 | Editar o borrar una dirección | Código | **Límite.** Se puede agregar; editar o borrar queda en el admin de Django | Sin prueba |
+| E-34 | Editar o borrar una dirección | Código | **Resuelto (7-nov-2026).** Se agrega en la ficha del CRM y se edita o borra en `/operacion/datos/direcciones/` | `operacion/tests_datos.py` |
 | E-35 | RUT de datos de demo | Vivo | **Límite.** `76.543.210-K` (Supermercados del Sur) no tiene dígito válido; es dato sembrado y las pruebas lo usan | Sin prueba |
 
 ## Errores abiertos, por gravedad

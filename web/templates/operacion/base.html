@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load iconos %}
 {% block cabeza %}<style>
 .campo-op input:not([type=hidden]), .campo-op select { width: 100%; max-width: 460px; display: block; }
 .campo-op .frio { margin: 6px 0 0; }
@@ -11,14 +11,29 @@
 .tipo-n { font-size: 2rem; font-weight: 700; line-height: 1.1; }
 .tipo-nombre { color: var(--texto-3); font-size: .9rem; font-weight: 600; }
 [data-roles][hidden] { display: none; }
+.buscar-op { display: flex; flex-wrap: nowrap; }
+.buscar-op input[type=search] { flex: 1 1 auto; min-width: 0; max-width: 420px; }
+.buscar-op select { flex: 0 1 200px; width: auto; }
+@media (max-width: 640px) { .buscar-op { flex-wrap: wrap; } .buscar-op select, .buscar-op input[type=search] { flex: 1 1 100%; max-width: none; } }
+button.btn-sec:not(#mp-brick-container button) { background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); }
+button.btn-sec:not(#mp-brick-container button):hover { background: var(--fondo-2); border-color: var(--texto-3); box-shadow: none; }
+button.btn-peligro:not(#mp-brick-container button) { background: var(--tarjeta); color: var(--alerta-fg); border-color: var(--alerta-borde); }
+.tablas-op { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin-bottom: 8px; }
+.tabla-op { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: inherit; text-decoration: none; }
+.tabla-op:hover { border-color: var(--acento); text-decoration: none; }
+.tabla-op-nombre { flex: 1; font-weight: 600; }
+.tabla-op-n { color: var(--texto-3); font-size: .9rem; }
 </style>{% endblock %}
 {% block contenido %}
 {% with ruta=request.path %}
 <nav class="subnav" aria-label="Secciones de operación">
-  <a href="/operacion/" {% if ruta == "/operacion/" %}class="activo" aria-current="page"{% endif %}>Resumen</a>
-  <a href="/operacion/cuentas/" {% if "/operacion/cuentas/" in ruta or "/operacion/clientes/" in ruta %}class="activo" aria-current="page"{% endif %}>Usuarios</a>
-  <a href="/operacion/stock/" {% if "/operacion/stock" in ruta %}class="activo" aria-current="page"{% endif %}>Reponer stock</a>
-  <span class="chip cancelado rol">Solo administrador</span>
+  <a href="/operacion/"{% if ruta == "/operacion/" %} class="activo" aria-current="page"{% endif %}>{% icono "panel" %}Resumen</a>
+  <a href="/operacion/cuentas/"{% if "/operacion/cuentas/" in ruta or "/operacion/clientes/" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "usuarios" %}Usuarios</a>
+  <a href="/operacion/productos/"{% if "/operacion/productos" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "productos" %}Productos</a>
+  <a href="/operacion/stock/"{% if "/operacion/stock" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "stock" %}Reponer stock</a>
+  <a href="/operacion/ordenes/"{% if "/operacion/ordenes" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "ordenes" %}Órdenes</a>
+  <a href="/operacion/datos/"{% if "/operacion/datos" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "datos" %}Datos</a>
+  <a href="/operacion/sistema/"{% if "/operacion/sistema" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "sistema" %}Sistema</a>
 </nav>
 {% endwith %}
 {% block operacion %}{% endblock %}

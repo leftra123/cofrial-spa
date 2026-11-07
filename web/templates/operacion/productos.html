@@ -1,0 +1,17 @@
+{% extends "operacion/base.html" %}{% load iconos formato %}
+{% block titulo %}Productos | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Productos</h1><p class="sub">Datos y precios de cada producto. El stock se mueve con las ventas y en Reponer stock; un producto no se borra, se desactiva.</p></div><div class="acciones"><a class="btn btn-sec" href="/operacion/stock/">{% icono "stock" %}Reponer stock</a><a class="btn" href="/operacion/productos/nuevo/">{% icono "agregar" %}Agregar producto</a></div></div>
+<form method="get" class="en-linea buscar-op" role="search"><label for="q" class="solo-lector">Buscar producto</label><input id="q" name="q" type="search" value="{{ q }}" placeholder="SKU o nombre del producto" maxlength="80" autocomplete="off"><button class="btn btn-sec" type="submit">{% icono "buscar" %}Buscar</button>{% if q %}<a class="btn btn-sec" href="/operacion/productos/">Ver todos</a>{% endif %}</form>
+<div class="tabla-caja"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Precios</th><th class="num">Stock</th><th><span class="solo-lector">Acción</span></th></tr></thead><tbody>
+{% for p in filas %}<tr>
+<td><b>{{ p.nombre }}</b>{% if not p.activo %} <span class="chip cancelado sin-punto">Inactivo</span>{% endif %}<br><span class="frio">{{ p.sku }}</span></td>
+<td>{{ p.categoria.nombre }}</td>
+<td>{% for x in p.precioproducto_set.all %}<span class="frio">{{ x.lista_precio.nombre }}:</span> {{ x.precio_clp|clp }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="chip pendiente sin-punto">Sin precio</span>{% endfor %}</td>
+<td class="num">{{ p.stock_disponible }} {{ p.unidad_medida }}</td>
+<td><a class="btn btn-sec" href="/operacion/productos/{{ p.pk }}/">{% icono "editar" %}Editar<span class="solo-lector"> {{ p.nombre }}</span></a></td>
+</tr>
+{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="lupa" titulo="Ningún producto coincide" texto="Prueba con otra parte del nombre o con el SKU." %}{% endfor %}
+</tbody></table></div>
+{% if hay_mas %}<p class="frio" style="margin-top:12px">Se muestran los primeros 100 productos: afina la búsqueda para ver los demás.</p>{% endif %}
+{% endblock %}

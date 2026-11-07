@@ -766,3 +766,15 @@ td.vacio-caja, td.vacio { white-space: normal; }
   .tabla-caja table:has(td.vacio-caja) thead, .tabla-caja table:has(td.vacio) thead { display: none; }
 }
 @media (max-width: 600px) { .tabla-caja tbody td:first-child { min-width: 9.5rem; } }
+
+/* Íconos de react-icons (Lucide), pintados por {% icono %}: mismo trazo que el menú lateral. */
+.ico { width: 1.15em; height: 1.15em; flex: none; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.2em; }
+.nav .ico { stroke-width: 1.8; }
+.btn .ico { margin-right: 6px; }
+.subnav a { display: inline-flex; align-items: center; gap: 7px; }
+.subnav:has(+ .subnav-2) { margin-bottom: 0; }
+.subnav.subnav-2 { position: static; border-bottom: 0; gap: 2px 16px; margin: 6px 0 22px; }
+.subnav-2 a { font-size: .86rem; padding: 6px 2px; }
+.subnav-2 a.activo { border-bottom-color: transparent; color: var(--acento); }
+:root[data-tema="oscuro"] .subnav-2 a.activo { color: var(--texto); } @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .subnav-2 a.activo { color: var(--texto); } }
+.subnav .panel-bi { margin-left: auto; }

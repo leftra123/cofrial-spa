@@ -1,0 +1,14 @@
+{
+  "name": "cofrial-iconos",
+  "private": true,
+  "type": "module",
+  "description": "Genera web/catalogo/iconos.json desde react-icons. Solo se usa en desarrollo: ni Docker ni la EC2 necesitan Node.",
+  "scripts": {
+    "generar": "node generar.mjs"
+  },
+  "dependencies": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-icons": "5.7.0"
+  }
+}

@@ -24,10 +24,12 @@ services:
 
   web:
     build: ./web
-    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 16"
+    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo --solo-primera-vez && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 16"
     environment:
       <<: *bd
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      RETENCION_TELEMETRIA_DIAS: ${RETENCION_TELEMETRIA_DIAS:-7}   # la usa Podar telemetría en /operacion/sistema/: debe ser la misma del podador
+      FORZAR_CARGA_DEMO: ${FORZAR_CARGA_DEMO:-0}                 # 1 = cargar datos de demostración nuevos en este arranque; usarlo antes de editar datos en /operacion/
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
       DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}            # ruta propia del panel de administración; por defecto /admin/
       ACCESO_MAX_FALLOS_CUENTA: ${ACCESO_MAX_FALLOS_CUENTA:-10}   # claves malas por cuenta antes de bloquearla 15 min

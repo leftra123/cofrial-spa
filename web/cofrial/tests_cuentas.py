@@ -60,9 +60,20 @@ class RegistroEmpresaTests(TestCase):
                 "clave": "hotel-clave-larga-73", "clave2": "hotel-clave-larga-73", **cambios}
 
     def pedir(self):
-        r = self.client.post("/cuenta/registro/empresa/", self.datos())
+        r = self.client.post("/cuenta/registro/empresa/", self.datos(), follow=True)
         self.assertContains(r, "Solicitud enviada")
         return Cliente.objects.get(rut="77.123.456-9")
+
+    def test_recargar_la_confirmacion_no_reenvia_el_formulario(self):
+        """Antes la confirmación era la respuesta del POST: al recargar, el navegador lo reenviaba y salía «Ya existe una cuenta con ese RUT»."""
+        r = self.client.post("/cuenta/registro/empresa/", self.datos())
+        self.assertRedirects(r, "/cuenta/registro/empresa/?enviado=1")
+        for _ in range(2):
+            self.assertContains(self.client.get("/cuenta/registro/empresa/?enviado=1"), "Solicitud enviada")
+        self.assertEqual(Cliente.objects.filter(rut="77.123.456-9").count(), 1)
+
+    def test_la_confirmacion_sin_solicitud_vuelve_al_formulario(self):
+        self.assertRedirects(self.client.get("/cuenta/registro/empresa/?enviado=1"), "/cuenta/registro/empresa/")
 
     def test_la_solicitud_queda_inactiva_y_sin_vendedor_y_lo_explica_al_ingresar(self):
         self.assertContains(self.client.get("/cuenta/entrar/"), 'href="/cuenta/registro/empresa/"')

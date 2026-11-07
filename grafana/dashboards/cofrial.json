@@ -566,7 +566,7 @@
   {
    "id": 11,
    "type": "row",
-   "title": "3 · Flota en vivo: 50 camiones, centro en INACAP Temuco (se actualiza cada 5 s)",
+   "title": "3 · Flota en vivo: 50 camiones en toda La Araucanía, con base en Temuco (se actualiza cada 5 s)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
@@ -578,6 +578,90 @@
   },
   {
    "id": 12,
+   "title": "Tiempo de la simulación",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 14,
+    "h": 2
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT coalesce((SELECT multiplicador_tiempo FROM ajuste_simulador WHERE ajuste_id = 1), 1) AS multiplicador"
+    }
+   ],
+   "description": "Cuántas veces más rápido avanzan los camiones (se elige en /demo/). Las lecturas siguen entrando cada 5 s.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 2
+       }
+      ]
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "1": {
+         "text": "Tiempo real (1×)",
+         "index": 0
+        },
+        "5": {
+         "text": "Acelerado 5×",
+         "index": 1
+        },
+        "20": {
+         "text": "Acelerado 20×",
+         "index": 2
+        },
+        "60": {
+         "text": "Acelerado 60×",
+         "index": 3
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none",
+    "textMode": "value"
+   }
+  },
+  {
+   "id": 13,
    "title": "Posición actual de la flota",
    "type": "geomap",
    "datasource": {
@@ -586,7 +670,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 16,
+    "y": 18,
     "w": 14,
     "h": 13
    },
@@ -645,9 +729,9 @@
    "options": {
     "view": {
      "id": "coords",
-     "lat": -38.8,
+     "lat": -38.58,
      "lon": -72.55,
-     "zoom": 9
+     "zoom": 7.6
     },
     "controls": {
      "showZoom": true,
@@ -665,10 +749,11 @@
        "showLegend": false,
        "style": {
         "size": {
-         "fixed": 9,
+         "fixed": 11,
          "min": 2,
          "max": 15
         },
+        "opacity": 0.95,
         "color": {
          "field": "estado",
          "fixed": "dark-green"
@@ -699,7 +784,7 @@
    }
   },
   {
-   "id": 13,
+   "id": 14,
    "title": "Temperatura de cámara (camiones elegidos arriba)",
    "type": "timeseries",
    "datasource": {
@@ -747,7 +832,7 @@
    }
   },
   {
-   "id": 14,
+   "id": 15,
    "title": "Camiones con más alertas de frío (período)",
    "type": "bargauge",
    "datasource": {
@@ -758,7 +843,7 @@
     "x": 14,
     "y": 23,
     "w": 10,
-    "h": 6
+    "h": 8
    },
    "targets": [
     {
@@ -812,20 +897,20 @@
    }
   },
   {
-   "id": 15,
+   "id": 16,
    "type": "row",
    "title": "4 · Detalle: qué pedidos se vieron afectados por una ruptura de frío (para llamar al cliente)",
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 29,
+    "y": 31,
     "w": 24,
     "h": 1
    },
    "panels": []
   },
   {
-   "id": 16,
+   "id": 17,
    "title": "Pedidos afectados por ruptura de frío",
    "type": "table",
    "datasource": {
@@ -834,7 +919,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 30,
+    "y": 32,
     "w": 24,
     "h": 7
    },

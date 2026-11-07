@@ -212,6 +212,7 @@
   function pintar(d) {
     if (d.estado && d.estado !== raiz.dataset.estado) { location.reload(); return; }     // el estado cambió (llegó el camión, entrega confirmada...): se vuelve a dibujar la orden
     var s = d.seguimiento; if (!s) return;
+    if (s.tiempo_x) CofrialEstados.tiempo(s.tiempo_x);
     var u = s.ultima;
     if (u) {
       var tt = document.getElementById("seg-temp"); tt.textContent = u.temp_camara.toFixed(1).replace(".", ","); tt.classList.remove("skeleton");
@@ -225,13 +226,13 @@
           marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom()), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
           if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(s.destino.direccion);
         } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom())); }
-        if (dest && s.ruta_url && Date.now() - ultimaRuta > 15000) {       // el servidor entrega solo el tramo que le falta al camión hasta esta dirección (sale de la ruta guardada, sin consultar a OSRM): se pide cada 15 s para que la línea parta del camión
+        if (dest && s.ruta_url && Date.now() - ultimaRuta > (s.tiempo_x > 1 ? 5000 : 15000)) {       // el servidor entrega solo el tramo que le falta al camión hasta esta dirección (sale de la ruta guardada, sin consultar a OSRM): se pide cada 15 s para que la línea parta del camión
           ultimaRuta = Date.now();
           fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
             if (!r) return;
             if (linea) mapa.removeLayer(linea);
             linea = L.polyline(r.puntos, {color: "#143A7B", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
-            if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30]}); encuadrado = true; }
+            if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30], maxZoom: 16}); encuadrado = true; }
           });
         }
         document.getElementById("ruta-info").textContent = (s.km_restantes != null ? "Faltan " + String(s.km_restantes).replace(".", ",") + " km hasta " : "Entrega en ") + (s.destino ? s.destino.direccion : "tu dirección");
@@ -242,7 +243,7 @@
     var cab = document.getElementById("ep-t"), sub = document.getElementById("ep-sub"), tarjeta = cab && cab.closest(".estado-pedido");
     if (cab && sub && d.estado === "Despachada") {         // cerca: el estado del pedido lo dice con todas sus letras, no solo el resaltado de la hora
       cab.textContent = s.cerca ? "Tu pedido está por llegar" : "Tu pedido va en camino";
-      sub.textContent = s.cerca ? "El camión está a menos de 2 km" + (s.minutos ? " (llega " + (s.minutos <= 1 ? "en cerca de un minuto" : "en unos " + s.minutos + " min") + ")" : "") + ". Deja a alguien listo para recibirlo." : "Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.";
+      sub.textContent = s.cerca ? "El camión está a menos de " + s.cerca_km + " km" + (s.minutos ? " (llega " + (s.minutos <= 1 ? "en cerca de un minuto" : "en unos " + s.minutos + " min") + ")" : "") + ". Deja a alguien listo para recibirlo." : "Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.";
       if (tarjeta) tarjeta.classList.toggle("cerca", !!s.cerca);
     }
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;

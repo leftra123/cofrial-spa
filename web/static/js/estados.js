@@ -4,7 +4,8 @@
    - [data-carga] en un <form>: aplica ese estado al enviar, con el texto de data-cargando en el botón.
    - [data-confirmar="texto"] en un botón: acción destructiva en dos pasos (el primer toque pide confirmar, el segundo envía).
    - vivo(elemento, opciones): indicador de conexión de los paneles que se refrescan solos (conectando, en vivo, reintentando, sin conexión).
-   - anunciar(texto): lo dice a los lectores de pantalla. */
+   - anunciar(texto): lo dice a los lectores de pantalla.
+   - tiempo(x): prende o apaga el aviso de tiempo acelerado sin recargar (lo llaman los paneles que se refrescan solos). */
 (function () {
   var RETARDO_SPINNER = 300, VENCE_CONFIRMAR = 5000;
 
@@ -104,5 +105,12 @@
   var resumen = document.getElementById("resumen-errores");
   if (resumen) resumen.focus();
 
-  window.CofrialEstados = {ocupar: ocupar, anunciar: anunciar, vivo: vivo};
+  function tiempo(x) {
+    var aviso = document.getElementById("tiempo-acelerado");
+    if (!aviso) return;
+    aviso.hidden = !(x > 1);
+    if (x > 1) aviso.querySelector("[data-tiempo-x]").textContent = x + "×";
+  }
+
+  window.CofrialEstados = {ocupar: ocupar, anunciar: anunciar, vivo: vivo, tiempo: tiempo};
 })();

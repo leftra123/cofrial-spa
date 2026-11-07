@@ -1,0 +1,2 @@
+{# Aviso de tiempo acelerado. Va en toda página con sesión: los paneles en vivo lo prenden y apagan con CofrialEstados.tiempo(x). #}
+{% if user.is_authenticated %}<p class="aviso warning aviso-tiempo" id="tiempo-acelerado" role="status"{% if tiempo_x <= 1 %} hidden{% endif %}><span><b>Tiempo acelerado: <span data-tiempo-x>{{ tiempo_x }}×</span>.</b> Es una demostración: los camiones avanzan más rápido y la hora de llegada ya lo considera. Las lecturas siguen entrando cada pocos segundos.</span></p>{% endif %}

@@ -54,6 +54,18 @@ def stat_monto(titulo, sql, x, y, w=4, rojo_si_hay_monto=False, descripcion=""):
     return p
 
 
+def tiempo_simulacion(x, y, w):
+    """Franja que avisa cuando el tiempo de la demostración está acelerado: sin ella, un camión que cruza la región en minutos parecería un error."""
+    p = panel("Tiempo de la simulación", "stat", x, y, w, 2,
+              [consulta("SELECT coalesce((SELECT multiplicador_tiempo FROM ajuste_simulador WHERE ajuste_id = 1), 1) AS multiplicador")],
+              {"reduceOptions": {"calcs": ["lastNotNull"], "values": False}, "colorMode": "value", "graphMode": "none", "textMode": "value"},
+              {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": None}, {"color": "orange", "value": 2}]},
+               "mappings": [{"type": "value", "options": {"1": {"text": "Tiempo real (1×)", "index": 0}, "5": {"text": "Acelerado 5×", "index": 1},
+                                                          "20": {"text": "Acelerado 20×", "index": 2}, "60": {"text": "Acelerado 60×", "index": 3}}}]},
+              descripcion="Cuántas veces más rápido avanzan los camiones (se elige en /demo/). Las lecturas siguen entrando cada 5 s.")
+    return p
+
+
 def seccion(titulo, y):
     global _id
     _id += 1
@@ -87,11 +99,12 @@ paneles = [
     panel("Ventas por canal", "piechart", 16, 6, 8, 9, [consulta(f"SELECT o.canal || ': ' || {pesos('sum(t.total_clp)')} AS canal, sum(t.total_clp) AS ventas {VENTAS} AND $__timeFilter(o.creada_en) GROUP BY o.canal ORDER BY o.canal")],
           {"legend": {"displayMode": "table", "placement": "bottom", "values": ["percent"]}, "tooltip": {"mode": "none"}, "pieType": "donut", "reduceOptions": {"calcs": ["lastNotNull"], "values": True, "fields": "/^ventas$/"}},
           descripcion="Cuánto del total vendido vino de cada canal: B2B (instituciones con lista de precios) y B2C (público general)."),
-    seccion("3 · Flota en vivo: 50 camiones, centro en INACAP Temuco (se actualiza cada 5 s)", 15),
-    panel("Posición actual de la flota", "geomap", 0, 16, 14, 13, [consulta("SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC")],
-          {"view": {"id": "coords", "lat": -38.80, "lon": -72.55, "zoom": 9}, "controls": {"showZoom": True, "mouseWheelZoom": True},
+    seccion("3 · Flota en vivo: 50 camiones en toda La Araucanía, con base en Temuco (se actualiza cada 5 s)", 15),
+    tiempo_simulacion(0, 16, 14),
+    panel("Posición actual de la flota", "geomap", 0, 18, 14, 13, [consulta("SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC")],
+          {"view": {"id": "coords", "lat": -38.58, "lon": -72.55, "zoom": 7.6}, "controls": {"showZoom": True, "mouseWheelZoom": True},
            "basemap": {"type": "osm-standard", "name": "Mapa"},
-           "layers": [{"type": "markers", "name": "Camiones", "config": {"showLegend": False, "style": {"size": {"fixed": 9, "min": 2, "max": 15}, "color": {"field": "estado", "fixed": "dark-green"},
+           "layers": [{"type": "markers", "name": "Camiones", "config": {"showLegend": False, "style": {"size": {"fixed": 11, "min": 2, "max": 15}, "opacity": 0.95, "color": {"field": "estado", "fixed": "dark-green"},
                                                                                                   "symbol": {"mode": "fixed", "fixed": "img/icons/marker/circle.svg"}, "text": {"mode": "field", "field": "camion_id", "fixed": ""}, "textConfig": {"fontSize": 10, "offsetY": -12}}},
                        "location": {"mode": "coords", "latitude": "lat", "longitude": "long"}, "tooltip": True}]},
           {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]},
@@ -100,12 +113,12 @@ paneles = [
     panel("Temperatura de cámara (camiones elegidos arriba)", "timeseries", 14, 16, 10, 7, [consulta("SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1", "time_series")],
           {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}, {"unit": "celsius", "custom": {"lineWidth": 2, "fillOpacity": 0}},
           descripcion="Una línea por camión elegido en el selector «Camión» de la parte superior (por defecto CAM-01 a CAM-03). Una subida brusca fuera del rango del camión es una ruptura de frío."),
-    panel("Camiones con más alertas de frío (período)", "bargauge", 14, 23, 10, 6, [consulta("SELECT camion_id AS camion, count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 2 DESC LIMIT 10")],
+    panel("Camiones con más alertas de frío (período)", "bargauge", 14, 23, 10, 8, [consulta("SELECT camion_id AS camion, count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 2 DESC LIMIT 10")],
           {"orientation": "horizontal", "displayMode": "gradient", "showUnfilled": True, "reduceOptions": {"calcs": ["lastNotNull"], "values": True, "fields": "/^alertas$/"}, "namePlacement": "left"},
           {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": None}, {"color": "red", "value": 10}]}, "min": 0, "noValue": "Ningún camión con alertas en el período"},
           [], "Los 10 camiones con más lecturas fuera de rango. Con una flota de 50 sirve para saber a cuáles revisar primero."),
-    seccion("4 · Detalle: qué pedidos se vieron afectados por una ruptura de frío (para llamar al cliente)", 29),
-    panel("Pedidos afectados por ruptura de frío", "table", 0, 30, 24, 7, [consulta(f"""SELECT o.orden_id AS "Orden", c.nombre AS "Cliente", o.canal AS "Canal", d.camion_id AS "Camión", count(m.*) AS "Lecturas con alerta", {pesos('t.total_clp')} AS "Monto"
+    seccion("4 · Detalle: qué pedidos se vieron afectados por una ruptura de frío (para llamar al cliente)", 31),
+    panel("Pedidos afectados por ruptura de frío", "table", 0, 32, 24, 7, [consulta(f"""SELECT o.orden_id AS "Orden", c.nombre AS "Cliente", o.canal AS "Canal", d.camion_id AS "Camión", count(m.*) AS "Lecturas con alerta", {pesos('t.total_clp')} AS "Monto"
 FROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id
 JOIN despacho d ON d.despacho_id = o.despacho_id
 JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id

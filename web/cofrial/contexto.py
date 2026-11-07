@@ -4,6 +4,7 @@ from django.conf import settings
 from catalogo import avisos
 from .acceso import ETIQUETAS, INICIOS, tipo_de
 from crm import servicios as crm
+from flota import tiempo
 from . import bi
 from pedidos import servicios as pedidos
 
@@ -17,7 +18,7 @@ def menu(request):
     u = request.user
     tiles = {"mapa_tiles": settings.MAPA_TILES, "asistente_activo": settings.ASISTENTE_ACTIVO}
     if not u.is_authenticated:
-        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "operacion": False, "demo": False, "tienda": True, "comercial": False}, "inicio_url": "/", "tipo_cuenta": "anonimo", "etiqueta_cuenta": "", "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "solicitudes_n": 0, "grafana_url": "", **tiles}
+        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "operacion": False, "demo": False, "tienda": True, "comercial": False}, "inicio_url": "/", "tipo_cuenta": "anonimo", "etiqueta_cuenta": "", "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "solicitudes_n": 0, "grafana_url": "", "tiempo_x": 1, **tiles}
     rol = crm.rol(u)
     cliente = pedidos.cliente_de(u)
     n = 0
@@ -32,4 +33,4 @@ def menu(request):
             "carrito_n": n, "cliente_tienda": cliente,
             "avisos_n": avisos.cuantos_disponibles(cliente) if cliente is not None else 0,
             "solicitudes_n": crm.solicitudes_empresa().count() if rol in ("admin", "gerencia", "vendedor") else 0,   # empresas por aprobar
-            "grafana_url": _grafana(rol), **tiles}
+            "grafana_url": _grafana(rol), "tiempo_x": tiempo.multiplicador(), **tiles}

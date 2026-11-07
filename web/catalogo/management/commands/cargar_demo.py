@@ -9,10 +9,11 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 
 from catalogo.models import Categoria, ListaPrecio, PrecioProducto, Producto, RangoTemperatura
-from clientes import cuentas_demo
+from clientes import cuentas_demo, regionales
 from clientes.models import Cliente, Comuna, Direccion, Region, TipoCliente, Vendedor
 from crm.models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 from flota.models import Camion, Despacho
@@ -253,6 +254,13 @@ class Command(BaseCommand):
             orden.despacho = base.despacho
             orden.save(update_fields=["despacho"])
             pedidos.avanzar(orden)
+
+        try:                                        # clientes y pedidos de otras comunas: son de demostración, un problema aquí no puede impedir que la web arranque
+            with transaction.atomic():
+                for omitido in regionales.sembrar(region, tipo_b2b, clave_para):
+                    self.stdout.write(self.style.WARNING(f"Pedido regional sin crear: {omitido}"))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"No se sembraron los clientes regionales: {e}"))
 
         if not Documento.objects.filter(tipo="factura").exists():
             self.historial_de_cobranza(Cliente.objects.get(rut="61.973.200-4"), sur)

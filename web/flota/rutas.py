@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import math
+import time
 import urllib.error
 import urllib.request
 
@@ -17,6 +18,9 @@ from django.conf import settings
 from .models import RutaCache
 
 log = logging.getLogger(__name__)
+
+TOLERANCIA_PARADA_KM = 0.05       # dos pasadas por el mismo punto de la carretera no se distinguen a menos de esto
+PAUSA_OSRM_SEG = 1                # el servidor público de OSRM pide no más de una consulta por segundo
 
 
 def km_entre(a, b):
@@ -79,7 +83,11 @@ def ruta_por_calles(puntos):
 
 
 def _indice_cercano(puntos, destino, desde=0):
-    return min(range(desde, len(puntos)), key=lambda i: km_entre(puntos[i], destino))
+    """El primer vértice que está prácticamente a la distancia mínima. En un viaje a otra comuna la ida y la vuelta van por la misma carretera:
+    sin tolerancia, un vértice de la vuelta unos metros más cerca dejaría la parada para el regreso y el camión pasaría de largo a la ida."""
+    distancias = [km_entre(puntos[i], destino) for i in range(desde, len(puntos))]
+    minima = min(distancias)
+    return desde + next(i for i, d in enumerate(distancias) if d <= minima + TOLERANCIA_PARADA_KM)
 
 
 def armar_ruta(paradas):
@@ -95,7 +103,7 @@ def armar_ruta(paradas):
     orden = ordenar_paradas(base, list(unicas.values()))
     secuencia = [base] + [(p[1], p[2]) for p in orden] + [base]
     linea, km, aproximada = ruta_por_calles(secuencia)
-    marcas, desde = [], 0
+    marcas, desde = [], 1                                               # el vértice 0 es la base: el camión ya está ahí y no lo «alcanza»
     for did, lat, lon in orden:
         if aproximada:                                                  # la recta pasa exactamente por cada punto
             i = next(k for k in range(desde, len(linea)) if (linea[k][0], linea[k][1]) == (lat, lon))
@@ -120,18 +128,32 @@ def asegurar_ruta(despacho):
     return ruta
 
 
-def km_hasta(ruta, posicion, indice_destino):
-    """Km por la ruta desde la posición actual hasta el vértice `indice_destino` (0 si ya lo pasó)."""
+def km_hasta(ruta, posicion, indice_destino, desde=0):
+    """Km por la ruta desde la posición actual hasta el vértice `indice_destino`. Solo se mira entre `desde` (la última parada ya atendida) y ese
+    vértice: la vuelta suele ir por la misma carretera, y al salir de un pueblo por donde se entró un punto ya recorrido está igual de cerca.
+    Sin ese límite la distancia que falta crecería de golpe o se creería que el camión ya pasó."""
     puntos = ruta["puntos"]
-    mas_cercano = min(range(len(puntos)), key=lambda i: km_entre(puntos[i], posicion))
+    mas_cercano = min(range(desde, indice_destino + 1), key=lambda i: km_entre(puntos[i], posicion))
     if mas_cercano >= indice_destino:
         return km_entre(posicion, puntos[indice_destino])
     return km_entre(posicion, puntos[mas_cercano]) + largo_km(puntos[mas_cercano:indice_destino + 1])
 
 
 def precalcular_demo():
-    """Deja en caché el recorrido base -> dirección -> base de cada dirección ubicada de los clientes (las de la demostración y las que
-    se registren): el primer despacho de una demostración no depende de que el servicio público de rutas esté disponible."""
+    """Deja en caché los recorridos de la demostración: base -> dirección -> base de cada dirección ubicada (las sembradas y las que se registren) y
+    los corredores regionales con varias paradas. Así un despacho en vivo no depende de que el servicio público de rutas esté disponible.
+    Corre en cada arranque: lo que ya está en caché no sale a la red, y si OSRM no responde se deja para el próximo arranque en vez de
+    esperar el tiempo límite por cada dirección con la web sin levantar."""
+    from clientes import regionales
     from clientes.models import Direccion
-    for d in Direccion.objects.filter(lat__isnull=False, long__isnull=False):
-        armar_ruta([(d.pk, d.lat, d.long)])
+    recorridos = regionales.corredores() + [[(d.pk, d.lat, d.long)] for d in Direccion.objects.filter(lat__isnull=False, long__isnull=False)]
+    for paradas in recorridos:
+        en_cache = RutaCache.objects.count()
+        ruta = armar_ruta(paradas)
+        if ruta is None:
+            continue
+        if ruta["aproximada"]:
+            log.warning("OSRM no respondió: el resto de las rutas de la demostración se calculará al despachar")
+            return
+        if RutaCache.objects.count() != en_cache:
+            time.sleep(PAUSA_OSRM_SEG)

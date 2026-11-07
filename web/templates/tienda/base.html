@@ -56,6 +56,7 @@
 <main class="t-main" id="contenido">
   <div class="t-pagina-escena" id="t-pagina-escena">
   <div class="t-pagina" id="t-pagina">
+    {% include "componentes/tiempo_acelerado.html" %}
   {% if messages %}<div class="avisos" role="status">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
   {% block cabecera %}{% endblock %}
   {% block contenido %}{% endblock %}

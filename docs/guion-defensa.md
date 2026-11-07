@@ -29,7 +29,7 @@
 
 Sirve para mostrar IoT, IA y CRM en una sola historia. Si el tiempo aprieta, va después del bloque 6 o se usa al responder "muéstreme una falla".
 
-**Antes de empezar:** el camión debe estar recorriendo un viaje. A 50 km/h los viajes de la demostración terminan en pocos minutos, así que conviene armar uno nuevo en `/flota/despachar/` justo antes. Tener abiertas `/demo/` y `/flota/`.
+**Antes de empezar:** el camión debe estar recorriendo un viaje. A 50 km/h los viajes dentro de Temuco terminan en pocos minutos, así que conviene armar uno nuevo en `/flota/despachar/` justo antes o usar uno a otra comuna. Tener abiertas `/demo/` y `/flota/`.
 
 1. En `/demo/`, sección 4, escribir: «falla de frío a mitad de ruta en el camión del Hospital» y pulsar **Interpretar con IA**.
 2. Leer la propuesta en voz alta: el resumen lo redacta el código a partir de lo que aceptó el validador. Hasta aquí nada cambió en el simulador.
@@ -41,6 +41,24 @@ Sirve para mostrar IoT, IA y CRM en una sola historia. Si el tiempo aprieta, va 
 **Qué decir:** la IA interpreta y propone, pero no decide. Un validador en código acepta solo tres escenarios y parámetros acotados, la base lo repite con restricciones `CHECK` y una persona confirma. Las lecturas las siguen insertando los contenedores: el escenario viaja por RDS, que la EC2 IoT ya alcanza, sin abrirle ningún puerto.
 
 **Si la IA no responde:** la pantalla lo avisa y los cuatro botones hacen lo mismo sin ella. No hay que explicar nada más: es parte del diseño.
+
+### Bloque 8 (opcional, 4 min): reparto regional en tiempo acelerado
+
+Sirve para mostrar el negocio real: Cofrial reparte en toda La Araucanía, no solo en Temuco. Va bien después del bloque 5 o al responder «¿y si el cliente está lejos?».
+
+**Antes de empezar:** tener abiertas `/flota/`, `/demo/` y otra ventana con `abastecimiento@hospitalangol.test` (las claves están en la hoja de cuentas). Revisar que `/flota/despachar/` tenga pedidos `OC-REG-…`; si se usaron en un ensayo, comprar uno desde la cuenta de Angol, Villarrica o Pucón.
+
+1. En `/flota/despachar/` marcar los pedidos de Lautaro, Victoria y Angol. El mapa muestra la ruta por carretera, 273,5 km ida y vuelta y unos 328 minutos a velocidad real, y propone un camión refrigerado.
+2. Pulsar **Despachar y salir ahora**.
+3. En `/demo/`, sección 5, elegir **60×**. El aviso naranja aparece en todas las pantallas, también en la del cliente, y en Grafana.
+4. Con la cuenta de Angol, abrir el pedido: los km bajan unos 4 por lectura y «Llega entre» es una ventana de 2 minutos. Con las tres paradas, el camión llega a Angol en unos 4 minutos y vuelve a la base en unos 7.
+5. Antes de llegar aparece «Tu pedido está por llegar» y luego «Camión en la puerta». El cliente confirma con **Recibí mi pedido**: tiene los mismos 2 minutos de siempre.
+6. En `/flota/` el camión pasa a «volviendo» y regresa por la carretera. En Grafana se ve en el mapa de toda la región.
+7. Cerrar con **Borrar lo de la demostración**, que deja el tiempo en 1×.
+
+**Qué decir:** el multiplicador solo cambia los km que avanza el camión por lectura. Sigue entrando una lectura cada 5 segundos con los seis campos de la pauta, y las reglas de frío y de despacho no cambian. La hora de llegada usa el mismo multiplicador, por eso sigue siendo una hora real del reloj.
+
+**Si OSRM está caído:** las rutas de la demostración ya están en la caché. Un viaje nuevo que no esté en ella sale igual, con rectas punteadas.
 
 ## Recorrido por los cuatro flujos
 
@@ -112,6 +130,10 @@ Sirve para mostrar IoT, IA y CRM en una sola historia. Si el tiempo aprieta, va 
 - **¿Qué hace el cliente si la alerta es real?** Reporta desde el pedido. Ventas ve al lado la temperatura real del viaje, sacada de la base y no de la IA, aunque la IA esté caída. Puede emitir una nota de crédito (RN-21). La alerta no bloquea la entrega ni avisa sola al vendedor: aparece destacada en su ficha y en Alertas.
 - **¿Qué pasa si se cae la base en plena demo?** Se probó deteniéndola: el sitio responde 503 con una página propia, sin traza. `/salud/` sigue vivo y `/salud/bd/` lo delata. Al volver la base la web responde en segundos y el simulador se reconecta solo a los 5 s. Lo enviado mientras tanto se pierde: no hay cola.
 - **¿Y si se cae OSRM?** El despacho no falla: la ruta son rectas marcadas como aproximadas, y tarda 8 s en vez de un instante porque espera dos intentos. El mapa dibuja esa ruta con línea punteada.
+- **¿El tiempo acelerado falsea la telemetría?** No. El simulador sigue insertando una lectura cada `INTERVALO_SEG`, con los mismos campos y la misma regla de alerta; solo avanza más km por lectura. El combustible y la temperatura siguen al ritmo de las lecturas, así que a 60× el combustible baja menos de lo que bajaría en un viaje real.
+- **A 60× el camión avanza más de 4 km por lectura, ¿se puede saltar una parada?** No. El avance de cada lectura termina en la primera parada que encuentra, aunque le sobre distancia. Hay una prueba con tres paradas a 200 m entre sí.
+- **¿Por qué el plazo para confirmar no se acelera?** Porque lo responde una persona frente a la pantalla. Dividido por 60 serían 2 segundos y nadie alcanzaría a pulsar. Por eso el camión puede ya ir volviendo mientras el cliente confirma, igual que a velocidad normal: se queda 30 segundos en la puerta y el plazo es de 2 minutos.
+- **¿De dónde salen las direcciones de otras comunas?** Son direcciones públicas de hospitales, con coordenadas de OpenStreetMap guardadas en `web/clientes/regionales.py`, así que la demostración no depende de Nominatim. Los RUT y los correos son ficticios.
 - **¿Qué pasa si detengo el simulador?** Dejan de llegar lecturas y los pedidos en ruta quedan quietos; se pueden cerrar a mano. Al reiniciarlo el viaje recomienza desde la base, sin perder pedidos ni repetir entregas, pero el camión salta en el mapa. Es un simulador: el camión real no vuelve a la base al reiniciar un servidor.
 - **¿Quién confirma y prepara los pedidos?** Aquí el prototipo simplifica: «Confirmada» y «En preparación» existen y el vendedor cancela hasta ahí, pero no hay una pantalla de bodega para marcarlas. Despachar recorre esos estados sola. En producción serían pasos de bodega, que el caso no pide.
 - **Un prospecto ganado, ¿ya puede comprar?** Queda como cliente con su lista institucional y su vendedor, que le agrega la dirección y le crea pedidos desde la ficha. Todavía no recibe cuenta del portal de forma automática.

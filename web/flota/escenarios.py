@@ -27,6 +27,7 @@ from crm.servicios import ASUNTO_AUTOMATICO
 from crm.views import con_rol
 from pedidos.models import Orden
 
+from . import tiempo
 from .models import Despacho, EscenarioSimulador, Telemetria
 
 CATALOGO = {
@@ -230,7 +231,8 @@ def contexto():
     """Datos de la pantalla de /demo/ y de su actualización periódica."""
     _cerrar_viajes_terminados()
     recientes = EscenarioSimulador.objects.select_related("despacho").order_by("-escenario_id")[:6]
-    return {"viajes": viajes_disponibles(), "escenarios": [_publico(e) for e in recientes], "forzadas": Telemetria.objects.filter(forzada=True).count()}
+    return {"viajes": viajes_disponibles(), "escenarios": [_publico(e) for e in recientes], "forzadas": Telemetria.objects.filter(forzada=True).count(),
+            "tiempo": tiempo.estado()}
 
 
 def _json(datos, status=200):

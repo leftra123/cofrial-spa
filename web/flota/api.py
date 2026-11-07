@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from crm import servicios as crm
 from pedidos import servicios as pedidos
 
+from . import tiempo
 from .servicios import estado_flota
 
 
@@ -50,7 +51,7 @@ class FlotaAPI(APIView):
 
     def get(self, request):
         tarjetas, resumen = estado_flota()
-        return Response({"resumen": resumen, "camiones": CamionSerializer(tarjetas, many=True).data})
+        return Response({"resumen": resumen, "tiempo_x": tiempo.multiplicador(), "camiones": CamionSerializer(tarjetas, many=True).data})
 
 
 class PedidosAPI(APIView):

@@ -434,8 +434,8 @@ def ruta_del_pedido(orden):
 
 # ---------- llegada estimada y avisos (campanita) ----------
 # La velocidad y el factor de calles salen de la configuración (VELOCIDAD_MEDIA_KMH y FACTOR_CALLES) y el simulador IoT usa las mismas
-# variables: así la hora de llegada que ve el cliente coincide con el movimiento del camión.
-CERCA_KM = 2
+# variables: así la hora de llegada que ve el cliente coincide con el movimiento del camión. Con el tiempo acelerado de la demostración, el
+# multiplicador sale de la misma tabla que lee el simulador (flota/tiempo.py): la hora sigue siendo la del reloj, la que de verdad va a llegar.
 
 
 def _km(lat1, lon1, lat2, lon2):
@@ -449,13 +449,35 @@ def _redondear5(momento):
     return momento.replace(second=0, microsecond=0) - timedelta(minutes=momento.minute % 5)
 
 
+def _ultima_parada_atendida(orden, ruta, parada):
+    """Vértice de la última parada anterior a `parada` que el camión ya atendió (0 si ninguna): desde ahí se mide lo que le falta."""
+    anteriores = {p["direccion_id"]: p["indice"] for p in ruta["paradas"] if p["indice"] < parada["indice"]}
+    if not anteriores:
+        return 0
+    pendientes = set(Orden.objects.filter(despacho=orden.despacho, direccion_id__in=anteriores, estado_orden__nombre="Despachada").values_list("direccion_id", flat=True))
+    return max((indice for direccion_id, indice in anteriores.items() if direccion_id not in pendientes), default=0)
+
+
+def _ventana(centro, multiplicador):
+    """Ventana de llegada alrededor de la hora estimada. Con tiempo acelerado el viaje entero dura minutos: la ventana de siempre (unos 20 min) no diría nada."""
+    from datetime import timedelta
+    if multiplicador > 1:
+        minuto = centro.replace(second=0, microsecond=0)
+        return {"desde": minuto.isoformat(), "hasta": (minuto + timedelta(minutes=2)).isoformat()}
+    return {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),
+            "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}
+
+
 def _llegada(orden, ultima):
     """Distancia que falta y ventana estimada de llegada («entre las 15:10 y las 15:30»). Solo mientras el camión va en camino a esta dirección.
     Con la ruta guardada, los km son los que faltan por esa ruta; sin ella, la distancia en línea recta por el factor de calles."""
     from datetime import timedelta
     from django.conf import settings
     from django.utils import timezone
-    vacio = {"km_restantes": None, "eta": None, "cerca": False, "minutos": None}
+    from flota import tiempo
+    multiplicador = tiempo.multiplicador()
+    cerca_km = tiempo.umbral_cerca_km(multiplicador)
+    vacio = {"km_restantes": None, "eta": None, "cerca": False, "minutos": None, "cerca_km": cerca_km, "tiempo_x": multiplicador}
     d = orden.despacho
     if ultima is None or orden.direccion.lat is None or d.salida_en is None or orden.estado_orden.nombre != "Despachada":
         return vacio
@@ -465,14 +487,12 @@ def _llegada(orden, ultima):
     ruta = d.ruta_geojson
     parada = next((p for p in (ruta or {}).get("paradas", []) if p["direccion_id"] == orden.direccion_id), None)
     if ruta and parada and not ruta.get("aproximada"):
-        km = rutas.km_hasta(ruta, (ultima.lat, ultima.long), parada["indice"])
+        km = rutas.km_hasta(ruta, (ultima.lat, ultima.long), parada["indice"], _ultima_parada_atendida(orden, ruta, parada))
     else:
         km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
-    minutos = km / settings.VELOCIDAD_MEDIA_KMH * 60
-    centro = timezone.now() + timedelta(minutes=minutos)
-    return {"km_restantes": round(km, 1), "cerca": km <= CERCA_KM, "minutos": max(1, round(minutos)),
-            "eta": {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),
-                    "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}}
+    minutos = tiempo.minutos_de_viaje(km, multiplicador)
+    return {**vacio, "km_restantes": round(km, 1), "cerca": km <= cerca_km, "minutos": max(1, round(minutos)),
+            "eta": _ventana(timezone.now() + timedelta(minutes=minutos), multiplicador)}
 
 
 def en_minutos(minutos):
@@ -554,7 +574,7 @@ def avisos_de_llegada(cliente):
         if info["cerca"]:
             salida.append({"id": f"{o.orden_id}-cerca", "orden_id": o.orden_id, "tipo": "cerca", "cuando": ultima.registrado_en.isoformat(),
                            "destacado": True, "minutos": info["minutos"],
-                           "texto": f"Tu pedido N.º {o.orden_id} está por llegar: el camión está a menos de {CERCA_KM} km (llega {en_minutos(info['minutos'])}). Deja a alguien listo para recibirlo."})
+                           "texto": f"Tu pedido N.º {o.orden_id} está por llegar: el camión está a menos de {info['cerca_km']} km (llega {en_minutos(info['minutos'])}). Deja a alguien listo para recibirlo."})
     if salida:
         from .models import Documento
         docs_de = {}

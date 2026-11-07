@@ -57,6 +57,12 @@ def prospectos_visibles(usuario):
     return base if ve_todo(usuario) else base.filter(vendedor__usuario=usuario)
 
 
+def requerimientos_visibles(usuario):
+    """RN-09 también en los reclamos: el vendedor ve los de su cartera y los de quien no tiene vendedor (clientes B2C), que son una bandeja común."""
+    base = Requerimiento.objects.select_related("cliente", "categoria_requerimiento")
+    return base if ve_todo(usuario) else base.filter(Q(cliente__isnull=True) | Q(cliente__vendedor__isnull=True) | Q(cliente__vendedor__usuario=usuario))
+
+
 def puede_editar(usuario):
     """Gerencia solo lee (Tabla 2); administrador y vendedor escriben dentro de su alcance."""
     return rol(usuario) in ("admin", "vendedor")
@@ -313,13 +319,13 @@ def crear_requerimiento(cliente, asunto, descripcion, orden=None, categoria_nomb
 def reintentar_ia(usuario, requerimiento_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
-    return clasificar_con_ia(Requerimiento.objects.get(pk=requerimiento_id))
+    return clasificar_con_ia(requerimientos_visibles(usuario).get(pk=requerimiento_id))
 
 
 def clasificar_manual(usuario, requerimiento_id, categoria_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
-    r = Requerimiento.objects.get(pk=requerimiento_id)
+    r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
     r.categoria_requerimiento, r.estado, r.clasificado_manual = CategoriaRequerimiento.objects.get(pk=categoria_id), "clasificado", True     # una categoría inexistente no se guarda
     r.save(update_fields=["categoria_requerimiento", "estado", "clasificado_manual"])
     return r
@@ -348,7 +354,7 @@ def indicadores(usuario):
         "oc_pendientes": ordenes.filter(oc_pendiente=True).count(),
         "por_cobrar": cobro["por_cobrar"], "vencido": cobro["vencido"], "n_vencidas": cobro["n_vencidas"],
         "sin_facturar": len(cobro["sin_facturar"]),
-        "requerimientos_pendientes": Requerimiento.objects.filter(estado="sin_clasificar").count(),
+        "requerimientos_pendientes": requerimientos_visibles(usuario).filter(estado="sin_clasificar").count(),
         "por_etapa": list(abiertos.values("etapa__nombre", "etapa__orden_etapa").annotate(n=Count("pk"), monto=Sum("monto_estimado_clp")).order_by("etapa__orden_etapa")),
     }
 

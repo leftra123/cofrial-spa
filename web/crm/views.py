@@ -14,7 +14,7 @@ from pedidos import documentos, servicios as pedidos
 from pedidos.models import Pago
 
 from . import ia, servicios as s
-from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto, Requerimiento
+from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto
 
 ERRORES = (pedidos.ErrorDeNegocio, ValueError)
 
@@ -225,16 +225,17 @@ def cliente_pedido(request, pk):
 @con_rol(*COMERCIAL)
 def requerimientos(request):
     return render(request, "crm/requerimientos.html", _contexto(
-        request, reqs=Requerimiento.objects.select_related("cliente", "categoria_requerimiento").order_by("-creado_en"),
+        request, reqs=s.requerimientos_visibles(request.user).order_by("-creado_en"),
         categorias=CategoriaRequerimiento.objects.all(), umbral=s.UMBRAL_CONFIANZA))
 
 
 @con_rol(*COMERCIAL)
 def requerimiento_detalle(request, pk):
     """Un requerimiento con el texto original, el desglose de la IA y, si es de temperatura, el dato real de la base al lado."""
-    r = get_object_or_404(Requerimiento.objects.select_related("cliente", "categoria_requerimiento", "orden__despacho__camion__rango_temperatura", "orden__estado_orden"), pk=pk)
+    r = get_object_or_404(s.requerimientos_visibles(request.user).select_related("orden__despacho__camion__rango_temperatura", "orden__estado_orden"), pk=pk)
     d = r.desglose or None
-    dato = s.telemetria_del_viaje(r.orden) if r.orden_id and d and (d.get("motivo_principal") == "temperatura_inadecuada" or "temperatur" in r.descripcion.lower()) else None
+    habla_de_frio = (d or {}).get("motivo_principal") == "temperatura_inadecuada" or any(p in f"{r.asunto} {r.descripcion}".lower() for p in PALABRAS_DE_FRIO)
+    dato = s.telemetria_del_viaje(r.orden) if r.orden_id and habla_de_frio else None      # sin IA también: la telemetría no depende de ella
     return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
 
 
@@ -277,13 +278,13 @@ def ia_panel(request):
             messages.error(request, "Escribe un mensaje de cliente para probar la IA.")
         else:
             prompt, filas = ia.comparar(asunto[:150], texto[:1000], categorias)
-    todos = Requerimiento.objects.all()
+    todos = s.requerimientos_visibles(request.user)
     resumen = {"total": todos.count(),
                "por_ia": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=False, clasificado_manual=False).count(),
                "ia_dudo": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=True).count(),
                "manual": todos.filter(Q(clasificado_manual=True) | Q(confianza_ia__isnull=True, categoria_requerimiento__isnull=False)).count(),
                "sin_clasificar": todos.filter(estado="sin_clasificar").count()}
-    ultimos = list(todos.select_related("cliente", "categoria_requerimiento").order_by("-creado_en")[:12])
+    ultimos = list(todos.order_by("-creado_en")[:12])
     return render(request, "crm/ia.html", _contexto(request, ia=ia.estado(), categorias=categorias, asunto=asunto, texto=texto, prompt=prompt,
                                                     filas=filas, resumen=resumen, ultimos=ultimos, umbral=s.UMBRAL_CONFIANZA, acierto=s.acierto_de_la_ia()))
 

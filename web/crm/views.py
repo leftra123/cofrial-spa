@@ -285,10 +285,11 @@ def requerimiento_clasificar(request, pk):
 def requerimiento_ia(request, pk):
     try:
         r = s.reintentar_ia(request.user, pk)
-        if r.estado == "clasificado":
+        if getattr(r, "ia_no_disponible", False):
+            ya = " El requerimiento ya tenía su categoría y no cambió." if r.estado == "clasificado" else " El requerimiento sigue sin clasificar: clasifícalo a mano."
+            messages.warning(request, "La IA no está disponible ahora (revisa la clave o la conexión)." + ya)
+        elif r.estado == "clasificado":
             messages.success(request, f"La IA lo clasificó como \"{r.categoria_requerimiento}\" (confianza {r.confianza_ia}).")
-        elif getattr(r, "ia_no_disponible", False):
-            messages.warning(request, "La IA no está disponible ahora (revisa la clave o la conexión). El requerimiento sigue sin clasificar: clasifícalo a mano.")
         else:
             messages.warning(request, "La IA no estuvo lo bastante segura (confianza bajo 0,60); clasifícalo a mano.")
     except (ObjectDoesNotExist, *ERRORES):

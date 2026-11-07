@@ -272,6 +272,21 @@ class ClasificacionIA(TestCase):
         self.assertContains(r, "no estuvo lo bastante segura")
 
 
+    def test_reintentar_con_la_ia_caida_sobre_un_requerimiento_ya_clasificado_no_inventa_confianza(self):
+        """Un reclamo que el sistema ya clasificó (p. ej. «Entrega no concretada») y la IA caída: el aviso no dice «confianza None»."""
+        from unittest.mock import patch
+        from crm import ia
+        from crm.models import CategoriaRequerimiento
+        r = self._req()
+        r.categoria_requerimiento, r.estado = CategoriaRequerimiento.objects.first(), "clasificado"
+        r.save()
+        self.entrar("vendedora@cofrial.cl")
+        with patch("crm.ia._llamar", side_effect=ia.ErrorIA("sin red")):
+            resp = self.client.post(f"/crm/requerimientos/{r.pk}/ia/", follow=True)
+        self.assertContains(resp, "ya tenía su categoría")
+        self.assertNotContains(resp, "None")
+
+
 class ClienteGemini(TestCase):
     """Interactions API de Gemini: forma de la respuesta, cambio de modelo ante fallas y presupuesto de tiempo (todo simulado)."""
 

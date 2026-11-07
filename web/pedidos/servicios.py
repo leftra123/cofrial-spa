@@ -8,7 +8,8 @@ from django.db.models import F
 
 from catalogo import avisos
 from catalogo.models import Categoria, PrecioProducto, Producto
-from clientes.models import Cliente, Direccion
+from clientes import geo
+from clientes.models import Cliente, Comuna, Direccion
 from cofrial import entradas
 
 from . import documentos
@@ -124,6 +125,25 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
         grupos.setdefault(rango_de_categoria[productos[i.producto_id].categoria_id], []).append(i)
     return {"direccion": direccion, "carrito": carrito, "items": items, "productos": productos, "precios": precios,
             "grupos": grupos, "pendiente": pendiente, "numero_oc": numero_oc}
+
+
+MAX_DIRECCIONES = 20
+
+
+def agregar_direccion(cliente, calle_numero, comuna_id):
+    """Dirección nueva de un cliente; la primera queda como principal. La ubicación en el mapa es de mejor esfuerzo."""
+    calle_numero = (calle_numero or "").strip()
+    if not calle_numero or len(calle_numero) > 150:
+        raise ErrorDeNegocio("Escribe la calle y el número (hasta 150 caracteres).")
+    comuna = Comuna.objects.filter(pk=entradas.entero(comuna_id)).first() if entradas.es_entero(comuna_id) else None
+    if comuna is None:
+        raise ErrorDeNegocio("Elige una comuna de la lista.")
+    existentes = cliente.direccion_set.count()
+    if existentes >= MAX_DIRECCIONES:
+        raise ErrorDeNegocio(f"Se admiten hasta {MAX_DIRECCIONES} direcciones por cliente.")
+    direccion = Direccion.objects.create(cliente=cliente, calle_numero=calle_numero, comuna=comuna, es_principal=existentes == 0)
+    geo.ubicar(direccion)
+    return direccion
 
 
 # ------------------------------------------------------------------------------------ órdenes

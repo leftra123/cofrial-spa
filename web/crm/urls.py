@@ -15,6 +15,7 @@ urlpatterns = [
     path("solicitudes/<int:pk>/rechazar/", views.solicitud_rechazar, name="crm_solicitud_rechazar"),
     path("clientes/<int:pk>/", views.cliente_ficha, name="crm_cliente"),
     path("clientes/<int:pk>/interaccion/", views.cliente_interaccion, name="crm_cliente_interaccion"),
+    path("clientes/<int:pk>/direccion/", views.cliente_direccion, name="crm_cliente_direccion"),
     path("clientes/<int:pk>/pedido/", views.cliente_pedido, name="crm_cliente_pedido"),
     path("cobranza/", views.cobranza, name="crm_cobranza"),
     path("ordenes/<int:orden_id>/factura/", views.orden_facturar, name="crm_orden_factura"),

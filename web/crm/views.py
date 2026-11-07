@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 
 from catalogo.models import Producto
 from cofrial import entradas
-from clientes.models import Vendedor
+from clientes.models import Comuna, Vendedor
 from pedidos import documentos, servicios as pedidos
 from pedidos.models import Pago
 
@@ -193,7 +193,7 @@ def cliente_ficha(request, pk):
         saldo_total=sum(d.saldo for d in docs if d.saldo and d.saldo > 0), direcciones=c.direccion_set.select_related("comuna"),
         interacciones=c.interaccion_set.select_related("vendedor").order_by("-registrada_en"),
         productos=Producto.objects.filter(activo=True, stock_disponible__gt=0).order_by("nombre"),
-        pide_oc=c.tipo_cliente.codigo == "B2B"))
+        pide_oc=c.tipo_cliente.codigo == "B2B", comunas=Comuna.objects.order_by("nombre"), accion_direccion=f"/crm/clientes/{c.pk}/direccion/"))
 
 
 @require_POST
@@ -203,6 +203,20 @@ def cliente_interaccion(request, pk):
     try:
         s.registrar_interaccion(request.user, request.POST.get("tipo", "nota"), request.POST.get("detalle", ""), cliente=c)
         messages.success(request, "Interacción registrada.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_cliente", pk=pk)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def cliente_direccion(request, pk):
+    c = _cliente(request, pk)
+    try:
+        if not s.puede_editar(request.user):
+            raise s.ErrorDeNegocio("Tu rol no puede modificar clientes.")
+        d = pedidos.agregar_direccion(c, request.POST.get("calle_numero", ""), request.POST.get("comuna"))
+        messages.success(request, f"Dirección «{d}» agregada." if d.lat is not None else f"Dirección «{d}» agregada, pero no la encontramos en el mapa: despacho deberá ubicarla.")
     except ERRORES as e:
         _avisar(request, e)
     return redirect("crm_cliente", pk=pk)

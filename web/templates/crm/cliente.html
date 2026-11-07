@@ -23,6 +23,11 @@
   <select name="tipo" aria-label="Tipo"><option>llamada</option><option>correo</option><option>reunion</option><option>nota</option></select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button data-cargando="Registrando…">Registrar</button></form></div>{% endif %}
 <div class="tabla-caja"><table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td><span class="chip asignado">{{ i.tipo }}</span></td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}{% include "componentes/vacio_estado.html" with cols=4 compacto=True ico="chat" titulo="Sin interacciones registradas" texto="Anota llamadas, correos y reuniones para no perder el hilo con este cliente." %}{% endfor %}</tbody></table></div>
 {% if puede_editar %}
+<div class="seccion"><h2>Direcciones de entrega</h2></div>
+<div class="tarjeta-ui" style="margin-bottom:16px">
+  {% for d in direcciones %}<p style="margin:0 0 6px">{{ d }}{% if d.lat is None %} <span class="chip pendiente">Sin ubicar en el mapa</span>{% endif %}</p>{% empty %}<p class="muted" style="margin:0 0 6px">Este cliente aún no tiene dirección: agrégala para poder crearle pedidos.</p>{% endfor %}
+  {% include "pedidos/_direccion_nueva.html" with accion=accion_direccion %}
+</div>
 <div class="seccion"><h2>Crear pedido a nombre del cliente</h2></div>
 <div class="tarjeta-ui">
 <form method="post" action="/crm/clientes/{{ c.cliente_id }}/pedido/" data-carga>{% csrf_token %}

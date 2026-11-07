@@ -183,3 +183,15 @@ El informe declaraba la retención como mitigación, pero no estaba implementada
 - **Qué nunca borra:** alertas de ruptura, porque sostienen RN-13, los pedidos afectados y el tablero; lecturas tomadas durante un viaje, porque `telemetria_del_viaje` las cruza con los reclamos; lecturas forzadas de la demostración, y la última lectura de cada camión, que usa la flota.
 - **Qué se cede:** el gráfico de temperatura de Grafana queda con huecos en períodos de más de 7 días. No se agrega por hora, porque exigiría una tabla nueva que no está en el modelo entregado.
 - **Por qué un servicio y no un paso del arranque:** un borrado grande retrasaría gunicorn. Corre después de arrancar porque el laboratorio se reinicia cada 4 horas y una espera inicial de un día nunca se cumpliría.
+
+## Un solo proceso de gunicorn (6-nov-2026)
+
+Los contadores de intentos viven en la caché de Django, que es memoria de cada proceso. Con `--workers 2` el bloqueo por claves malas salía distinto según qué proceso atendía: tras 10 fallos la clave correcta entraba o daba 429 al azar, y un ingreso correcto limpiaba el contador de un solo proceso. Se probó en vivo.
+
+- **Decisión:** `--workers 1 --threads 16`, los mismos 16 hilos en un proceso. El trabajo de la web es casi todo espera de la base y de servicios externos, así que el límite de Python no se nota con una sala de clases.
+- **Se descartó** `FileBasedCache`: su `incr` reinicia el vencimiento (los 15 minutos pasarían a 5) y no es atómico. Tampoco `DatabaseCache`: si la base cae, el middleware que protege el sitio caería con ella.
+- **Qué se cede:** un solo proceso usa un núcleo. Para varias instancias detrás de un balanceador hace falta una caché compartida (Redis), como ya decía `cofrial/seguridad.py`.
+
+## Hasta cuándo una orden está expuesta a una ruptura de frío (6-nov-2026)
+
+Un viaje puede llevar a varios clientes. RN-13 cuenta las alertas desde la salida hasta `crm.servicios.fin_de_exposicion`: para una orden entregada, hasta que se recibió; para el resto, hasta que el camión regresa. Antes se usaba `llegada_en` de todo el viaje, que marcaba como afectado a quien ya había recibido y dejaba fuera una ruptura con el camión en la última puerta, porque el simulador fija `llegada_en` al llegar y no al entregar.

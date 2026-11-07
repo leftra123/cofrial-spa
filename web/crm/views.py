@@ -325,6 +325,17 @@ def orden_facturar(request, orden_id):
 
 @require_POST
 @con_rol(*COMERCIAL)
+def orden_cancelar(request, orden_id):
+    try:
+        o = s.cancelar_orden(request.user, orden_id)
+        messages.success(request, f"Pedido N.º {o.orden_id} cancelado; el stock quedó repuesto.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return _volver(request)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
 def documento_pago(request, documento_id):
     try:
         monto = int(request.POST.get("monto") or 0)

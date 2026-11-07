@@ -203,6 +203,7 @@ def ordenes_de_cliente(cliente):
     ordenes = list(ordenes)
     for o in ordenes:
         o.total = pedidos.total_orden(o)
+        o.cancelable = (not o.estado_orden.es_final and o.estado_orden.orden_flujo <= 3) or o.estado_orden.nombre == "Entrega no concretada"
     return ordenes_con_alerta(ordenes)
 
 
@@ -232,7 +233,21 @@ def crear_pedido_para_cliente(usuario, cliente_id, cantidades, direccion_id, num
     for producto_id, cantidad in cantidades.items():
         if cantidad > 0:
             pedidos.agregar(cliente, producto_id, cantidad)
-    return pedidos.generar_orden(cliente, direccion_id, numero_oc)
+    orden = pedidos.generar_orden(cliente, direccion_id, numero_oc)
+    if guardado:
+        nuevo = pedidos.carrito_abierto(cliente)
+        CarritoItem.objects.bulk_create([CarritoItem(carrito=nuevo, producto_id=p, cantidad=c) for p, c in guardado])
+    return orden
+
+
+def cancelar_orden(usuario, orden_id):
+    """RN-07: el vendedor cancela hasta «En preparación» y da de baja una entrega no concretada, solo dentro de su cartera."""
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol no puede cancelar pedidos.")
+    orden = Orden.objects.filter(pk=orden_id, direccion__cliente__in=clientes_visibles(usuario)).first()
+    if orden is None:
+        raise ErrorDeNegocio("Orden no encontrada en tu cartera.")
+    return pedidos.cancelar(orden, como="vendedor")
 
 
 # ---------------------------------------------------------------- RN-14: clasificación con IA y manual

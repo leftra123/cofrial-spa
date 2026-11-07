@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.contrib import admin
 from django.db import connection
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
+from django.templatetags.static import static
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from . import bi, vistas
@@ -31,10 +32,17 @@ def salud_bd(request):
     return JsonResponse({"estado": "ok"})
 
 
+def favicon(request):
+    """Los navegadores piden /favicon.ico por su cuenta (sobre todo desde una página de error sin <link rel=icon>). Sin esta ruta cada pedido sería un 404 y el limitador de barridos bloquearía a toda la sala."""
+    return HttpResponseRedirect(static("img/marca/favicon-32.png"))
+
+
 handler400 = "cofrial.seguridad.error_400"
 handler500 = "cofrial.seguridad.error_500"
 
 urlpatterns = [
+    path("favicon.ico", favicon, name="favicon"),
+    path("apple-touch-icon.png", lambda request: HttpResponseRedirect(static("img/marca/favicon-180.png"))),
     path("", vistas.inicio, name="inicio"),
     path("portada/", lambda request: vistas.inicio(request, portada=True), name="portada"),
     path("catalogo/", include("catalogo.urls")),

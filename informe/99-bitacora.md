@@ -79,3 +79,6 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 ## 2026-11-06: preparación de la defensa
 - Retención de telemetría implementada (`manage.py podar_telemetria` y servicio `podador`): el informe la declaraba como mitigación y no existía en el código. Se ajustó el riesgo de `03-arquitectura-cloud.md`, porque no se agrega por hora. El Word aún no incorpora ese cambio.
 - Guion de la defensa: el tope de la IA es de 12 s y no de 5 s, se agregan las preguntas sobre IA de pago y crecimiento de la telemetría, y se pide confirmar que `ANTHROPIC_API_KEY` esté vacía en AWS.
+
+- Pestañas de la tienda: los clics durante una transición se perdían y la raya del menú quedaba en la pestaña equivocada. `nav-slide.js` ahora guarda el último destino, no bloquea por Mercado Pago y no lo carga para B2B.
+- Logo: la caja blanca del tema oscuro se reemplazó por una variante con letras blancas (`logo-horizontal-oscuro-900.png`, derivada del logo oficial); el camión y la barra lima no cambian.

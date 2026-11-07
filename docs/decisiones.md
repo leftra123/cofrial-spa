@@ -183,3 +183,12 @@ El informe declaraba la retención como mitigación, pero no estaba implementada
 - **Qué nunca borra:** alertas de ruptura, porque sostienen RN-13, los pedidos afectados y el tablero; lecturas tomadas durante un viaje, porque `telemetria_del_viaje` las cruza con los reclamos; lecturas forzadas de la demostración, y la última lectura de cada camión, que usa la flota.
 - **Qué se cede:** el gráfico de temperatura de Grafana queda con huecos en períodos de más de 7 días. No se agrega por hora, porque exigiría una tabla nueva que no está en el modelo entregado.
 - **Por qué un servicio y no un paso del arranque:** un borrado grande retrasaría gunicorn. Corre después de arrancar porque el laboratorio se reinicia cada 4 horas y una espera inicial de un día nunca se cumpliría.
+
+## Pestañas de la tienda: cola de un destino (6-nov-2026)
+
+En `web/static/js/nav-slide.js` un clic durante una transición se descartaba, pero la raya del menú ya se había movido: quedaba el carrito en pantalla con «Mis pedidos» marcado. La transición además seguía bloqueada mientras cargaba el SDK de Mercado Pago, que se descargaba también para clientes B2B que no lo usan.
+
+- **Cola:** se guarda solo el último destino y se abre al terminar la transición. Una ráfaga de clics termina en la última pestaña, sin recorrer las intermedias.
+- **Atrás:** ya no se ignora durante una transición.
+- **Mercado Pago:** el SDK carga solo si la página trae su configuración, y su carga ya no bloquea las pestañas.
+- **Caché:** la clave incluye los filtros de la dirección, y «Mis pedidos» se guarda 10 s en vez de 2 min para no mostrar estados viejos.

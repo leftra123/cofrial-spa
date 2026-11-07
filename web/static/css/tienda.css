@@ -915,8 +915,6 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 
 /* barra superior: logotipo de imagen (chip blanco solo en oscuro; la caja mide igual en claro) */
 .tb-marca img { height: 40px; width: auto; display: block; }
-:root[data-tema="oscuro"] .tb-marca { background: #fff; }
-@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tb-marca { background: #fff; } }
 
 /* ---------- catálogo y tarjeta de producto (dirección «Termómetro») ---------- */
 .filtros { border-radius: 18px; box-shadow: none; }

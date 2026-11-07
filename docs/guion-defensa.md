@@ -88,6 +88,7 @@ Sirve para mostrar IoT, IA y CRM en una sola historia. Si el tiempo aprieta, va 
 3. Pulsar **Agregar** en una tarjeta (por ejemplo, Vendedor): el formulario pide solo los datos de ese tipo (RUT, dirección y vendedor aparecen solo para clientes). Escribir un correo y una clave dos veces; la clave no se muestra ni vuelve a la pantalla.
 4. Volver a la lista: la cantidad de esa tarjeta subió en uno. Mostrar que entra: cerrar sesión e ingresar con la cuenta nueva (esa clave la dicta quien la creó).
 5. Abajo, **Clientes sin cuenta del portal**: un cliente ganado en el CRM aparece ahí; **Crear cuenta** lo enlaza a ese mismo cliente, sin duplicarlo.
+- Si después se compra con la cuenta recién creada, su dirección queda «Sin ubicar en el mapa»: en `/flota/despachar/` el despachador pulsa **Ubicar «…» en el mapa** (1 s, necesita internet) y recién ahí el pedido se puede despachar.
 - Seguridad que se puede mencionar: solo el administrador entra (los demás roles reciben 403), la clave se valida y se guarda con hash, y reponer stock está en `/operacion/stock/`, enlazado desde `/crm/demanda/`.
 
 **Tablero BI:** Grafana en `/bi/` cruza ventas por canal con alertas de ruptura de frío y se refresca solo; lo ven admin (edita) y gerencia (solo mira), el resto recibe acceso denegado.

@@ -1,10 +1,13 @@
+from datetime import timedelta
 from functools import wraps
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from catalogo.models import Producto
@@ -37,6 +40,7 @@ def con_rol(*roles):
     return decorador
 
 
+PROSPECTO_REPETIDO_SEG = 60          # el mismo prospecto enviado dos veces en este plazo es un doble envío, no dos personas
 TODOS = ("admin", "gerencia", "vendedor", "despachador")
 COMERCIAL = ("admin", "gerencia", "vendedor")
 
@@ -95,7 +99,16 @@ def prospecto_nuevo(request):
                 for campo, errores in e.message_dict.items():
                     messages.error(request, f"{Prospecto._meta.get_field(campo).verbose_name.capitalize() if campo != '__all__' else 'Datos'}: {' '.join(errores)}")
             else:
-                nuevo.save()
+                with transaction.atomic():
+                    Vendedor.objects.select_for_update().get(pk=vendedor.pk)       # dos envíos a la vez (doble clic, dos pestañas) se ponen en fila
+                    repetido = Prospecto.objects.filter(
+                        vendedor=vendedor, nombre_contacto=nuevo.nombre_contacto, empresa=nuevo.empresa, email=nuevo.email, telefono=nuevo.telefono,
+                        creado_en__gte=timezone.now() - timedelta(seconds=PROSPECTO_REPETIDO_SEG)).first()
+                    if repetido is None:
+                        nuevo.save()
+                if repetido is not None:
+                    messages.info(request, "Ese prospecto ya se había creado hace un momento: es este.")
+                    return redirect("crm_prospecto", pk=repetido.pk)
                 messages.success(request, "Prospecto creado.")
                 return redirect("crm_prospecto", pk=nuevo.pk)
     return render(request, "crm/prospecto_nuevo.html", _contexto(request, origenes=Prospecto.ORIGENES, vendedores=vendedores,

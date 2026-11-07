@@ -138,6 +138,18 @@ class AccesoWeb(TestCase):
         self.assertContains(self.client.get("/crm/embudo/"), "Residencial Sur")
         self.assertContains(self.client.get("/crm/"), "oportunidades abiertas")
 
+    def test_el_mismo_prospecto_enviado_dos_veces_no_se_duplica(self):
+        """Doble clic o dos pestañas: el segundo envío idéntico lleva al prospecto ya creado, sin crear otro."""
+        self.entrar("vendedora@cofrial.cl")
+        datos = {"nombre_contacto": "Doble Clic", "empresa": "Impaciente Ltda", "email": "doble@clic.test", "origen": "web"}
+        primero = self.client.post("/crm/prospectos/nuevo/", datos)
+        segundo = self.client.post("/crm/prospectos/nuevo/", datos, follow=True)
+        self.assertEqual(Prospecto.objects.filter(empresa="Impaciente Ltda").count(), 1)
+        self.assertEqual(segundo.redirect_chain[-1][0], primero["Location"])
+        self.assertContains(segundo, "ya se había creado")
+        self.client.post("/crm/prospectos/nuevo/", {**datos, "email": "otro@clic.test"})       # otro correo: es otra persona
+        self.assertEqual(Prospecto.objects.filter(empresa="Impaciente Ltda").count(), 2)
+
     def test_gerencia_ve_todo_pero_no_modifica(self):
         self.entrar("gerencia@cofrial.cl")
         self.assertContains(self.client.get("/crm/embudo/"), "Casino Escolar")

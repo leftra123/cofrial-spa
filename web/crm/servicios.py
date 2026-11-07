@@ -10,7 +10,7 @@ from clientes.models import Cliente, TipoCliente, Vendedor
 from cofrial import entradas
 from flota.models import Telemetria
 from pedidos import documentos, servicios as pedidos
-from pedidos.models import Documento, Orden
+from pedidos.models import CarritoItem, Documento, Orden
 
 from . import ia
 from .models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
@@ -227,6 +227,7 @@ def crear_pedido_para_cliente(usuario, cliente_id, cantidades, direccion_id, num
         raise ErrorDeNegocio("Indica si el pedido llegó por llamada o por correo.")
     registrar_interaccion(usuario, tipo_interaccion, detalle_interaccion, cliente=cliente)
     carrito = pedidos.carrito_abierto(cliente)
+    guardado = list(carrito.carritoitem_set.values_list("producto_id", "cantidad"))    # lo que el cliente tenía armado en el portal no es del vendedor
     carrito.carritoitem_set.all().delete()
     for producto_id, cantidad in cantidades.items():
         if cantidad > 0:

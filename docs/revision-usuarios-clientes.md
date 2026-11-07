@@ -16,24 +16,24 @@
 
 | Pantalla | Visitante | Particular (B2C) | Institucional (B2B) |
 |---|---|---|---|
-| Portada | ✓ escritorio claro y oscuro, móvil oscuro | ✓ | ✓ |
+| Portada | ✓ escritorio claro y oscuro, móvil oscuro | – | – |
 | Registro particular | ✓ con campos inválidos y doble clic: una sola cuenta | – | – |
 | Pedir cuenta de empresa | ✓ doble clic: una solicitud; **C-03** al recargar | – | – |
 | Ingreso, clave mala, recuperar clave | ✓ mensaje claro; enlace de un solo uso; clave común y claves distintas rechazadas | ✓ | ✓ |
 | Catálogo y filtros | ✓ tres clics seguidos de categoría: queda el último; recuerda los filtros con aviso | ✓ | ✓ precio institucional (neto) y «Repetir mi último pedido» |
-| Detalle de producto | ✓ claro, escritorio | ✓ | ✓ |
+| Detalle de producto | ✓ claro, escritorio | ✓ escritorio oscuro; la pestaña Catálogo queda marcada | – |
 | Carrito | – (pide ingresar) | ✓ **C-01**, **C-04** | ✓ mezcla de rangos avisa que se parte en 2 pedidos |
 | Quién recibe | – | ✓ lista propia y nombre nuevo | ✓ rechaza `<b>…</b>`, acepta apóstrofo y tilde; **A-02** |
 | Compra | – | ✓ Webpay simulado, doble clic: una orden, un descuento | ✓ con OC, doble clic: dos órdenes (una por rango), sin duplicar |
 | Mis pedidos | – | ✓ filtros por pestaña con clics seguidos; **C-01** | ✓ |
-| Seguimiento (mapa, temperatura) | – | ✓ mapa con teselas, ruta propia, gráfica | ✓ en lo visto por API |
+| Seguimiento (mapa, temperatura) | – | ✓ mapa con teselas, ruta propia, gráfica | – (sus pedidos no se despacharon; la API se probó con cuentas B2C) |
 | Aviso de llegada y revisión al recibir | – | ✓ banner en cualquier página, cerrable, móvil | – |
 | Recibí mi pedido / no pude recibirlo | – | ✓ doble clic: un solo registro; reenvíos tardíos no cambian nada | – |
 | Cancelar orden | – | – | ✓ pide confirmar; doble clic: se repone una vez |
 | Agregar OC a una orden pendiente | – | – | ✓ una vez puesta no se cambia; **A-03** |
 | Soporte y asistente | – | ✓ doble clic y doble Enter: un solo mensaje; sin IA responde «no disponible» | – |
 | Avisarme (sin stock) | – | ✓ doble clic: un solo aviso | – |
-| Mi clave y salir | – | ✓ salir y «atrás» no deja ver nada privado | ✓ |
+| Mi clave y salir | – | ✓ salir y «atrás» no deja ver nada privado; Mi clave se vio, sin cambiarla | – |
 | Menú: raya y pestañas | ✓ | ✓ clics rápidos, atrás y adelante: URL, pestaña y raya siempre coinciden | ✓ |
 
 Cobertura de combinaciones (no se probó todo en todo):

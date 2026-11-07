@@ -73,6 +73,7 @@ def ver_carrito(request, cliente):
         "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
         "direcciones": cliente.direccion_set.select_related("comuna"),
         "pide_oc": cliente.tipo_cliente.codigo == "B2B",
+        "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
         "mp_brick": mp_brick,
     }
     if mp_brick:
@@ -111,6 +112,11 @@ def repetir(request, cliente):
     return redirect("carrito")
 
 
+def _quien_recibe_del_formulario(post):
+    """Dos formas de elegir quién recibe: una persona de la lista (`recibe`) o un nombre nuevo (`recibe_nuevo`, que tiene prioridad si se escribió)."""
+    return (post.get("recibe_nuevo") or "").strip() or post.get("recibe", "")
+
+
 def _mensaje_ordenes_creadas(ordenes):
     orden = ordenes[0]
     if len(ordenes) > 1:
@@ -133,7 +139,7 @@ def confirmar(request, cliente):
         messages.info(request, "Completa el pago con Mercado Pago en el formulario del carrito.")
         return redirect("carrito")
     try:
-        ordenes = s.generar_ordenes(cliente, direccion, numero_oc)
+        ordenes = s.generar_ordenes(cliente, direccion, numero_oc, recibe=_quien_recibe_del_formulario(request.POST))
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
         return redirect("carrito")
@@ -155,7 +161,7 @@ def mp_pagar_brick(request, cliente):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"ok": False, "mensaje": "Solicitud no válida."}, status=400)
     try:
-        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {})
+        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {}, recibe=str(datos.get("recibe") or ""))
         return JsonResponse({"ok": True, "redirect": f"/pedidos/{checkout.primera_orden_id}/?nueva=1"},
                             json_dumps_params={"ensure_ascii": False})
     except s.ErrorDeNegocio as e:

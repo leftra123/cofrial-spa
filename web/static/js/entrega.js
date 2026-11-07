@@ -144,6 +144,7 @@
       if (!d || !d.puede_responder || !d.revision) { document.dispatchEvent(new CustomEvent("cofrial:entrega", {detail: {orden: ordenId, ok: false}})); location.href = "/pedidos/" + ordenId + "/"; return; }
       var rev = d.revision, dlg = el("dialog", {"class": "dialogo entrega-dialogo", "aria-labelledby": "rv-t"}), form = el("form", {novalidate: ""});
       form.appendChild(el("h2", {id: "rv-t"}, "Revisa tu pedido N.º " + ordenId));
+      var pr = el("p", {"class": "revision-recibe"}); pr.appendChild(el("b", {}, "Recibe: ")); pr.appendChild(document.createTextNode(rev.recibe)); form.appendChild(pr);
       var ul = el("ul", {"class": "revision-productos", "aria-label": "Productos de tu pedido"});
       rev.productos.forEach(function (p) { var li = el("li"); li.appendChild(el("b", {}, String(p.cantidad))); li.appendChild(document.createTextNode(" × " + p.producto)); ul.appendChild(li); });
       form.appendChild(ul);

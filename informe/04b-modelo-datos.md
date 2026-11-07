@@ -518,6 +518,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `despacho_id` | integer | Sí | FK → despacho | Despacho que la lleva (vacío hasta asignarla). | 88 |
 | `numero_oc` | varchar(30) | Sí | — | Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número. | OC-2026-0457 |
 | `oc_pendiente` | boolean | No | — | Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega. | falso |
+| `recibe_nombre` | varchar(80) | No | — | Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta. | María Soto |
 | `creada_en` | timestamptz | No | — | Fecha y hora de la orden. | 2026-10-12 10:20:00-03 |
 
 *Nota.* Elaboración propia.
@@ -790,6 +791,7 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | direccion.lat | double precision | Sí | Latitud de entrega para seguimiento y ruta |
 | direccion.long | double precision | Sí | Longitud de entrega para seguimiento y ruta |
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
+| orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas administrativas de demostración |
 
 Nota. Elaboración propia. La demostración no cambia los seis campos exigidos por el requerimiento de Cofrial.

@@ -88,8 +88,38 @@ def total(filas):
     return sum(f["subtotal"] for f in filas)
 
 
-def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
-    """Valida dirección, carrito, stock y precios; devuelve el contexto para generar órdenes o un checkout MP."""
+RECIBE_MAXIMO = 80          # largo de orden.recibe_nombre
+_LETRAS_EXTRA = " .'’-"      # además de letras: espacio, punto, apóstrofo y guion (María José O'Higgins-Soto Jr.)
+
+
+def nombre_de_quien_recibe(texto):
+    """Quien recibe el pedido, elegido por el comprador. Vacío = recibe el titular de la cuenta (se guarda vacío y se muestra su nombre).
+    Un nombre se normaliza (espacios sobrantes fuera) y debe tener hasta 80 caracteres, al menos 2 letras y solo letras, espacio, punto,
+    apóstrofo o guion: no se aceptan números ni símbolos que no son parte de un nombre. Este dato NO viaja a los proveedores de IA."""
+    nombre = " ".join((texto or "").split())
+    if not nombre:
+        return ""
+    if len(nombre) > RECIBE_MAXIMO:
+        raise ErrorDeNegocio(f"El nombre de quien recibe admite hasta {RECIBE_MAXIMO} caracteres.")
+    if sum(c.isalpha() for c in nombre) < 2 or any(not (c.isalpha() or c in _LETRAS_EXTRA) for c in nombre):
+        raise ErrorDeNegocio("Escribe el nombre de quien recibe solo con letras (puedes usar espacios, punto, guion o apóstrofo).")
+    return nombre
+
+
+def opciones_de_quien_recibe(cliente, limite=8):
+    """Personas que ESTE cliente eligió antes para recibir (las más recientes primero), sin repetir y sin el titular, que siempre es la
+    primera opción. Solo salen de las órdenes del propio cliente."""
+    titular = cliente.nombre.casefold()
+    vistos, salida = set(), []
+    for nombre in Orden.objects.filter(direccion__cliente=cliente).exclude(recibe_nombre="").order_by("-creada_en").values_list("recibe_nombre", flat=True)[:100]:
+        if nombre.casefold() not in vistos and nombre.casefold() != titular:
+            vistos.add(nombre.casefold())
+            salida.append(nombre)
+    return salida[:limite]
+
+
+def _contexto_desde_carrito(cliente, direccion_id, numero_oc="", recibe=""):
+    """Valida dirección, quién recibe, carrito, stock y precios; devuelve el contexto para generar órdenes o un checkout MP."""
     numero_oc = (numero_oc or "").strip()[:30]
     pendiente = cliente.tipo_cliente.codigo == "B2B" and not numero_oc
     try:
@@ -99,6 +129,7 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
     direccion = Direccion.objects.filter(pk=direccion_id, cliente=cliente).first()
     if direccion is None:
         raise ErrorDeNegocio("Elige una dirección de entrega que pertenezca a tu cuenta.")
+    recibe = nombre_de_quien_recibe(recibe)
     carrito = Carrito.objects.select_for_update().filter(cliente=cliente, estado="abierto").first()
     items = list(CarritoItem.objects.filter(carrito=carrito).select_related("producto")) if carrito else []
     if not items:
@@ -118,18 +149,19 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
     for i in items:
         grupos.setdefault(rango_de_categoria[productos[i.producto_id].categoria_id], []).append(i)
     return {"direccion": direccion, "carrito": carrito, "items": items, "productos": productos, "precios": precios,
-            "grupos": grupos, "pendiente": pendiente, "numero_oc": numero_oc}
+            "grupos": grupos, "pendiente": pendiente, "numero_oc": numero_oc, "recibe": recibe}
 
 
 # ------------------------------------------------------------------------------------ órdenes
 @transaction.atomic
-def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None):
+def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe=""):
     """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
 
     RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
-    (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección y la misma OC. Devuelve la lista.
+    (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección, la misma OC y la misma persona que recibe.
+    Devuelve la lista.
     """
-    ctx = _contexto_desde_carrito(cliente, direccion_id, numero_oc)
+    ctx = _contexto_desde_carrito(cliente, direccion_id, numero_oc, recibe)
     direccion, carrito, items, productos, precios, grupos = ctx["direccion"], ctx["carrito"], ctx["items"], ctx["productos"], ctx["precios"], ctx["grupos"]
     pendiente, numero_oc = ctx["pendiente"], ctx["numero_oc"]
 
@@ -137,7 +169,7 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
     ordenes = []
     for rango_id in sorted(grupos):
         orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado,
-                                     checkout_pago=checkout_pago)
+                                     checkout_pago=checkout_pago, recibe_nombre=ctx["recibe"])
         if pendiente:
             orden.numero_oc = referencia_web(orden)
             orden.save(update_fields=["numero_oc"])
@@ -471,7 +503,7 @@ def revision_de(orden):
         temperatura = {"ultima": seg["ultima"]["temp_camara"], "minima": min(temps), "maxima": max(temps), "banda": banda,
                        "hubo_ruptura": seg["hubo_ruptura"] or seg["ultima"]["alerta_ruptura_frio"],
                        "en_rango": not (seg["hubo_ruptura"] or seg["ultima"]["alerta_ruptura_frio"]) and banda["min"] <= seg["ultima"]["temp_camara"] <= banda["max"]}
-    return {"orden_id": orden.orden_id, "productos": productos, "temperatura": temperatura,
+    return {"orden_id": orden.orden_id, "recibe": orden.quien_recibe, "productos": productos, "temperatura": temperatura,
             "problemas": [{"codigo": k, "etiqueta": v[0]} for k, v in PROBLEMAS_AL_RECIBIR.items()]}
 
 

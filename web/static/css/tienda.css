@@ -1267,3 +1267,8 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .revision-falla textarea[aria-invalid="true"] { border-color: var(--cancelado-fg); }
 .entrega-revision .btn, .entrega-dialogo .acciones .btn { min-height: 48px; }
 .entrega-reclamo { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--borde-fuerte); background: var(--fondo); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; max-width: 62ch; overflow-wrap: anywhere; }
+
+/* ---------- Carrito: quién recibe el pedido ---------- */
+.quien-recibe { margin: 14px 0 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.quien-recibe legend { padding: 0; margin-bottom: 4px; font-weight: 700; }
+.revision-recibe { margin: 0; font-size: .9rem; color: var(--texto-2); }

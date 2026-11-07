@@ -134,7 +134,7 @@ CREATE TABLE estado_orden (
   es_final boolean NOT NULL DEFAULT false
 );
 
--- Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según la pauta).
+-- Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según el requerimiento de Cofrial).
 CREATE TABLE camion (
   camion_id varchar(20) PRIMARY KEY,
   patente varchar(8) NOT NULL UNIQUE,
@@ -162,6 +162,7 @@ CREATE TABLE orden (
   despacho_id integer REFERENCES despacho (despacho_id),
   numero_oc varchar(30),
   oc_pendiente boolean NOT NULL DEFAULT false,
+  recibe_nombre varchar(80) NOT NULL DEFAULT '',
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -200,7 +201,7 @@ CREATE TABLE pago (
   pagado_en timestamptz NOT NULL DEFAULT now()
 );
 
--- Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige la pauta.
+-- Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige el requerimiento de Cofrial.
 CREATE TABLE telemetria (
   telemetria_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   camion_id varchar(20) NOT NULL REFERENCES camion (camion_id),

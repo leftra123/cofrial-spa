@@ -76,7 +76,7 @@
 
 **Por qué PostgreSQL y no MySQL.** Ambos cumplen los requerimientos de Cofrial y puntúan casi igual en la evaluación ponderada. PostgreSQL gana por su manejo de fechas y coordenadas, útil para la telemetría, y porque Grafana y Django lo soportan de forma nativa.
 
-**Riesgo: telemetría y transacciones en la misma base.** Con 50 camiones reportando cada 5 segundos se insertan unas 10 filas por segundo, cerca de 864 000 al día (estimación). Si se deja correr durante semanas, la tabla de telemetría crece mucho más que las de pedidos y compite con ellas. Mitigación: índices por camión y fecha, una política de retención (por ejemplo, conservar el detalle por 7 días y agregar por hora) y, en producción, separar la telemetría en una base de series de tiempo.
+**Riesgo: telemetría y transacciones en la misma base.** Con 50 camiones reportando cada 5 segundos se insertan unas 10 filas por segundo, cerca de 864 000 al día (estimación). Si se deja correr durante semanas, la tabla de telemetría crece mucho más que las de pedidos y compite con ellas. Mitigación: índices por camión y fecha y una política de retención que cada día borra las lecturas normales de más de 7 días y conserva las alertas, las lecturas de los viajes y la última de cada camión. En producción se agregaría el detalle por hora y se separaría la telemetría en una base de series de tiempo.
 
 ### 5. IoT: nodo EC2 dedicado con Docker
 

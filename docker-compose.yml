@@ -71,6 +71,22 @@ services:
       db: {condition: service_healthy}
     restart: unless-stopped
 
+  # Borra cada día la telemetría normal antigua (docs/decisiones.md). Espera 10 min para no competir con el arranque.
+  podador:
+    build: ./web
+    command: sh -c "sleep 600; while true; do python manage.py podar_telemetria; sleep 86400; done"
+    init: true
+    environment:
+      <<: *bd
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      DJANGO_DEBUG: "0"
+      RETENCION_TELEMETRIA_DIAS: ${RETENCION_TELEMETRIA_DIAS:-7}
+    depends_on: [web]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
   # La flota de 50 camiones se reparte en 5 contenedores de 10 (CAM-01 a CAM-10, CAM-11 a CAM-20, ...)
   flota-1: &flota
     build: ./iot

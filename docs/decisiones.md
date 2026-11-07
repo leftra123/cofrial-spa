@@ -53,7 +53,7 @@ La aplicación oficial está en `web/` (ver `docs/codigo.md`).
 
 
 ## IA y despliegue (22-oct-2026)
-- **IA (D-06):** Gemini (free tier) como proveedor principal y Groq de respaldo, con solo la biblioteca estándar (`urllib`), sin dependencias nuevas. Modelo configurable con `GEMINI_MODEL` porque la oferta gratuita de Google cambia; no se fijó en código. Cumple RN-14: confianza guardada, umbral 0,60, tiempo máximo de 5 s y, ante cualquier falla, el requerimiento queda «sin clasificar» y nunca se pierde.
+- **IA (D-06):** Gemini (free tier) como proveedor principal y Groq de respaldo, con solo la biblioteca estándar (`urllib`), sin dependencias nuevas. Modelo configurable con `GEMINI_MODEL` porque la oferta gratuita de Google cambia; no se fijó en código. Cumple RN-14: confianza guardada, umbral 0,60, tiempo máximo de 12 s (ver más abajo) y, ante cualquier falla, el requerimiento queda «sin clasificar» y nunca se pierde.
 - **Claude como tercer proveedor (5-nov-2026):** opcional y de pago, detrás de Gemini y Groq, que siguen cumpliendo el requisito de IA gratuita. Entra al orden solo si existe `ANTHROPIC_API_KEY`; sin ella, nada cambia. Usa el SDK oficial `anthropic` (la única dependencia nueva de IA) y `CLAUDE_MODELS` para elegir el modelo; por defecto `claude-opus-5-5`, con esfuerzo bajo.
 - **Cómo se prueba:** `manage.py probar_ia` verifica la clave contra la API real y `manage.py evaluar_ia` mide el acierto sobre 20 mensajes etiquetados frente a la meta de 85 % de CU-09. **Ninguno de los dos se ejecutó todavía con una clave real**; las pruebas automáticas usan la API simulada.
 - **Despliegue:** `aws/` separa el compose en EC2 web e IoT, con `DB_SSLMODE=require` contra RDS. Se probó en local; falta ejecutarlo en el Learner Lab.
@@ -174,3 +174,12 @@ El PDF de la evaluación no exige ningún framework, lenguaje ni API concreta; s
 ## El informe no cita la pauta (5-nov-2026)
 
 El texto exportado nombra esas exigencias como requerimientos de Cofrial, sin códigos de dimensión. El criterio C1 de las evaluaciones de herramientas pasa a «Cumplimiento de los requerimientos», con los mismos pesos y puntajes; el Anexo C pasa a «Correspondencia con los requerimientos de Cofrial», y la referencia a la pauta sale de la lista porque ya nada la cita. La trazabilidad contra la rúbrica sigue en `informe/09-verificacion-pauta.md`, que no se exporta.
+
+## Retención de telemetría (6-nov-2026)
+
+El informe declaraba la retención como mitigación, pero no estaba implementada. `manage.py podar_telemetria` la implementa y el servicio `podador` la corre 10 minutos después de arrancar y luego cada día, en ambos `docker-compose`.
+
+- **Qué borra:** lecturas normales con más de `RETENCION_TELEMETRIA_DIAS` días (7 por defecto), en lotes de 5000 con una pausa, para no competir con la demostración.
+- **Qué nunca borra:** alertas de ruptura, porque sostienen RN-13, los pedidos afectados y el tablero; lecturas tomadas durante un viaje, porque `telemetria_del_viaje` las cruza con los reclamos; lecturas forzadas de la demostración, y la última lectura de cada camión, que usa la flota.
+- **Qué se cede:** el gráfico de temperatura de Grafana queda con huecos en períodos de más de 7 días. No se agrega por hora, porque exigiría una tabla nueva que no está en el modelo entregado.
+- **Por qué un servicio y no un paso del arranque:** un borrado grande retrasaría gunicorn. Corre después de arrancar porque el laboratorio se reinicia cada 4 horas y una espera inicial de un día nunca se cumpliría.

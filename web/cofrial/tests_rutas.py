@@ -238,7 +238,7 @@ class MenuPorRol(Base):
     def test_cada_rol_si_ve_lo_suyo(self):
         esperado = {"B2B": ('href="/pedidos/"', 'href="/carrito/"', 'href="/soporte/"', 'href="/avisos/"'), "vendedor": ('href="/crm/embudo/"', 'href="/crm/ia/"'),
                     "gerencia": ('href="/crm/embudo/"', 'href="/flota/"'), "despachador": ('href="/flota/"', 'href="/crm/alertas/"'),
-                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/catalogo/"', 'href="/portada/"')}
+                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
         paginas = {"B2B": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
         for rol, enlaces in esperado.items():
             html = self.cliente(rol).get(paginas[rol]).content.decode()

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
@@ -55,7 +56,7 @@ class Telemetria(models.Model):
     combustible_pct = models.IntegerField()
     alerta_ruptura_frio = models.BooleanField()
     registrado_en = models.DateTimeField(auto_now_add=True)
-    forzada = models.BooleanField(default=False, db_default=False)    # lectura creada desde el modo demostración (el simulador no la envía)
+    forzada = models.BooleanField(default=False, db_default=False)    # lectura de demostración: la crea /demo/ o la envía el simulador durante una falla de un escenario; se puede borrar sin tocar la telemetría normal
 
     class Meta:
         db_table = "telemetria"
@@ -82,3 +83,45 @@ class RutaCache(models.Model):
 
     class Meta:
         db_table = "ruta_cache"
+
+
+class EscenarioSimulador(models.Model):
+    """Comportamiento pedido para un viaje en curso. Lo escribe la web (botón o propuesta de la IA ya validada) y lo leen los contenedores
+    del simulador en cada ciclo. El camión no se guarda: se obtiene del despacho. Las restricciones repiten en la base los límites de
+    `flota/escenarios.py`, así ni un error del código deja pasar un parámetro fuera de rango."""
+    TIPOS = [("falla_frio", "falla de frío"), ("entrega_perfecta", "entrega perfecta"), ("cliente_no_recibe", "cliente no recibe")]
+    ESTADOS = [("pendiente", "pendiente"), ("en_curso", "en curso"), ("terminado", "terminado"), ("cancelado", "cancelado")]
+    ORIGENES = [("boton", "botón predefinido"), ("ia", "propuesta de la IA")]
+    VIGENTES = ("pendiente", "en_curso")
+
+    escenario_id = models.AutoField(primary_key=True)
+    despacho = models.ForeignKey(Despacho, on_delete=models.PROTECT)
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    estado = models.CharField(max_length=10, choices=ESTADOS, default="pendiente", db_default="pendiente")
+    momento_pct = models.SmallIntegerField(null=True, blank=True)        # falla de frío: avance del camión hacia la última parada al que parte
+    duracion_lecturas = models.SmallIntegerField(null=True, blank=True)  # falla de frío: lecturas que dura
+    subida_c = models.FloatField(null=True, blank=True)                  # falla de frío: grados que sube por lectura
+    direccion = models.ForeignKey("clientes.Direccion", null=True, blank=True, on_delete=models.CASCADE)    # cliente no recibe: la parada afectada
+    motivo_no_recibe = models.CharField(max_length=120, blank=True)      # cliente no recibe: texto de la lista cerrada, nunca de la IA
+    origen = models.CharField(max_length=5, choices=ORIGENES)
+    pedido_texto = models.CharField(max_length=300, blank=True)          # lo que escribió el administrador, ya anonimizado (solo registro: nadie lo ejecuta)
+    modelo_ia = models.CharField(max_length=80, blank=True)              # qué modelo propuso el escenario
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    iniciado_en = models.DateTimeField(null=True, blank=True)            # lo registra el simulador cuando el escenario empieza a actuar
+    terminado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "escenario_simulador"
+        verbose_name_plural = "escenarios del simulador"
+        constraints = [
+            models.UniqueConstraint(fields=["despacho"], condition=Q(estado__in=("pendiente", "en_curso")), name="uq_escenario_vigente_por_despacho"),
+            models.CheckConstraint(condition=Q(tipo__in=("falla_frio", "entrega_perfecta", "cliente_no_recibe")), name="escenario_tipo_conocido"),
+            models.CheckConstraint(condition=Q(estado__in=("pendiente", "en_curso", "terminado", "cancelado")), name="escenario_estado_conocido"),
+            models.CheckConstraint(condition=~Q(tipo="falla_frio") | Q(momento_pct__gte=5, momento_pct__lte=95, duracion_lecturas__gte=6, duracion_lecturas__lte=36,
+                                                                       subida_c__gte=1.0, subida_c__lte=2.0), name="escenario_falla_acotada"),
+            models.CheckConstraint(condition=~Q(tipo="cliente_no_recibe") | (Q(direccion__isnull=False) & ~Q(motivo_no_recibe="")), name="escenario_no_recibe_completo"),
+        ]
+
+    def __str__(self):
+        return f"Escenario {self.escenario_id} ({self.tipo}, despacho {self.despacho_id})"

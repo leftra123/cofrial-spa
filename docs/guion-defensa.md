@@ -10,6 +10,7 @@
 3. Abrir en pestañas: `/salud/`, `/` (sin sesión), el BI en `/bi/` (con la cuenta de gerencia o admin; Grafana ya no se abre por el puerto 3000), `/flota/`, `/crm/`.
 4. Plan B: capturas de `docs/capturas-visual/`, por si el laboratorio no responde.
 5. Confirmar que `ANTHROPIC_API_KEY` está vacía en `aws/.estado/secretos.env`: en la defensa la IA debe ser solo la gratuita (Gemini y Groq).
+6. Confirmar que la EC2 IoT corre el simulador con escenarios: si el código llegó después de crearla, `bash aws/provision.sh recrear-iot`. Probar un botón de `/demo/` y limpiar.
 
 ## Guion
 
@@ -21,6 +22,23 @@
 | 4 | CRM (2 min) | Con `vendedora@cofrial.cl`: la orden web recién creada aparece en la ficha del Hospital; un prospecto no avanza sin interacción | Erradica el Shadow IT: la cartera es de la empresa y cada vendedor ve solo la suya | D2 |
 | 5 | IoT y dashboard (3 min) | `/flota/` con "En vivo · cada 5 s"; `/api/flota/`; Grafana en `/bi/` con ventas por canal y alertas; hacer una compra y ver el gráfico cambiar en 5 a 10 s | Contenedores Docker en la EC2 dedicada insertan `camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct` y `alerta_ruptura_frio` directo en RDS; el tablero cruza ventas con cadena de frío | D3, D4 |
 | 6 | IA gratuita en vivo (2 min) | En el CRM, clasificar el requerimiento de ejemplo con el botón de IA | Gemini en free tier con respaldo Groq; guarda la confianza, umbral 0,60 y tope de 12 s (la latencia medida es de 4 a 7 s); si falla, queda "sin clasificar" y no se pierde (RN-14). Medido: 20 de 20 con respaldo | D5 |
+
+### Bloque 7 (opcional, 2 min): escenarios del simulador con IA
+
+Sirve para mostrar IoT, IA y CRM en una sola historia. Si el tiempo aprieta, va después del bloque 6 o se usa al responder "muéstreme una falla".
+
+**Antes de empezar:** el camión debe estar recorriendo un viaje. A 50 km/h los viajes de la demostración terminan en pocos minutos, así que conviene armar uno nuevo en `/flota/despachar/` justo antes. Tener abiertas `/demo/` y `/flota/`.
+
+1. En `/demo/`, sección 4, escribir: «falla de frío a mitad de ruta en el camión del Hospital» y pulsar **Interpretar con IA**.
+2. Leer la propuesta en voz alta: el resumen lo redacta el código a partir de lo que aceptó el validador. Hasta aquí nada cambió en el simulador.
+3. Pulsar **Activar esta propuesta**. El escenario aparece «pendiente» y pasa a «en curso» cuando el camión llega a ese avance; para no esperar, usar el botón **Falla de frío ahora**.
+4. En `/flota/` el camión pasa a rojo; las alertas llegan al CRM y a Grafana, igual que una falla real.
+5. Con **Cliente no recibe**: el pedido pasa a «Camión en la puerta» y luego a «Entrega no concretada», y aparece el requerimiento en `/crm/requerimientos/`.
+6. Cerrar con **Borrar lo de la demostración**.
+
+**Qué decir:** la IA interpreta y propone, pero no decide. Un validador en código acepta solo tres escenarios y parámetros acotados, la base lo repite con restricciones `CHECK` y una persona confirma. Las lecturas las siguen insertando los contenedores: el escenario viaja por RDS, que la EC2 IoT ya alcanza, sin abrirle ningún puerto.
+
+**Si la IA no responde:** la pantalla lo avisa y los cuatro botones hacen lo mismo sin ella. No hay que explicar nada más: es parte del diseño.
 
 ## Recorrido por los cuatro flujos
 
@@ -63,6 +81,9 @@
 - **¿Por qué EC2 y no Lambda o Elastic Beanstalk?** Backend persistente, Docker Compose conocido por el equipo y control de la red; ver `informe/03-arquitectura-cloud.md`.
 - **¿Por qué la base va en subred privada?** Es el activo de la empresa; solo la alcanzan las dos EC2 por Security Group.
 - **¿Qué pasa si la IA falla o está saturada?** Prueba en cascada de modelos, luego Groq; si todo falla, el requerimiento queda "sin clasificar".
+- **¿La IA puede romper el simulador o ejecutar algo?** No. Devuelve JSON que el validador lee llave por llave: tipo de una lista cerrada, viaje y parada que existen y números dentro de un rango; lo demás se ignora o se rechaza. Ningún texto del modelo llega a SQL y el motivo de «no recibe» sale de una lista fija. Además, la activación la confirma un administrador.
+- **¿Por qué el escenario va por la base y no por una API al contenedor?** La EC2 IoT no tiene entradas abiertas y ya conecta a RDS. Leer una tabla en cada ciclo no agrega puertos ni credenciales, y el escenario sobrevive a un reinicio. El costo es una espera de hasta 5 s.
+- **¿Las lecturas de un escenario son falsas?** Las inserta el mismo contenedor, con la misma regla de alerta. El escenario cambia cómo se comporta el camión simulado; van marcadas `forzada` para poder borrarlas después de la demostración.
 - **¿Cómo sabe que está en tercera forma normal?** Dependencias funcionales por tabla en `informe/04b-modelo-datos.md`; se corrigió una dependencia transitiva en `orden`.
 - **¿Usan una IA de pago?** No en la demostración. El código admite Claude como tercer proveedor opcional, pero solo entra si existe `ANTHROPIC_API_KEY`, y en AWS esa variable queda vacía. Gemini y Groq, ambos en plan gratuito, cubren el requisito.
 - **¿La telemetría no llena la base?** Son unas 864 000 filas al día. `podar_telemetria` corre a diario y borra las lecturas normales de más de 7 días; las alertas, las lecturas de los viajes y la última de cada camión se conservan, porque sostienen los pedidos afectados y los reclamos. En producción iría a una base de series de tiempo.

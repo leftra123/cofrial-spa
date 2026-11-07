@@ -21,6 +21,7 @@
 | Cómputo | EC2 con Docker Compose | Lambda o Elastic Beanstalk | Administrar el sistema operativo por cuenta del equipo a cambio de control visible y proceso persistente |
 | Base de datos | RDS PostgreSQL | PostgreSQL instalado en EC2 | Menos control del servidor a cambio de respaldos y parches gestionados |
 | IoT | EC2 dedicada con Docker | Simulador en la misma EC2 del backend | Una instancia más de créditos a cambio de aislar la carga de telemetría de la web |
+| Escenarios del simulador | Tabla en RDS que los contenedores leen en cada ciclo | Endpoint en el contenedor o consulta a la API web | Hasta un ciclo de espera a cambio de no abrir puertos en la EC2 IoT ni hacerla depender de la EC2 web |
 | Disponibilidad | Single-AZ en el prototipo, Multi-AZ en producción | Multi-AZ desde el inicio | Riesgo de caída por zona a cambio de costo cero y compatibilidad con el Learner Lab |
 | Respaldos | Respaldos automáticos de RDS más un snapshot manual antes de cualquier borrado | Respaldos manuales periódicos | Costo de almacenamiento a cambio de eliminar la dependencia de una persona |
 

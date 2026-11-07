@@ -18,6 +18,14 @@ Ciclo de un camión:
   - El simulador también da por entregados («confirmada automáticamente») los pedidos cuyo camión lleva más de
     CONFIRMACION_AUTO_SEG en la puerta sin respuesta del cliente. Es una sentencia condicional sobre el estado: repetirla, o que
     corra en varios contenedores o tras un reinicio, no cambia nada; el plazo está en la base (orden.puerta_en), no en memoria.
+
+Escenarios: en cada ciclo el proceso lee de la tabla escenario_simulador los escenarios vigentes de sus camiones (la web los valida y los
+escribe; ver web/flota/escenarios.py). Cambian el comportamiento del camión, no las lecturas: estas se siguen insertando aquí.
+  - falla_frio: al llegar al avance pedido la temperatura sube duracion_lecturas lecturas; la alerta sale de la misma regla de siempre.
+    Esas lecturas van marcadas forzada, para que la limpieza de la demostración las pueda borrar.
+  - entrega_perfecta: sin rupturas al azar y el cliente confirma en cada parada.
+  - cliente_no_recibe: en la parada pedida el pedido queda «Entrega no concretada» y se crea el requerimiento para ventas.
+Sin escenario vigente no cambia nada. Si la tabla aún no existe (la EC2 IoT se actualizó antes que la web), se sigue como si no hubiera escenarios.
 """
 import logging
 import math
@@ -38,6 +46,9 @@ VELOCIDAD_MEDIA_KMH = float(os.environ.get("VELOCIDAD_MEDIA_KMH") or os.environ.
 FACTOR_CALLES = float(os.environ.get("FACTOR_CALLES", "1.3"))      # solo para rectas: la ruta por calles es más larga que la línea recta
 DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas detenido en cada dirección de entrega
 CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)
+ESPERA_RESPUESTA_LECTURAS = int(os.environ.get("ESPERA_RESPUESTA_LECTURAS", "3"))   # en un escenario, lecturas que el cliente tarda en responder en la puerta
+TOPE_SOBRE_RANGO_C = 12.0                                                           # una falla de escenario no sube más que esto sobre el máximo del camión
+TIPOS_ESCENARIO = ("falla_frio", "entrega_perfecta", "cliente_no_recibe")
 if os.environ.get("CAMION_ID"):
     IDS = [os.environ["CAMION_ID"]]
 else:
@@ -98,6 +109,44 @@ def viajes_en_curso(con, ids):
     return viajes
 
 
+def _acotar(valor, minimo, maximo):
+    return max(minimo, min(maximo, valor))
+
+
+def escenario_de_fila(fila):
+    """Fila de escenario_simulador -> diccionario. La web y las restricciones de la tabla ya validaron; igual se ignora un tipo desconocido y se acotan los números."""
+    escenario_id, camion_id, despacho_id, tipo, momento, duracion, subida, direccion_id, motivo = fila
+    if tipo not in TIPOS_ESCENARIO:
+        log.warning("Escenario %s con tipo desconocido: se ignora", escenario_id)
+        return None
+    return {"id": escenario_id, "camion_id": camion_id, "despacho_id": despacho_id, "tipo": tipo, "momento_pct": _acotar(momento or 50, 5, 95),
+            "duracion_lecturas": _acotar(duracion or 12, 6, 36), "subida_c": _acotar(subida or 1.0, 1.0, 2.0), "direccion_id": direccion_id, "motivo": motivo or ""}
+
+
+_sin_tabla_avisado = False
+
+
+def escenarios_vigentes(con, ids):
+    """{camion_id: escenario} de los viajes abiertos. Una consulta por ciclo. Un problema de esquema no puede detener la telemetría."""
+    global _sin_tabla_avisado
+    try:
+        filas = con.execute(
+            "SELECT e.escenario_id, d.camion_id, e.despacho_id, e.tipo, e.momento_pct, e.duracion_lecturas, e.subida_c, e.direccion_id, e.motivo_no_recibe "
+            "FROM escenario_simulador e JOIN despacho d USING (despacho_id) "
+            "WHERE d.camion_id = ANY(%s) AND e.estado IN ('pendiente', 'en_curso') AND d.regreso_en IS NULL", (ids,)).fetchall()
+    except psycopg.ProgrammingError as e:
+        if not _sin_tabla_avisado:
+            log.warning("Sin escenarios (%s); el simulador sigue normal", str(e).strip().splitlines()[0])
+            _sin_tabla_avisado = True
+        return {}
+    escenarios = {}
+    for fila in filas:
+        esc = escenario_de_fila(fila)
+        if esc:
+            escenarios[esc["camion_id"]] = esc
+    return escenarios
+
+
 class Camion:
     def __init__(self, camion_id, tmin, tmax):
         self.id = camion_id
@@ -119,6 +168,9 @@ class Camion:
         self.al_reanudar = None         # fase que se informa al terminar la detención
         self.fase = None
         self.eventos = []               # lo que el proceso debe escribir en la base: ("puerta", despacho, direccion), ("llegada", d), ("fase", d, f), ("regreso", d)
+        self.escenario = None           # escenario vigente de este camión (None: comportamiento normal)
+        self.respuestas = []            # [[lecturas que faltan, direccion_id]...] clientes de un escenario por responder en la puerta
+        self.lectura_forzada = False    # la última lectura es parte de una falla de escenario
 
     @property
     def en_base(self):
@@ -214,13 +266,88 @@ class Camion:
             self.pos = self.casa
         return self.pos
 
+    def progreso_pct(self):
+        """Avance del camión hacia la última parada, medido en km sobre el camino (los vértices de la ruta no están a la misma distancia)."""
+        if self.ultima_marca < 1 or self.i > self.ultima_marca:
+            return 100.0
+        tramos = [km_entre(a, b) for a, b in zip(self.camino, self.camino[1:self.ultima_marca + 1])]
+        total = sum(tramos)
+        if total == 0:
+            return 100.0
+        return 100 * (sum(tramos[:self.i - 1]) + km_entre(self.camino[self.i - 1], self.pos)) / total
+
+    def aplicar_escenario(self, esc):
+        """Sincroniza con el escenario de la base. Si desapareció (cancelado, limpiado o terminado) se suelta y sigue el comportamiento normal."""
+        if esc is not None and esc["despacho_id"] != self.despacho:
+            esc = None
+        if esc is None:
+            if self.escenario is not None:
+                if self.escenario.get("disparada"):
+                    self.ruptura_restante = 0                      # una falla cancelada a medias se corta: la temperatura vuelve sola al objetivo
+                self.escenario, self.respuestas = None, []
+            return
+        if self.escenario is not None and self.escenario["id"] == esc["id"]:
+            return
+        self.escenario, self.respuestas = {**esc, "disparada": False, "terminado": False}, []
+        log.info("%s, viaje %s: escenario %s (%s)", self.id, self.despacho, esc["id"], esc["tipo"])
+        if esc["tipo"] == "entrega_perfecta":
+            self.ruptura_restante = 0
+            self.eventos.append(("escenario", esc["id"], "en_curso"))
+
+    def _terminar_escenario(self):
+        self.escenario["terminado"] = True
+        self.eventos.append(("escenario", self.escenario["id"], "terminado"))
+
+    def _disparar_falla(self):
+        esc = self.escenario
+        if esc is None or esc["tipo"] != "falla_frio" or esc["disparada"] or esc["terminado"]:
+            return
+        if self.fase == "volviendo":                               # el viaje se dio por llegado antes del avance pedido: ya no hay carga que dañar
+            self._terminar_escenario()
+        elif self.progreso_pct() >= esc["momento_pct"]:
+            esc["disparada"], self.ruptura_restante = True, esc["duracion_lecturas"]
+            self.eventos.append(("escenario", esc["id"], "en_curso"))
+            log.warning("Escenario %s: falla de frío en %s durante %d lecturas", esc["id"], self.id, self.ruptura_restante)
+
+    def _despues_de_leer(self, alerta):
+        """Efectos del escenario que dependen de lo que pasó en esta lectura. Sin escenario no hace nada."""
+        esc = self.escenario
+        self.lectura_forzada = bool(esc and esc.get("disparada") and not esc["terminado"])
+        if esc is None or esc["terminado"]:
+            return
+        if esc["tipo"] == "falla_frio":
+            if esc["disparada"] and self.ruptura_restante == 0 and not alerta:        # volvió al rango: esta última lectura normal cierra la falla
+                self._terminar_escenario()
+            return
+        for ev in list(self.eventos):
+            if ev[0] == "puerta" and (esc["tipo"] == "entrega_perfecta" or ev[2] == esc["direccion_id"]):
+                self.respuestas.append([ESPERA_RESPUESTA_LECTURAS, ev[2]])
+                if esc["tipo"] == "cliente_no_recibe":
+                    self.eventos.append(("escenario", esc["id"], "en_curso"))
+        for respuesta in self.respuestas:
+            respuesta[0] -= 1
+            if respuesta[0] <= 0:
+                if esc["tipo"] == "entrega_perfecta":
+                    self.eventos.append(("recibe", esc["despacho_id"], respuesta[1]))
+                else:
+                    self.eventos.append(("no_recibe", esc["despacho_id"], respuesta[1], esc["motivo"]))
+                    self._terminar_escenario()
+        self.respuestas = [r for r in self.respuestas if r[0] > 0]
+
     def paso(self):
-        if self.ruptura_restante == 0 and random.random() < PROB_RUPTURA:
+        esc = self.escenario
+        self._disparar_falla()
+        falla = bool(esc and esc.get("disparada") and not esc["terminado"] and self.ruptura_restante > 0)
+        protegido = bool(esc and esc["tipo"] == "entrega_perfecta")
+        if self.ruptura_restante == 0 and not protegido and random.random() < PROB_RUPTURA:
             self.ruptura_restante = random.randint(6, 14)
             log.warning("Falla de frío simulada en %s durante %d lecturas", self.id, self.ruptura_restante)
         if self.ruptura_restante > 0:
             self.ruptura_restante -= 1
-            self.temp += random.uniform(0.6, 1.4)                 # sube sin control
+            if falla:
+                self.temp = min(self.temp + esc["subida_c"] * random.uniform(0.85, 1.15), self.tmax + TOPE_SOBRE_RANGO_C)
+            else:
+                self.temp += random.uniform(0.6, 1.4)             # sube sin control
         else:
             self.temp += (self.objetivo - self.temp) * 0.4 + random.uniform(-0.2, 0.2)   # vuelve al objetivo
         self.combustible = max(0, self.combustible - (1 if random.random() < 0.15 else 0))
@@ -229,7 +356,39 @@ class Camion:
         lat, lon = self.posicion()
         temp = round(self.temp, 1)
         alerta = temp > self.tmax or temp < self.tmin
+        self._despues_de_leer(alerta)
         return temp, round(lat, 6), round(lon, 6), self.combustible, alerta
+
+
+ESTADO_ORDEN = "(SELECT estado_orden_id FROM estado_orden WHERE nombre = '{}')"
+# Misma regla que pedidos.servicios.resolver_entrega. El texto y los ids entran siempre como parámetros, nunca dentro de la sentencia.
+SQL_RECIBE = (f"UPDATE orden SET estado_orden_id = {ESTADO_ORDEN.format('Entregada')}, entrega_resuelta_en = now(), entrega_automatica = false "
+              f"WHERE despacho_id = %s AND direccion_id = %s AND estado_orden_id = {ESTADO_ORDEN.format('Camión en la puerta')}")
+SQL_NO_RECIBE = (f"WITH marcadas AS (UPDATE orden SET estado_orden_id = {ESTADO_ORDEN.format('Entrega no concretada')}, entrega_resuelta_en = now(), "
+                 f"entrega_automatica = false, entrega_motivo = %(motivo)s WHERE despacho_id = %(despacho)s AND direccion_id = %(direccion)s "
+                 f"AND estado_orden_id = {ESTADO_ORDEN.format('Camión en la puerta')} RETURNING orden_id, direccion_id) "
+                 "INSERT INTO requerimiento (cliente_id, orden_id, asunto, descripcion, categoria_requerimiento_id, estado, clasificado_manual, creado_en) "
+                 "SELECT d.cliente_id, m.orden_id, 'Entrega no concretada del pedido N.º ' || m.orden_id, %(motivo)s, c.categoria_requerimiento_id, "
+                 "CASE WHEN c.categoria_requerimiento_id IS NULL THEN 'sin_clasificar' ELSE 'clasificado' END, false, now() "
+                 "FROM marcadas m JOIN direccion d USING (direccion_id) "
+                 "LEFT JOIN categoria_requerimiento c ON c.nombre = 'Problema en la entrega'")
+SQL_ESCENARIO = ("UPDATE escenario_simulador SET estado = %(estado)s, iniciado_en = COALESCE(iniciado_en, now()), "
+                 "terminado_en = CASE WHEN %(fin)s THEN now() END "
+                 "WHERE escenario_id = %(id)s AND estado IN ('pendiente', 'en_curso')")
+
+
+def aplicar_evento_de_escenario(con, ev):
+    """Un error de esquema en un evento de escenario se registra y no detiene la telemetría (el resto de los errores los maneja el ciclo principal)."""
+    try:
+        if ev[0] == "recibe":
+            con.execute(SQL_RECIBE, (ev[1], ev[2]))
+        elif ev[0] == "no_recibe":
+            with con.transaction():
+                con.execute(SQL_NO_RECIBE, {"motivo": ev[3], "despacho": ev[1], "direccion": ev[2]})
+        else:
+            con.execute(SQL_ESCENARIO, {"estado": ev[2], "fin": ev[2] == "terminado", "id": ev[1]})
+    except (psycopg.ProgrammingError, psycopg.IntegrityError) as e:
+        log.error("Evento de escenario %s sin aplicar: %s", ev[0], str(e).strip().splitlines()[0])
 
 
 def aplicar_eventos(con, camion):
@@ -247,6 +406,8 @@ def aplicar_eventos(con, camion):
             con.execute("UPDATE despacho SET fase = %s WHERE despacho_id = %s AND regreso_en IS NULL", (ev[2], ev[1]))
         elif ev[0] == "regreso":
             con.execute("UPDATE despacho SET llegada_en = COALESCE(llegada_en, now()), regreso_en = now() WHERE despacho_id = %s AND regreso_en IS NULL", (ev[1],))
+        elif ev[0] in ("recibe", "no_recibe", "escenario"):
+            aplicar_evento_de_escenario(con, ev)
     camion.eventos = []
 
 
@@ -279,11 +440,13 @@ def main():
                 if len(flota) < len(IDS):
                     log.warning("Faltan %d camiones en la base (se reintenta); activos: %d", len(IDS) - len(flota), len(flota))
             viajes = viajes_en_curso(con, list(flota))
+            escenarios = escenarios_vigentes(con, list(flota))
             filas = []
             for c in flota.values():
                 c.asignar(viajes.get(c.id))
+                c.aplicar_escenario(escenarios.get(c.id))
                 temp, lat, lon, comb, alerta = c.paso()
-                filas.append((c.id, temp, lat, lon, comb, alerta))
+                filas.append((c.id, temp, lat, lon, comb, alerta, c.lectura_forzada))
                 aplicar_eventos(con, c)
             confirmadas = confirmar_vencidas(con)
             if confirmadas:
@@ -291,8 +454,8 @@ def main():
             if filas:
                 with con.transaction():
                     con.cursor().executemany(
-                        'INSERT INTO telemetria (camion_id, temp_camara, lat, "long", combustible_pct, alerta_ruptura_frio, registrado_en) '
-                        "VALUES (%s, %s, %s, %s, %s, %s, now())", filas)
+                        'INSERT INTO telemetria (camion_id, temp_camara, lat, "long", combustible_pct, alerta_ruptura_frio, forzada, registrado_en) '
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, now())", filas)
                 lecturas_hechas += 1
                 if lecturas_hechas % 12 == 1:
                     log.info("%d lecturas insertadas; camiones en alerta: %d", len(filas), sum(1 for f in filas if f[5]))

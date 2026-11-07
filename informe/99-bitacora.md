@@ -75,3 +75,7 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - **Corrección UX iconos:** la regla global `button:not(#mp-brick-container button)` pisaba `.tema-btn`, `.cant button` y similares (iconos en cuadrados azules). Excepciones con mayor especificidad en `web/static/css/cofrial.css`; badges de temperatura con SVG visible otra vez en `tienda.css`.
 - **Seguimiento del envío:** realineación de la línea de tiempo en detalle de pedido — clase `pasos-envio`, rail `[tramo | marca | tramo]` y partial `web/templates/pedidos/_paso_envio.html` (`cofrial.css`, `tienda.css`, `pedidos/detalle.html`). Etiquetas («Recibida», fecha) centradas bajo el hito; conectores alineados al círculo.
 - **Para el PR:** agrupar estos cambios (MP + CSS botones/iconos + timeline) con prueba manual documentada (compra B2C aprobada → pantalla de confirmación + seguimiento alineado).
+
+## 2026-11-06: preparación de la defensa
+- Retención de telemetría implementada (`manage.py podar_telemetria` y servicio `podador`): el informe la declaraba como mitigación y no existía en el código. Se ajustó el riesgo de `03-arquitectura-cloud.md`, porque no se agrega por hora. El Word aún no incorpora ese cambio.
+- Guion de la defensa: el tope de la IA es de 12 s y no de 5 s, se agregan las preguntas sobre IA de pago y crecimiento de la telemetría, y se pide confirmar que `ANTHROPIC_API_KEY` esté vacía en AWS.

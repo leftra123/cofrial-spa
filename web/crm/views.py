@@ -42,7 +42,7 @@ COMERCIAL = ("admin", "gerencia", "vendedor")
 
 
 def _avisar(request, error):
-    for m in getattr(error, "mensajes", [str(error) or "Dato no válido."]):
+    for m in getattr(error, "mensajes", ["Dato no válido: revisa lo que escribiste."]):     # un ValueError trae texto de Python, no para el usuario
         messages.error(request, m)
 
 

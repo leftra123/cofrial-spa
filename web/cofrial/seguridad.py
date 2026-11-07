@@ -102,6 +102,11 @@ def limpiar_fallos(sender, request, user, **kwargs):
 
 
 # ---------------------------------------------------------------- middleware
+# El navegador pide estas rutas por su cuenta (sobre todo desde una página de error sin <link rel=icon>). Si contaran como «no encontrado»,
+# unas pocas páginas de error bloquearían a toda la sala, que sale por una sola IP.
+ICONOS_DEL_NAVEGADOR = {"/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"}
+
+
 class ProteccionMiddleware:
     """Va antes que sesiones y autenticación: corta rápido a quien ya excedió un límite."""
 
@@ -114,7 +119,7 @@ class ProteccionMiddleware:
         if bloqueo is not None:
             return bloqueo
         respuesta = self.get_response(request)
-        if respuesta.status_code == 404 and not request.path.startswith("/bi/"):      # los 404 de Grafana (ya detrás de la sesión) no son un barrido
+        if respuesta.status_code == 404 and not request.path.startswith("/bi/") and request.path not in ICONOS_DEL_NAVEGADOR:      # los 404 de Grafana (ya detrás de la sesión) y los íconos que el navegador pide solo no son un barrido
             n = _contar(f"escaneo:{ip}", settings.ESCANEO_VENTANA_SEG)
             if n == settings.ESCANEO_MAX_404 + 1:
                 log.warning("Barrido de rutas desde %s: %s «no encontrado» en %s s (último: %s)", ip, n - 1, settings.ESCANEO_VENTANA_SEG, request.path[:80])

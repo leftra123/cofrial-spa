@@ -281,6 +281,7 @@ td button, td .btn { padding: 6px 12px; font-size: .85rem; }
 td input[type=number] { padding: 6px 8px; width: 74px; }
 td select { padding: 6px 2rem 6px 8px; max-width: 220px; }
 .en-linea { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.en-linea input:not([type=number]):not([type=checkbox]):not([type=radio]):not([type=hidden]) { min-width: 0; flex: 1 1 16rem; }   /* size="50" medía 457 px y desbordaba el móvil */
 .ayuda { font-size: .82rem; color: var(--texto-3); margin: 4px 0 0; }
 .errorlist { color: var(--alerta-fg); list-style: none; padding: 0; margin: 4px 0; font-size: .85rem; }
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: gira .7s linear infinite; display: inline-block; }

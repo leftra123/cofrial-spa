@@ -138,6 +138,18 @@ class AccesoWeb(TestCase):
         self.assertContains(self.client.get("/crm/embudo/"), "Residencial Sur")
         self.assertContains(self.client.get("/crm/"), "oportunidades abiertas")
 
+    def test_el_mismo_prospecto_enviado_dos_veces_no_se_duplica(self):
+        """Doble clic o dos pestañas: el segundo envío idéntico lleva al prospecto ya creado, sin crear otro."""
+        self.entrar("vendedora@cofrial.cl")
+        datos = {"nombre_contacto": "Doble Clic", "empresa": "Impaciente Ltda", "email": "doble@clic.test", "origen": "web"}
+        primero = self.client.post("/crm/prospectos/nuevo/", datos)
+        segundo = self.client.post("/crm/prospectos/nuevo/", datos, follow=True)
+        self.assertEqual(Prospecto.objects.filter(empresa="Impaciente Ltda").count(), 1)
+        self.assertEqual(segundo.redirect_chain[-1][0], primero["Location"])
+        self.assertContains(segundo, "ya se había creado")
+        self.client.post("/crm/prospectos/nuevo/", {**datos, "email": "otro@clic.test"})       # otro correo: es otra persona
+        self.assertEqual(Prospecto.objects.filter(empresa="Impaciente Ltda").count(), 2)
+
     def test_gerencia_ve_todo_pero_no_modifica(self):
         self.entrar("gerencia@cofrial.cl")
         self.assertContains(self.client.get("/crm/embudo/"), "Casino Escolar")
@@ -258,6 +270,21 @@ class ClasificacionIA(TestCase):
         with patch("crm.ia._llamar", return_value='{"categoria": "Otro", "confianza": 0.3}'):
             r = self.client.post(f"/crm/requerimientos/{self._req().pk}/ia/", follow=True)
         self.assertContains(r, "no estuvo lo bastante segura")
+
+
+    def test_reintentar_con_la_ia_caida_sobre_un_requerimiento_ya_clasificado_no_inventa_confianza(self):
+        """Un reclamo que el sistema ya clasificó (p. ej. «Entrega no concretada») y la IA caída: el aviso no dice «confianza None»."""
+        from unittest.mock import patch
+        from crm import ia
+        from crm.models import CategoriaRequerimiento
+        r = self._req()
+        r.categoria_requerimiento, r.estado = CategoriaRequerimiento.objects.first(), "clasificado"
+        r.save()
+        self.entrar("vendedora@cofrial.cl")
+        with patch("crm.ia._llamar", side_effect=ia.ErrorIA("sin red")):
+            resp = self.client.post(f"/crm/requerimientos/{r.pk}/ia/", follow=True)
+        self.assertContains(resp, "ya tenía su categoría")
+        self.assertNotContains(resp, "None")
 
 
 class ClienteGemini(TestCase):

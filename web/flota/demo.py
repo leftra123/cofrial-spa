@@ -1,7 +1,8 @@
 """Modo demostración: forzar una ruptura de frío en un camión para mostrarla en vivo (campanita, alertas del CRM y Grafana).
 
 Solo para administradores. No corre solo: exige confirmación, dura como máximo DURACION_MAX_S, y sus lecturas quedan marcadas
-(`forzada`) para poder apagarlas y borrarlas sin tocar la telemetría real del simulador."""
+(`forzada`) para poder apagarlas y borrarlas sin tocar la telemetría real del simulador.
+La misma pantalla pide escenarios para un viaje en curso; esos los ejecuta el simulador (ver `escenarios.py`)."""
 from datetime import timedelta
 
 from django.conf import settings
@@ -12,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from crm.views import con_rol
 
+from . import escenarios
 from .models import Camion, Telemetria
 
 DURACION_MAX_S = 180     # tope de una ruptura forzada
@@ -38,7 +40,8 @@ def _estado(request, camion):
 def pagina(request):
     camiones = Camion.objects.filter(activo=True).select_related("rango_temperatura").order_by("camion_id")
     return render(request, "flota/demo.html", {"rol": request.rol, "camiones": camiones, "duracion": DURACION_MAX_S,
-                                               "forzadas": Telemetria.objects.filter(forzada=True).count()})
+                                               "forzadas": Telemetria.objects.filter(forzada=True).count(),
+                                               "predefinidos": escenarios.PREDEFINIDOS, "escenarios_datos": escenarios.contexto()})
 
 
 def _insertar(camion, temp, alerta):
@@ -89,10 +92,11 @@ def apagar(request):
 @require_POST
 @con_rol("admin")
 def limpiar(request):
-    """Borra solo las lecturas forzadas; la telemetría real queda intacta."""
+    """Borra los escenarios y las lecturas forzadas (las de esta pantalla y las de las fallas de un escenario); la telemetría real queda intacta."""
     if request.POST.get("confirmar") != "1":
         return JsonResponse({"detail": "Hay que confirmar para borrar."}, status=400)
+    resultado = escenarios.limpiar()                 # primero: así el simulador deja de marcar lecturas antes de borrarlas
     n, _ = Telemetria.objects.filter(forzada=True).delete()
     for k in [k for k in request.session.keys() if k.startswith("demo_")]:
         request.session.pop(k)
-    return JsonResponse({"borradas": n, "forzadas": 0})
+    return JsonResponse({"borradas": n, "forzadas": 0, **resultado})

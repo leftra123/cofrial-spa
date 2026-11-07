@@ -2,7 +2,7 @@
 {% block titulo %}Modo demostración | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
-  <div><h1>Modo <span class="marca-texto">demostración</span></h1><p class="sub">Fuerza una ruptura de frío en un camión para mostrarla en vivo. Solo para administradores.</p></div>
+  <div><h1>Modo <span class="marca-texto">demostración</span></h1><p class="sub">Fuerza una ruptura de frío o pide un escenario para un viaje en curso. Solo para administradores.</p></div>
   <div class="acciones"><span class="chip cancelado sin-punto">Rol: {{ rol }}</span></div>
 </div>
 {% endblock %}
@@ -28,10 +28,33 @@
       {% if grafana_url %}<li><b>Panel BI:</b> <a href="{{ grafana_url }}" target="_blank" rel="noopener">Grafana</a> (alertas, ventas en riesgo y temperatura por camión; se actualiza cada 5 s).</li>{% endif %}
     </ul>
     <h2 style="margin-top:18px">3. Limpiar</h2>
-    <p class="muted">Borra solo las lecturas creadas desde esta pantalla (<b id="n-forzadas">{{ forzadas }}</b> ahora). La telemetría real no se toca.</p>
-    <button type="button" class="btn-sec" id="limpiar">Borrar lecturas forzadas</button>
+    <p class="muted">Borra los escenarios, los requerimientos que crearon y las lecturas marcadas como demostración (<b id="n-forzadas">{{ forzadas }}</b> ahora). La telemetría real no se toca.</p>
+    <button type="button" class="btn-sec" id="limpiar">Borrar lo de la demostración</button>
   </section>
 </div>
+<section class="tarjeta-ui" aria-labelledby="d-t4" style="margin-top:16px">
+  <h2 id="d-t4">4. Escenarios para un viaje en curso</h2>
+  <p class="muted">Los ejecutan los contenedores del simulador: leen el escenario de la base en su siguiente ciclo y las lecturas siguen saliendo de ellos. Los botones funcionan sin IA.</p>
+  <div class="rejilla dos">
+    <div>
+      <label for="esc-viaje">Viaje</label>
+      <select id="esc-viaje" style="width:100%"></select>
+      <label for="esc-parada" style="margin-top:12px">Parada (solo para «Cliente no recibe»)</label>
+      <select id="esc-parada" style="width:100%"></select>
+      <div class="acciones" style="margin-top:16px;flex-wrap:wrap">
+        {% for clave, p in predefinidos.items %}<button type="button" class="btn-sec esc-boton" data-predefinido="{{ clave }}">{{ p.titulo }}</button>{% endfor %}
+      </div>
+    </div>
+    <div>
+      <label for="esc-texto">O pídelo con tus palabras (lo interpreta la IA gratuita)</label>
+      <textarea id="esc-texto" rows="3" maxlength="300" style="width:100%" placeholder="Falla de frío a mitad de ruta en el camión del Hospital"></textarea>
+      <div class="acciones" style="margin-top:12px"><button type="button" class="btn-sec" id="esc-interpretar">Interpretar con IA</button><button type="button" class="btn-peligro" id="esc-activar" hidden>Activar esta propuesta</button></div>
+    </div>
+  </div>
+  <div class="demo-estado" id="esc-estado" role="status" aria-live="polite">Sin escenario pedido en esta pantalla.</div>
+  <h3 style="margin-top:16px">Últimos escenarios</h3>
+  <ul class="demo-lista" id="esc-lista"></ul>
+</section>
 <dialog id="dlg" class="dialogo" aria-labelledby="dlg-t">
   <form method="dialog">
     <h2 id="dlg-t">¿Forzar una ruptura de frío?</h2>
@@ -40,6 +63,7 @@
   </form>
 </dialog>
 {% csrf_token %}
+{{ escenarios_datos|json_script:"esc-datos" }}
 {% endblock %}
 {% block scripts %}
 <script>
@@ -72,9 +96,76 @@
     detener(); post("/demo/apagar/", {camion: sel.value}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Apagado. El camión vuelve a mostrar una temperatura normal."); });
   });
   document.getElementById("limpiar").addEventListener("click", function () {
-    if (!confirm("¿Borrar las lecturas forzadas? La telemetría real no se toca.")) return;
-    detener(); post("/demo/limpiar/", {confirmar: "1"}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Lecturas forzadas borradas (" + r.borradas + ")."); });
+    if (!confirm("¿Borrar los escenarios y las lecturas de demostración? La telemetría real no se toca.")) return;
+    detener(); post("/demo/limpiar/", {confirmar: "1"}).then(function (r) {
+      document.getElementById("n-forzadas").textContent = r.forzadas;
+      pantalla(false, "Limpio: " + r.borradas + " lecturas, " + r.escenarios + " escenarios y " + r.requerimientos + " requerimientos borrados.");
+      avisar(r.sin_concretar ? r.sin_concretar + " pedido(s) siguen en «Entrega no concretada»: se reprograman en Armar despacho." : "Sin escenario pedido en esta pantalla.", false);
+      refrescar();
+    });
   });
+
+  // Escenarios: los textos llegan de la base o de la IA y se pintan siempre con textContent.
+  var selV = document.getElementById("esc-viaje"), selP = document.getElementById("esc-parada"), lista = document.getElementById("esc-lista"),
+      estadoE = document.getElementById("esc-estado"), texto = document.getElementById("esc-texto"), bInterpretar = document.getElementById("esc-interpretar"),
+      bActivar = document.getElementById("esc-activar"), botones = document.querySelectorAll(".esc-boton"), viajes = [], firma = "";
+  function avisar(msg, activa) { estadoE.textContent = msg; estadoE.classList.toggle("activa", !!activa); }
+  function opcion(sel, valor, etiqueta) { var o = document.createElement("option"); o.value = valor; o.textContent = etiqueta; sel.appendChild(o); }
+  function pintarParadas() {
+    var previa = selP.value, viaje = viajes.filter(function (v) { return String(v.despacho_id) === selV.value; })[0];
+    selP.textContent = "";
+    (viaje ? viaje.paradas : []).forEach(function (p) { opcion(selP, p.direccion_id, p.cliente + " (" + p.comuna + ")"); });
+    if (previa) selP.value = previa;
+    if (!selP.value && selP.options.length) selP.selectedIndex = 0;
+  }
+  function pintar(d) {
+    var nueva = JSON.stringify(d);
+    if (nueva === firma) return;                 // sin cambios no se redibuja: una lista desplegada no se cierra sola
+    firma = nueva;
+    var previo = selV.value;
+    viajes = d.viajes; selV.textContent = "";
+    viajes.forEach(function (v) { opcion(selV, v.despacho_id, v.camion + " · viaje " + v.despacho_id + " · " + (v.paradas.map(function (p) { return p.cliente; }).join(", ") || "sin paradas pendientes")); });
+    if (!viajes.length) opcion(selV, "", "No hay viajes en curso: arma un despacho primero");
+    if (previo) selV.value = previo;
+    if (!selV.value && selV.options.length) selV.selectedIndex = 0;
+    pintarParadas();
+    botones.forEach(function (b) { b.disabled = !viajes.length; });
+    lista.textContent = "";
+    if (!d.escenarios.length) { var vacio = document.createElement("li"); vacio.textContent = "Todavía no hay escenarios."; lista.appendChild(vacio); }
+    d.escenarios.forEach(function (e) {
+      var li = document.createElement("li");
+      li.textContent = e.camion + " · viaje " + e.despacho_id + " · " + e.tipo + " · " + e.estado + " · " + e.origen + (e.modelo ? " (" + e.modelo + ")" : "") + (e.pedido ? " · «" + e.pedido + "»" : "") + " ";
+      if (e.vigente) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "btn-sec"; b.textContent = "Cancelar";
+        b.addEventListener("click", function () { post("/flota/escenarios/cancelar/", {escenario: e.id}).then(function (r) { if (r._ok) { avisar("Escenario cancelado. El camión vuelve a lo normal en el siguiente ciclo.", false); pintar(r); } else { avisar(r.detail, false); } }); });
+        li.appendChild(b);
+      }
+      lista.appendChild(li);
+    });
+    document.getElementById("n-forzadas").textContent = d.forzadas;
+  }
+  function refrescar() { return fetch("/flota/escenarios/estado/", {credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d) pintar(d); }).catch(function () {}); }
+  function activado(r) { if (!r._ok) { avisar(r.detail || "No se pudo activar.", false); return; } avisar("Activado: " + r.resumen, true); bActivar.hidden = true; pintar(r); }
+  selV.addEventListener("change", pintarParadas);
+  botones.forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (!confirm("¿Activar «" + b.textContent + "» en el viaje elegido? Los clientes de ese viaje verán sus efectos.")) return;
+      post("/flota/escenarios/activar/", {predefinido: b.dataset.predefinido, despacho: selV.value, direccion: selP.value, confirmar: "1"}).then(activado).catch(function () { avisar("Sin conexión con el servidor.", false); });
+    });
+  });
+  bInterpretar.addEventListener("click", function () {
+    bInterpretar.disabled = true; bActivar.hidden = true; avisar("Consultando a la IA…", false);
+    post("/flota/escenarios/interpretar/", {texto: texto.value}).then(function (r) {
+      if (!r._ok) { avisar(r.detail || "No se pudo interpretar.", false); return; }
+      avisar("Propuesta" + (r.modelo ? " de " + r.modelo : "") + ": " + r.resumen, false); bActivar.hidden = false;
+    }).catch(function () { avisar("Sin conexión con el servidor. Usa los botones.", false); }).then(function () { bInterpretar.disabled = false; });
+  });
+  bActivar.addEventListener("click", function () {
+    if (!confirm("¿Activar la propuesta? " + estadoE.textContent)) return;
+    post("/flota/escenarios/activar/", {propuesta: "1", confirmar: "1"}).then(activado).catch(function () { avisar("Sin conexión con el servidor.", false); });
+  });
+  pintar(JSON.parse(document.getElementById("esc-datos").textContent));
+  setInterval(refrescar, 5000);
 })();
 </script>
 {% endblock %}

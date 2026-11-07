@@ -294,11 +294,16 @@ def seguimiento(orden):
         return None
     from flota import rutas
     camion = orden.despacho.camion
-    desde = timezone.now() - timedelta(minutes=60)
-    lecturas = list(Telemetria.objects.filter(camion=camion, registrado_en__gte=desde).order_by("registrado_en"))
-    ultima = (lecturas[-1] if lecturas else Telemetria.objects.filter(camion=camion).order_by("-registrado_en").first())
-    from flota.vigente import ultima_vigente
-    ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada
+    fin = fin_de_exposicion(orden) if orden.estado_orden.nombre == "Entregada" else None
+    todas = Telemetria.objects.filter(camion=camion)
+    if fin is not None:               # RN-13: quien ya recibió no ve lo que le pasó al camión después de su entrega (resumen hasta ese momento)
+        todas = todas.filter(registrado_en__lte=fin)
+    desde = (fin or timezone.now()) - timedelta(minutes=60)
+    lecturas = list(todas.filter(registrado_en__gte=desde).order_by("registrado_en"))
+    ultima = (lecturas[-1] if lecturas else todas.order_by("-registrado_en").first())
+    if fin is None:
+        from flota.vigente import ultima_vigente
+        ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada (no aplica a una entrega ya cerrada)
     rango = camion.rango_temperatura
     en_vivo = mapa_en_vivo(orden)                     # el mapa y la posición solo se muestran mientras el camión va o está en la puerta
     return {
@@ -318,6 +323,18 @@ def seguimiento(orden):
         "entrega": entrega_de(orden),
         **_llegada(orden, ultima),
     }
+
+
+def fin_de_exposicion(orden, ahora=None):
+    """RN-13: hasta cuándo la carga de esta orden estuvo en el camión, y por tanto hasta cuándo cuenta una ruptura de frío para ella. Un viaje
+    puede llevar a varios clientes: quien ya recibió no se ve afectado por una falla posterior; quien aún no recibe (en la puerta o con la
+    entrega sin concretar) sigue a bordo hasta el regreso. Es la misma regla que `crm.servicios.fin_de_exposicion` (PR de casos de uso):
+    cuando ambos estén en `main`, el CRM puede importar esta función y dejar una sola."""
+    from django.utils import timezone
+    d = orden.despacho
+    if orden.estado_orden.nombre == "Entregada":
+        return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
+    return d.regreso_en or ahora or timezone.now()
 
 
 def mapa_en_vivo(orden):

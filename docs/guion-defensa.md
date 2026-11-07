@@ -55,6 +55,14 @@
 3. El equipo ve esa demanda en `/crm/demanda/` y repone el stock.
 4. Con stock suficiente, el cliente ve un contador en `/avisos/` y compra desde ahí.
 
+**5. El administrador agrega usuarios por tipo** (solo `admin@cofrial.cl`; si el profesor pregunta «¿cómo se crea un usuario?»)
+1. Ingresar con `admin@cofrial.cl` (la clave está en la hoja de cuentas, no se escribe aquí ni se muestra en pantalla). El inicio es `/crm/`: en «Accesos directos del administrador» pulsar **Usuarios** (también está en el menú lateral, «Operación del sistema»).
+2. `/operacion/cuentas/` muestra una tarjeta por tipo con su cantidad: cliente institucional, cliente particular, vendedor, gerencia, despachador y administrador. Pulsar la tarjeta filtra la tabla y la búsqueda sigue funcionando; cada fila tiene **Asignar clave**.
+3. Pulsar **Agregar** en una tarjeta (por ejemplo, Vendedor): el formulario pide solo los datos de ese tipo (RUT, dirección y vendedor aparecen solo para clientes). Escribir un correo y una clave dos veces; la clave no se muestra ni vuelve a la pantalla.
+4. Volver a la lista: la cantidad de esa tarjeta subió en uno. Mostrar que entra: cerrar sesión e ingresar con la cuenta nueva (esa clave la dicta quien la creó).
+5. Abajo, **Clientes sin cuenta del portal**: un cliente ganado en el CRM aparece ahí; **Crear cuenta** lo enlaza a ese mismo cliente, sin duplicarlo.
+- Seguridad que se puede mencionar: solo el administrador entra (los demás roles reciben 403), la clave se valida y se guarda con hash, y reponer stock está en `/operacion/stock/`, enlazado desde `/crm/demanda/`.
+
 **Tablero BI:** Grafana en `/bi/` cruza ventas por canal con alertas de ruptura de frío y se refresca solo; lo ven admin (edita) y gerencia (solo mira), el resto recibe acceso denegado.
 
 ## Preguntas probables

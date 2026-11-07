@@ -4,15 +4,20 @@
 .campo-op .frio { margin: 6px 0 0; }
 .error-campo { color: var(--alerta-fg); font-size: .85rem; font-weight: 600; margin: 6px 0 0; }
 .buscar-op { margin-bottom: 18px; }
+.tipos-op { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 18px; }
+.tipo-op { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.tipo-op.activa { border-color: var(--acento); box-shadow: 0 0 0 2px var(--foco); }
+.tipo-filtro { display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: inherit; }
+.tipo-n { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.tipo-nombre { color: var(--texto-3); font-size: .9rem; font-weight: 600; }
 [data-roles][hidden] { display: none; }
 </style>{% endblock %}
 {% block contenido %}
 {% with ruta=request.path %}
 <nav class="subnav" aria-label="Secciones de operación">
   <a href="/operacion/" {% if ruta == "/operacion/" %}class="activo" aria-current="page"{% endif %}>Resumen</a>
+  <a href="/operacion/cuentas/" {% if "/operacion/cuentas/" in ruta or "/operacion/clientes/" in ruta %}class="activo" aria-current="page"{% endif %}>Usuarios</a>
   <a href="/operacion/stock/" {% if "/operacion/stock" in ruta %}class="activo" aria-current="page"{% endif %}>Reponer stock</a>
-  <a href="/operacion/cuentas/nueva/" {% if ruta == "/operacion/cuentas/nueva/" %}class="activo" aria-current="page"{% endif %}>Crear cuenta</a>
-  <a href="/operacion/cuentas/" {% if ruta == "/operacion/cuentas/" or "/clave/" in ruta %}class="activo" aria-current="page"{% endif %}>Claves de cuentas</a>
   <span class="chip cancelado rol">Solo administrador</span>
 </nav>
 {% endwith %}

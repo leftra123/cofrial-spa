@@ -22,6 +22,7 @@ Hay tres formas. En AWS se usa la web (A0 o A) porque no requiere entrar a la m�
 
 ### A0. Desde la pantalla de operación (`/operacion/`), la más corta
 Solo el administrador (menú **Operación del sistema**, o `http://IP/operacion/`).
+- **Usuarios** (`/operacion/cuentas/`): una tarjeta por tipo con su cantidad; al pulsarla se filtra la tabla, y su botón **Agregar** abre el formulario de ese tipo. Los clientes que existen en el CRM sin cuenta del portal (por ejemplo, un prospecto ganado) aparecen abajo con **Crear cuenta**, que los enlaza sin duplicarlos.
 - **Crear cuenta** (`/operacion/cuentas/nueva/`): se elige el rol (cliente B2B, cliente B2C, vendedor, gerencia, despachador o administrador), se completan los datos que pide ese rol y se escribe la clave dos veces. Crea de una vez el usuario, el grupo, el vendedor o el cliente con su dirección. Usa las mismas reglas que `crear_cuenta` (`web/clientes/cuentas.py`).
 - **Claves de cuentas** (`/operacion/cuentas/`): lista con búsqueda por correo, nombre o RUT; «Asignar clave» guarda una clave nueva. La clave se valida y se guarda con hash; no se muestra ni se registra. Al cambiar la propia, la sesión del administrador sigue abierta. La pantalla no desactiva cuentas ni cambia roles.
 - **Reponer stock** (`/operacion/stock/`): suma unidades a un producto (ver `docs/decisiones.md`).

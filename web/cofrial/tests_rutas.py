@@ -59,6 +59,7 @@ ESPERADO = {
     '/operacion/stock/999999/sumar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
     '/operacion/cuentas/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
     '/operacion/cuentas/nueva/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/clientes/999999/cuenta/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
     '/operacion/cuentas/999999/clave/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
     '/bi/': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),            # solo gerencia y admin; 502 porque en las pruebas no hay Grafana (ver test_bi)
     '/bi/x': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),

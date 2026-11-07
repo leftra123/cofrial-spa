@@ -35,8 +35,8 @@ def validar_clave(clave, usuario=None):
         raise ErrorCuenta("Clave no válida: " + " ".join(e.messages), campo="clave", codigo="clave")
 
 
-def preparar(usuario, rol, nombre="", rut=None, direccion=None, comuna="Temuco", vendedor=None):
-    """Valida los datos de una cuenta nueva y los deja listos para `crear`. No toca la base."""
+def validar_nombre_libre(usuario):
+    """El usuario tiene caracteres permitidos y no existe todavía (sin distinguir mayúsculas)."""
     Usuario = get_user_model()
     try:
         Usuario._meta.get_field("username").run_validators(usuario)
@@ -44,6 +44,11 @@ def preparar(usuario, rol, nombre="", rut=None, direccion=None, comuna="Temuco",
         raise ErrorCuenta(" ".join(e.messages), campo="usuario", codigo="usuario_invalido")
     if Usuario.objects.filter(username__iexact=usuario).exists():
         raise ErrorCuenta(f"El usuario {usuario} ya existe.", campo="usuario", codigo="existe")
+
+
+def preparar(usuario, rol, nombre="", rut=None, direccion=None, comuna="Temuco", vendedor=None):
+    """Valida los datos de una cuenta nueva y los deja listos para `crear`. No toca la base."""
+    validar_nombre_libre(usuario)
     cliente = rol.startswith("cliente")
     datos = {"usuario": usuario, "rol": rol, "nombre": nombre, "cliente": cliente}
     if cliente:
@@ -90,6 +95,24 @@ def crear(datos, clave):
             if datos["cliente"]:
                 c = Cliente.objects.create(usuario=u, tipo_cliente=datos["tipo"], vendedor=datos["vendedor"], rut=datos["rut"], nombre=nombre, email=correo)
                 Direccion.objects.create(cliente=c, calle_numero=datos["direccion"], comuna=datos["comuna"], es_principal=True)
+    except IntegrityError:
+        raise ErrorCuenta("La cuenta ya existe: alguien la creó al mismo tiempo.", codigo="existe")
+    return u
+
+
+def crear_para_cliente(cliente, usuario, clave):
+    """Cuenta del portal para un cliente que ya existe (por ejemplo, el que nace al ganar un prospecto y todavía no puede ingresar):
+    se enlaza al cliente existente, no se crea otro. Todo o nada; falla si el cliente ya tiene cuenta."""
+    validar_nombre_libre(usuario)
+    Usuario = get_user_model()
+    try:
+        with transaction.atomic():
+            fijo = Cliente.objects.select_for_update().get(pk=cliente.pk)
+            if fijo.usuario_id:
+                raise ErrorCuenta("Este cliente ya tiene una cuenta del portal.", codigo="con_cuenta")
+            u = Usuario.objects.create_user(usuario, email=usuario if "@" in usuario else "", password=clave)
+            fijo.usuario = u
+            fijo.save(update_fields=["usuario"])
     except IntegrityError:
         raise ErrorCuenta("La cuenta ya existe: alguien la creó al mismo tiempo.", codigo="existe")
     return u

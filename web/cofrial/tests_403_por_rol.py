@@ -111,20 +111,26 @@ class SoloElAdministradorOpera(Base):
         stock, usuarios = p.stock_disponible, Usuario.objects.count()
         ana = Usuario.objects.get(username="ana@correo.test")
         clave_ana = ana.password
+        from clientes.models import Cliente, TipoCliente
+        sin_cuenta = Cliente.objects.create(tipo_cliente=TipoCliente.objects.get(codigo="B2B"), rut="76.111.222-8", nombre="Sin cuenta", email="s@t.test")
         acciones = [(f"/operacion/stock/{p.pk}/sumar/", {"cantidad": 50}),
                     ("/operacion/cuentas/nueva/", {"usuario": "intruso@t.test", "rol": "admin", "clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"}),
-                    (f"/operacion/cuentas/{ana.pk}/clave/", {"clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"})]
+                    (f"/operacion/cuentas/{ana.pk}/clave/", {"clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"}),
+                    (f"/operacion/clientes/{sin_cuenta.pk}/cuenta/", {"usuario": "intruso2@t.test", "clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"}),
+                    ("/operacion/cuentas/nueva/?tipo=admin", {"usuario": "intruso3@t.test", "clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"})]
         for usuario in self.NO_ADMIN:
             c = self.entrar(usuario)
             for url, datos in acciones:
                 with self.subTest(usuario=usuario, url=url):
                     self.assertEqual(c.post(url, datos).status_code, 403)
                     self.assertEqual(c.get(url).status_code, 403 if "sumar" not in url else 405)
-            for url in ("/operacion/", "/operacion/stock/", "/operacion/cuentas/"):
+            for url in ("/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/?tipo=admin"):
                 self.assertEqual(c.get(url).status_code, 403, f"{usuario} {url}")
         p.refresh_from_db()
         ana.refresh_from_db()
+        sin_cuenta.refresh_from_db()
         self.assertEqual((p.stock_disponible, Usuario.objects.count(), ana.password), (stock, usuarios, clave_ana))
+        self.assertIsNone(sin_cuenta.usuario)
 
     def test_sin_sesion_lleva_al_login(self):
         for url in ("/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/"):

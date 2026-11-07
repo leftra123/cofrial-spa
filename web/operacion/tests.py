@@ -333,3 +333,185 @@ class DarClave(Base):
     def crear_cuenta_extra(self, c):
         r = c.post("/operacion/cuentas/nueva/", {"usuario": "extra@t.test", "rol": "gerencia", "clave": NUEVA, "clave2": NUEVA})
         self.assertEqual(r.status_code, 302)
+
+
+class UsuariosPorTipo(Base):
+    """Pantalla Usuarios: una tarjeta por tipo con su cantidad y su botón Agregar, tabla filtrable y formulario por tipo."""
+    TIPOS = ("cliente-b2b", "cliente-b2c", "vendedor", "gerencia", "despachador", "admin")
+
+    def test_hay_una_tarjeta_por_tipo_con_su_cantidad_y_su_boton_agregar(self):
+        r = self.entrar().get("/operacion/cuentas/")
+        tarjetas = {t["rol"]: t["n"] for t in r.context["tarjetas"]}
+        self.assertEqual(list(tarjetas), list(self.TIPOS))
+        self.assertEqual(tarjetas, {"cliente-b2b": 2, "cliente-b2c": 2, "vendedor": 2, "gerencia": 1, "despachador": 1, "admin": 2})   # las cuentas de la demo
+        self.assertEqual(sum(tarjetas.values()) + r.context["otros"], Usuario.objects.count())
+        for rol in self.TIPOS:
+            self.assertContains(r, f'href="/operacion/cuentas/nueva/?tipo={rol}"')
+            self.assertContains(r, f'href="?tipo={rol}')
+
+    def test_las_cantidades_cuentan_las_cuentas_nuevas(self):
+        c = self.entrar()
+        c.post("/operacion/cuentas/nueva/?tipo=despachador", {"usuario": "des2@t.test", "clave": NUEVA, "clave2": NUEVA})
+        tarjetas = {t["rol"]: t["n"] for t in c.get("/operacion/cuentas/").context["tarjetas"]}
+        self.assertEqual(tarjetas["despachador"], 2)
+
+    def test_filtra_por_tipo_y_la_busqueda_sigue_funcionando_junto(self):
+        c = self.entrar()
+        r = c.get("/operacion/cuentas/", {"tipo": "vendedor"})
+        self.assertEqual(sorted(x["u"].username for x in r.context["cuentas"]), ["vendedor2@cofrial.cl", "vendedora@cofrial.cl"])
+        self.assertEqual([t["rol"] for t in r.context["tarjetas"] if t["activa"]], ["vendedor"])
+        self.assertContains(r, "Asignar clave")
+        r = c.get("/operacion/cuentas/", {"tipo": "vendedor", "q": "vendedor2"})
+        self.assertEqual([x["u"].username for x in r.context["cuentas"]], ["vendedor2@cofrial.cl"])
+        self.assertEqual({t["rol"]: t["n"] for t in r.context["tarjetas"]}["vendedor"], 2)         # los conteos no dependen de la búsqueda
+        self.assertEqual(c.get("/operacion/cuentas/", {"tipo": "gerencia", "q": "vendedor"}).context["cuentas"], [])
+        self.assertEqual({x["rol"] for x in c.get("/operacion/cuentas/", {"tipo": "cliente-b2c"}).context["cuentas"]}, {"Cliente particular (B2C)"})
+
+    def test_un_tipo_que_no_existe_se_ignora(self):
+        c = self.entrar()
+        for malo in ("inventado", "admin' OR 1=1", "<script>", "personal", "sin rol", "../../", ""):
+            r = c.get("/operacion/cuentas/", {"tipo": malo})
+            self.assertEqual(r.status_code, 200, malo)
+            self.assertEqual(r.context["tipo"], "", malo)
+            self.assertEqual(len(r.context["cuentas"]), Usuario.objects.count(), malo)
+            r = c.get("/operacion/cuentas/nueva/", {"tipo": malo})
+            self.assertEqual(r.status_code, 200, malo)
+            self.assertEqual(r.context["tipo"], "", malo)
+
+    def test_el_formulario_pide_solo_los_campos_de_cada_tipo(self):
+        c = self.entrar()
+        esperados = {"cliente-b2b": ["nombre", "rut", "direccion", "comuna", "vendedor", "clave", "clave2"],
+                     "cliente-b2c": ["nombre", "rut", "direccion", "comuna", "clave", "clave2"],
+                     "vendedor": ["nombre", "clave", "clave2"], "gerencia": ["nombre", "clave", "clave2"],
+                     "despachador": ["nombre", "clave", "clave2"], "admin": ["nombre", "clave", "clave2"]}
+        for rol, campos in esperados.items():
+            with self.subTest(rol=rol):
+                r = c.get("/operacion/cuentas/nueva/", {"tipo": rol})
+                self.assertEqual([n for n in r.context["form"].fields if n not in ("usuario", "rol")], campos)
+                self.assertContains(r, f'name="rol" value="{rol}"')
+                for campo in ("rut", "direccion", "vendedor"):
+                    self.assertEqual(f'name="{campo}"' in r.content.decode(), campo in campos, campo)
+
+    def test_con_tipo_en_la_url_el_rol_es_ese_aunque_el_formulario_diga_otro(self):
+        """Un POST manipulado no puede crear un administrador desde la pantalla de otro tipo."""
+        r = self.entrar().post("/operacion/cuentas/nueva/?tipo=gerencia", {"usuario": "falso@t.test", "rol": "admin", "clave": NUEVA, "clave2": NUEVA})
+        self.assertRedirects(r, "/operacion/cuentas/?tipo=gerencia", fetch_redirect_response=False)
+        u = Usuario.objects.get(username="falso@t.test")
+        self.assertFalse(u.is_superuser)
+        self.assertEqual(s.rol_de(Usuario.objects.get(pk=u.pk)), "gerencia")
+
+    def test_crear_un_cliente_desde_su_tarjeta(self):
+        c = self.entrar()
+        temuco = Comuna.objects.get(nombre="Temuco").pk
+        r = c.post("/operacion/cuentas/nueva/?tipo=cliente-b2b", {"usuario": "compras@hotel.test", "nombre": "Hotel Villarrica", "rut": "76.111.222-8",
+                                                                  "direccion": "Av. Pedro de Valdivia 100", "comuna": temuco, "clave": NUEVA, "clave2": NUEVA})
+        self.assertRedirects(r, "/operacion/cuentas/?tipo=cliente-b2b", fetch_redirect_response=False)
+        self.assertEqual(Cliente.objects.get(rut="76.111.222-8").tipo_cliente.codigo, "B2B")
+        r = c.post("/operacion/cuentas/nueva/?tipo=cliente-b2c", {"usuario": "x@t.test", "nombre": "X", "clave": NUEVA, "clave2": NUEVA})
+        self.assertEqual(r.status_code, 200)                                                    # sin RUT ni dirección no se crea
+        self.assertContains(r, "Indica el RUT")
+        self.assertFalse(Usuario.objects.filter(username="x@t.test").exists())
+
+    def test_el_acceso_se_encuentra_sin_buscarlo(self):
+        r = self.entrar().get("/operacion/")
+        self.assertContains(r, 'href="/operacion/cuentas/"')
+        self.assertContains(r, "Ver usuarios y agregar")
+        panel = self.entrar().get("/crm/")
+        self.assertContains(panel, 'href="/operacion/cuentas/"')
+        self.assertContains(panel, "Accesos directos del administrador")
+        for usuario in ("vendedora@cofrial.cl", "gerencia@cofrial.cl"):
+            self.assertNotContains(self.entrar(usuario).get("/crm/"), "/operacion/", msg_prefix=usuario)
+
+
+class ClienteSinCuenta(Base):
+    """Un cliente ganado (nace en el CRM sin cuenta del portal) debe poder ingresar sin duplicarlo."""
+
+    def cliente_ganado(self):
+        from clientes.models import Direccion, TipoCliente
+        c = Cliente.objects.create(tipo_cliente=TipoCliente.objects.get(codigo="B2B"), vendedor=Vendedor.objects.first(), rut="76.111.222-8",
+                                   nombre="Hotel Villarrica", email="Compras@Hotel.test")
+        Direccion.objects.create(cliente=c, calle_numero="Av. Pedro de Valdivia 100", comuna=Comuna.objects.get(nombre="Temuco"), es_principal=True)
+        return c
+
+    def crear(self, c, cliente, **datos):
+        return c.post(f"/operacion/clientes/{cliente.pk}/cuenta/", {"usuario": "compras@hotel.test", "clave": NUEVA, "clave2": NUEVA, **datos})
+
+    def test_se_crea_la_cuenta_enlazada_al_cliente_existente_sin_duplicarlo(self):
+        from pedidos import servicios as pedidos
+        cliente = self.cliente_ganado()
+        total, direcciones = Cliente.objects.count(), cliente.direccion_set.count()
+        r = self.crear(self.entrar(), cliente)
+        self.assertRedirects(r, f"/crm/clientes/{cliente.pk}/", fetch_redirect_response=False)
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.usuario.username, "compras@hotel.test")
+        self.assertEqual((Cliente.objects.count(), cliente.direccion_set.count()), (total, direcciones))           # el mismo cliente
+        self.assertEqual(pedidos.cliente_de(cliente.usuario), cliente)
+        self.assertIsNone(crm.rol(cliente.usuario))                                  # entra al portal, no al CRM
+        self.assertFalse(cliente.usuario.is_staff)
+        cli = Client()
+        self.assertTrue(cli.login(username="compras@hotel.test", password=NUEVA))
+        self.assertEqual(cli.get("/catalogo/").status_code, 200)
+        self.assertEqual(cli.get("/pedidos/").status_code, 200)
+
+    def test_la_pantalla_ofrece_el_correo_del_cliente_y_la_ficha_el_boton(self):
+        cliente = self.cliente_ganado()
+        c = self.entrar()
+        r = c.get(f"/operacion/clientes/{cliente.pk}/cuenta/")
+        self.assertEqual(r.context["form"].initial["usuario"], "compras@hotel.test")
+        self.assertContains(r, "Hotel Villarrica")
+        self.assertContains(c.get(f"/crm/clientes/{cliente.pk}/"), f'href="/operacion/clientes/{cliente.pk}/cuenta/"')
+        self.assertContains(c.get("/crm/clientes/"), f'href="/operacion/clientes/{cliente.pk}/cuenta/"')
+        self.assertContains(c.get("/operacion/cuentas/"), f'href="/operacion/clientes/{cliente.pk}/cuenta/"')
+        self.assertIn(cliente, c.get("/operacion/cuentas/").context["sin_cuenta"])
+        for usuario in ("vendedora@cofrial.cl", "gerencia@cofrial.cl"):
+            ficha = self.entrar(usuario).get(f"/crm/clientes/{cliente.pk}/")
+            self.assertNotContains(ficha, "/operacion/", msg_prefix=usuario)
+
+    def test_despues_de_crearla_el_boton_desaparece_y_no_se_puede_repetir(self):
+        cliente = self.cliente_ganado()
+        c = self.entrar()
+        self.crear(c, cliente)
+        self.assertNotContains(c.get(f"/crm/clientes/{cliente.pk}/"), "Crear cuenta del portal")
+        self.assertContains(c.get(f"/crm/clientes/{cliente.pk}/"), "compras@hotel.test")
+        usuarios = Usuario.objects.count()
+        r = self.crear(c, cliente, usuario="otra@hotel.test")
+        self.assertRedirects(r, f"/crm/clientes/{cliente.pk}/", fetch_redirect_response=False)
+        self.assertEqual(Usuario.objects.count(), usuarios)
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.usuario.username, "compras@hotel.test")
+
+    def test_valida_usuario_y_clave_y_no_deja_nada_a_medias(self):
+        cliente = self.cliente_ganado()
+        c = self.entrar()
+        usuarios = Usuario.objects.count()
+        for datos, texto in (({"usuario": "ana@correo.test"}, "ya existe"), ({"usuario": "ANA@correo.test"}, "ya existe"), ({"usuario": "con espacio"}, "usuario"),
+                             ({"clave": "1234", "clave2": "1234"}, "demasiado corta"), ({"clave2": NUEVA + "x"}, "no coinciden"), ({"usuario": ""}, "requerido")):
+            with self.subTest(datos=datos):
+                r = self.crear(c, cliente, **datos)
+                self.assertEqual(r.status_code, 200)
+                self.assertContains(r, texto)
+                self.assertNotContains(r, NUEVA)
+        self.assertEqual(Usuario.objects.count(), usuarios)
+        cliente.refresh_from_db()
+        self.assertIsNone(cliente.usuario)
+
+    def test_la_clave_no_se_muestra_ni_se_registra(self):
+        cliente = self.cliente_ganado()
+        c = self.entrar()
+        with self.assertLogs("cofrial.operacion", level="INFO") as registro:
+            r = self.crear(c, cliente)
+        self.assertNotIn(NUEVA, r["Location"])
+        self.assertNotIn(NUEVA, " ".join(registro.output))
+        self.assertFalse(Client().login(username="compras@hotel.test", password=CLAVE))
+
+    def test_requiere_csrf_y_cliente_inexistente_da_404(self):
+        cliente = self.cliente_ganado()
+        self.assertEqual(self.crear(self.entrar(enforce_csrf_checks=True), cliente).status_code, 403)
+        cliente.refresh_from_db()
+        self.assertIsNone(cliente.usuario)
+        self.assertEqual(self.entrar().get("/operacion/clientes/999999/cuenta/").status_code, 404)
+
+    def test_un_cliente_que_ya_tiene_cuenta_no_cambia(self):
+        ana = Cliente.objects.get(rut="12.345.678-5")
+        r = self.entrar().get(f"/operacion/clientes/{ana.pk}/cuenta/")
+        self.assertRedirects(r, f"/crm/clientes/{ana.pk}/", fetch_redirect_response=False)

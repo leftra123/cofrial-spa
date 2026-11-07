@@ -1,4 +1,4 @@
-"""Tareas del administrador que no tenían pantalla: reponer stock, listar cuentas y asignar claves.
+"""Tareas del administrador que no tenían pantalla: reponer stock, listar usuarios por tipo y asignar claves.
 Sin HTTP: las vistas (vistas.py) piden y muestran; las reglas están aquí para poder probarlas solas."""
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -95,3 +95,26 @@ def cuentas_con_rol(q=""):
 
 
 ROTULOS = dict(cuentas.ROLES) | {"personal": "Personal", "sin rol": "Sin rol"}
+
+
+def usuarios_por_tipo(q="", tipo=""):
+    """Para la pantalla Usuarios: cuántas cuentas hay de cada tipo (siempre sobre todas) y las filas de la tabla, filtradas por tipo y
+    por la búsqueda. Devuelve (conteos {rol: n}, otros, filas [(usuario, rol)], hay_mas). `tipo` vacío = todos."""
+    todos = list(cuentas_con_rol())
+    roles = {u.pk: rol_de(u) for u in todos}
+    conteos = {r: 0 for r, _ in cuentas.ROLES}
+    otros = 0
+    for r in roles.values():
+        if r in conteos:
+            conteos[r] += 1
+        else:
+            otros += 1
+    pks = set(cuentas_con_rol(q).values_list("pk", flat=True)) if q else None
+    filas = [(u, roles[u.pk]) for u in todos if (not tipo or roles[u.pk] == tipo) and (pks is None or u.pk in pks)]
+    return conteos, otros, filas[:FILAS_MAXIMAS], len(filas) > FILAS_MAXIMAS
+
+
+def clientes_sin_cuenta():
+    """Clientes que no pueden ingresar al portal (p. ej. los que nacen al ganar un prospecto), con el vendedor y el tipo."""
+    from clientes.models import Cliente
+    return Cliente.objects.filter(usuario__isnull=True).select_related("tipo_cliente", "vendedor").order_by("nombre")

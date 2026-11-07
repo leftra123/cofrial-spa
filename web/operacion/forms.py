@@ -42,12 +42,23 @@ class CuentaNuevaForm(ClaveMixin):
                                       help_text="Cartera del cliente institucional (B2B).")
     field_order = ["usuario", "rol", "nombre", "rut", "direccion", "comuna", "vendedor", "clave", "clave2"]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, tipo=None, **kwargs):
+        """Con `tipo` (un rol de cuentas.ROLES, ya validado por la vista) el rol queda fijo y el formulario pide solo los campos de ese tipo."""
         super().__init__(*args, **kwargs)
+        self.tipo = tipo
         self.fields["comuna"].queryset = Comuna.objects.order_by("nombre")
         self.fields["vendedor"].queryset = Vendedor.objects.filter(activo=True).select_related("usuario").order_by("nombre")
         if not self.is_bound:
             self.initial.setdefault("comuna", Comuna.objects.filter(nombre="Temuco").values_list("pk", flat=True).first())
+        if tipo:
+            self.fields["rol"].widget = forms.HiddenInput()
+            self.initial["rol"] = tipo
+            self.fields["nombre"].label = "Nombre de la empresa" if tipo == "cliente-b2b" else "Nombre completo" if tipo == "cliente-b2c" else "Nombre"
+            if tipo not in CLASES_CLIENTE:
+                for campo in ("rut", "direccion", "comuna", "vendedor"):
+                    del self.fields[campo]
+            elif tipo != "cliente-b2b":
+                del self.fields["vendedor"]
 
     def clean_usuario(self):
         return self.cleaned_data["usuario"].strip().lower()
@@ -113,3 +124,32 @@ class ClaveNuevaForm(ClaveMixin):
     def guardar(self):
         self.usuario.set_password(self.cleaned_data["clave"])
         self.usuario.save(update_fields=["password"])
+
+
+class ClienteCuentaForm(ClaveMixin):
+    """Cuenta del portal para un cliente que ya existe: solo el usuario y la clave; el RUT, el nombre y las direcciones son los del cliente."""
+    usuario = forms.CharField(label="Usuario (correo)", max_length=150, help_text="Con este correo ingresa el cliente. Se guarda en minúsculas.",
+                              widget=forms.TextInput(attrs={"autocomplete": "off", "autocapitalize": "none"}))
+    field_order = ["usuario", "clave", "clave2"]
+
+    def clean_usuario(self):
+        return self.cleaned_data["usuario"].strip().lower()
+
+    def clean(self):
+        d = super().clean()
+        usuario = d.get("usuario")
+        if usuario and "usuario" not in self.errors:
+            try:
+                cuentas.validar_nombre_libre(usuario)
+            except cuentas.ErrorCuenta as e:
+                self.add_error("usuario", str(e))
+        self.verificar_clave(get_user_model()(username=usuario or "", email=usuario if "@" in (usuario or "") else ""))
+        return d
+
+    def guardar(self, cliente):
+        return cuentas.crear_para_cliente(cliente, self.cleaned_data["usuario"], self.cleaned_data["clave"])
+
+    def is_valid(self):
+        valido = super().is_valid()
+        self.marcar_errores()
+        return valido

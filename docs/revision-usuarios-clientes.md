@@ -88,7 +88,11 @@ Cuatro commits chicos en esta rama. Las correcciones de JavaScript y de plantill
 | A-06 | Dos clics seguidos en «Agregar» del mismo producto suman una unidad: el botón se bloquea mientras llega la respuesta | Decisión | Evita duplicar con el doble clic. Quien quiera dos usa el selector de cantidad |
 | A-07 | «Llega entre 23:40 y 00:00» con salida a las 23:45 | Solo con la demo rápida | La ventana de llegada se calcula con la velocidad de la web (50 km/h) y el simulador va a 120. No pasa con `VELOCIDAD_MEDIA_KMH=50` |
 | A-08 | La consola del navegador registra un 404 de `/api/pedidos/N/ruta/` en pedidos ya entregados | Muy baja | La pantalla explica «El mapa en vivo ya no está disponible» |
-| A-09 | El botón «Precargar datos de ejemplo» pone siempre la clave `Cofrial-demo-2026`, que está en el código público | Decisión documentada (`docs/decisiones.md`) | Quien se registre así tiene una clave conocida. `REGISTRO_PRECARGA=0` lo oculta; conviene apagarlo si el sitio queda abierto después de la defensa |
+| A-09 | El botón «Precargar datos de ejemplo» pone siempre la misma clave, que está escrita en `web/static/js/precarga.js` (público) | Decisión documentada (`docs/decisiones.md`) | Quien se registre así tiene una clave conocida. `REGISTRO_PRECARGA=0` lo oculta; conviene apagarlo si el sitio queda abierto después de la defensa |
+
+## Suite
+
+Imagen reconstruida con `docker build -t cofrial-clientes-web ./web` y `docker compose run --rm -e DEMO_PASSWORD= -e ADMIN_PASSWORD= web python manage.py test --noinput`: **674 pruebas, 9 saltadas (las de `@abierto` y las que dependen de servicios externos), 1 falla de entorno**. La falla es `cofrial.tests.VelocidadCompartidaWebTests.test_valores_por_defecto`: espera `VELOCIDAD_MEDIA_KMH` sin definir y este stack local la tenía en 120 para la demostración. Con `-e VELOCIDAD_MEDIA_KMH=` el módulo `cofrial.tests` pasa completo (9 de 9). Hay que correr la suite con esa variable vacía o con el `.env` por defecto.
 
 ## Filas de la matriz repetidas
 

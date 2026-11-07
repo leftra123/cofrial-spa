@@ -57,11 +57,13 @@ def agregar(cliente, producto_id, cantidad):
         raise ErrorDeNegocio(f"{producto.nombre} no tiene precio en tu lista.")
     carrito = carrito_abierto(cliente)
     avisos.marcar_atendidos(cliente, producto.pk)          # si esperaba este producto, el aviso ya cumplió su función
-    item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
-    if not creado:
-        _validar_cantidad(item.cantidad + cantidad)
-        item.cantidad += cantidad
-        item.save(update_fields=["cantidad"])
+    with transaction.atomic():
+        item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
+        if not creado:
+            item = CarritoItem.objects.select_for_update().get(pk=item.pk)     # dos «Agregar» seguidos suman los dos, no se pisan
+            _validar_cantidad(item.cantidad + cantidad)
+            item.cantidad += cantidad
+            item.save(update_fields=["cantidad"])
     return item
 
 
@@ -80,7 +82,7 @@ def lineas(cliente):
     for item in CarritoItem.objects.filter(carrito=carrito_abierto(cliente)).select_related("producto").order_by("producto__nombre"):
         precio = precio_de(cliente, item.producto_id) or 0
         filas.append({"producto": item.producto, "cantidad": item.cantidad, "precio": precio,
-                      "subtotal": precio * item.cantidad, "hay_stock": item.cantidad <= item.producto.stock_disponible})
+                      "subtotal": precio * item.cantidad, "hay_stock": item.producto.activo and item.cantidad <= item.producto.stock_disponible})
     return filas
 
 
@@ -104,6 +106,9 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
     if not items:
         raise ErrorDeNegocio("Tu carrito está vacío.")
     productos = {p.pk: p for p in Producto.objects.select_for_update().filter(pk__in=[i.producto_id for i in items]).order_by("pk")}
+    retirados = [p.nombre for p in productos.values() if not p.activo]
+    if retirados:                                          # se retiró del catálogo después de agregarlo al carrito: ya no se vende
+        raise ErrorDeNegocio("Ya no vendemos " + ", ".join(retirados) + ". Quítalo del carrito para generar la orden.")
     faltantes = [f"{productos[i.producto_id].nombre}: pides {i.cantidad} y quedan {productos[i.producto_id].stock_disponible}."
                  for i in items if i.cantidad > productos[i.producto_id].stock_disponible]
     if faltantes:

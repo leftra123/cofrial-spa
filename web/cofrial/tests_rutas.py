@@ -54,6 +54,13 @@ ESPERADO = {
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despachar/ubicar/999999/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 404 404'),
+    '/operacion/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),            # solo el administrador
+    '/operacion/stock/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/stock/999999/sumar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
+    '/operacion/cuentas/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/cuentas/nueva/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/clientes/999999/cuenta/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/cuentas/999999/clave/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
     '/bi/': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),            # solo gerencia y admin; 502 porque en las pruebas no hay Grafana (ver test_bi)
     '/bi/x': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),
     '/demo/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
@@ -215,11 +222,11 @@ class InicioPorRol(Base):
 
 class MenuPorRol(Base):
     PROHIBIDOS = {   # enlaces del menú que darían 403/redirección a esa cuenta
-        "B2B": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/'],
-        "B2C": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/'],
-        "vendedor": ['href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
-        "gerencia": ['href="/flota/despachar/', 'href="/admin/', 'href="/demo/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
-        "despachador": ['href="/crm/embudo/', 'href="/crm/clientes/', 'href="/admin/', 'href="/demo/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
+        "B2B": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/operacion/'],
+        "B2C": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/operacion/'],
+        "vendedor": ['href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/operacion/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
+        "gerencia": ['href="/flota/despachar/', 'href="/admin/', 'href="/demo/', 'href="/operacion/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
+        "despachador": ['href="/crm/embudo/', 'href="/crm/clientes/', 'href="/admin/', 'href="/demo/', 'href="/operacion/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
     }
 
     def test_el_menu_no_ofrece_enlaces_que_dan_403(self):
@@ -232,7 +239,7 @@ class MenuPorRol(Base):
     def test_cada_rol_si_ve_lo_suyo(self):
         esperado = {"B2B": ('href="/pedidos/"', 'href="/carrito/"', 'href="/soporte/"', 'href="/avisos/"'), "vendedor": ('href="/crm/embudo/"', 'href="/crm/ia/"'),
                     "gerencia": ('href="/crm/embudo/"', 'href="/flota/"'), "despachador": ('href="/flota/"', 'href="/crm/alertas/"'),
-                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/catalogo/"', 'href="/portada/"')}
+                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
         paginas = {"B2B": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
         for rol, enlaces in esperado.items():
             html = self.cliente(rol).get(paginas[rol]).content.decode()

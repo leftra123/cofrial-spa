@@ -3,7 +3,7 @@
 {% block crm %}
 <div class="pagina-cab">
   <div><h1>{{ c.nombre }}</h1><p class="sub">{{ c.tipo_cliente.codigo }} · RUT {{ c.rut }} · {{ c.email }} · Vendedor: {{ c.vendedor|default:"sin asignar" }}</p></div>
-  <div class="acciones"><a class="btn btn-sec" href="/crm/clientes/">Volver a clientes</a></div>
+  <div class="acciones">{% if rol == "admin" %}{% if c.usuario_id %}<span class="chip entregado sin-punto">Cuenta del portal: {{ c.usuario.username }}</span>{% else %}<span class="chip pendiente sin-punto">Sin cuenta del portal</span><a class="btn" href="/operacion/clientes/{{ c.cliente_id }}/cuenta/">Crear cuenta del portal</a>{% endif %}{% endif %}<a class="btn btn-sec" href="/crm/clientes/">Volver a clientes</a></div>
 </div>
 <div class="seccion" style="margin-top:0"><h2>Pedidos web</h2></div>
 <div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Fecha</th><th>Estado</th><th>Camión</th><th class="num">Total</th><th></th></tr></thead><tbody>

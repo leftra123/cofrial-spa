@@ -1,0 +1,14 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}Cuenta del portal de {{ c.nombre }} | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Crear cuenta del portal</h1><p class="sub">Para <b>{{ c.nombre }}</b> · {{ c.tipo_cliente.codigo }} · RUT {{ c.rut }}{% if c.vendedor %} · Vendedor: {{ c.vendedor }}{% endif %}. La cuenta queda enlazada a este cliente: no se crea otro ni se piden de nuevo el RUT ni la dirección.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/clientes/{{ c.cliente_id }}/">Volver a la ficha</a></div></div>
+<div class="tarjeta-ui" style="max-width:560px">
+<form method="post" data-carga autocomplete="off">{% csrf_token %}
+  {% if form.non_field_errors %}<div role="alert">{% for e in form.non_field_errors %}<p class="error-campo">{{ e }}</p>{% endfor %}</div>{% endif %}
+  {% include "operacion/_campo.html" with c=form.usuario %}
+  {% include "operacion/_campo.html" with c=form.clave %}
+  {% include "operacion/_campo.html" with c=form.clave2 %}
+  <p class="frio" style="margin-top:12px">La clave no se muestra después de guardar: anótala o entrégala en mano al cliente. Con ella entra a la tienda y ve sus pedidos.</p>
+  <button data-cargando="Creando…">Crear cuenta del portal</button>
+</form></div>
+{% endblock %}

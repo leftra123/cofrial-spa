@@ -3,6 +3,7 @@
 Regla común: ante una entrada hostil o inexistente la respuesta es siempre controlada (302 al acceso, 400/403/404/405/429),
 nunca un 500, nunca una traza y nunca un dato de otra cuenta.
 """
+import re
 from unittest import mock
 
 from django.conf import settings
@@ -364,6 +365,66 @@ class EntradasHostilesTests(BaseSeguridad):
 
 
 # ---------------------------------------------------------------- 6. Configuración de producción
+class ListasDeParadasTests(BaseSeguridad):
+    """El nombre y la dirección los escribe el cliente al registrarse y los lee el despachador: un texto hostil no debe volverse HTML.
+
+    `json_script` protege solo el paso del dato a la página. El riesgo está después, cuando el JavaScript arma la lista. La imagen de la
+    suite no trae navegador, así que la ejecución real se comprobó con Chromium; aquí se vigila el código que evita el problema."""
+    NOMBRE = '<img src=x onerror="alert(1)">'
+    DIRECCION = '<i id="hostil">Calle</i> 123'
+
+    def _pedido_hostil(self):
+        cliente = Cliente.objects.get(usuario__username="ana@correo.test")
+        Cliente.objects.filter(pk=cliente.pk).update(nombre=self.NOMBRE)
+        direccion = cliente.direccion_set.first()
+        type(direccion).objects.filter(pk=direccion.pk).update(calle_numero=self.DIRECCION, lat=-38.7359, long=-72.5904)
+        s.agregar(cliente, Producto.objects.get(sku="POL-PEC-10K").pk, 2)
+        return s.generar_orden(cliente, direccion.pk, "")
+
+    def _sin_html_crudo(self, respuesta):
+        html = respuesta.content.decode()
+        self.assertNotIn("<img src=x", html)
+        self.assertNotIn('<i id="hostil"', html)
+
+    def test_el_despacho_entrega_el_nombre_escapado(self):
+        orden = self._pedido_hostil()
+        self.client.login(username="despacho@cofrial.cl", password=CLAVE)
+        r = self.client.get("/flota/despachar/")
+        self.assertContains(r, f"Orden N.º {orden.orden_id}")
+        self.assertContains(r, "\\u003Cimg src=x")
+        self._sin_html_crudo(r)
+
+    def test_el_panel_entrega_el_nombre_escapado(self):
+        orden = self._pedido_hostil()
+        self.client.login(username="despacho@cofrial.cl", password=CLAVE)
+        self.client.post("/flota/despachar/", {"camion": "CAM-03", "ordenes": [orden.orden_id]})
+        r = self.client.get("/flota/")
+        self.assertContains(r, "\\u003Cimg src=x")
+        self._sin_html_crudo(r)
+
+    def test_las_listas_se_arman_con_nodos_y_no_con_html(self):
+        for plantilla in ("panel", "despacho"):
+            codigo = (settings.BASE_DIR / "templates" / "flota" / f"{plantilla}.html").read_text(encoding="utf-8")
+            self.assertIn("CofrialMapa.filaParada(p.cliente, p.direccion,", codigo, plantilla)
+            self.assertNotIn("insertAdjacentHTML", codigo, plantilla)
+            # Solo se admite vaciar un contenedor o poner el fragmento que el servidor ya escapó (la caja del despacho automático).
+            self.assertLessEqual(set(re.findall(r"innerHTML\s*=\s*([^;]+);", codigo)), {'""', "html"}, plantilla)
+
+    def test_los_popups_con_datos_del_cliente_son_texto(self):
+        for plantilla in ("flota/panel", "flota/despacho", "pedidos/detalle"):
+            codigo = (settings.BASE_DIR / "templates" / f"{plantilla}.html").read_text(encoding="utf-8")
+            for contenido in re.findall(r"bindPopup\(([^;]*)\);", codigo):
+                if "cliente" in contenido or "direccion" in contenido:
+                    self.assertTrue(contenido.startswith("CofrialMapa.popupTexto("), f"{plantilla}: {contenido}")
+
+    def test_la_fila_de_una_parada_usa_solo_texto(self):
+        codigo = (settings.BASE_DIR / "static" / "js" / "mapa.js").read_text(encoding="utf-8")
+        cuerpo = re.search(r"function filaParada\(.*?\n  }\n", codigo, re.S)
+        self.assertIsNotNone(cuerpo, "falta filaParada en mapa.js")
+        self.assertIn("textContent", cuerpo.group())
+        self.assertNotIn("innerHTML", cuerpo.group())
+
+
 class ConfiguracionSeguraTests(TestCase):
     def test_la_depuracion_esta_apagada_por_defecto(self):
         self.assertFalse(settings.DEBUG)

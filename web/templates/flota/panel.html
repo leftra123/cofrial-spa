@@ -194,11 +194,16 @@
         var posicion = {}; v.ruta.paradas.forEach(function (q, k) { posicion[q.direccion_id] = k + 1; });
         v.paradas.forEach(function (p) {
           var n = posicion[p.direccion_id] || 1;                  // posición de la parada en el recorrido (la base es 0)
-          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
-          lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")</span></li>";
+          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(CofrialMapa.popupTexto([p.cliente, p.direccion]));
+          lista[n - 1] = CofrialMapa.filaParada(p.cliente, p.direccion, "(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")");
         });
-        document.getElementById("rutas-sugeridas").insertAdjacentHTML("beforeend",
-          "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b> · " + v.situacion + ", ruta por calles: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.filter(Boolean).join("") + "</ol>");
+        var caja = document.getElementById("rutas-sugeridas"), info = document.createElement("p"), camion = document.createElement("b"), ol = document.createElement("ol");
+        info.className = "ruta-info"; ol.className = "ruta-lista";
+        camion.textContent = v.camion + " · " + v.patente;
+        info.appendChild(camion);
+        info.appendChild(document.createTextNode(" · " + v.situacion + ", ruta por calles: " + CofrialMapa.texto(r)));
+        lista.filter(Boolean).forEach(function (fila) { ol.appendChild(fila); });
+        caja.appendChild(info); caja.appendChild(ol);
       })();
     });
     if (todos.length > 1) m.fitBounds(todos, {padding: [36, 36], maxZoom: 15});

@@ -143,10 +143,34 @@ window.CofrialMapa = (function () {
     return (r.metros / 1000).toFixed(1).replace(".", ",") + " km · unos " + Math.max(1, Math.round(r.segundos / 60)) + " min";
   }
 
+  /* Fila de una lista de paradas: «**cliente** · dirección (detalle)». El nombre y la dirección los escribe el cliente al registrarse, así que
+     entran como texto y nunca como HTML. */
+  function filaParada(cliente, direccion, detalle) {
+    var li = document.createElement("li"), nombre = document.createElement("b"), nota = document.createElement("span");
+    nombre.textContent = cliente;
+    nota.className = "frio";
+    nota.textContent = detalle;
+    li.appendChild(nombre);
+    li.appendChild(document.createTextNode(" · " + direccion + " "));
+    li.appendChild(nota);
+    return li;
+  }
+
+  /* Contenido de un popup con datos del cliente. Leaflet interpreta un texto como HTML; un nodo lo deja tal cual. Una línea por cada texto. */
+  function popupTexto(lineas) {
+    var caja = document.createElement("div");
+    lineas.forEach(function (linea) {
+      var d = document.createElement("div");
+      d.textContent = linea;
+      caja.appendChild(d);
+    });
+    return caja;
+  }
+
   /* La ruta que calculó y guardó el servidor ({puntos, km, minutos, aproximada}): se dibuja tal cual, sin volver a pedirle nada a OSRM. */
   function rutaGuardada(r) {
     return {linea: r.puntos, metros: r.aproximada ? null : r.km * 1000, segundos: (r.minutos || 0) * 60, orden: null, aproximada: !!r.aproximada};
   }
 
-  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto};
+  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto, filaParada: filaParada, popupTexto: popupTexto};
 })();

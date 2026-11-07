@@ -284,3 +284,12 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
   - La distancia restante podía medirse sobre la vuelta o sobre un tramo ya recorrido. Ahora se mide solo entre la última parada atendida y la de destino.
 - **Qué se cede:** la detención de una parada anterior no se suma a la hora de llegada, porque la web no conoce `DETENCION_LECTURAS`; a 60× son 30 s por parada, dentro de la ventana de 2 minutos solo si hay una o dos. Reiniciar el simulador en medio de un viaje largo lo hace recomenzar desde la base, como ya ocurría, y eso pesa más en un viaje de 3 horas.
 
+
+## Textos de clientes en listas de paradas y popups
+
+Reproducido en un stack local: un cliente registrado con `<img src=x onerror=…>` en el nombre ejecutaba ese código en la sesión del despachador, al cargar `/flota/despachar/` y `/flota/`, y otra vez al abrir el popup de la parada.
+
+- **Causa:** `json_script` protege el paso del dato a la página, no lo que se haga después. Las listas concatenaban el nombre y la dirección en `innerHTML` e `insertAdjacentHTML`, y `bindPopup` de Leaflet interpreta como HTML el texto que recibe.
+- **Decisión:** `CofrialMapa.filaParada` y `CofrialMapa.popupTexto` arman filas y popups con `textContent` y nodos del DOM. Se corrige al mostrar el dato y no al registrarlo: un nombre con `<` o `&` es válido y se guarda tal como lo escribió el cliente.
+- **Regla:** todo texto que venga de un usuario entra al DOM con `textContent`, nunca concatenado en HTML. `innerHTML` queda para texto fijo y para fragmentos que Django ya escapó.
+- **Pruebas:** `ListasDeParadasTests` (`web/cofrial/tests_seguridad.py`) revisa el escape y vigila el código. La imagen de la suite no trae navegador, así que la ejecución se comprobó aparte con Chromium, antes y después del cambio.

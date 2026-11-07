@@ -234,14 +234,21 @@ def avanzar(orden):
     return orden
 
 
+MISMA_COMPRA_SEG = 5         # las órdenes de una compra dividida se crean en la misma transacción, con milisegundos de diferencia
+
+
 @transaction.atomic
 def repetir_ultimo_pedido(cliente):
-    """RN-08: copia al carrito las líneas de la última orden no cancelada, ajustadas al stock; devuelve los avisos."""
-    ultima = ordenes_de(cliente).exclude(estado_orden__nombre="Cancelada").first()
+    """RN-08: copia al carrito las líneas de la última compra no cancelada, ajustadas al stock; devuelve los avisos.
+    Una compra con refrigerados y congelados se dividió en una orden por rango (RN-16), así que se toman todas las de esa compra."""
+    from datetime import timedelta
+    vigentes = ordenes_de(cliente).exclude(estado_orden__nombre="Cancelada")
+    ultima = vigentes.first()
     if ultima is None:
         raise ErrorDeNegocio("Aún no tienes pedidos que repetir.")
+    misma_compra = vigentes.filter(direccion=ultima.direccion, creada_en__gte=ultima.creada_en - timedelta(seconds=MISMA_COMPRA_SEG))
     avisos = []
-    for item in ultima.ordenitem_set.select_related("producto"):
+    for item in OrdenItem.objects.filter(orden__in=misma_compra).select_related("producto").order_by("orden_id", "pk"):
         p = item.producto
         if not p.activo or p.stock_disponible < 1 or precio_de(cliente, p.pk) is None:
             avisos.append(f"{p.nombre} no está disponible y no se agregó.")

@@ -56,6 +56,8 @@ ESPERADO = {
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 403 →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/flota/despacho-auto/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/flota/despacho-auto/correr/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ubicar/999999/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 404 404'),
     '/operacion/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),            # solo el administrador
     '/operacion/stock/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),

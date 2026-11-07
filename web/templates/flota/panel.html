@@ -16,22 +16,25 @@
   <div class="kpi-card"><div class="etiqueta">Volviendo</div><div class="valor" data-resumen="volviendo">{{ resumen.volviendo }}</div><div class="detalle">de regreso a la base</div></div>
   <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor" data-resumen="con_alerta">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
   <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
+  <div class="kpi-card"><div class="etiqueta">Sin señal</div><div class="valor" data-resumen="sin_senal">{{ resumen.sin_senal }}</div><div class="detalle">más de 2 min sin reportar</div></div>
 </div>
+
+<div id="despacho-auto" data-activo="{{ auto.activo|yesno:'1,0' }}">{% include "flota/_despacho_auto.html" %}</div>
 
 <div id="sugerencia" hidden>
   <div class="seccion"><h2>Sugerencia de despacho</h2><span class="chip transito" id="sug-origen"></span></div>
   <div class="tarjeta-ui">
     <p id="sug-texto" style="margin:0 0 10px"></p>
     <div id="sug-viajes"></div>
-    <p class="frio" style="margin:8px 0 0">Es una propuesta: el botón abre «Armar despacho» con el camión y los pedidos marcados, y nada sale hasta que lo confirmes.</p>
+    <p class="frio" style="margin:8px 0 0">{% if auto.activo %}El despacho automático está encendido y puede sacar estos viajes por su cuenta. El botón abre «Armar despacho» por si prefieres hacerlo tú antes.{% else %}Es una propuesta: el botón abre «Armar despacho» con el camión y los pedidos marcados, y nada sale hasta que lo confirmes.{% endif %}</p>
   </div>
 </div>
 
-<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
+<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
 <div class="tarjeta-ui">
   <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
   <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
-  <p class="frio" style="margin:8px 0 0">Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino.</p>
+  <p class="frio" style="margin:8px 0 0">Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino. Por defecto se ven los camiones en ruta, en la puerta, volviendo o con alerta; donde dos etiquetas chocan se oculta una, y el camión sigue ahí: acerca el mapa o tócalo para ver su código.</p>
   <div id="rutas-sugeridas"></div>
 </div>
 
@@ -65,17 +68,19 @@
 {% endfor %}
 </div>
 {% endif %}
-<div class="seccion"><h2>Vehículos</h2></div>
-<div class="rejilla vehiculos">
+<div class="seccion"><h2>Vehículos</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button></div></div>
+<p class="sub" id="vehiculos-vacio"{% if resumen.guardados != resumen.total or not tarjetas %} hidden{% endif %}>Ningún camión en operación ahora: toda la flota está en la base.</p>
+<div class="rejilla vehiculos" id="vehiculos">
 {% for x in tarjetas %}
-  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}{% if not x.lectura %} sin-lectura{% endif %}" data-camion="{{ x.camion.camion_id }}">
+  <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}{% if not x.lectura %} sin-lectura{% endif %}" data-camion="{{ x.camion.camion_id }}"{% if not x.en_operacion %} data-guardado{% endif %}>
     <div class="vehiculo-cab">
       <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
         <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
+      <div class="vehiculo-chips"><span class="chip pendiente" data-campo="sin-senal"{% if not x.sin_senal %} hidden{% endif %}>Sin señal</span>
       {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
       {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
       {% elif x.situacion == "en_base" %}<span class="chip entregado" data-campo="situacion">{{ x.situacion_texto|capfirst }}</span>
-      {% else %}<span class="chip transito" data-campo="situacion">{{ x.situacion_texto|capfirst }}</span>{% endif %}
+      {% else %}<span class="chip transito" data-campo="situacion">{{ x.situacion_texto|capfirst }}</span>{% endif %}</div>
     </div>
     {% if x.lectura %}
     <div class="mini">
@@ -95,7 +100,15 @@
 </div>
 
 {% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<style>
+  #vehiculos:not(.ver-base) [data-guardado] { display: none; }   /* siguen en la página y reportando; solo no ocupan pantalla */
+  .base-contador { font-weight: 700; }
+  .vehiculo-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .vehiculo-chips .chip[hidden] { display: none; }
+  .decision-auto { padding: 10px 0; border-bottom: 1px solid var(--borde); }
+  .decision-auto:last-child { border-bottom: 0; }
+</style>{% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
 <script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
@@ -123,10 +136,51 @@
   (function () {
     var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
     var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
-    L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
-    d.camiones.forEach(function (c) {
+    var enBase = {}, capaBase = L.layerGroup(), verBase = false;
+    var marcaBase = L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
+    marcaBase.bindTooltip("", {permanent: true, direction: "bottom", offset: [0, 16], className: "base-contador"});
+    function agregarCamion(c) {
       marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id, m.getZoom()), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
-    });
+      marcas[c.id].enAlerta = c.alerta;
+    }
+    d.camiones.forEach(agregarCamion);
+    d.en_base.forEach(function (c) { enBase[c.id] = c; });
+    /* Los guardados están a metros unos de otros: como camiones con etiqueta serían una mancha. Se dibujan como puntos sin etiqueta,
+       repartidos en espiral alrededor de la base (solo el dibujo; su posición real es la base). */
+    function dibujarBase() {
+      var z = m.getZoom(), centro = m.project(base, z), ids = Object.keys(enBase).sort();
+      capaBase.clearLayers();
+      ids.forEach(function (id, i) {
+        var r = 30 + 7 * Math.sqrt(i), angulo = i * 2.39996;
+        L.circleMarker(m.unproject(centro.add([r * Math.cos(angulo), r * Math.sin(angulo)]), z), {radius: 5, weight: 1, color: "#fff", fillColor: "#0F172A", fillOpacity: .85})
+          .bindPopup(id + " · " + enBase[id].patente + " · en base").addTo(capaBase);
+      });
+      marcaBase.setTooltipContent(ids.length + " en base");
+    }
+    /* Etiquetas que chocan con otra o con un camión vecino se ocultan; las de alerta tienen prioridad. El camión y su popup quedan. */
+    var enCola = false;
+    function choca(a, b) { return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom); }
+    function ordenarEtiquetas() {
+      var caja = m.getContainer(), puestas = [], cuerpos = [], tip = caja.querySelector(".base-contador");
+      if (tip) puestas.push(tip.getBoundingClientRect());
+      caja.querySelectorAll(".pin-camion").forEach(function (p) { var g = p.querySelector(".pin-camion-graf"); if (g) cuerpos.push({dueno: p, r: g.getBoundingClientRect()}); });
+      var etiquetas = Array.prototype.slice.call(caja.querySelectorAll(".pin-camion .pin-etq"));
+      etiquetas.sort(function (a, b) { return b.parentNode.classList.contains("alerta") - a.parentNode.classList.contains("alerta"); });
+      etiquetas.forEach(function (e) {
+        var r = e.getBoundingClientRect();
+        var tapada = puestas.some(function (p) { return choca(r, p); }) || cuerpos.some(function (c) { return c.dueno !== e.parentNode && choca(r, c.r); });
+        e.style.visibility = tapada ? "hidden" : "";
+        if (!tapada) puestas.push(r);
+      });
+    }
+    function agendarEtiquetas() {             // dos cuadros: mapa.js separa los camiones en el primero y aquí se mide el resultado
+      if (enCola) return;
+      enCola = true;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { enCola = false; ordenarEtiquetas(); }); });
+    }
+    m.on("moveend zoomend layeradd", agendarEtiquetas);
+    m.on("zoomend", dibujarBase);
+    dibujarBase();
     var todos = [base];
     d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });          // el encuadre incluye a los camiones, no solo la bodega y las paradas
     d.viajes.forEach(function (v, i) {
@@ -150,14 +204,45 @@
     if (todos.length > 1) m.fitBounds(todos, {padding: [36, 36], maxZoom: 15});
     var puntosRutas = todos.slice();
     document.getElementById("ver-flota").addEventListener("click", function () {      // toda la flota, incluidos los camiones en viajes lejanos
-      var pts = [base].concat(d.camiones.map(function (c) { return [c.lat, c.long]; }));
+      var pts = [base];
       Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].getLatLng()); });
-      m.fitBounds(pts, {padding: [30, 30]});
+      m.fitBounds(pts, {padding: [30, 30], maxZoom: 15});
     });
     document.getElementById("ver-rutas").addEventListener("click", function () { m.fitBounds(puntosRutas.length > 1 ? puntosRutas : [base], {padding: [40, 40], maxZoom: 14}); });
-    window.moverCamion = function (id, lat, lon, alerta) {
-      if (marcas[id]) { marcas[id].setLatLng([lat, lon]); marcas[id].setIcon(CofrialMapa.camion(alerta, id, m.getZoom())); }
+    var botones = document.querySelectorAll(".alternar-base"), rejilla = document.getElementById("vehiculos"), vacio = document.getElementById("vehiculos-vacio");
+    function pintarControl() {
+      var n = Object.keys(enBase).length;
+      botones.forEach(function (b) {
+        b.textContent = n ? (verBase ? "Ocultar" : "Mostrar") + (n === 1 ? " el camión en base" : " los " + n + " en base") : "Ninguno en base";
+        b.disabled = !n;
+        b.setAttribute("aria-pressed", verBase ? "true" : "false");
+      });
+      rejilla.classList.toggle("ver-base", verBase);
+      vacio.hidden = verBase || !n || !!rejilla.querySelector(".vehiculo:not([data-guardado])");
+    }
+    botones.forEach(function (b) {
+      b.addEventListener("click", function () {
+        verBase = !verBase;
+        if (verBase) capaBase.addTo(m); else capaBase.remove();
+        pintarControl();
+      });
+    });
+    pintarControl();
+    /* Cada 5 s: un camión que sale de la base o entra en alerta aparece solo, y uno que vuelve a guardarse se resume en el contador. */
+    window.moverCamion = function (c, lat, lon) {
+      var id = c.camion_id, guardado = c.situacion === "en_base" && !c.alerta, cambio = guardado !== !!enBase[id];
+      if (guardado) {
+        if (marcas[id]) { marcas[id].remove(); delete marcas[id]; }
+        enBase[id] = {id: id, patente: c.patente};
+      } else {
+        delete enBase[id];
+        if (!marcas[id]) agregarCamion({id: id, patente: c.patente, lat: lat, long: lon, alerta: c.alerta});
+        marcas[id].setLatLng([lat, lon]);
+        if (marcas[id].enAlerta !== c.alerta) { marcas[id].enAlerta = c.alerta; marcas[id].setIcon(CofrialMapa.camion(c.alerta, id, m.getZoom())); }
+      }
+      if (cambio) dibujarBase();
     };
+    window.despuesDeMover = function () { pintarControl(); agendarEtiquetas(); };
   })();
 </script>
 <script>
@@ -171,21 +256,38 @@
       Object.keys(d.resumen).forEach(function (k) { pon(document.querySelector('[data-resumen="' + k + '"]'), d.resumen[k]); });
       d.camiones.forEach(function (c) {
         var t = document.querySelector('[data-camion="' + c.camion_id + '"]'), l = c.ultima_lectura;
-        if (!t || !l) return;
+        if (!t) return;
+        t.toggleAttribute("data-guardado", c.situacion === "en_base" && !c.alerta);
+        t.querySelector('[data-campo="sin-senal"]').hidden = !c.sin_senal;
+        if (!l) return;
         t.classList.toggle("en-alerta", c.alerta);
-        pon(t.querySelector('[data-campo="situacion"]'), c.situacion_texto.charAt(0).toUpperCase() + c.situacion_texto.slice(1));
+        var chip = t.querySelector('[data-campo="situacion"]');
+        pon(chip, c.situacion_texto.charAt(0).toUpperCase() + c.situacion_texto.slice(1));
+        if (chip) { chip.classList.toggle("entregado", c.situacion === "en_base"); chip.classList.toggle("transito", c.situacion !== "en_base"); }
         pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
         pon(t.querySelector('[data-campo="comb"]'), l.combustible_pct + " %", c.combustible_bajo);
         var b = t.querySelector('[data-campo="barra"] i');
         if (b) { b.style.width = l.combustible_pct + "%"; b.classList.toggle("bajo", c.combustible_bajo); }
-        if (window.moverCamion) window.moverCamion(c.camion_id, l.lat, l.long, c.alerta);
+        if (window.moverCamion) window.moverCamion(c, l.lat, l.long);
         pon(t.querySelector('[data-campo="lectura"]'), "Última lectura " + new Date(l.registrado_en).toLocaleString("es-CL"));
       });
+      if (window.despuesDeMover) window.despuesDeMover();
     }
     function actualizar() {
       fetch("/api/flota/", {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (d) { vivo.ok(); pintar(d); }).catch(function () { vivo.falla(); });
     }
     actualizar(); setInterval(actualizar, 5000);
+  })();
+</script>
+<script>
+  /* Con el modo automático encendido, sus decisiones aparecen sin recargar; apagado no hay nada que refrescar. */
+  (function () {
+    var caja = document.getElementById("despacho-auto");
+    if (caja.dataset.activo !== "1") return;
+    setInterval(function () {
+      fetch("/flota/despacho-auto/", {credentials: "same-origin"}).then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (html) { if (html !== null) caja.innerHTML = html; }).catch(function () {});
+    }, 15000);
   })();
 </script>
 {% endblock %}

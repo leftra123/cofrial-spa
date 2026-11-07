@@ -33,6 +33,8 @@ class Despacho(models.Model):
     fase = models.CharField(max_length=12, choices=FASES, default="en_ruta", db_default="en_ruta")     # la actualiza el simulador mientras dura el viaje
     ruta_geojson = models.JSONField(null=True, blank=True)        # recorrido por calles base -> paradas -> base: {"puntos": [[lat, long]...], "paradas": [{"direccion_id", "indice"}]}
     ruta_aproximada = models.BooleanField(default=False, db_default=False)     # true si OSRM no respondió y la ruta son rectas entre los puntos
+    decision_auto = models.TextField(null=True, blank=True)       # por qué salió este viaje, escrito por el código; vacío si lo armó una persona
+    decision_ia = models.TextField(null=True, blank=True)         # la misma decisión redactada por la IA; vacío si no hubo IA utilizable
 
     class Meta:
         db_table = "despacho"

@@ -38,6 +38,7 @@ class CamionSerializer(serializers.Serializer):
     situacion_texto = serializers.CharField()
     alerta = serializers.BooleanField()
     combustible_bajo = serializers.BooleanField()
+    sin_senal = serializers.BooleanField()
     ultima_lectura = LecturaSerializer(source="lectura", allow_null=True)
 
     def get_en_ruta(self, obj):

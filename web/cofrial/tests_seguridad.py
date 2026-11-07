@@ -49,12 +49,12 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
-                    "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/"]
+                    "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/"]
     PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/clientes/1/direccion/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/crm/requerimientos/1/resolver/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
                      "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/limpiar/",
-                     "/pedidos/1/oc/", "/bi/x", "/carrito/direccion/", "/crm/ordenes/1/cancelar/", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/", "/operacion/stock/1/sumar/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/flota/escenarios/interpretar/", "/flota/escenarios/activar/", "/flota/escenarios/cancelar/"]
+                     "/pedidos/1/oc/", "/bi/x", "/carrito/direccion/", "/crm/ordenes/1/cancelar/", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/", "/operacion/stock/1/sumar/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/flota/escenarios/interpretar/", "/flota/escenarios/activar/", "/flota/escenarios/cancelar/", "/flota/despacho-auto/correr/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
         for url in self.PRIVADAS_GET:

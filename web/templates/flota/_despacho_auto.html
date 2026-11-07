@@ -1,0 +1,30 @@
+<div class="seccion"><h2>Despacho automático</h2>{% if auto.activo %}<span class="chip entregado">Encendido</span>{% else %}<span class="chip cancelado">Apagado</span>{% endif %}</div>
+<div class="tarjeta-ui">
+  {% if auto.activo %}
+  <p style="margin:0 0 8px">Revisa cada {{ auto.intervalo_seg }} s y despacha sin intervención: agrupa por rango de frío y un viaje sale al completar {{ auto.max_paradas }} paradas o cuando su pedido más antiguo lleva {{ auto.espera_min }} min.</p>
+  {% else %}
+  <p style="margin:0 0 8px">Los pedidos esperan a que una persona arme el viaje. Se enciende con <code>DESPACHO_AUTO=1</code>. Las reglas son las de «Armar despacho»; además, solo usa camiones con telemetría reciente, combustible suficiente y la cámara sin alerta.</p>
+  {% endif %}
+  {% if auto.en_espera %}
+  <p class="frio" style="margin:8px 0 4px"><b>{% if auto.activo %}Qué sigue esperando y por qué{% else %}Lo que no saldría solo y por qué{% endif %}</b></p>
+  <ul class="frio" style="margin:0 0 8px;padding-left:18px">{% for linea in auto.en_espera %}<li>{{ linea }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if auto.decisiones %}
+  <p class="frio" style="margin:8px 0 0"><b>Últimas decisiones</b></p>
+  {% for x in auto.decisiones %}
+  <div class="decision-auto">
+    <div><b>Despacho N.º {{ x.despacho.despacho_id }}</b> · {{ x.despacho.camion_id }} · {{ x.despacho.salida_en|date:"d/m H:i" }} <span class="chip transito">{% if x.por_ia %}Redactado por IA{% else %}Cálculo del sistema{% endif %}</span></div>
+    <div class="frio">{{ x.texto }}</div>
+  </div>
+  {% endfor %}
+  {% elif auto.activo %}
+  <p class="frio" style="margin:8px 0 0">Todavía no ha sacado ningún viaje.</p>
+  {% endif %}
+  {% if puede_cerrar %}
+  <form method="post" action="/flota/despacho-auto/correr/" style="margin-top:10px"
+        onsubmit="return confirm('Esto despacha de verdad hasta {{ auto.max_viajes_a_mano }} viajes, sin esperar la agrupación. ¿Continuar?')">
+    {% csrf_token %}<input type="hidden" name="confirmar" value="1">
+    <button class="btn-sec" {% if not auto.listos %}disabled aria-describedby="why-auto"{% endif %}>Correr una pasada ahora</button>{% if not auto.listos %} <span class="frio" id="why-auto">Ningún viaje puede salir ahora.</span>{% endif %}
+  </form>
+  {% endif %}
+</div>

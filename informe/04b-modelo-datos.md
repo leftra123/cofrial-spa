@@ -784,7 +784,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 El diccionario anterior corresponde al diseño lógico de referencia. Las siguientes tablas documentan las extensiones que utilizan las migraciones Django; no deben confundirse con columnas presentes en el SQL académico original.
 
 **Tabla D26**
-*Campos físicos adicionales de dirección, orden y telemetría*
+*Campos físicos adicionales de dirección, orden, despacho y telemetría*
 
 | Campo | Tipo físico | Nulo | Propósito |
 |---|---|---|---|
@@ -793,6 +793,8 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
 | orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas de demostración: las forzadas desde la web y las que el simulador envía durante la falla de un escenario |
+| despacho.decision_auto | text | Sí | Por qué salió el viaje, escrito por el despacho automático; vacío si lo armó una persona |
+| despacho.decision_ia | text | Sí | La misma decisión redactada por la IA; vacío si no hubo IA utilizable |
 
 Nota. Elaboración propia. La demostración no cambia los seis campos exigidos por el requerimiento de Cofrial.
 

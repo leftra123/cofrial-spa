@@ -264,3 +264,23 @@ En `web/static/js/nav-slide.js` un clic durante una transición se descartaba, p
 - **Atrás:** ya no se ignora durante una transición.
 - **Mercado Pago:** el SDK carga solo si la página trae su configuración, y su carga ya no bloquea las pestañas.
 - **Caché:** la clave incluye los filtros de la dirección, y «Mis pedidos» se guarda 10 s en vez de 2 min para no mostrar estados viejos.
+
+## Reparto regional y tiempo acelerado (6-nov-2026)
+
+Eric pidió repartir por toda la región con entregas «reales» y poder simular el tiempo más rápido. Un viaje a Angol toma unas 3 horas a 50 km/h, así que sin acelerar no se alcanza a ver en la defensa.
+
+- **Direcciones fijas:** `web/clientes/regionales.py` trae nueve hospitales de comunas de La Araucanía con dirección y coordenadas de OpenStreetMap. Quedan escritas en el código para no depender de Nominatim. Los RUT y correos son ficticios y no hay personas.
+- **Siembra idempotente:** `cargar_demo` corre en cada arranque. Se crea solo lo que falta: el cliente por RUT, la cuenta por usuario y el pedido por número de OC. Un error en esta parte se avisa y la web arranca igual, porque son datos de demostración.
+- **Solo tres cuentas nuevas:** Angol, Villarrica y Pucón. Con eso se muestra la compra y el seguimiento desde lejos sin alargar la hoja del profesor; los otros hospitales tienen pedidos sembrados.
+- **Precálculo que no bloquea:** si OSRM no responde, se corta en el primer recorrido en vez de esperar 8 s por dirección con la web sin levantar. Entre consultas hay 1 s de pausa, que es lo que pide el servidor público. El primer arranque tarda cerca de 1 minuto más; los siguientes usan la caché.
+- **Multiplicador en una tabla:** `ajuste_simulador`, una sola fila, leída en cada ciclo como `escenario_simulador`. No se recrean contenedores, no se abren puertos y un administrador lo cambia desde `/demo/`. Si la tabla no existe, el simulador sigue a 1×.
+- **Solo acelera el avance del camión:** sigue una lectura cada `INTERVALO_SEG` con los mismos campos. La detención en la puerta y las fallas de frío siguen medidas en lecturas. No se tocó el combustible: a 60× baja menos de lo que bajaría en el viaje real.
+- **El plazo del cliente no se acelera:** `CONFIRMACION_AUTO_SEG` lo responde una persona. Dividirlo por 60 dejaría 2 segundos para pulsar.
+- **La hora de llegada es la del reloj:** se calcula con el multiplicador y dice cuándo llegará de verdad. Se descartó mostrar un reloj simulado, porque obligaría a explicar dos horas distintas. A más de 1× la ventana es de 2 minutos, porque la de siempre dura más que el viaje entero.
+- **«Está por llegar» depende de la velocidad:** a 60× el camión avanza 4,2 km por lectura y cruzaría los 2 km sin que la campanita, que consulta cada 15 s, alcanzara a verlo. El radio cubre 20 s de viaje: 2 km hasta 5×, 6 km a 20× y 17 km a 60×.
+- **Tres errores que solo se notan en viajes largos, corregidos:**
+  - Al registrar la llegada, el simulador tomaba la última parada como corrección manual: cortaba la detención, volvía en línea recta y nunca informaba «volviendo». Lo había anotado la sesión del simulador.
+  - Con ida y vuelta por la misma carretera, una parada podía quedar marcada en el regreso. Ahora se elige la primera pasada que está a 50 m o menos de la distancia mínima.
+  - La distancia restante podía medirse sobre la vuelta o sobre un tramo ya recorrido. Ahora se mide solo entre la última parada atendida y la de destino.
+- **Qué se cede:** la detención de una parada anterior no se suma a la hora de llegada, porque la web no conoce `DETENCION_LECTURAS`; a 60× son 30 s por parada, dentro de la ventana de 2 minutos solo si hay una o dos. Reiniciar el simulador en medio de un viaje largo lo hace recomenzar desde la base, como ya ocurría, y eso pesa más en un viaje de 3 horas.
+

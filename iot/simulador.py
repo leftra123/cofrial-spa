@@ -26,6 +26,11 @@ escribe; ver web/flota/escenarios.py). Cambian el comportamiento del camión, no
   - entrega_perfecta: sin rupturas al azar y el cliente confirma en cada parada.
   - cliente_no_recibe: en la parada pedida el pedido queda «Entrega no concretada» y se crea el requerimiento para ventas.
 Sin escenario vigente no cambia nada. Si la tabla aún no existe (la EC2 IoT se actualizó antes que la web), se sigue como si no hubiera escenarios.
+
+Tiempo acelerado: en cada ciclo el proceso lee de ajuste_simulador el multiplicador que pidió un administrador en /demo/ (1, 5, 20 o 60), sin
+recrear contenedores. Multiplica solo los km que el camión avanza por lectura. Lo demás sigue igual: se inserta una lectura cada INTERVALO_SEG con
+los mismos campos, la detención en la puerta dura las mismas lecturas y el plazo del cliente sigue en segundos reales (lo responde una persona).
+Un camión rápido no se salta paradas: el avance de cada lectura termina en la primera parada que encuentra.
 """
 import logging
 import math
@@ -49,6 +54,7 @@ CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)
 ESPERA_RESPUESTA_LECTURAS = int(os.environ.get("ESPERA_RESPUESTA_LECTURAS", "3"))   # en un escenario, lecturas que el cliente tarda en responder en la puerta
 TOPE_SOBRE_RANGO_C = 12.0                                                           # una falla de escenario no sube más que esto sobre el máximo del camión
 TIPOS_ESCENARIO = ("falla_frio", "entrega_perfecta", "cliente_no_recibe")
+MULTIPLICADORES = (1, 5, 20, 60)                                                    # los mismos de web/flota/tiempo.py y de la restricción de la tabla
 if os.environ.get("CAMION_ID"):
     IDS = [os.environ["CAMION_ID"]]
 else:
@@ -147,6 +153,22 @@ def escenarios_vigentes(con, ids):
     return escenarios
 
 
+_sin_ajuste_avisado = False
+
+
+def multiplicador_vigente(con):
+    """Cuántas veces más rápido avanzan los camiones. Sin fila, sin tabla o con un valor desconocido, 1: un ajuste nunca detiene la telemetría."""
+    global _sin_ajuste_avisado
+    try:
+        fila = con.execute("SELECT multiplicador_tiempo FROM ajuste_simulador WHERE ajuste_id = 1").fetchone()
+    except psycopg.ProgrammingError as e:
+        if not _sin_ajuste_avisado:
+            log.warning("Sin ajuste de tiempo (%s); el simulador sigue a 1×", str(e).strip().splitlines()[0])
+            _sin_ajuste_avisado = True
+        return 1
+    return fila[0] if fila and fila[0] in MULTIPLICADORES else 1
+
+
 class Camion:
     def __init__(self, camion_id, tmin, tmax):
         self.id = camion_id
@@ -163,7 +185,8 @@ class Camion:
         self.i = 0                      # índice del próximo vértice del camino
         self.marcas = {}                # {índice del camino: [direccion_id...]} de las direcciones de entrega
         self.ultima_marca = -1          # índice de la última parada
-        self.paso_km = 0.0
+        self.paso_km = 0.0              # km por lectura a velocidad normal
+        self.multiplicador = 1          # tiempo acelerado: lo fija el ciclo principal con lo que lee de la base
         self.detenido = 0
         self.al_reanudar = None         # fase que se informa al terminar la detención
         self.fase = None
@@ -218,7 +241,7 @@ class Camion:
                 self.eventos.append(("llegada", self.despacho))
                 self.fase = "volviendo"
                 self.eventos.append(("fase", self.despacho, "volviendo"))
-        elif viaje["llego"] and self.fase != "volviendo":          # corrección manual: se dio el viaje por llegado, el camión regresa
+        elif viaje["llego"] and self.fase != "volviendo" and self.al_reanudar != "volviendo":      # corrección manual: se dio el viaje por llegado, el camión regresa
             self.fase, self.detenido, self.al_reanudar = "volviendo", 0, None
             self._volver()
 
@@ -232,7 +255,7 @@ class Camion:
             return self.pos
         if not self.camino:
             return self.pos                                       # guardado en la base
-        paso = self.paso_km
+        paso = self.paso_km * self.multiplicador                   # lo que sobre al llegar a una parada se descarta: nunca se pasa de largo
         while paso > 0 and self.i < len(self.camino):
             destino = self.camino[self.i]
             faltan = km_entre(self.pos, destino)
@@ -429,7 +452,7 @@ def rangos_de(con, ids):
 
 def main():
     con = conectar()
-    flota, lecturas_hechas = {}, 0
+    flota, lecturas_hechas, multiplicador_anterior = {}, 0, 1
     log.info("Grupo de %d camiones (%s a %s), intervalo %.0f s, probabilidad de ruptura %.4f", len(IDS), IDS[0], IDS[-1], INTERVALO, PROB_RUPTURA)
     while True:
         inicio = time.monotonic()
@@ -441,8 +464,13 @@ def main():
                     log.warning("Faltan %d camiones en la base (se reintenta); activos: %d", len(IDS) - len(flota), len(flota))
             viajes = viajes_en_curso(con, list(flota))
             escenarios = escenarios_vigentes(con, list(flota))
+            multiplicador = multiplicador_vigente(con)
+            if multiplicador != multiplicador_anterior:
+                log.info("Tiempo de la simulación: %d×", multiplicador)
+                multiplicador_anterior = multiplicador
             filas = []
             for c in flota.values():
+                c.multiplicador = multiplicador
                 c.asignar(viajes.get(c.id))
                 c.aplicar_escenario(escenarios.get(c.id))
                 temp, lat, lon, comb, alerta = c.paso()

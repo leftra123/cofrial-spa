@@ -13,7 +13,7 @@ from pedidos.servicios import ErrorDeNegocio
 
 from crm.views import con_rol
 
-from . import autodespacho, rutas, servicios, sugerencias
+from . import autodespacho, rutas, servicios, sugerencias, tiempo
 from .servicios import estado_flota
 
 DESPACHAN = ("admin", "despachador")          # gerencia ve la flota y la pantalla de despacho, pero no arma viajes ni toca direcciones
@@ -28,7 +28,7 @@ def _ruta_para_mapa(viaje):
     ruta = rutas.asegurar_ruta(viaje)
     if not ruta:
         return None
-    return {**ruta, "minutos": round(ruta["km"] / settings.VELOCIDAD_MEDIA_KMH * 60)}
+    return {**ruta, "minutos": round(tiempo.minutos_de_viaje(ruta["km"]))}
 
 
 @con_rol("admin", "gerencia", "despachador")
@@ -44,7 +44,7 @@ def ruta_sugerida(request):
         por_direccion.setdefault(o.direccion_id, []).append(o.orden_id)
     for p in ruta["paradas"]:
         p["ordenes"] = por_direccion.get(p["direccion_id"], [])
-    return JsonResponse({"ruta": {**ruta, "minutos": round(ruta["km"] / settings.VELOCIDAD_MEDIA_KMH * 60)}})
+    return JsonResponse({"ruta": {**ruta, "minutos": round(tiempo.minutos_de_viaje(ruta["km"]))}})
 
 
 @con_rol("admin", "gerencia", "despachador")

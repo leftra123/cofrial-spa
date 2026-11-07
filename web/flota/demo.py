@@ -2,7 +2,7 @@
 
 Solo para administradores. No corre solo: exige confirmación, dura como máximo DURACION_MAX_S, y sus lecturas quedan marcadas
 (`forzada`) para poder apagarlas y borrarlas sin tocar la telemetría real del simulador.
-La misma pantalla pide escenarios para un viaje en curso; esos los ejecuta el simulador (ver `escenarios.py`)."""
+La misma pantalla pide escenarios para un viaje en curso, que ejecuta el simulador (ver `escenarios.py`), y acelera el tiempo (ver `tiempo.py`)."""
 from datetime import timedelta
 
 from django.conf import settings
@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from crm.views import con_rol
 
-from . import escenarios
+from . import escenarios, tiempo
 from .models import Camion, Telemetria
 
 DURACION_MAX_S = 180     # tope de una ruptura forzada
@@ -91,12 +91,24 @@ def apagar(request):
 
 @require_POST
 @con_rol("admin")
+def cambiar_tiempo(request):
+    """Fija cuántas veces más rápido avanzan los camiones. El simulador lo lee en su ciclo siguiente: no se recrea ningún contenedor."""
+    try:
+        tiempo.cambiar(request.POST.get("multiplicador", ""), request.user)
+    except tiempo.ErrorTiempo as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+    return JsonResponse(tiempo.estado())
+
+
+@require_POST
+@con_rol("admin")
 def limpiar(request):
-    """Borra los escenarios y las lecturas forzadas (las de esta pantalla y las de las fallas de un escenario); la telemetría real queda intacta."""
+    """Borra los escenarios y las lecturas forzadas (las de esta pantalla y las de las fallas de un escenario) y deja el tiempo a 1×; la telemetría real queda intacta."""
     if request.POST.get("confirmar") != "1":
         return JsonResponse({"detail": "Hay que confirmar para borrar."}, status=400)
     resultado = escenarios.limpiar()                 # primero: así el simulador deja de marcar lecturas antes de borrarlas
+    tiempo.restablecer(request.user)
     n, _ = Telemetria.objects.filter(forzada=True).delete()
     for k in [k for k in request.session.keys() if k.startswith("demo_")]:
         request.session.pop(k)
-    return JsonResponse({"borradas": n, "forzadas": 0, **resultado})
+    return JsonResponse({"borradas": n, "forzadas": 0, "tiempo": tiempo.estado(), **resultado})

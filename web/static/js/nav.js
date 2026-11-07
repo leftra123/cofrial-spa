@@ -57,5 +57,6 @@
     }
     window.addEventListener("scroll", function () { if (!esperando) { esperando = true; requestAnimationFrame(actualizar); } }, {passive: true});
     barra.addEventListener("focusin", function () { if (plegada) { plegada = false; barra.classList.remove("tb-compacta"); } });
+    if (window.ResizeObserver) new ResizeObserver(function () { raiz.style.setProperty("--tb-alto", barra.offsetHeight + "px"); }).observe(barra);   // los filtros del catálogo se pegan justo debajo
   }
 })();

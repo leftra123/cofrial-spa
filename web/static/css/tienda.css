@@ -124,6 +124,7 @@ body.t-nav-animando .tb-nav { pointer-events: auto; }
 .cat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 28px; align-items: start; }
 .filtros { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; position: sticky; top: 84px; box-shadow: var(--sombra); }
 @media (min-width: 861px) { .filtros { max-height: calc(100vh - 100px); overflow-y: auto; } }
+@media (min-width: 861px) { .filtros #filtros-ver { display: none; } }   /* con id: la regla global de botones tiene id y lo mostraba; en escritorio cerraría el panel sin forma de reabrirlo */
 .filtros h2 { font-size: .75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--texto-3); margin: 18px 0 8px; font-weight: 700; }
 .filtros .filtros-cuerpo > h2:first-child { margin-top: 0; }
 .filtros input[type=search] { width: 100%; }
@@ -723,7 +724,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 @media (max-width: 860px) { .etq-temp { font-size: .75rem; padding: 3px 7px 3px 6px; } }
 @media (max-width: 860px) {
   .tb { position: sticky; top: 0; z-index: 1001; }
-  .filtros { top: 8px; max-height: calc(100vh - 24px); }
   .prod-badges .chip { font-size: .75rem; padding: 2px 7px; }
 }
 @media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }

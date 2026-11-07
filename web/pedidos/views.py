@@ -20,7 +20,9 @@ def solo_clientes(vista):
     @wraps(vista)
     def envoltura(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect(f"/cuenta/entrar/?next={request.path}")
+            if request.method != "GET":             # se explica por qué pide ingresar de nuevo; el carrito está en la base y no se pierde
+                messages.info(request, "Tu sesión terminó. Ingresa de nuevo: tu carrito sigue guardado.")
+            return redirect(entradas.url_de_ingreso(request, "/carrito/"))
         cliente = s.cliente_de(request.user)
         if cliente is None:
             if request.method == "POST":            # una cuenta del equipo no compra, no cancela ni abre reclamos como cliente: se le dice claro

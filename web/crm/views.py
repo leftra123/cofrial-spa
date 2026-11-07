@@ -25,7 +25,9 @@ def con_rol(*roles):
         @wraps(vista)
         def envoltura(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect(f"/cuenta/entrar/?next={request.path}")
+                if request.method != "GET":
+                    messages.info(request, "Tu sesión terminó. Ingresa de nuevo y repite la acción.")
+                return redirect(entradas.url_de_ingreso(request, "/crm/"))
             mi_rol = s.rol(request.user)
             if mi_rol not in roles:
                 return render(request, "403.html", {"detalle": "Tu cuenta no tiene acceso a esta sección del CRM."}, status=403)

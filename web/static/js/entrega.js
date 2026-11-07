@@ -1,8 +1,9 @@
 /* Cofrial SpA · «Estamos afuera»: el cliente confirma la entrega o cuenta por qué no pudo recibirla.
    Mejora progresiva: sin este script los formularios de la pantalla del pedido envían igual (POST /pedidos/<id>/entrega/).
-   - iniciar(raiz): pantalla del pedido (contador de caracteres, validación, envío sin recarga, cuenta regresiva suave).
-   - modal(ordenId): el mismo formulario en un diálogo, para la campanita en cualquier página.
-   - aceptar(ordenId): «Recibí mi pedido» directo, para la campanita. */
+   - iniciar(raiz): pantalla del pedido (revisión al recibir, contador de caracteres, validación, envío sin recarga, cuenta regresiva suave).
+   - modal(ordenId): «No pude recibirlo» en un diálogo, para la campanita y el aviso destacado en cualquier página.
+   - revisar(ordenId): el paso de revisión al recibir (productos, temperatura del viaje y si todo llegó bien) en un diálogo, para la campanita y el aviso.
+   - aceptar(ordenId): «Recibí mi pedido» directo, sin revisión (queda por si algún flujo antiguo lo usa). */
 (function () {
   var MIN = 5, MAX = 500, TIEMPO_MAX = 10000;
   var anunciar = window.CofrialEstados ? CofrialEstados.anunciar : function () {}, ocupar = window.CofrialEstados ? CofrialEstados.ocupar : function () { return function () {}; };
@@ -16,8 +17,10 @@
     var t = document.createElement("div"); t.className = "toast t-" + (tipo || "info"); t.setAttribute("role", tipo === "error" ? "alert" : "status"); t.textContent = texto;
     c.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 300); }, tipo === "error" ? 7000 : 5000);
   }
-  function enviar(ordenId, accion, motivo) {
-    var cuerpo = new FormData(); cuerpo.append("accion", accion); if (motivo != null) cuerpo.append("motivo", motivo);
+  function enviar(ordenId, accion, extra) {          // extra: el motivo (texto) o un objeto con más campos (resultado, tipo_problema, problema…)
+    var cuerpo = new FormData(); cuerpo.append("accion", accion);
+    if (typeof extra === "string") cuerpo.append("motivo", extra);
+    else if (extra) Object.keys(extra).forEach(function (k) { cuerpo.append(k, extra[k]); });
     var ctl = window.AbortController ? new AbortController() : null, corte = setTimeout(function () { if (ctl) ctl.abort(); }, TIEMPO_MAX);
     return fetch("/pedidos/" + ordenId + "/entrega/", {method: "POST", body: cuerpo, credentials: "same-origin", signal: ctl ? ctl.signal : undefined,
                  headers: {"X-Requested-With": "fetch", "Accept": "application/json", "X-CSRFToken": csrf()}})
@@ -58,6 +61,34 @@
     });
   }
 
+  /* Paso de revisión al recibir: el cliente ve productos y temperatura, dice si todo llegó bien o qué falló y recién entonces confirma.
+     Con «algo falló» el pedido queda entregado y el aviso llega a ventas como reclamo (lo crea el servidor). Misma lógica para la página y el diálogo. */
+  function ligarRevision(form, ordenId, alEmpezar, alTerminar) {
+    var radios = form.querySelectorAll("input[name=resultado]"), falla = form.querySelector(".revision-falla"), area = form.querySelector("textarea"),
+        tipo = form.querySelector("select"), err = form.querySelector(".entrega-error"), boton = form.querySelector("button:not([type=button])");
+    function eligio() { var r = form.querySelector("input[name=resultado]:checked"); return r ? r.value : ""; }
+    function mostrar() { var f = eligio() === "falla"; falla.hidden = !f; if (f) area.focus(); }
+    function error(m, campo) { err.textContent = m; err.hidden = false; if (campo) { campo.setAttribute("aria-invalid", "true"); campo.focus(); } }
+    function limpiar() { err.hidden = true; area.removeAttribute("aria-invalid"); }
+    for (var i = 0; i < radios.length; i++) radios[i].addEventListener("change", function () { limpiar(); mostrar(); });
+    area.addEventListener("input", function () { if (!err.hidden && !validar(area.value)) limpiar(); });
+    falla.hidden = eligio() !== "falla";                  // sin JavaScript el bloque queda a la vista y el servidor decide; con JavaScript aparece solo si algo falló
+    form.addEventListener("submit", function (e) {
+      e.preventDefault(); var r = eligio();
+      if (!r) { error("Elige si todo llegó bien o si algo falló.", radios[0]); return; }
+      var datos = {resultado: r};
+      if (r === "falla") {
+        var m = validar(area.value); if (m) { error(m.replace("qué pasó", "qué falló"), area); return; }
+        datos.tipo_problema = tipo.value; datos.problema = area.value.trim();
+      }
+      limpiar(); if (alEmpezar) alEmpezar(); var fin = ocupar(boton, "Confirmando…");
+      enviar(ordenId, "aceptar", datos).then(function (d) {
+        if (d.ok) fin("Confirmado", 3000); else { fin(); error(d.mensaje); }
+        if (alTerminar) alTerminar(d);
+      });
+    });
+  }
+
   /* ---------- pantalla del pedido ---------- */
   function iniciar(raiz) {
     if (!raiz || !window.fetch) return;
@@ -66,10 +97,7 @@
         resta = document.getElementById("entrega-resta"), barra = document.getElementById("entrega-barra"), seccion = raiz.closest(".estado-pedido");
     var total = null, fin = null, anuncio = document.getElementById("entrega-anuncio");
     function ocupado(si) { if (seccion) seccion.classList.toggle("cargando", si); }
-    aceptar.addEventListener("submit", function (e) {
-      e.preventDefault(); var b = aceptar.querySelector("button"), listo = ocupar(b, "Confirmando…"); ocupado(true);
-      enviar(ordenId, "aceptar").then(function (d) { ocupado(false); if (d.ok) listo("Confirmado", 3000); else { listo(); toast(d.mensaje, "error"); anunciar(d.mensaje); } termino(ordenId, d); });
-    });
+    ligarRevision(aceptar, ordenId, function () { ocupado(true); }, function (d) { ocupado(false); if (!d.ok) anunciar(d.mensaje); termino(ordenId, d); });
     ligarFormularioNo(no, ordenId, function (d) { ocupado(false); termino(ordenId, d); });
     det.addEventListener("toggle", function () { if (det.open) no.querySelector("textarea").focus(); });
     /* cuenta regresiva suave: no hay números que cambien cada segundo; la barra se vacía despacio y el texto se redondea */
@@ -107,6 +135,47 @@
     d.addEventListener("close", function () { d.remove(); if (modal.origen && document.contains(modal.origen)) modal.origen.focus(); });
     modal.origen = document.activeElement; d.showModal(); d.querySelector("textarea").focus();
   }
+  /* Diálogo con el paso de revisión (campanita y aviso destacado). Los datos vienen del servidor; todo se escribe con textContent. */
+  function revisar(ordenId) {
+    var url = "/pedidos/" + ordenId + "/entrega/?revision=1";
+    if (!window.HTMLDialogElement || !window.fetch) { location.href = "/pedidos/" + ordenId + "/#entrega"; return; }
+    function el(tag, props, texto) { var n = document.createElement(tag); Object.keys(props || {}).forEach(function (k) { n.setAttribute(k, props[k]); }); if (texto != null) n.textContent = texto; return n; }
+    fetch(url, {credentials: "same-origin", headers: {"Accept": "application/json"}}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !d.puede_responder || !d.revision) { document.dispatchEvent(new CustomEvent("cofrial:entrega", {detail: {orden: ordenId, ok: false}})); location.href = "/pedidos/" + ordenId + "/"; return; }
+      var rev = d.revision, dlg = el("dialog", {"class": "dialogo entrega-dialogo", "aria-labelledby": "rv-t"}), form = el("form", {novalidate: ""});
+      form.appendChild(el("h2", {id: "rv-t"}, "Revisa tu pedido N.º " + ordenId));
+      var ul = el("ul", {"class": "revision-productos", "aria-label": "Productos de tu pedido"});
+      rev.productos.forEach(function (p) { var li = el("li"); li.appendChild(el("b", {}, String(p.cantidad))); li.appendChild(document.createTextNode(" × " + p.producto)); ul.appendChild(li); });
+      form.appendChild(ul);
+      if (rev.temperatura) {
+        var t = rev.temperatura, f1 = function (v) { return v.toFixed(1).replace(".", ","); }, fb = function (v) { return String(v).replace(".", ","); };
+        var pt = el("p", {"class": "revision-temp" + (t.en_rango ? "" : " fuera")});
+        pt.appendChild(el("b", {}, "Temperatura del viaje: "));
+        pt.appendChild(document.createTextNode(f1(t.ultima) + " °C ahora (entre " + f1(t.minima) + " y " + f1(t.maxima) + " °C en la última hora; lo permitido es " + fb(t.banda.min) + " a " + fb(t.banda.max) + " °C). "));
+        pt.appendChild(el("span", {"class": "chip " + (t.en_rango ? "entregado" : "alerta")}, t.en_rango ? "Dentro de rango" : "Fuera de rango"));
+        form.appendChild(pt);
+      }
+      var fs = el("fieldset", {"class": "revision-resultado"}); fs.appendChild(el("legend", {}, "¿Llegó todo bien?"));
+      [["bien", "Sí, todo llegó bien"], ["falla", "No, algo falló"]].forEach(function (o) {
+        var lb = el("label"), rd = el("input", {type: "radio", name: "resultado", value: o[0]}); lb.appendChild(rd); lb.appendChild(document.createTextNode(" " + o[1])); fs.appendChild(lb);
+      });
+      form.appendChild(fs);
+      var fl = el("div", {"class": "revision-falla"});
+      fl.appendChild(el("label", {"for": "rv-tipo"}, "¿Qué falló?"));
+      var sel = el("select", {id: "rv-tipo", name: "tipo_problema"}); rev.problemas.forEach(function (k) { sel.appendChild(el("option", {value: k.codigo}, k.etiqueta)); }); fl.appendChild(sel);
+      fl.appendChild(el("label", {"for": "rv-problema"}, "Cuéntanos qué pasó (obligatorio si algo falló)"));
+      fl.appendChild(el("textarea", {id: "rv-problema", name: "problema", rows: "3", maxlength: String(MAX), "aria-describedby": "rv-error"}));
+      fl.appendChild(el("p", {"class": "frio"}, "Ventas recibe tu aviso como reclamo y te contacta. El pedido igual queda como entregado."));
+      form.appendChild(fl);
+      form.appendChild(el("p", {"class": "entrega-error", id: "rv-error", role: "alert", hidden: ""}));
+      var ac = el("div", {"class": "acciones"}); ac.appendChild(el("button", {"class": "btn"}, "Recibí mi pedido"));
+      var cerrar = el("button", {type: "button", "class": "btn-sec"}, "Cancelar"); cerrar.addEventListener("click", function () { dlg.close(); }); ac.appendChild(cerrar);
+      form.appendChild(ac); dlg.appendChild(form); document.body.appendChild(dlg);
+      ligarRevision(form, ordenId, null, function (r) { if (r.ok) { dlg.close(); termino(ordenId, r); } else termino(ordenId, r); });
+      dlg.addEventListener("close", function () { dlg.remove(); if (revisar.origen && document.contains(revisar.origen)) revisar.origen.focus(); });
+      revisar.origen = document.activeElement; dlg.showModal(); fs.querySelector("input").focus();
+    }).catch(function () { location.href = "/pedidos/" + ordenId + "/#entrega"; });
+  }
   function aceptarDirecto(ordenId, boton) {
     var fin = ocupar(boton, "Confirmando…");
     enviar(ordenId, "aceptar").then(function (d) { if (d.ok) fin("Confirmado", 2500); else { fin(); toast(d.mensaje, "error"); anunciar(d.mensaje); } termino(ordenId, d); });
@@ -121,5 +190,5 @@
       return vistos.indexOf(a.id) < 0 && ahora - new Date(a.cuando).getTime() <= RECIENTE_MS;
     }).length;
   }
-  window.CofrialEntrega = {iniciar: iniciar, modal: modal, aceptar: aceptarDirecto, validar: validar, pide: pide, contarAvisos: contarAvisos};
+  window.CofrialEntrega = {iniciar: iniciar, modal: modal, revisar: revisar, aceptar: aceptarDirecto, validar: validar, pide: pide, contarAvisos: contarAvisos};
 })();

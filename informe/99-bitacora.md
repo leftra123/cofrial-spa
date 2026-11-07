@@ -79,3 +79,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 ## 2026-11-06: preparación de la defensa
 - Retención de telemetría implementada (`manage.py podar_telemetria` y servicio `podador`): el informe la declaraba como mitigación y no existía en el código. Se ajustó el riesgo de `03-arquitectura-cloud.md`, porque no se agrega por hora. El Word aún no incorpora ese cambio.
 - Guion de la defensa: el tope de la IA es de 12 s y no de 5 s, se agregan las preguntas sobre IA de pago y crecimiento de la telemetría, y se pide confirmar que `ANTHROPIC_API_KEY` esté vacía en AWS.
+
+## 2026-11-06: experiencia del cliente que recibe
+- **Error corregido (filtraba datos):** la ruta que recibía el cliente era la polilínea completa del viaje. En una prueba con 2 paradas se vio también el camino y la parada del otro cliente. Ahora el servidor entrega solo el tramo del camión hasta la parada del propio cliente; hay pruebas con un viaje de 2 clientes que fallan si aparece la parada ajena.
+- **Aviso de llegada evidente:** el aviso «cerca» solo estaba en la campanita y duraba unos 2 minutos; ahora hay un banner fijo en cualquier página (cerca y llegó), título de pestaña y sondeo más seguido.
+- **Revisión de la entrega:** al recibir, el cliente revisa productos y temperatura y dice si todo llegó bien o qué falló; si falló queda un reclamo para ventas (requerimiento ligado al pedido). Sin cambios en el modelo de datos: `informe/04b-modelo-datos.md` no cambia.

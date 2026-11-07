@@ -293,15 +293,37 @@ def mapa_en_vivo(orden):
 
 
 def ruta_del_pedido(orden):
-    """Polilínea guardada del viaje y el punto de la parada de este pedido (para dibujar al cliente la misma ruta que ve el despachador)."""
+    """Lo que el cliente puede ver de la ruta: SOLO el tramo desde donde está el camión hasta la parada de este pedido.
+
+    El viaje guardado puede llevar a varios clientes (base -> parada 1 -> parada 2 -> base) y es el que ve el despachador. El filtro es
+    de este lado, el servidor, y no del mapa: la respuesta nunca trae la polilínea completa, las paradas de otros clientes ni los
+    tramos de otras entregas, aunque alguien lea el JSON a mano. Si el camión todavía debe pasar por la parada de otro cliente antes
+    de llegar a esta, el tramo por calles pasaría por la casa de ese cliente: en ese caso se entrega una línea recta (aproximada)
+    entre el camión y esta dirección, que no revela nada de la ruta de los demás."""
+    from django.conf import settings
+
     from flota import rutas
     if orden.despacho_id is None or not mapa_en_vivo(orden):
         return None
     ruta = rutas.asegurar_ruta(orden.despacho)
-    if not ruta:
+    propia = next((p for p in (ruta or {}).get("paradas", []) if p["direccion_id"] == orden.direccion_id), None)
+    if propia is None:
         return None
-    parada = next((p for p in ruta["paradas"] if p["direccion_id"] == orden.direccion_id), None)
-    return {"puntos": ruta["puntos"], "parada": parada, "aproximada": ruta["aproximada"], "km": ruta["km"]}
+    from flota.models import Telemetria
+    ultima = Telemetria.objects.filter(camion_id=orden.despacho.camion_id).order_by("-registrado_en").first()
+    posicion = (ultima.lat, ultima.long) if ultima else (settings.BASE_LOGISTICA["lat"], settings.BASE_LOGISTICA["long"])
+    destino = [propia["lat"], propia["long"]]
+    puntos, hasta = ruta["puntos"], propia["indice"]
+    actual = min(range(hasta + 1), key=lambda i: rutas.km_entre(puntos[i], posicion))     # el vértice de la ruta más cercano al camión, sin pasarse de esta parada
+    antes_de_la_propia = [p for p in ruta["paradas"] if p is not propia and actual < p["indice"] <= hasta]
+    if antes_de_la_propia:
+        tramo, aproximada = [list(posicion), destino], True
+    else:
+        tramo, aproximada = [list(posicion)] + [list(p) for p in puntos[actual + 1:hasta + 1]], ruta["aproximada"]
+        if len(tramo) == 1 or tramo[-1] != destino:
+            tramo.append(destino)
+    return {"puntos": tramo, "parada": {"lat": propia["lat"], "long": propia["long"]}, "aproximada": aproximada,
+            "km": round(rutas.largo_km(tramo), 2)}
 
 
 # ---------- llegada estimada y avisos (campanita) ----------
@@ -327,7 +349,7 @@ def _llegada(orden, ultima):
     from datetime import timedelta
     from django.conf import settings
     from django.utils import timezone
-    vacio = {"km_restantes": None, "eta": None, "cerca": False}
+    vacio = {"km_restantes": None, "eta": None, "cerca": False, "minutos": None}
     d = orden.despacho
     if ultima is None or orden.direccion.lat is None or d.salida_en is None or orden.estado_orden.nombre != "Despachada":
         return vacio
@@ -342,9 +364,14 @@ def _llegada(orden, ultima):
         km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
     minutos = km / settings.VELOCIDAD_MEDIA_KMH * 60
     centro = timezone.now() + timedelta(minutes=minutos)
-    return {"km_restantes": round(km, 1), "cerca": km <= CERCA_KM,
+    return {"km_restantes": round(km, 1), "cerca": km <= CERCA_KM, "minutos": max(1, round(minutos)),
             "eta": {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),
                     "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}}
+
+
+def en_minutos(minutos):
+    """«en cerca de un minuto» / «en unos 4 min»: la hora estimada nunca es exacta, así que no se dice como si lo fuera."""
+    return "en cerca de un minuto" if (minutos or 0) <= 1 else f"en unos {minutos} min"
 
 
 def avisos_de_llegada(cliente):
@@ -369,7 +396,8 @@ def avisos_de_llegada(cliente):
                        "texto": f"Tu pedido N.º {o.orden_id} salió a las {hora(d.salida_en)}."})
         if o.puerta_en:
             salida.append({"id": f"{o.orden_id}-puerta", "orden_id": o.orden_id, "tipo": "puerta", "cuando": o.puerta_en.isoformat(),
-                           "texto": f"Estamos afuera de tu dirección con tu pedido N.º {o.orden_id}. Confírmanos si lo recibiste."
+                           "destacado": nombre == "Camión en la puerta",       # espera tu respuesta: la pantalla lo muestra como banner, no solo en la campanita
+                           "texto": f"Estamos afuera de tu dirección con tu pedido N.º {o.orden_id}. Revísalo y confírmanos si lo recibiste."
                            if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}."})
         if nombre == "Entregada" and o.entrega_resuelta_en:
             salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": o.entrega_resuelta_en.isoformat(),
@@ -392,7 +420,8 @@ def avisos_de_llegada(cliente):
                            "texto": f"Recibirás tu pedido N.º {o.orden_id} entre las {desde} y las {hasta}."})
         if info["cerca"]:
             salida.append({"id": f"{o.orden_id}-cerca", "orden_id": o.orden_id, "tipo": "cerca", "cuando": ultima.registrado_en.isoformat(),
-                           "texto": f"El camión de tu pedido N.º {o.orden_id} está a menos de {CERCA_KM} km."})
+                           "destacado": True, "minutos": info["minutos"],
+                           "texto": f"Tu pedido N.º {o.orden_id} está por llegar: el camión está a menos de {CERCA_KM} km (llega {en_minutos(info['minutos'])}). Deja a alguien listo para recibirlo."})
     return sorted(salida, key=lambda a: a["cuando"], reverse=True)
 
 
@@ -419,16 +448,50 @@ def entrega_de(orden):
             "motivo": orden.entrega_motivo or None, "automatica": orden.entrega_automatica}
 
 
-def resolver_entrega(cliente, orden_id, accion, motivo=""):
-    """El cliente responde al aviso «estamos afuera»: `aceptar` (queda «Entregada») o `no_recibido` con el motivo (queda «Entrega no
-    concretada», no final, y se crea un requerimiento para ventas). Solo mientras la orden está «Camión en la puerta»: si el plazo
-    la dio por entregada o ya respondió, no cambia nada y se informa."""
+# Qué puede haber fallado al recibir. La etiqueta es lo que ve el cliente; la categoría es la del CRM a la que va el reclamo (None = la
+# clasifica la IA, como cualquier consulta). Son categorías que ya existen: no hay tablas ni campos nuevos para esto.
+PROBLEMAS_AL_RECIBIR = {
+    "temperatura": ("Los productos llegaron tibios o descongelados", "Reclamo por temperatura"),
+    "faltante": ("Faltan o sobran productos", "Problema en la entrega"),
+    "danado": ("Producto dañado o en mal estado", "Problema en la entrega"),
+    "otro": ("Otro problema", None),
+}
+ASUNTO_RECLAMO_AL_RECIBIR = "Problema al recibir el pedido"
+
+
+def revision_de(orden):
+    """Lo que el cliente revisa antes de confirmar que recibió: los productos con sus cantidades y la temperatura del viaje
+    (el mismo dato de `seguimiento`, la última hora del camión). `temperatura` es None si el camión no tiene lecturas."""
+    productos = [{"producto": i.producto.nombre, "cantidad": i.cantidad} for i in orden.ordenitem_set.select_related("producto").order_by("producto__nombre")]
+    seg = seguimiento(orden)
+    temperatura = None
+    if seg and seg["ultima"]:
+        temps = [p["temp"] for p in seg["serie"]] or [seg["ultima"]["temp_camara"]]
+        banda = seg["banda"]
+        temperatura = {"ultima": seg["ultima"]["temp_camara"], "minima": min(temps), "maxima": max(temps), "banda": banda,
+                       "hubo_ruptura": seg["hubo_ruptura"] or seg["ultima"]["alerta_ruptura_frio"],
+                       "en_rango": not (seg["hubo_ruptura"] or seg["ultima"]["alerta_ruptura_frio"]) and banda["min"] <= seg["ultima"]["temp_camara"] <= banda["max"]}
+    return {"orden_id": orden.orden_id, "productos": productos, "temperatura": temperatura,
+            "problemas": [{"codigo": k, "etiqueta": v[0]} for k, v in PROBLEMAS_AL_RECIBIR.items()]}
+
+
+def resolver_entrega(cliente, orden_id, accion, motivo="", con_problema=False, tipo_problema="otro"):
+    """El cliente responde al aviso «estamos afuera». Tres desenlaces, siempre solo mientras la orden está «Camión en la puerta»:
+    - `aceptar`: revisó y todo llegó bien; queda «Entregada».
+    - `aceptar` con `con_problema` (y en `motivo` qué falló): recibió el pedido pero algo falló. Queda «Entregada» (el camión sí entregó) y se
+      crea un requerimiento para ventas ligado a la orden, que es el reclamo; sin tablas nuevas.
+    - `no_recibido` con el motivo: no pudo recibirlo; queda «Entrega no concretada» (no final) y se crea un requerimiento para ventas.
+    Si el plazo la dio por entregada o ya respondió, no cambia nada y se informa."""
     from django.utils import timezone
     motivo = (motivo or "").strip()
     if accion not in ("aceptar", "no_recibido"):
         raise ErrorDeNegocio("Elige «Recibí mi pedido» o «No pude recibirlo».")
     if accion == "no_recibido" and len(motivo) < MOTIVO_MINIMO:
         raise ErrorDeNegocio("Cuéntanos por qué no pudiste recibirlo (al menos unas palabras).")
+    if accion == "aceptar" and con_problema and len(motivo) < MOTIVO_MINIMO:
+        raise ErrorDeNegocio("Cuéntanos qué falló en tu pedido (al menos unas palabras) o marca que todo llegó bien.")
+    if accion == "aceptar" and con_problema and tipo_problema not in PROBLEMAS_AL_RECIBIR:
+        tipo_problema = "otro"
     with transaction.atomic():
         orden = ordenes_de(cliente).select_for_update(of=("self",)).filter(pk=orden_id).first()
         if orden is None:
@@ -441,10 +504,20 @@ def resolver_entrega(cliente, orden_id, accion, motivo=""):
         if accion == "no_recibido":
             orden.entrega_motivo = motivo[:500]
         orden.save(update_fields=["estado_orden", "entrega_resuelta_en", "entrega_automatica", "entrega_motivo"])
+    from crm import servicios as crm
     if accion == "no_recibido":
-        from crm import servicios as crm
         crm.crear_requerimiento(orden.direccion.cliente, f"Entrega no concretada del pedido N.º {orden.pk}", motivo, orden=orden)
+    elif con_problema:
+        etiqueta, categoria = PROBLEMAS_AL_RECIBIR[tipo_problema]
+        crm.crear_requerimiento(orden.direccion.cliente, f"{ASUNTO_RECLAMO_AL_RECIBIR} N.º {orden.pk}: {etiqueta}", motivo[:500], orden=orden,
+                                categoria_nombre=categoria)
     return orden
+
+
+def reclamo_al_recibir(orden):
+    """El reclamo que el cliente dejó al recibir este pedido (si lo hizo), para mostrárselo en la pantalla del pedido."""
+    from crm.models import Requerimiento
+    return Requerimiento.objects.filter(orden=orden, asunto__startswith=ASUNTO_RECLAMO_AL_RECIBIR).order_by("-creado_en").first()
 
 
 def confirmar_vencidas(ahora=None):

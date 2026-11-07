@@ -32,13 +32,30 @@
       {% if orden.entrega_automatica %}<p>No recibimos tu respuesta a tiempo y lo dimos por entregado{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Si no lo recibiste, cuéntanoslo y lo revisamos.</p>
       <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">No lo recibí</a><a class="btn" href="/catalogo/">Seguir comprando</a></div>
       {% else %}<p>Confirmaste la recepción{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura.</p>
+      {% if reclamo %}<p class="entrega-reclamo"><b>Ventas ya tiene tu aviso:</b> {{ reclamo.descripcion }} <a href="/soporte/?orden={{ orden.orden_id }}">Ver mis consultas</a></p>{% endif %}
       <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>{% endif %}
     {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Estamos afuera de tu dirección</h2>
       <p>El camión llegó con tu pedido N.º {{ orden.orden_id }} a {{ orden.direccion }}. ¿Lo pudiste recibir?</p>
       <div class="entrega" id="entrega" data-url="/pedidos/{{ orden.orden_id }}/entrega/">
-        <div class="entrega-resp">
-          <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar">{% csrf_token %}<input type="hidden" name="accion" value="aceptar"><button class="btn" data-cargando="Confirmando…">Recibí mi pedido</button></form>
-        </div>
+        <form class="entrega-revision" method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar" aria-labelledby="rev-t">{% csrf_token %}<input type="hidden" name="accion" value="aceptar">
+          <h3 id="rev-t">Revisa tu pedido antes de confirmar</h3>
+          <ul class="revision-productos" aria-label="Productos de tu pedido">{% for p in revision.productos %}<li><b>{{ p.cantidad }}</b> × {{ p.producto }}</li>{% endfor %}</ul>
+          {% if revision.temperatura %}{% with t=revision.temperatura %}<p class="revision-temp{% if not t.en_rango %} fuera{% endif %}" id="revision-temp"><b>Temperatura del viaje:</b> {{ t.ultima|floatformat:1 }} °C ahora (entre {{ t.minima|floatformat:1 }} y {{ t.maxima|floatformat:1 }} °C en la última hora; lo permitido es {{ t.banda.min|floatformat:"-1" }} a {{ t.banda.max|floatformat:"-1" }} °C).
+            {% if t.en_rango %}<span class="chip entregado">Dentro de rango</span>{% else %}<span class="chip alerta">Fuera de rango</span> Si los productos llegaron tibios, cuéntalo abajo.{% endif %}</p>{% endwith %}{% endif %}
+          <fieldset class="revision-resultado"><legend>¿Llegó todo bien?</legend>
+            <label><input type="radio" name="resultado" value="bien" required> Sí, todo llegó bien</label>
+            <label><input type="radio" name="resultado" value="falla"> No, algo falló</label>
+          </fieldset>
+          <div class="revision-falla" id="revision-falla">
+            <label for="revision-tipo">¿Qué falló?</label>
+            <select id="revision-tipo" name="tipo_problema">{% for k in revision.problemas %}<option value="{{ k.codigo }}">{{ k.etiqueta }}</option>{% endfor %}</select>
+            <label for="revision-problema">Cuéntanos qué pasó (obligatorio si algo falló)</label>
+            <textarea id="revision-problema" name="problema" rows="3" maxlength="500" aria-describedby="revision-error" placeholder="Por ejemplo: llegaron 3 cajas en vez de 4, o una caja venía abierta…"></textarea>
+            <p class="frio">Ventas recibe tu aviso como reclamo y te contacta. El pedido igual queda como entregado.</p>
+          </div>
+          <p class="entrega-error" id="revision-error" role="alert" hidden></p>
+          <button class="btn" data-cargando="Confirmando…">Recibí mi pedido</button>
+        </form>
         <details class="entrega-no" id="entrega-no">
           <summary>No pude recibirlo</summary>
           <form method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="no_recibido" novalidate>{% csrf_token %}<input type="hidden" name="accion" value="no_recibido">
@@ -58,7 +75,7 @@
       {% if orden.entrega_motivo %}<blockquote class="entrega-motivo"><span class="frio">Lo que nos contaste</span>{{ orden.entrega_motivo }}</blockquote>{% endif %}
       <ol class="que-sigue" aria-label="Qué sigue"><li>Ventas ya tiene tu aviso en su bandeja.</li><li>Te contactamos para reprogramar la entrega o cancelar el pedido.</li><li>Si lo reprogramamos, verás aquí el nuevo viaje y te avisamos por la campanita.</li></ol>
       <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Escribir a ventas</a></div>
-    {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p>Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.</p>
+    {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p id="ep-sub">Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.</p>
     {% elif n == "En preparación" %}<h2 id="ep-t">Estamos preparando tu pedido</h2><p>Tu pedido aún no sale. Cada producto se arma en su rango de temperatura y el mapa en vivo aparece cuando el camión parta; te avisamos por la campanita.</p>
     {% elif n == "Confirmada" %}<h2 id="ep-t">Tu pedido está confirmado</h2><p>Ya reservamos el stock. Tu pedido aún no sale; el mapa aparece cuando el camión parta.</p>
     {% else %}<h2 id="ep-t">Recibimos tu pedido</h2><p>Estamos confirmando el stock.{% if puede_cancelar %} Mientras esté en esta etapa puedes cancelarlo.{% endif %}</p>{% endif %}
@@ -204,7 +221,7 @@
           marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom()), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
           if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(s.destino.direccion);
         } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom())); }
-        if (dest && s.ruta_url && Date.now() - ultimaRuta > 60000) {       // la ruta por calles la calculó y guardó el servidor: se pide una vez por minuto
+        if (dest && s.ruta_url && Date.now() - ultimaRuta > 15000) {       // el servidor entrega solo el tramo que le falta al camión hasta esta dirección (sale de la ruta guardada, sin consultar a OSRM): se pide cada 15 s para que la línea parta del camión
           ultimaRuta = Date.now();
           fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
             if (!r) return;
@@ -217,6 +234,12 @@
       }
     }
     ponerFacts(s, d.estado);
+    var cab = document.getElementById("ep-t"), sub = document.getElementById("ep-sub"), tarjeta = cab && cab.closest(".estado-pedido");
+    if (cab && sub && d.estado === "Despachada") {         // cerca: el estado del pedido lo dice con todas sus letras, no solo el resaltado de la hora
+      cab.textContent = s.cerca ? "Tu pedido está por llegar" : "Tu pedido va en camino";
+      sub.textContent = s.cerca ? "El camión está a menos de 2 km" + (s.minutos ? " (llega " + (s.minutos <= 1 ? "en cerca de un minuto" : "en unos " + s.minutos + " min") + ")" : "") + ". Deja a alguien listo para recibirlo." : "Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.";
+      if (tarjeta) tarjeta.classList.toggle("cerca", !!s.cerca);
+    }
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;
     pintarSerie(s.serie || []);
   }

@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from catalogo.asistente import estado_de_pedido
 from catalogo.models import ListaPrecio
+from clientes import rut as rutlib
 from clientes.models import Cliente, TipoCliente, Vendedor
 from cofrial import entradas
 from flota.models import Telemetria
@@ -114,7 +115,8 @@ def rechazar_empresa(usuario, cliente_id):
 
 # ---------------------------------------------------------------- RN-10 y RN-11: pipeline
 def transiciones_de(prospecto):
-    """Etapas a las que puede pasar un prospecto: la siguiente del embudo o «Perdido» (Figura de pipeline)."""
+    """Etapas a las que puede pasar un prospecto: la siguiente del embudo o «Perdido» (Figura de pipeline). Desde «Propuesta enviada»
+    también vuelve a «Contactado», cuando el cliente pide aclaraciones (CU-07, A5)."""
     if prospecto.etapa.es_final:
         return []
     etapas = list(EtapaPipeline.objects.order_by("orden_etapa"))
@@ -123,7 +125,8 @@ def transiciones_de(prospecto):
     perdida = next(e for e in etapas if e.es_final and not e.es_ganada)
     idx = abiertas.index(prospecto.etapa)
     siguiente = abiertas[idx + 1] if idx + 1 < len(abiertas) else ganada
-    return [siguiente, perdida]
+    retroceso = [abiertas[idx - 1]] if prospecto.etapa.nombre == "Propuesta enviada" else []
+    return [siguiente, *retroceso, perdida]
 
 
 @transaction.atomic
@@ -144,14 +147,15 @@ def mover_prospecto(usuario, prospecto_id, etapa_id, motivo="", rut=""):
     elif destino.es_ganada:                                              # RN-11: ganar crea el cliente B2B
         if not rut.strip():
             raise ErrorDeNegocio("Para ganar el prospecto indica el RUT de la empresa.")
-        if len(rut.strip()) > 12:
-            raise ErrorDeNegocio("El RUT no es válido (máximo 12 caracteres, con puntos y guion).")
+        if not rutlib.es_valido(rut) or len(rutlib.limpiar(rut)) > 9:
+            raise ErrorDeNegocio("El RUT no es válido; revisa el dígito verificador.")
+        rut = rutlib.formatear(rut)                      # el mismo formato del registro: «76111222-3» y «76.111.222-3» son el mismo cliente
         if not prospecto.email:
             raise ErrorDeNegocio("El prospecto necesita un correo para crearlo como cliente.")
-        if Cliente.objects.filter(rut=rut.strip()).exists():
+        if Cliente.objects.filter(rut=rut).exists():
             raise ErrorDeNegocio("Ya existe un cliente con ese RUT.")
         tipo = TipoCliente.objects.get(codigo="B2B")
-        prospecto.cliente = Cliente.objects.create(tipo_cliente=tipo, vendedor=prospecto.vendedor, rut=rut.strip(),
+        prospecto.cliente = Cliente.objects.create(tipo_cliente=tipo, vendedor=prospecto.vendedor, rut=rut,
                                                    nombre=prospecto.empresa or prospecto.nombre_contacto,
                                                    email=prospecto.email, telefono=prospecto.telefono)
         prospecto.cerrado_en = ahora

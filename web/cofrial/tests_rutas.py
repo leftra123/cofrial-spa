@@ -42,6 +42,7 @@ ESPERADO = {
     '/crm/requerimientos/999999/': ('L 403 403 404 404 403 404', 'L 403 403 404 404 403 404'),
     '/crm/requerimientos/999999/ia/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
     '/crm/requerimientos/999999/clasificar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
+    '/crm/requerimientos/999999/resolver/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
     '/crm/cobranza/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
     '/crm/ordenes/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/ordenes/999999/factura/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),

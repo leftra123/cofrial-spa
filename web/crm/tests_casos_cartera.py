@@ -86,6 +86,44 @@ class ReclamosPorCartera(Base):
         self.assertEqual(s.indicadores(self.maria)["requerimientos_pendientes"], 2)
 
 
+class CierreDelReclamo(Base):
+    def setUp(self):
+        super().setUp()
+        self.categoria = CategoriaRequerimiento.objects.first()
+        self.r = Requerimiento.objects.create(cliente=self.hospital, asunto="Faltó una caja", descripcion="Llegó incompleto",
+                                              categoria_requerimiento=self.categoria, estado="clasificado")
+
+    def test_el_vendedor_lo_resuelve_y_el_cliente_lo_ve_en_soporte(self):
+        self.entrar("vendedora@cofrial.cl")
+        self.assertContains(self.client.get(f"/crm/requerimientos/{self.r.pk}/"), "Marcar como resuelto")
+        self.client.post(f"/crm/requerimientos/{self.r.pk}/resolver/")
+        self.r.refresh_from_db()
+        self.assertEqual(self.r.estado, "resuelto")
+        self.assertIsNotNone(self.r.respondido_en)                              # alimenta el indicador de primera respuesta
+        self.entrar("abastecimiento@hospital.test")
+        self.assertContains(self.client.get("/soporte/"), "resuelto")
+
+    def test_sin_clasificar_no_se_resuelve_y_resuelto_no_se_reabre(self):
+        sin = Requerimiento.objects.create(cliente=self.hospital, asunto="x", descripcion="y")
+        with self.assertRaisesMessage(s.ErrorDeNegocio, "Clasifícalo antes"):
+            s.resolver_requerimiento(self.maria, sin.pk)
+        s.resolver_requerimiento(self.maria, self.r.pk)
+        with self.assertRaisesMessage(s.ErrorDeNegocio, "Ya está resuelto"):
+            s.resolver_requerimiento(self.maria, self.r.pk)
+        with self.assertRaises(s.ErrorDeNegocio):
+            s.clasificar_manual(self.maria, self.r.pk, self.categoria.pk)
+        with self.assertRaises(s.ErrorDeNegocio):
+            s.reintentar_ia(self.maria, self.r.pk)
+
+    def test_otro_vendedor_y_gerencia_no_lo_resuelven(self):
+        self.entrar("vendedor2@cofrial.cl")
+        self.client.post(f"/crm/requerimientos/{self.r.pk}/resolver/")
+        self.entrar("gerencia@cofrial.cl")
+        self.client.post(f"/crm/requerimientos/{self.r.pk}/resolver/")
+        self.r.refresh_from_db()
+        self.assertEqual(self.r.estado, "clasificado")
+
+
 class Embudo(Base):
     def test_a5_de_propuesta_enviada_vuelve_a_contactado(self):
         p = Prospecto.objects.get(nombre_contacto="Luis Soto")                  # Propuesta enviada, de Pedro

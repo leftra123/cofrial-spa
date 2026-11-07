@@ -283,6 +283,19 @@ def requerimiento_ia(request, pk):
     return redirect("crm_requerimientos")
 
 
+@require_POST
+@con_rol(*COMERCIAL)
+def requerimiento_resolver(request, pk):
+    try:
+        s.resolver_requerimiento(request.user, pk)
+        messages.success(request, "Requerimiento resuelto: el cliente ya lo ve así en Soporte.")
+    except ObjectDoesNotExist:
+        messages.error(request, "No se pudo resolver el requerimiento.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_requerimientos")
+
+
 @con_rol(*COMERCIAL)
 def ia_panel(request):
     """Explica la IA y permite probarla en vivo: estado de los proveedores, una prueba lado a lado y un resumen de lo que ha hecho."""

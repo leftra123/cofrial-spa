@@ -114,7 +114,7 @@ Se especifican cuatro casos: los tres más sensibles para los requerimientos de 
 | Precondiciones | Cuenta de cliente; si se referencia una orden, debe pertenecer a esa cuenta |
 | Disparador | Enviar Soporte o Reportar un problema desde el detalle de una orden |
 | Flujo normal | Validar asunto y descripción; persistir el requerimiento con cliente y orden opcional; consultar al clasificador; guardar confianza y categoría válida si alcanza 0,60; mostrar el registro en soporte y en la bandeja CRM |
-| Alternativas | Falla de proveedor, categoría inválida o confianza baja: el nuevo requerimiento queda sin clasificar. Respaldo por otro proveedor cuando está configurado y hay presupuesto. Reintento manual o clasificación humana; no existe cola automática. Descripción vacía: envío rechazado |
+| Alternativas | Falla de proveedor, categoría inválida o confianza baja: el nuevo requerimiento queda sin clasificar. Respaldo por otro proveedor cuando está configurado y hay presupuesto. Reintento manual o clasificación humana; no existe cola automática. Descripción vacía: envío rechazado. Ventas cierra el caso con «Marcar como resuelto» |
 | Tiempo | Presupuesto nominal de doce segundos para proveedores; no garantiza el plazo total HTTP |
 | Postcondiciones | Una falla de IA no elimina el requerimiento previamente guardado; el reintento fallido no borra una clasificación anterior |
 | Datos | requerimiento, categoria_requerimiento, cliente y orden |

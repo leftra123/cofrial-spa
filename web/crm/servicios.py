@@ -348,15 +348,32 @@ def crear_requerimiento(cliente, asunto, descripcion, orden=None, categoria_nomb
 def reintentar_ia(usuario, requerimiento_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
-    return clasificar_con_ia(requerimientos_visibles(usuario).get(pk=requerimiento_id))
+    r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
+    if r.estado == "resuelto":
+        raise ErrorDeNegocio("Este requerimiento ya está resuelto.")
+    return clasificar_con_ia(r)
 
 
 def clasificar_manual(usuario, requerimiento_id, categoria_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
     r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
+    if r.estado == "resuelto":
+        raise ErrorDeNegocio("Este requerimiento ya está resuelto.")
     r.categoria_requerimiento, r.estado, r.clasificado_manual = CategoriaRequerimiento.objects.get(pk=categoria_id), "clasificado", True     # una categoría inexistente no se guarda
     r.save(update_fields=["categoria_requerimiento", "estado", "clasificado_manual"])
+    return r
+
+
+def resolver_requerimiento(usuario, requerimiento_id):
+    """Cierra el caso: el cliente lo ve «resuelto» en Soporte y `respondido_en` alimenta el indicador de primera respuesta."""
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol no puede resolver requerimientos.")
+    r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
+    if r.estado != "clasificado":
+        raise ErrorDeNegocio("Ya está resuelto." if r.estado == "resuelto" else "Clasifícalo antes de marcarlo como resuelto.")
+    r.estado, r.respondido_en = "resuelto", timezone.now()
+    r.save(update_fields=["estado", "respondido_en"])
     return r
 
 

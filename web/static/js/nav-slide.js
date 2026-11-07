@@ -106,6 +106,13 @@
     }
     var nr = nav.getBoundingClientRect();
     var r = enlace.getBoundingClientRect();
+    /* En móvil el menú se desliza de lado y «Carrito» queda cortado al borde: la pestaña elegida se trae a la vista.
+       La raya se mide después, porque mover el menú cambia dónde cae el enlace. */
+    if (nav.scrollWidth > nav.clientWidth) {
+      if (r.right > nr.right - 8) nav.scrollLeft += r.right - nr.right + 8;
+      else if (r.left < nr.left + 8) nav.scrollLeft -= nr.left + 8 - r.left;
+      r = enlace.getBoundingClientRect();
+    }
     ind.hidden = false;
     ind.removeAttribute("hidden");
     ind.style.left = r.left - nr.left + nav.scrollLeft + "px";

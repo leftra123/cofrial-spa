@@ -276,8 +276,8 @@ def entrega(request, cliente, orden_id):
         orden = s.resolver_entrega(cliente, orden_id, accion, request.POST.get("problema" if con_problema else "motivo", ""),
                                    con_problema=con_problema, tipo_problema=request.POST.get("tipo_problema", "otro"))
         if orden.estado_orden.nombre == "Entregada":
-            mensaje = ("Gracias por confirmar la recepción. Registramos el problema que nos contaste y ventas te contactará."
-                       if con_problema else "Gracias por confirmar la recepción.")
+            mensaje = ("Pedido entregado exitosamente. Registramos el problema que nos contaste y ventas te contactará."
+                       if con_problema else "Pedido entregado exitosamente. Gracias por confirmar la recepción.")
         else:
             mensaje = "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar."
         ok = True

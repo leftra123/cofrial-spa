@@ -1272,3 +1272,10 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .quien-recibe { margin: 14px 0 0; padding: 0; border: 0; display: grid; gap: 6px; }
 .quien-recibe legend { padding: 0; margin-bottom: 4px; font-weight: 700; }
 .revision-recibe { margin: 0; font-size: .9rem; color: var(--texto-2); }
+
+/* ---------- Itinerario del pedido y recorrido cerrado ---------- */
+.itinerario { margin: 8px 0 0; padding: 10px 14px; border-left: 3px solid var(--acento); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; background: var(--acento-suave); color: var(--texto); font-size: .9rem; }
+.itinerario[hidden] { display: none; }
+.recorrido-cerrado { margin: 4px 0 0; color: var(--texto-2); }
+.campana-meta { color: var(--texto-3); font-size: .78rem; }
+.campana-item .campana-acciones { padding-top: 0; }

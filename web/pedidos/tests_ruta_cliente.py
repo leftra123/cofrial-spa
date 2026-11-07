@@ -29,7 +29,9 @@ def puntos_de(respuesta):
     return {redondeado(p) for p in respuesta["puntos"]} | {redondeado((respuesta["parada"]["lat"], respuesta["parada"]["long"]))}
 
 
-class RutaSoloDelClienteTests(EntregaBase):
+class ViajeDeDosClientesBase(EntregaBase):
+    """Ayudas para armar un viaje con dos clientes (la usan las pruebas de ruta y de itinerario)."""
+
     def viaje_de_dos_clientes(self, osrm=None):
         """Ana (B2C) y el hospital (B2B) en el mismo camión. Devuelve (despacho, [(cliente, orden, parada)]) en el orden en que el viaje los visita."""
         usuarios, pedidos = get_user_model().objects, []
@@ -62,6 +64,9 @@ class RutaSoloDelClienteTests(EntregaBase):
     def punto_medio(a, b):
         return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
 
+
+
+class RutaSoloDelClienteTests(ViajeDeDosClientesBase):
     def test_con_dos_clientes_nadie_recibe_la_parada_ni_los_puntos_del_otro(self):
         """El caso de la prueba en vivo: un viaje con 2 paradas. Con la línea recta de respaldo, la polilínea completa lleva ambas paradas."""
         despacho, ((c1, o1, p1), (c2, o2, p2)) = self.viaje_de_dos_clientes()

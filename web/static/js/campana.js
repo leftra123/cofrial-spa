@@ -13,6 +13,13 @@
   var pide = CofrialEntrega.pide, contar = CofrialEntrega.contarAvisos;      // reglas del contador en entrega.js (una función pura, con prueba)
   var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", frio: "Temperatura"};
 
+  function datosDelPedido(a) {
+    var p = a.pedido; if (!p) return "";
+    var partes = [];
+    if (p.documento) partes.push(p.documento.etiqueta);
+    if (p.total_clp != null) partes.push("$" + Number(p.total_clp).toLocaleString("es-CL") + (p.con_iva ? " con IVA" : ""));
+    return partes.join(" · ");
+  }
   var VACIO = "Sin avisos por ahora. Te avisamos cuando tu pedido salga, esté cerca y llegue.", cargado = false, nota = document.getElementById("campana-nota");
   function mensaje(clase, texto) { lista.innerHTML = ""; var li = document.createElement("li"); li.className = clase; li.textContent = texto; lista.appendChild(li); return li; }
   function pintar() {
@@ -28,8 +35,15 @@
       var enlace = document.createElement("a"); enlace.href = "/pedidos/" + a.orden_id + "/";
       var tipo = document.createElement("span"); tipo.className = "campana-tipo t-" + a.tipo; tipo.textContent = ICONOS[a.tipo] || "Aviso";
       var txt = document.createElement("span"); txt.className = "campana-txt"; txt.textContent = a.texto;
+      var meta = datosDelPedido(a);          // lo que el pedido lleva de verdad: documento y monto, para no hacerlo abrir para saberlo
+      if (meta) { var m = document.createElement("small"); m.className = "campana-meta"; m.textContent = meta; txt.appendChild(document.createElement("br")); txt.appendChild(m); }
       var h = document.createElement("time"); h.dateTime = a.cuando; h.textContent = hora(a.cuando);
       enlace.appendChild(tipo); enlace.appendChild(txt); enlace.appendChild(h); li.appendChild(enlace); lista.appendChild(li);
+      /* Todo aviso trae su botón con una acción real (el servidor dice a qué pantalla lleva); el de «estamos afuera» trae las dos respuestas. */
+      if (a.accion && !(a.tipo === "puerta" && pide(a))) {
+        var ab = document.createElement("div"); ab.className = "campana-acciones";
+        var ir = document.createElement("a"); ir.className = "btn-sec"; ir.href = a.accion.url; ir.textContent = a.accion.texto; ab.appendChild(ir); li.appendChild(ab);
+      }
       /* «Estamos afuera»: mientras el camión sigue en la puerta (el servidor cambia el texto cuando ya no), el aviso trae las dos respuestas */
       if (a.tipo === "puerta" && /^Estamos afuera/.test(a.texto) && window.CofrialEntrega) {
         var ac = document.createElement("div"); ac.className = "campana-acciones";
@@ -65,7 +79,7 @@
         : "El camión está a menos de 2 km" + (a.minutos ? " (llega " + (a.minutos <= 1 ? "en cerca de un minuto" : "en unos " + a.minutos + " min") + ")" : "") + ". Deja a alguien listo para recibirlo."));
       var ac = nodo("div", "al-acciones");
       if (llego) { var r = nodo("button", "btn", "Revisar y recibir"); r.type = "button"; r.addEventListener("click", function () { CofrialEntrega.revisar(a.orden_id); }); ac.appendChild(r); }
-      var ver = nodo("a", llego ? "btn-sec" : "btn", llego ? "Ver mi pedido" : "Ver dónde va"); ver.href = "/pedidos/" + a.orden_id + "/"; ac.appendChild(ver);
+      var ver = nodo("a", llego ? "btn-sec" : "btn", llego ? "Ver mi pedido" : "Ver dónde va"); ver.href = a.accion ? a.accion.url : "/pedidos/" + a.orden_id + "/"; ac.appendChild(ver);
       it.appendChild(cuerpo); it.appendChild(ac);
       if (!llego) { var x = nodo("button", "al-cerrar", "×"); x.type = "button"; x.setAttribute("aria-label", "Cerrar este aviso"); x.addEventListener("click", function () { cerrar(a.id); }); it.appendChild(x); }
       banner.appendChild(it);

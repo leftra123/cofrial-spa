@@ -314,6 +314,7 @@ def seguimiento(orden):
         "salida_en": orden.despacho.salida_en.isoformat() if orden.despacho.salida_en else None,
         "llegada_en": orden.puerta_en.isoformat() if orden.puerta_en else None,          # cuando el camión llegó a ESTA dirección
         "ruta_url": f"/api/pedidos/{orden.orden_id}/ruta/" if en_vivo else None,
+        "itinerario": itinerario_de(orden) if en_vivo else None,
         "entrega": entrega_de(orden),
         **_llegada(orden, ultima),
     }
@@ -322,6 +323,30 @@ def seguimiento(orden):
 def mapa_en_vivo(orden):
     """RN-16: el cliente ve el mapa en vivo solo con el pedido «Despachada» (en ruta) o «Camión en la puerta»."""
     return orden.estado_orden.nombre in ("Despachada", "Camión en la puerta")
+
+
+def itinerario_de(orden):
+    """Un único itinerario por pedido: en qué parada del viaje va este pedido y por qué el camión puede pasar antes por otra entrega.
+    Solo cuenta paradas («parada 2 de 3», «antes pasamos por otra entrega»): nunca el nombre, la dirección ni las coordenadas de otro cliente.
+    Las «anteriores» son las paradas previas del viaje cuyos pedidos siguen «Despachada»; las que el camión ya atendió no cuentan."""
+    d = orden.despacho
+    marcas = ((d.ruta_geojson or {}).get("paradas") or []) if d else []
+    ids = [m["direccion_id"] for m in marcas]
+    if orden.direccion_id not in ids:
+        return None
+    n, total = ids.index(orden.direccion_id), len(ids)
+    antes = (Orden.objects.filter(despacho=d, direccion_id__in=ids[:n], estado_orden__nombre="Despachada")
+             .values("direccion_id").distinct().count())
+    if total == 1:
+        texto = "Este viaje lleva solo tu pedido: el camión va directo a tu dirección."
+    elif antes:
+        otras = "otra entrega" if antes == 1 else f"{antes} entregas más"
+        texto = f"Tu pedido es la parada {n + 1} de {total}. Antes pasamos por {otras}, por eso la línea del mapa es una guía hasta tu dirección."
+    elif n:
+        texto = f"Tu pedido es la parada {n + 1} de {total}. Ya hicimos las entregas anteriores: el camión va directo a tu dirección."
+    else:
+        texto = f"Tu pedido es la parada 1 de {total}: es la primera entrega del viaje y el camión va directo a tu dirección."
+    return {"parada": n + 1, "total": total, "antes": antes, "texto": texto}
 
 
 def ruta_del_pedido(orden):
@@ -406,6 +431,32 @@ def en_minutos(minutos):
     return "en cerca de un minuto" if (minutos or 0) <= 1 else f"en unos {minutos} min"
 
 
+def _resumen_del_pedido(orden, documentos):
+    """Datos del pedido que acompañan a cada aviso, para que muestre lo correcto: estado, lo que paga el cliente y su documento
+    (el tributario si ya existe: factura o boleta; si no, la guía de despacho). `documentos` es {tipo: Documento} de esta orden."""
+    from . import documentos as docs
+    elegido = next((documentos[t] for t in ("factura", "boleta", "guia_despacho") if t in documentos), None)
+    b2b = orden.direccion.cliente.tipo_cliente.codigo == "B2B"
+    return {"estado": orden.estado_orden.nombre, "total_clp": docs.monto_con_iva(orden) if b2b else total_orden(orden), "con_iva": b2b,
+            "documento": None if elegido is None else {"tipo": elegido.tipo, "nombre": elegido.get_tipo_display(), "etiqueta": str(elegido)}}
+
+
+def _accion_del_aviso(aviso, pedido):
+    """El botón de cada tipo de aviso lleva a una pantalla que existe y sirve para lo que el aviso dice (la prueba los recorre todos)."""
+    n, tipo = aviso["orden_id"], aviso["tipo"]
+    if tipo == "puerta" and aviso.get("destacado"):
+        return {"texto": "Revisar y recibir", "url": f"/pedidos/{n}/#entrega"}
+    if tipo in ("salio", "ventana", "cerca"):
+        return {"texto": "Ver dónde va", "url": f"/pedidos/{n}/#seg"}
+    if tipo == "llego" and pedido["documento"]:
+        return {"texto": f"Ver {pedido['documento']['nombre'].lower()}", "url": f"/pedidos/{n}/#documentos"}
+    if tipo == "no_concretada":
+        return {"texto": "Escribir a ventas", "url": f"/soporte/?orden={n}"}
+    if tipo == "frio":
+        return {"texto": "Reportar un problema", "url": f"/soporte/?orden={n}"}
+    return {"texto": "Ver pedido", "url": f"/pedidos/{n}/"}
+
+
 def avisos_de_llegada(cliente):
     """Avisos para la campanita del cliente, calculados desde el estado de sus órdenes (no se guardan): salió, cerca y llegó.
     Cada aviso tiene un id estable para que el navegador sepa cuáles ya vio."""
@@ -417,7 +468,8 @@ def avisos_de_llegada(cliente):
     hace_un_dia = timezone.now() - timedelta(hours=24)
     salida = []
     hora = lambda x: localtime(x).strftime("%H:%M")
-    for o in ordenes_de(cliente).select_related("despacho__camion", "direccion", "estado_orden"):
+    ordenes_listadas = list(ordenes_de(cliente).select_related("despacho__camion", "direccion__cliente__tipo_cliente", "estado_orden"))
+    for o in ordenes_listadas:
         d = o.despacho
         if d is None or d.salida_en is None:
             continue
@@ -433,7 +485,7 @@ def avisos_de_llegada(cliente):
                            if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}."})
         if nombre == "Entregada" and o.entrega_resuelta_en:
             salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": o.entrega_resuelta_en.isoformat(),
-                           "texto": f"Tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
+                           "texto": f"Pedido entregado exitosamente: tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
                            + (" (confirmado automáticamente)." if o.entrega_automatica else ".")})
         if nombre == "Entrega no concretada":
             salida.append({"id": f"{o.orden_id}-no-concretada", "orden_id": o.orden_id, "tipo": "no_concretada",
@@ -454,6 +506,15 @@ def avisos_de_llegada(cliente):
             salida.append({"id": f"{o.orden_id}-cerca", "orden_id": o.orden_id, "tipo": "cerca", "cuando": ultima.registrado_en.isoformat(),
                            "destacado": True, "minutos": info["minutos"],
                            "texto": f"Tu pedido N.º {o.orden_id} está por llegar: el camión está a menos de {CERCA_KM} km (llega {en_minutos(info['minutos'])}). Deja a alguien listo para recibirlo."})
+    if salida:
+        from .models import Documento
+        docs_de = {}
+        for doc in Documento.objects.filter(orden_id__in={a["orden_id"] for a in salida}).exclude(tipo="nota_credito"):
+            docs_de.setdefault(doc.orden_id, {})[doc.tipo] = doc
+        resumen = {o.orden_id: _resumen_del_pedido(o, docs_de.get(o.orden_id, {})) for o in ordenes_listadas if o.orden_id in {a["orden_id"] for a in salida}}
+        for a in salida:
+            a["pedido"] = resumen[a["orden_id"]]
+            a["accion"] = _accion_del_aviso(a, a["pedido"])
     return sorted(salida, key=lambda a: a["cuando"], reverse=True)
 
 

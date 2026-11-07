@@ -127,3 +127,25 @@ class EscenarioSimulador(models.Model):
 
     def __str__(self):
         return f"Escenario {self.escenario_id} ({self.tipo}, despacho {self.despacho_id})"
+
+
+class AjusteSimulador(models.Model):
+    """Ajustes de la demostración que el simulador lee en cada ciclo. Es una sola fila (ajuste_id = 1): si no existe, el tiempo corre a 1×.
+    La restricción repite los valores de `flota/tiempo.py`, así ni un error del código deja un multiplicador fuera de la lista."""
+    UNICO = 1
+
+    ajuste_id = models.SmallIntegerField(primary_key=True, default=UNICO)
+    multiplicador_tiempo = models.SmallIntegerField(default=1, db_default=1)    # cuántas veces más rápido avanzan los camiones; no cambia la frecuencia de la telemetría
+    actualizado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ajuste_simulador"
+        verbose_name_plural = "ajustes del simulador"
+        constraints = [
+            models.CheckConstraint(condition=Q(ajuste_id=1), name="ajuste_fila_unica"),
+            models.CheckConstraint(condition=Q(multiplicador_tiempo__in=(1, 5, 20, 60)), name="ajuste_multiplicador_conocido"),
+        ]
+
+    def __str__(self):
+        return f"Tiempo a {self.multiplicador_tiempo}×"

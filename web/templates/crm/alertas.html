@@ -4,6 +4,6 @@
 <div class="pagina-cab"><div><h1>Pedidos afectados por una ruptura de frío</h1><p class="sub">Órdenes cuyo camión reportó temperatura fuera de rango durante el viaje.</p></div></div>
 <div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Cliente</th><th>Camión</th><th>Estado</th><th>Lecturas con alerta</th></tr></thead><tbody>
 {% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td><td>{{ o.direccion.cliente.nombre }}</td><td>{{ o.despacho.camion }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td><span class="alerta">{{ o.alertas_frio }}</span></td></tr>
-{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." url="/flota/" accion="Ver la flota en vivo" %}{% endfor %}
+{% empty %}{% if menu.flota %}{% include "componentes/vacio_estado.html" with cols=5 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." url="/flota/" accion="Ver la flota en vivo" %}{% else %}{% include "componentes/vacio_estado.html" with cols=5 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." %}{% endif %}{% endfor %}
 </tbody></table></div>
 {% endblock %}

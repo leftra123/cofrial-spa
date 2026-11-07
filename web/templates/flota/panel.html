@@ -253,6 +253,7 @@
     var vivo = CofrialEstados.vivo(document.getElementById("en-vivo"), {etiqueta: "En vivo · cada 5 s", alCambiar: function (e) { document.getElementById("contenido").classList.toggle("desactualizado", e === "caido"); }});
     function pon(el, txt, malo) { if (el) { el.textContent = txt; if (malo !== undefined) el.classList.toggle("mal", malo); } }
     function pintar(d) {
+      CofrialEstados.tiempo(d.tiempo_x);
       Object.keys(d.resumen).forEach(function (k) { pon(document.querySelector('[data-resumen="' + k + '"]'), d.resumen[k]); });
       d.camiones.forEach(function (c) {
         var t = document.querySelector('[data-camion="' + c.camion_id + '"]'), l = c.ultima_lectura;

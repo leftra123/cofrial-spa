@@ -28,7 +28,7 @@
       {% if grafana_url %}<li><b>Panel BI:</b> <a href="{{ grafana_url }}" target="_blank" rel="noopener">Grafana</a> (alertas, ventas en riesgo y temperatura por camión; se actualiza cada 5 s).</li>{% endif %}
     </ul>
     <h2 style="margin-top:18px">3. Limpiar</h2>
-    <p class="muted">Borra los escenarios, los requerimientos que crearon y las lecturas marcadas como demostración (<b id="n-forzadas">{{ forzadas }}</b> ahora). La telemetría real no se toca.</p>
+    <p class="muted">Borra los escenarios, los requerimientos que crearon y las lecturas marcadas como demostración (<b id="n-forzadas">{{ forzadas }}</b> ahora) y deja el tiempo a 1×. La telemetría real no se toca.</p>
     <button type="button" class="btn-sec" id="limpiar">Borrar lo de la demostración</button>
   </section>
 </div>
@@ -54,6 +54,14 @@
   <div class="demo-estado" id="esc-estado" role="status" aria-live="polite">Sin escenario pedido en esta pantalla.</div>
   <h3 style="margin-top:16px">Últimos escenarios</h3>
   <ul class="demo-lista" id="esc-lista"></ul>
+</section>
+<section class="tarjeta-ui" aria-labelledby="d-t5" style="margin-top:16px">
+  <h2 id="d-t5">5. Tiempo de la simulación</h2>
+  <p class="muted">Un viaje real a Angol toma unas 3 horas. Aquí eliges cuántas veces más rápido avanzan los camiones: el simulador lo lee en su siguiente ciclo, sin reiniciarse. La hora de llegada se ajusta sola. No cambian las lecturas (siguen entrando cada pocos segundos, con los mismos campos), la detención en la puerta ni el plazo para que el cliente confirme: lo responde una persona.</p>
+  <div class="acciones" role="group" aria-label="Velocidad del tiempo" id="tiempo-opciones" style="flex-wrap:wrap">
+    {% for m in escenarios_datos.tiempo.opciones %}<button type="button" class="btn-sec tiempo-boton" data-x="{{ m }}" aria-pressed="false">{{ m }}×</button>{% endfor %}
+  </div>
+  <div class="demo-estado" id="tiempo-estado" role="status" aria-live="polite">Tiempo normal.</div>
 </section>
 <dialog id="dlg" class="dialogo" aria-labelledby="dlg-t">
   <form method="dialog">
@@ -96,10 +104,11 @@
     detener(); post("/demo/apagar/", {camion: sel.value}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Apagado. El camión vuelve a mostrar una temperatura normal."); });
   });
   document.getElementById("limpiar").addEventListener("click", function () {
-    if (!confirm("¿Borrar los escenarios y las lecturas de demostración? La telemetría real no se toca.")) return;
+    if (!confirm("¿Borrar los escenarios y las lecturas de demostración y volver el tiempo a 1×? La telemetría real no se toca.")) return;
     detener(); post("/demo/limpiar/", {confirmar: "1"}).then(function (r) {
       document.getElementById("n-forzadas").textContent = r.forzadas;
       pantalla(false, "Limpio: " + r.borradas + " lecturas, " + r.escenarios + " escenarios y " + r.requerimientos + " requerimientos borrados.");
+      pintarTiempo(r.tiempo);
       avisar(r.sin_concretar ? r.sin_concretar + " pedido(s) siguen en «Entrega no concretada»: se reprograman en Armar despacho." : "Sin escenario pedido en esta pantalla.", false);
       refrescar();
     });
@@ -118,10 +127,24 @@
     if (previa) selP.value = previa;
     if (!selP.value && selP.options.length) selP.selectedIndex = 0;
   }
+  // Tiempo acelerado: la pantalla muestra lo que dice la base, también si otro administrador lo cambió.
+  var botonesT = document.querySelectorAll(".tiempo-boton"), estadoT = document.getElementById("tiempo-estado");
+  function pintarTiempo(t) {
+    botonesT.forEach(function (b) { b.setAttribute("aria-pressed", String(Number(b.dataset.x) === t.multiplicador)); b.classList.toggle("activo", Number(b.dataset.x) === t.multiplicador); });
+    estadoT.textContent = (t.acelerado ? "Tiempo acelerado: " + t.multiplicador + "×." : "Tiempo normal (1×).") + " Hasta Angol (130 km) el camión tarda unos " + t.minutos_a_angol + " min.";
+    estadoT.classList.toggle("activa", t.acelerado);
+    CofrialEstados.tiempo(t.multiplicador);
+  }
+  botonesT.forEach(function (b) {
+    b.addEventListener("click", function () {
+      post("/demo/tiempo/", {multiplicador: b.dataset.x}).then(function (r) { if (r._ok) { pintarTiempo(r); } else { estadoT.textContent = r.detail || "No se pudo cambiar."; } }).catch(function () { estadoT.textContent = "Sin conexión con el servidor."; });
+    });
+  });
   function pintar(d) {
     var nueva = JSON.stringify(d);
     if (nueva === firma) return;                 // sin cambios no se redibuja: una lista desplegada no se cierra sola
     firma = nueva;
+    pintarTiempo(d.tiempo);
     var previo = selV.value;
     viajes = d.viajes; selV.textContent = "";
     viajes.forEach(function (v) { opcion(selV, v.despacho_id, v.camion + " · viaje " + v.despacho_id + " · " + (v.paradas.map(function (p) { return p.cliente; }).join(", ") || "sin paradas pendientes")); });

@@ -9,11 +9,13 @@ from django.contrib.auth import get_user_model, login
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, PasswordResetView
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
 from catalogo.models import Categoria, Producto
 from clientes.forms import RegistroB2CForm, RegistroEmpresaForm
+from clientes.models import Cliente
 from .acceso import inicio_de
 from crm import servicios as crm
 from flota.models import Camion, Telemetria
@@ -90,10 +92,19 @@ def registro_empresa(request):
     """Una empresa pide su cuenta: queda pendiente hasta que ventas la aprueba en el CRM (crm/solicitudes)."""
     if request.user.is_authenticated:
         return redirect(inicio_de(request.user))
+    if request.method == "GET" and request.GET.get("enviado"):
+        # Confirmación recargable: no es la respuesta del POST, que el navegador reenviaría al recargar y mostraría
+        # «Ya existe una cuenta con ese RUT» justo después de que la solicitud sí se envió.
+        dato = request.session.get("empresa_enviada") or {}
+        cliente = Cliente.objects.filter(pk=dato.get("pk")).first()
+        if cliente is not None:
+            return render(request, "cuenta/registro_empresa_enviado.html", {"cliente": cliente, "ubicada": dato.get("ubicada", True)})
+        return redirect("registro_empresa")
     form = RegistroEmpresaForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         cliente = form.guardar()
-        return render(request, "cuenta/registro_empresa_enviado.html", {"cliente": cliente, "ubicada": form.ubicada})
+        request.session["empresa_enviada"] = {"pk": cliente.pk, "ubicada": bool(form.ubicada)}
+        return redirect(reverse("registro_empresa") + "?enviado=1")
     return render(request, "cuenta/registro_empresa.html", {"form": form})
 
 

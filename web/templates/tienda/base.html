@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=nav-v2">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -56,6 +56,7 @@
 <main class="t-main" id="contenido">
   <div class="t-pagina-escena" id="t-pagina-escena">
   <div class="t-pagina" id="t-pagina">
+    {% include "componentes/tiempo_acelerado.html" %}
   {% if messages %}<div class="avisos" role="status">{% for m in messages %}<p class="aviso {{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
   {% block cabecera %}{% endblock %}
   {% block contenido %}{% endblock %}
@@ -78,8 +79,8 @@
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
-<script src="{% static 'js/tienda.js' %}"></script>
-{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-v1"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
+<script src="{% static 'js/tienda.js' %}?v=sesion-v1"></script>
+{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-v3"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

@@ -290,7 +290,7 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 
 ## Correspondencia entre diseño lógico y modelo físico
 
-El MER principal y el SQL representan el diseño de referencia de veintisiete entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veintisiete modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock. La tabla escenario_simulador, propia de la demostración, se agrega a ellos (Tabla D29). Además, Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
+El MER principal y el SQL representan el diseño de referencia de veintisiete entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veintisiete modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock. Las tablas escenario_simulador y ajuste_simulador, propias de la demostración, se agregan a ellos (Tablas D29 y D30). Además, Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
 
 **Tabla 5**
 *Diferencias deliberadas entre referencia lógica e implementación*
@@ -301,7 +301,7 @@ El MER principal y el SQL representan el diseño de referencia de veintisiete en
 | Líneas y precios | Clave compuesta | ID autogenerado y UNIQUE sobre el par; conserva la dependencia de la clave candidata |
 | Geolocalización | Dirección textual | direccion.lat y long, opcionales, para mapas y entregas |
 | OC diferida | numero_oc en orden | numero_oc y oc_pendiente; referencia WEB temporal para B2B sin OC |
-| Demostración | Telemetría ordinaria | telemetria.forzada distingue las lecturas de demostración; escenario_simulador guarda el comportamiento pedido para un viaje |
+| Demostración | Telemetría ordinaria | telemetria.forzada distingue las lecturas de demostración; escenario_simulador guarda el comportamiento pedido para un viaje; ajuste_simulador guarda el multiplicador de tiempo |
 | Reposición | Sin entidad específica | aviso_stock con cliente, producto, cantidad mínima y atención |
 | Requerimiento | Cliente opcional y orden opcional | Se conservan ambas relaciones; el portal verifica propiedad de la orden |
 
@@ -847,3 +847,15 @@ Nota. Elaboración propia. Las migraciones y modelos Django son la referencia de
 | terminado_en | timestamptz | Sí | Fin del escenario |
 
 Nota. Elaboración propia. UNIQUE parcial sobre despacho_id mientras el estado sea pendiente o en_curso. Un CHECK exige los tres parámetros acotados cuando el tipo es falla_frio y otro exige direccion_id y motivo cuando es cliente_no_recibe. Está en 3FN: todos los atributos dependen de escenario_id, y el camión no se repite porque depende de despacho_id. Las columnas de parámetros quedan nulas en los tipos que no las usan; se prefirieron a un campo JSON para que la base pueda acotarlas. La escribe la web y la leen los contenedores del simulador; ver `docs/decisiones.md`.
+
+**Tabla D30**
+*Diccionario físico de ajuste_simulador*
+
+| Campo | Tipo | Nulo | Clave y función |
+|---|---|---|---|
+| ajuste_id | smallint, por defecto 1 | No | PK; un CHECK la fija en 1, así la tabla tiene una sola fila |
+| multiplicador_tiempo | smallint, por defecto 1 | No | Cuántas veces más rápido avanzan los camiones: 1, 5, 20 o 60 (CHECK) |
+| actualizado_por_id | integer | Sí | FK auth_user: administrador que lo cambió |
+| actualizado_en | timestamptz | No | Momento del último cambio |
+
+Nota. Elaboración propia. La escribe `/demo/` y la leen los contenedores del simulador en cada ciclo; si no tiene fila, el tiempo corre a 1×. No cambia la frecuencia de la telemetría. Está en 3FN: los campos dependen solo de la clave y la tabla guarda un parámetro de operación, no datos de otra entidad.

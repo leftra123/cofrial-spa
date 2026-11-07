@@ -1285,3 +1285,5 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .recorrido-cerrado { margin: 4px 0 0; color: var(--texto-2); }
 .campana-meta { color: var(--texto-3); font-size: .78rem; }
 .campana-item .campana-acciones { padding-top: 0; }
+/* En teléfonos angostos (375 px) «Carrito» y su contador quedaban cortados al borde del menú: con menos relleno caben los cuatro enlaces */
+@media (max-width: 480px) { .tb-nav { gap: 0; } .tb-nav a { padding-left: 4px; padding-right: 4px; } }

@@ -53,7 +53,7 @@ class AccesoAnonimoTests(BaseSeguridad):
     PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/clientes/1/direccion/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/crm/requerimientos/1/resolver/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
-                     "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/limpiar/",
+                     "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/tiempo/", "/demo/limpiar/",
                      "/pedidos/1/oc/", "/bi/x", "/carrito/direccion/", "/crm/ordenes/1/cancelar/", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/", "/operacion/stock/1/sumar/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/flota/escenarios/interpretar/", "/flota/escenarios/activar/", "/flota/escenarios/cancelar/", "/flota/despacho-auto/correr/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
@@ -491,6 +491,14 @@ class BarridoDeRutasTests(BaseSeguridad):
             for url in ("/portada/", "/catalogo/", "/carrito/", "/pedidos/", "/soporte/", "/avisos/"):     # con sesión «/» redirige al inicio de la cuenta
                 self.assertEqual(c.get(url).status_code, 200, url)
         self.assertEqual(c.get("/pedidos/999999/").status_code, 404)          # un enlace viejo ocasional es normal
+
+    def test_los_iconos_que_pide_el_navegador_no_cuentan_como_barrido(self):
+        """Un navegador pide /favicon.ico desde cada página de error: no puede sumar «no encontrado» hasta bloquear a la sala."""
+        c = self.anonimo()
+        for _ in range(self.M + 5):
+            for ruta in ("/favicon.ico", "/apple-touch-icon.png"):
+                self.assertEqual(c.get(ruta).status_code, 404)
+        self.assertEqual(c.get("/catalogo/").status_code, 200)
 
     def test_el_barrido_queda_en_el_registro(self):
         c = self.anonimo()

@@ -7,6 +7,7 @@ os.environ["VELOCIDAD_MEDIA_KMH"] = "120"      # rápido para que las pruebas se
 os.environ["FACTOR_CALLES"] = "1"
 os.environ["INTERVALO_SEG"] = "5"
 os.environ["DETENCION_LECTURAS"] = "3"
+os.environ["PROB_RUPTURA"] = "0"               # una ruptura al azar en 400 lecturas tumbaba las pruebas de los escenarios una de cada tres veces
 import simulador as sim  # noqa: E402
 
 CASA = (-38.7400, -72.6000)       # a ~2 km de la base
@@ -397,6 +398,155 @@ class BaseDeDatosTest(unittest.TestCase):
         c.eventos = [("escenario", 1, "en_curso")]
         sim.aplicar_eventos(ConexionFalsa(error=sim.psycopg.errors.UndefinedColumn("sin columna")), c)
         self.assertEqual(c.eventos, [])
+
+
+class TiempoAceleradoTest(unittest.TestCase):
+    """El multiplicador cambia cuánto avanza el camión por lectura y nada más."""
+    LEJOS = (-37.80, -72.69)                       # Angol, a más de 100 km de la base
+
+    def recorrido(self, *paradas, tramos=40):
+        """Ruta con vértices intermedios, como las de OSRM: la marca de cada parada cae en medio de la polilínea."""
+        puntos, marcas = [list(sim.BASE)], []
+        for k, p in enumerate(paradas):
+            a = puntos[-1]
+            puntos += [[a[0] + (p[0] - a[0]) * i / tramos, a[1] + (p[1] - a[1]) * i / tramos] for i in range(1, tramos + 1)]
+            marcas.append({"direccion_id": 100 + k, "indice": len(puntos) - 1})
+        puntos.append(list(sim.BASE))
+        return {"puntos": puntos, "paradas": marcas, "aproximada": False, "km": 200}
+
+    def avance(self, multiplicador):
+        c = camion()
+        c.multiplicador = multiplicador
+        c.asignar(viaje(self.recorrido(self.LEJOS)))
+        antes = c.pos
+        c.posicion()
+        return sim.km_entre(antes, c.pos)
+
+    def test_avanza_tantas_veces_mas_como_diga_el_multiplicador(self):
+        normal = self.avance(1)
+        for m in sim.MULTIPLICADORES:
+            self.assertAlmostEqual(self.avance(m) / normal, m, delta=m * 0.02)
+
+    def test_a_60x_no_se_salta_ninguna_parada_aunque_esten_a_menos_de_un_paso(self):
+        cerca = (sim.BASE[0] - 0.002, sim.BASE[1])                   # tres paradas a unos 200 m entre sí: a 60× un paso son 10 km
+        otra = (sim.BASE[0] - 0.004, sim.BASE[1])
+        c = camion()
+        c.multiplicador = 60
+        c.asignar(viaje(self.recorrido(cerca, otra, self.LEJOS, tramos=4)))
+        eventos = correr(c)
+        self.assertEqual([e[2] for e in eventos if e[0] == "puerta"], [100, 101, 102])     # todas y en orden
+        self.assertLess([e[0] for e in eventos].index("llegada"), [e[0] for e in eventos].index("regreso"))
+        self.assertTrue(c.en_base)
+
+    def test_la_detencion_dura_las_mismas_lecturas_que_a_velocidad_normal(self):
+        for m in (1, 60):
+            c = camion()
+            c.multiplicador = m
+            c.asignar(viaje(self.recorrido(CASA)))
+            lecturas_en_la_puerta = 0
+            for _ in range(2000):
+                c.posicion()
+                lecturas_en_la_puerta += c.detenido > 0
+                if c.fase == "volviendo":
+                    break
+            self.assertEqual(lecturas_en_la_puerta, sim.DETENCION_LECTURAS, m)
+
+    def test_cambiarlo_a_mitad_de_viaje_se_nota_en_la_lectura_siguiente(self):
+        c = camion()
+        c.asignar(viaje(self.recorrido(self.LEJOS)))
+        c.posicion()
+        antes = c.pos
+        c.posicion()
+        normal = sim.km_entre(antes, c.pos)
+        c.multiplicador = 20
+        antes = c.pos
+        c.posicion()
+        self.assertAlmostEqual(sim.km_entre(antes, c.pos) / normal, 20, delta=1)
+
+    def test_cada_ciclo_sigue_siendo_una_lectura_con_los_mismos_campos(self):
+        c = camion()
+        c.multiplicador = 60
+        c.asignar(viaje(self.recorrido(self.LEJOS)))
+        lectura = c.paso()
+        self.assertEqual(len(lectura), 5)                            # temp_camara, lat, long, combustible_pct, alerta_ruptura_frio
+        self.assertIsInstance(lectura[0], float)
+        self.assertIsInstance(lectura[3], int)
+        self.assertIsInstance(lectura[4], bool)
+
+    def test_una_falla_de_frio_dura_las_mismas_lecturas_a_60x(self):
+        c = camion()
+        c.multiplicador = 60
+        c.asignar(viaje(self.recorrido(self.LEJOS)))
+        c.aplicar_escenario({"id": 1, "camion_id": "CAM-01", "despacho_id": 1, "tipo": "falla_frio", "momento_pct": 50, "duracion_lecturas": 12, "subida_c": 1.0, "direccion_id": None, "motivo": ""})
+        marcadas = 0
+        for _ in range(300):
+            c.paso()
+            marcadas += c.lectura_forzada
+        self.assertGreaterEqual(marcadas, 12)
+        self.assertTrue(c.escenario["terminado"])
+
+
+class RegresoDesdeLaUltimaParadaTest(unittest.TestCase):
+    """La base avisa `llego` en cuanto el simulador registra la llegada: eso no es una corrección manual."""
+
+    def test_termina_la_detencion_y_vuelve_por_la_ruta_informando_la_fase(self):
+        intermedio = (-38.7350, -72.5900)                            # el regreso por calles no es la recta a la base
+        c = camion()
+        r = ruta(CASA)
+        r["puntos"].insert(-1, list(intermedio))
+        c.asignar(viaje(r))
+        for _ in range(400):
+            c.posicion()
+            if c.fase == "en_la_puerta":
+                break
+        camino = list(c.camino)
+        c.eventos = []
+        lecturas_detenido = 0
+        while c.fase == "en_la_puerta":
+            c.asignar(viaje(r, llego=True))                          # lo que el ciclo principal lee de la base después de escribir la llegada
+            c.posicion()
+            lecturas_detenido += 1
+        self.assertEqual(lecturas_detenido, sim.DETENCION_LECTURAS)
+        self.assertEqual(c.camino, camino)                           # sigue la ruta guardada, no una recta improvisada
+        self.assertIn(("fase", 1, "volviendo"), c.eventos)
+
+    def test_una_correccion_manual_en_ruta_sigue_haciendolo_volver(self):
+        c = camion()
+        c.asignar(viaje(ruta(CASA, OTRA)))
+        c.posicion()
+        c.asignar(viaje(ruta(CASA, OTRA), llego=True))
+        self.assertEqual(c.fase, "volviendo")
+
+
+class LecturaDelMultiplicadorTest(unittest.TestCase):
+    class Conexion:
+        def __init__(self, fila=None, error=None):
+            self.fila, self.error = fila, error
+
+        def execute(self, sql, *args):
+            if self.error:
+                raise self.error
+            return self
+
+        def fetchone(self):
+            return self.fila
+
+    def test_lee_el_valor_de_la_tabla(self):
+        self.assertEqual(sim.multiplicador_vigente(self.Conexion((20,))), 20)
+
+    def test_sin_fila_es_tiempo_normal(self):
+        self.assertEqual(sim.multiplicador_vigente(self.Conexion(None)), 1)
+
+    def test_un_valor_desconocido_no_se_obedece(self):
+        for malo in (0, -5, 7, 1000):
+            self.assertEqual(sim.multiplicador_vigente(self.Conexion((malo,))), 1)
+
+    def test_si_la_tabla_no_existe_sigue_a_velocidad_normal(self):
+        self.assertEqual(sim.multiplicador_vigente(self.Conexion(error=sim.psycopg.errors.UndefinedTable("no existe"))), 1)
+
+    def test_una_caida_de_conexion_no_se_esconde(self):
+        with self.assertRaises(sim.psycopg.OperationalError):
+            sim.multiplicador_vigente(self.Conexion(error=sim.psycopg.OperationalError("sin red")))
 
 
 class VelocidadCompartidaTest(unittest.TestCase):

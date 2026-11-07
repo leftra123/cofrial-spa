@@ -230,7 +230,7 @@ class DarClave(Base):
         r = c.get("/operacion/cuentas/")
         for usuario in ("admin@cofrial.cl", "ana@correo.test", "despacho@cofrial.cl"):
             self.assertContains(r, usuario)
-        self.assertEqual(len(c.get("/operacion/cuentas/", {"q": "hospital"}).context["cuentas"]), 1)
+        self.assertEqual(len(c.get("/operacion/cuentas/", {"q": "hospital regional"}).context["cuentas"]), 1)
         self.assertEqual(len(c.get("/operacion/cuentas/", {"q": "12.345.678"}).context["cuentas"]), 1)
         self.assertEqual(len(c.get("/operacion/cuentas/", {"q": "supermercados"}).context["cuentas"]), 0)      # esa empresa no tiene cuenta de acceso
         self.assertEqual([x["u"].username for x in c.get("/operacion/cuentas/", {"q": "vendedor2"}).context["cuentas"]], ["vendedor2@cofrial.cl"])
@@ -343,7 +343,7 @@ class UsuariosPorTipo(Base):
         r = self.entrar().get("/operacion/cuentas/")
         tarjetas = {t["rol"]: t["n"] for t in r.context["tarjetas"]}
         self.assertEqual(list(tarjetas), list(self.TIPOS))
-        self.assertEqual(tarjetas, {"cliente-b2b": 2, "cliente-b2c": 2, "vendedor": 2, "gerencia": 1, "despachador": 1, "admin": 2})   # las cuentas de la demo
+        self.assertEqual(tarjetas, {"cliente-b2b": 5, "cliente-b2c": 2, "vendedor": 2, "gerencia": 1, "despachador": 1, "admin": 2})   # las cuentas de la demo
         self.assertEqual(sum(tarjetas.values()) + r.context["otros"], Usuario.objects.count())
         for rol in self.TIPOS:
             self.assertContains(r, f'href="/operacion/cuentas/nueva/?tipo={rol}"')

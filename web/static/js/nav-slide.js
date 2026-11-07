@@ -75,6 +75,10 @@
     })
       .then(function (r) {
         if (!r.ok) throw new Error("nav");
+        /* Sesión vencida: el servidor contesta con el login (un 200 tras redirigir). Esa página no es la pedida: si se mostrara
+           aquí, quedaría el formulario de ingreso dentro de la tienda, con el menú de cliente y la dirección equivocada.
+           Se falla a propósito: el que llama navega de verdad a la dirección y el servidor lleva a ingresar. */
+        if (r.redirected && /\/cuenta\/entrar\//.test(r.url)) throw new Error("sesion");
         return r.text();
       })
       .then(function (html) {
@@ -106,6 +110,13 @@
     }
     var nr = nav.getBoundingClientRect();
     var r = enlace.getBoundingClientRect();
+    /* En móvil el menú se desliza de lado y «Carrito» queda cortado al borde: la pestaña elegida se trae a la vista.
+       La raya se mide después, porque mover el menú cambia dónde cae el enlace. */
+    if (nav.scrollWidth > nav.clientWidth) {
+      if (r.right > nr.right - 8) nav.scrollLeft += r.right - nr.right + 8;
+      else if (r.left < nr.left + 8) nav.scrollLeft -= nr.left + 8 - r.left;
+      r = enlace.getBoundingClientRect();
+    }
     ind.hidden = false;
     ind.removeAttribute("hidden");
     ind.style.left = r.left - nr.left + nav.scrollLeft + "px";

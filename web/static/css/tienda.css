@@ -81,7 +81,7 @@ body.tienda {
 .tb-ingresar { display: inline-block; padding: 9px 18px; background: var(--acento); color: var(--acento-fg); border-radius: 10px; font-weight: 600; transition: background .12s; }
 .tb-ingresar:hover { background: var(--acento-hover); text-decoration: none; }
 .t-main { position: relative; z-index: 0; max-width: 1240px; margin: 0 auto; padding: 28px 24px 56px; min-height: 70vh; overflow-x: clip; }
-.t-pagina-escena { position: relative; overflow: hidden; isolation: isolate; }
+.t-pagina-escena { position: relative; overflow: clip; isolation: isolate; }   /* clip y no hidden: hidden anula position: sticky de los filtros */
 .t-pagina-escena .t-pagina {
   width: 100%;
   transition: opacity var(--nav-slide-dur) var(--nav-slide-ease);
@@ -123,6 +123,8 @@ body.t-nav-animando .tb-nav { pointer-events: auto; }
 /* ---------- catálogo ---------- */
 .cat-layout { display: grid; grid-template-columns: 250px 1fr; gap: 28px; align-items: start; }
 .filtros { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; position: sticky; top: 84px; box-shadow: var(--sombra); }
+@media (min-width: 861px) { .filtros { max-height: calc(100vh - 100px); overflow-y: auto; } }
+@media (min-width: 861px) { .filtros #filtros-ver { display: none; } }   /* con id: la regla global de botones tiene id y lo mostraba; en escritorio cerraría el panel sin forma de reabrirlo */
 .filtros h2 { font-size: .75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--texto-3); margin: 18px 0 8px; font-weight: 700; }
 .filtros .filtros-cuerpo > h2:first-child { margin-top: 0; }
 .filtros input[type=search] { width: 100%; }
@@ -722,7 +724,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 @media (max-width: 860px) { .etq-temp { font-size: .75rem; padding: 3px 7px 3px 6px; } }
 @media (max-width: 860px) {
   .tb { position: sticky; top: 0; z-index: 1001; }
-  .filtros { top: 8px; max-height: calc(100vh - 24px); }
   .prod-badges .chip { font-size: .75rem; padding: 2px 7px; }
 }
 @media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }
@@ -915,8 +916,6 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 
 /* barra superior: logotipo de imagen (chip blanco solo en oscuro; la caja mide igual en claro) */
 .tb-marca img { height: 40px; width: auto; display: block; }
-:root[data-tema="oscuro"] .tb-marca { background: #fff; }
-@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tb-marca { background: #fff; } }
 
 /* ---------- catálogo y tarjeta de producto (dirección «Termómetro») ---------- */
 .filtros { border-radius: 18px; box-shadow: none; }
@@ -1226,3 +1225,63 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
   .nav-skel-acciones-carro { width: 100%; }
   .nav-skel-btn--sec { flex: 1 1 calc(50% - 4px); width: auto; min-width: 0; }
 }
+
+/* ---------- barra superior en móvil: la fila del buscador se pliega al bajar (nav.js) ---------- */
+@media (max-width: 860px) {
+  .tb-compacta .tb-buscar { display: none; }
+  .tb-compacta .tb-fila { padding-top: 6px; padding-bottom: 6px; }
+}
+.tb-ingresar, .tb-clave { white-space: nowrap; }
+@media (max-width: 480px) { .tb-ingresar { padding: 6px 10px; font-size: .8rem; } .tb-interno { padding: 6px 8px; font-size: .8rem; } .tb-cuenta { flex-wrap: wrap; justify-content: flex-end; } }
+/* ---------- Aviso destacado de llegada (banner fijo en cualquier página del cliente): «está por llegar» y «el camión llegó» ---------- */
+.aviso-llegada { position: sticky; top: var(--al-top, 72px); z-index: 50; display: grid; gap: 8px; margin: 0 0 16px; }
+.aviso-llegada-item { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 44px 14px 16px; border-radius: 14px; box-shadow: var(--sombra-alta); }
+.aviso-llegada-item.cerca { background: var(--lima-suave); color: var(--texto); border: 2px solid var(--lima); }
+.aviso-llegada-item.llego { background: var(--acento); color: var(--acento-fg); border: 2px solid var(--lima); animation: al-pulso 2.4s ease-in-out infinite; }
+.al-texto { flex: 1 1 260px; display: grid; gap: 2px; }
+.al-texto b { font-size: 1.05rem; }
+.al-texto span { font-size: .9rem; }
+.al-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.al-acciones .btn, .al-acciones .btn-sec { min-height: 44px; }
+.aviso-llegada-item.llego .btn { background: var(--lima); color: var(--lima-fg); border-color: var(--lima); }
+.aviso-llegada-item.llego .btn-sec { background: transparent; color: inherit; border-color: currentColor; }
+.al-cerrar { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.al-cerrar:hover { background: rgba(0, 0, 0, .08); }
+@keyframes al-pulso { 0%, 100% { box-shadow: var(--sombra-alta), 0 0 0 0 rgba(189, 230, 58, .55); } 50% { box-shadow: var(--sombra-alta), 0 0 0 8px rgba(189, 230, 58, 0); } }
+@media (prefers-reduced-motion: reduce) { .aviso-llegada-item.llego { animation: none; } }
+.estado-pedido.cerca { border: 2px solid var(--lima); background: var(--lima-suave); }
+.toast.t-cerca { background: var(--lima); color: var(--lima-fg); border-color: var(--lima-fg); font-weight: 600; }
+.toast.t-cerca a { font-weight: 700; }
+
+/* ---------- Revisión al recibir: productos, temperatura del viaje y si todo llegó bien ---------- */
+.entrega-revision, .entrega-dialogo form { display: grid; gap: 10px; }
+.entrega-revision { padding: 14px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--tarjeta); }
+.entrega-revision h3 { margin: 0; font-size: 1rem; }
+.revision-productos { margin: 0; padding: 10px 14px; list-style: none; display: grid; gap: 4px; border-radius: var(--radio-sm); background: var(--fondo); }
+.revision-productos b { font-variant-numeric: tabular-nums; }
+.revision-temp { margin: 0; font-size: .9rem; color: var(--texto-2); }
+.revision-temp.fuera { color: var(--alerta-fg); }
+.revision-resultado { margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.revision-resultado legend { padding: 0; margin-bottom: 4px; font-weight: 600; }
+.revision-resultado label { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); cursor: pointer; font-weight: 500; }
+.revision-resultado label:has(input:checked) { border-color: var(--acento); background: var(--acento-suave); }
+.revision-falla { display: grid; gap: 8px; }
+.revision-falla[hidden] { display: none; }
+.revision-falla label { font-weight: 600; font-size: .9rem; }
+.revision-falla select, .revision-falla textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--fondo-campo, var(--tarjeta)); color: var(--texto); }
+.revision-falla textarea { resize: vertical; min-height: 84px; }
+.revision-falla textarea[aria-invalid="true"] { border-color: var(--cancelado-fg); }
+.entrega-revision .btn, .entrega-dialogo .acciones .btn { min-height: 48px; }
+.entrega-reclamo { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--borde-fuerte); background: var(--fondo); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; max-width: 62ch; overflow-wrap: anywhere; }
+
+/* ---------- Carrito: quién recibe el pedido ---------- */
+.quien-recibe { margin: 14px 0 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.quien-recibe legend { padding: 0; margin-bottom: 4px; font-weight: 700; }
+.revision-recibe { margin: 0; font-size: .9rem; color: var(--texto-2); }
+
+/* ---------- Itinerario del pedido y recorrido cerrado ---------- */
+.itinerario { margin: 8px 0 0; padding: 10px 14px; border-left: 3px solid var(--acento); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; background: var(--acento-suave); color: var(--texto); font-size: .9rem; }
+.itinerario[hidden] { display: none; }
+.recorrido-cerrado { margin: 4px 0 0; color: var(--texto-2); }
+.campana-meta { color: var(--texto-3); font-size: .78rem; }
+.campana-item .campana-acciones { padding-top: 0; }

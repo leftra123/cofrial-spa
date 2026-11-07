@@ -6,12 +6,15 @@ DS = {"type": "postgres", "uid": "cofrial-pg"}
 SIN_CANCELADAS = "e.nombre <> 'Cancelada'"
 VENTAS = f"""FROM v_orden o JOIN v_orden_total t USING (orden_id)
 JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE {SIN_CANCELADAS}"""
-AFECTADAS = """FROM v_orden o JOIN v_orden_total t USING (orden_id)
+# RN-13, igual que crm.servicios.fin_de_exposicion: una orden entregada deja de estar expuesta al recibirse; las demás, al volver el camión.
+A_BORDO = """m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
+  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
+AFECTADAS = f"""FROM v_orden o JOIN v_orden_total t USING (orden_id)
+JOIN orden x USING (orden_id)
 JOIN despacho d ON d.despacho_id = o.despacho_id
 JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id
 WHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (
-  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio
-  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"""
+  SELECT 1 FROM telemetria m WHERE {A_BORDO})"""
 
 _id = 0
 
@@ -103,10 +106,11 @@ paneles = [
           [], "Los 10 camiones con más lecturas fuera de rango. Con una flota de 50 sirve para saber a cuáles revisar primero."),
     seccion("4 · Detalle: qué pedidos se vieron afectados por una ruptura de frío (para llamar al cliente)", 29),
     panel("Pedidos afectados por ruptura de frío", "table", 0, 30, 24, 7, [consulta(f"""SELECT o.orden_id AS "Orden", c.nombre AS "Cliente", o.canal AS "Canal", d.camion_id AS "Camión", count(m.*) AS "Lecturas con alerta", {pesos('t.total_clp')} AS "Monto"
-FROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id
+FROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id
 JOIN despacho d ON d.despacho_id = o.despacho_id
-JOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now())
-WHERE d.salida_en IS NOT NULL GROUP BY 1,2,3,4,6 ORDER BY 5 DESC""")],
+JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id
+JOIN telemetria m ON {A_BORDO}
+WHERE d.salida_en IS NOT NULL AND {SIN_CANCELADAS} GROUP BY 1,2,3,4,6 ORDER BY 5 DESC""")],
           {"showHeader": True}, {"custom": {"align": "auto"}, "noValue": "Sin pedidos afectados: ninguna ruptura de frío durante un viaje con pedidos"},
           [{"matcher": {"id": "byName", "options": "Monto"}, "properties": [{"id": "custom.align", "value": "right"}]},
            {"matcher": {"id": "byName", "options": "Lecturas con alerta"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}},

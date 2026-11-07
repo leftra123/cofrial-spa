@@ -1,0 +1,34 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}Usuarios | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Usuarios</h1><p class="sub">{{ total }} cuenta{{ total|pluralize }} en total. Elige un tipo para ver solo esas cuentas o para agregar una nueva; en cada fila puedes asignar una clave. La clave nunca se muestra: se guarda cifrada.</p></div></div>
+<div class="rejilla tipos-op" role="list" aria-label="Tipos de usuario">
+{% for t in tarjetas %}<div class="tarjeta-ui tipo-op{% if t.activa %} activa{% endif %}" role="listitem">
+  <a class="tipo-filtro" href="?tipo={{ t.rol }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if t.activa %} aria-current="true"{% endif %}><span class="tipo-n">{{ t.n }}</span><span class="tipo-nombre">{{ t.nombre }}</span><span class="solo-lector"> (filtrar la tabla)</span></a>
+  <a class="btn btn-sec" href="/operacion/cuentas/nueva/?tipo={{ t.rol }}">Agregar<span class="solo-lector"> {{ t.nombre }}</span></a>
+</div>{% endfor %}
+</div>
+{% if otros %}<p class="frio">Además hay {{ otros }} cuenta{{ otros|pluralize }} sin rol del sistema (visibles en «Todos»).</p>{% endif %}
+<form method="get" class="en-linea buscar-op" role="search">{% if tipo %}<input type="hidden" name="tipo" value="{{ tipo }}">{% endif %}<label for="q" class="solo-lector">Buscar usuario</label><input id="q" name="q" type="search" value="{{ q }}" placeholder="Correo, nombre o RUT" maxlength="80" autocomplete="off" style="width:min(100%,360px)"><button>Buscar</button>
+  {% if tipo %}<span class="chip asignado sin-punto">Tipo: {{ tipo_nombre }}</span>{% endif %}
+  {% if q or tipo %}<a class="btn btn-sec" href="/operacion/cuentas/">Ver todos</a>{% endif %}</form>
+<div class="tabla-caja"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Tipo</th><th>Estado</th><th><span class="solo-lector">Acción</span></th></tr></thead><tbody>
+{% for c in cuentas %}<tr>
+<td><b>{{ c.u.username }}</b>{% if c.es_yo %} <span class="chip entregado sin-punto">Tú</span>{% endif %}</td>
+<td>{{ c.nombre|default:"—" }}</td>
+<td>{{ c.rol }}</td>
+<td>{% if c.u.is_active %}<span class="chip entregado">Activa</span>{% else %}<span class="chip pendiente">Inactiva</span>{% endif %}</td>
+<td><a class="btn btn-sec" href="/operacion/cuentas/{{ c.u.pk }}/clave/">Asignar clave<span class="solo-lector"> a {{ c.u.username }}</span></a></td>
+</tr>
+{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="lupa" titulo="Ninguna cuenta coincide" texto="Prueba con otra parte del correo, del nombre o del RUT, o quita el filtro de tipo." %}{% endfor %}
+</tbody></table></div>
+{% if hay_mas %}<p class="frio" style="margin-top:12px">Se muestran las primeras 100 cuentas: afina la búsqueda para ver las demás.</p>{% endif %}
+{% if sin_cuenta_n %}
+<div class="seccion"><h2>Clientes sin cuenta del portal</h2><p class="sub" style="margin:0">Existen en el CRM (por ejemplo, un prospecto ganado) pero no pueden ingresar a la tienda. Crear su cuenta los enlaza al cliente existente, sin duplicarlo.</p></div>
+<div class="tabla-caja"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>Correo</th><th>Vendedor</th><th><span class="solo-lector">Acción</span></th></tr></thead><tbody>
+{% for c in sin_cuenta %}<tr><td><a class="id-orden" href="/crm/clientes/{{ c.cliente_id }}/">{{ c.nombre }}</a></td><td>{{ c.tipo_cliente.codigo }}</td><td>{{ c.email|default:"—" }}</td><td>{{ c.vendedor|default:"–" }}</td>
+<td><a class="btn btn-sec" href="/operacion/clientes/{{ c.cliente_id }}/cuenta/">Crear cuenta<span class="solo-lector"> de {{ c.nombre }}</span></a></td></tr>{% endfor %}
+</tbody></table></div>
+{% if sin_cuenta_n > 20 %}<p class="frio" style="margin-top:12px">Se muestran 20 de {{ sin_cuenta_n }}; el resto está en la lista de clientes del CRM.</p>{% endif %}
+{% endif %}
+{% endblock %}

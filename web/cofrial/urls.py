@@ -40,6 +40,7 @@ urlpatterns = [
     path("catalogo/", include("catalogo.urls")),
     path("crm/", include("crm.urls")),
     path("flota/", include("flota.urls")),
+    path("operacion/", include("operacion.urls")),
     path("bi/", bi.proxy, name="bi"),
     path("bi/<path:ruta>", bi.proxy),
     path("demo/", flota_demo.pagina, name="demo"),

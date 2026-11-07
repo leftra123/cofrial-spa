@@ -513,7 +513,15 @@ td.celda-acciones select { max-width: 100%; }
 .hero .marca-texto, .t-hero .marca-texto { background: var(--lima); color: var(--lima-fg); }
 .linea-lima { display: block; height: 4px; width: 72px; border-radius: 4px; background: var(--lima); margin: 12px 0 0; }
 .pagina-cab h1 + .linea-lima { margin-top: 10px; }
-.logo-chip { display: inline-block; background: #fff; border-radius: 12px; padding: 8px 14px; line-height: 0; }
+.logo-chip { display: inline-block; line-height: 0; }
+/* El logo tiene letras azul marino: con tema oscuro se usa la variante de letras blancas, sin caja de fondo. */
+.logo-chip .logo-tema-oscuro, .tb-marca .logo-tema-oscuro { display: none; }
+:root[data-tema="oscuro"] .logo-tema-claro { display: none; }
+:root[data-tema="oscuro"] .logo-tema-oscuro { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) .logo-tema-claro { display: none; }
+  :root:not([data-tema="claro"]) .logo-tema-oscuro { display: block; }
+}
 .logo-chip img { height: 54px; width: auto; display: block; }
 .marca-texto-logo { font-weight: 800; letter-spacing: .08em; color: var(--acento); }
 :root[data-tema="oscuro"] .marca-texto-logo { color: var(--texto); }
@@ -694,3 +702,62 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 .acc-doc summary { cursor: pointer; color: var(--acento); font-size: .875rem; }
 .acc-doc form { margin-top: 6px; }
 .acc-doc input[type=number] { width: 7.5rem; }
+
+/* ---------- navegación que se mantiene y filtros que se recuerdan (nav.js, filtros.js) ---------- */
+:root { --barra-movil: 61px; }
+/* el submenú del CRM queda pegado arriba al desplazarse; en móvil, justo bajo la barra superior */
+.subnav { position: sticky; top: 0; z-index: 10; background: var(--fondo); }
+@media (max-width: 860px) {
+  .subnav { top: var(--barra-movil); margin-left: -16px; margin-right: -16px; width: auto; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+  .subnav::-webkit-scrollbar { display: none; }
+  .subnav .rol { margin-left: 12px; }
+  .subnav.mas-der { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+  .subnav.mas-izq { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px); mask-image: linear-gradient(to right, transparent, #000 40px); }
+  .subnav.mas-izq.mas-der { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+  html.menu-abierto { overflow: hidden; }
+}
+
+/* barra de búsqueda y selectores de las listas */
+.filtro-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin: 0 0 14px; }
+.filtro-barra .filtro-q { flex: 1 1 240px; max-width: 360px; margin: 0; }
+.filtro-barra select { flex: 0 1 auto; margin: 0; max-width: 100%; }
+.filtro-cuenta { color: var(--texto-3); font-size: .85rem; margin-left: auto; }
+button.filtros-limpiar-btn:not(#mp-brick-container button) { background: none; border: 0; padding: 6px 4px; color: var(--acento); font: inherit; font-size: .88rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; box-shadow: none; min-height: 0; transform: none; }
+button.filtros-limpiar-btn:not(#mp-brick-container button):hover { background: none; color: var(--acento); text-decoration-thickness: 2px; box-shadow: none; }
+:root[data-tema="oscuro"] button.filtros-limpiar-btn:not(#mp-brick-container button) { color: var(--lima); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) button.filtros-limpiar-btn:not(#mp-brick-container button) { color: var(--lima); } }
+.tabs .filtros-limpiar-btn { align-self: center; margin-left: 4px; }
+.filtros-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--acento-suave); color: var(--texto); font-size: .92rem; }
+.filtro-vacio { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 36px 20px; margin-bottom: 14px; border: 1px dashed var(--borde-fuerte); border-radius: 18px; color: var(--texto-3); }
+.filtro-vacio b { color: var(--texto); font-size: 1.05rem; }
+.filtro-vacio[hidden], .filtro-barra [hidden] { display: none !important; }
+.tabla-caja[hidden] { display: none; }
+@media (max-width: 600px) { .filtro-barra .filtro-q { max-width: none; flex-basis: 100%; } .filtro-cuenta { margin-left: 0; flex-basis: 100%; order: 5; } }
+
+/* tablas: sombra en el borde que indica que hay más columnas al deslizar (solo aparece cuando la tabla desborda) */
+.tabla-caja {
+  background:
+    linear-gradient(to right, var(--tarjeta) 30%, transparent) left center / 36px 100% no-repeat local,
+    linear-gradient(to left, var(--tarjeta) 30%, transparent) right center / 36px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(15, 23, 42, .16), transparent) left center / 10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(15, 23, 42, .16), transparent) right center / 10px 100% no-repeat scroll,
+    var(--tarjeta);
+}
+:root[data-tema="oscuro"] .tabla-caja { background:
+    linear-gradient(to right, var(--tarjeta) 30%, transparent) left center / 36px 100% no-repeat local,
+    linear-gradient(to left, var(--tarjeta) 30%, transparent) right center / 36px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, .5), transparent) left center / 10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, .5), transparent) right center / 10px 100% no-repeat scroll,
+    var(--tarjeta); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tabla-caja { background:
+    linear-gradient(to right, var(--tarjeta) 30%, transparent) left center / 36px 100% no-repeat local,
+    linear-gradient(to left, var(--tarjeta) 30%, transparent) right center / 36px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, .5), transparent) left center / 10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, .5), transparent) right center / 10px 100% no-repeat scroll,
+    var(--tarjeta); } }
+/* una tabla sin filas: en pantallas chicas el estado vacío no puede quedar cortado por el ancho de las columnas que no se ven */
+td.vacio-caja, td.vacio { white-space: normal; }
+@media (max-width: 860px) {
+  .tabla-caja table:has(td.vacio-caja) thead, .tabla-caja table:has(td.vacio) thead { display: none; }
+}
+@media (max-width: 600px) { .tabla-caja tbody td:first-child { min-width: 9.5rem; } }

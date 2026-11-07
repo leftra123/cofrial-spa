@@ -290,7 +290,7 @@ El diseño relacional no expresa estas reglas; se validan en la aplicación o co
 
 ## Correspondencia entre diseño lógico y modelo físico
 
-El MER principal y el SQL representan el diseño de referencia de veintisiete entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veintisiete modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock; además Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
+El MER principal y el SQL representan el diseño de referencia de veintisiete entidades, no un inventario literal de todas las tablas del framework. La aplicación tiene veintisiete modelos de dominio: sustituye usuario por auth_user e incorpora aviso_stock. La tabla escenario_simulador, propia de la demostración, se agrega a ellos (Tabla D29). Además, Django crea tablas técnicas de permisos, grupos, sesiones y administración. Las migraciones son la fuente de la instalación física.
 
 **Tabla 5**
 *Diferencias deliberadas entre referencia lógica e implementación*
@@ -301,7 +301,7 @@ El MER principal y el SQL representan el diseño de referencia de veintisiete en
 | Líneas y precios | Clave compuesta | ID autogenerado y UNIQUE sobre el par; conserva la dependencia de la clave candidata |
 | Geolocalización | Dirección textual | direccion.lat y long, opcionales, para mapas y entregas |
 | OC diferida | numero_oc en orden | numero_oc y oc_pendiente; referencia WEB temporal para B2B sin OC |
-| Demostración | Telemetría ordinaria | telemetria.forzada distingue las inserciones administrativas |
+| Demostración | Telemetría ordinaria | telemetria.forzada distingue las lecturas de demostración; escenario_simulador guarda el comportamiento pedido para un viaje |
 | Reposición | Sin entidad específica | aviso_stock con cliente, producto, cantidad mínima y atención |
 | Requerimiento | Cliente opcional y orden opcional | Se conservan ambas relaciones; el portal verifica propiedad de la orden |
 
@@ -518,6 +518,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `despacho_id` | integer | Sí | FK → despacho | Despacho que la lleva (vacío hasta asignarla). | 88 |
 | `numero_oc` | varchar(30) | Sí | — | Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número. | OC-2026-0457 |
 | `oc_pendiente` | boolean | No | — | Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega. | falso |
+| `recibe_nombre` | varchar(80) | No | — | Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta. | María Soto |
 | `creada_en` | timestamptz | No | — | Fecha y hora de la orden. | 2026-10-12 10:20:00-03 |
 
 *Nota.* Elaboración propia.
@@ -783,14 +784,17 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 El diccionario anterior corresponde al diseño lógico de referencia. Las siguientes tablas documentan las extensiones que utilizan las migraciones Django; no deben confundirse con columnas presentes en el SQL académico original.
 
 **Tabla D26**
-*Campos físicos adicionales de dirección, orden y telemetría*
+*Campos físicos adicionales de dirección, orden, despacho y telemetría*
 
 | Campo | Tipo físico | Nulo | Propósito |
 |---|---|---|---|
 | direccion.lat | double precision | Sí | Latitud de entrega para seguimiento y ruta |
 | direccion.long | double precision | Sí | Longitud de entrega para seguimiento y ruta |
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
-| telemetria.forzada | boolean, por defecto false | No | Distingue lecturas administrativas de demostración |
+| orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
+| telemetria.forzada | boolean, por defecto false | No | Distingue lecturas de demostración: las forzadas desde la web y las que el simulador envía durante la falla de un escenario |
+| despacho.decision_auto | text | Sí | Por qué salió el viaje, escrito por el despacho automático; vacío si lo armó una persona |
+| despacho.decision_ia | text | Sí | La misma decisión redactada por la IA; vacío si no hubo IA utilizable |
 
 Nota. Elaboración propia. La demostración no cambia los seis campos exigidos por el requerimiento de Cofrial.
 
@@ -819,3 +823,27 @@ Nota. Elaboración propia. UNIQUE parcial sobre cliente y producto mientras aten
 | orden_item | ID autogenerado además de orden_id y producto_id | UNIQUE del par orden–producto |
 
 Nota. Elaboración propia. Las migraciones y modelos Django son la referencia del esquema físico. El ID adicional no elimina la clave candidata compuesta.
+
+**Tabla D29**
+*Diccionario físico de escenario_simulador*
+
+| Campo | Tipo | Nulo | Clave y función |
+|---|---|---|---|
+| escenario_id | integer autogenerado | No | PK |
+| despacho_id | integer | No | FK despacho: el viaje afectado; de él se obtiene el camión |
+| tipo | varchar(20) | No | falla_frio, entrega_perfecta o cliente_no_recibe (CHECK) |
+| estado | varchar(10), por defecto pendiente | No | pendiente, en_curso, terminado o cancelado (CHECK) |
+| momento_pct | smallint | Sí | Falla de frío: avance hacia la última parada al que parte, de 5 a 95 |
+| duracion_lecturas | smallint | Sí | Falla de frío: lecturas que dura, de 6 a 36 |
+| subida_c | double precision | Sí | Falla de frío: grados que sube por lectura, de 1 a 2 |
+| direccion_id | integer | Sí | FK direccion: la parada donde el cliente no recibe |
+| motivo_no_recibe | varchar(120) | No, puede ir vacío | Texto de una lista cerrada; pasa a orden.entrega_motivo |
+| origen | varchar(5) | No | boton o ia |
+| pedido_texto | varchar(300) | No, puede ir vacío | Lo que escribió el administrador, anonimizado; solo registro |
+| modelo_ia | varchar(80) | No, puede ir vacío | Modelo que propuso el escenario |
+| creado_por_id | integer | Sí | FK auth_user: administrador que lo activó |
+| creado_en | timestamptz | No | Momento de la activación |
+| iniciado_en | timestamptz | Sí | Lo registra el simulador cuando el escenario empieza a actuar |
+| terminado_en | timestamptz | Sí | Fin del escenario |
+
+Nota. Elaboración propia. UNIQUE parcial sobre despacho_id mientras el estado sea pendiente o en_curso. Un CHECK exige los tres parámetros acotados cuando el tipo es falla_frio y otro exige direccion_id y motivo cuando es cliente_no_recibe. Está en 3FN: todos los atributos dependen de escenario_id, y el camión no se repite porque depende de despacho_id. Las columnas de parámetros quedan nulas en los tipos que no las usan; se prefirieron a un campo JSON para que la base pueda acotarlas. La escribe la web y la leen los contenedores del simulador; ver `docs/decisiones.md`.

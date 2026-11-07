@@ -6,7 +6,7 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
-| EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80) y Grafana (solo red interna, se abre en `/bi/`) |
+| EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80), Grafana (solo red interna, se abre en `/bi/`) y los servicios `podador` y `despachador` (este último apagado salvo `DESPACHO_AUTO=1`) |
 | EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
 | RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, Single-AZ | Base `cofrial` |
 

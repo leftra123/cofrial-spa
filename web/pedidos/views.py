@@ -8,6 +8,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
+from clientes.models import Comuna
 from cofrial import entradas
 from crm import servicios as crm
 from crm.models import Requerimiento
@@ -20,7 +21,9 @@ def solo_clientes(vista):
     @wraps(vista)
     def envoltura(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect(f"/cuenta/entrar/?next={request.path}")
+            if request.method != "GET":             # se explica por qué pide ingresar de nuevo; el carrito está en la base y no se pierde
+                messages.info(request, "Tu sesión terminó. Ingresa de nuevo: tu carrito sigue guardado.")
+            return redirect(entradas.url_de_ingreso(request, "/carrito/"))
         cliente = s.cliente_de(request.user)
         if cliente is None:
             if request.method == "POST":            # una cuenta del equipo no compra, no cancela ni abre reclamos como cliente: se le dice claro
@@ -71,8 +74,9 @@ def ver_carrito(request, cliente):
     total = s.total(filas)
     ctx = {
         "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
-        "direcciones": cliente.direccion_set.select_related("comuna"),
+        "direcciones": cliente.direccion_set.select_related("comuna"), "comunas": Comuna.objects.order_by("nombre"),
         "pide_oc": cliente.tipo_cliente.codigo == "B2B",
+        "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
         "mp_brick": mp_brick,
     }
     if mp_brick:
@@ -101,6 +105,20 @@ def actualizar(request, cliente):
 
 @require_POST
 @solo_clientes
+def direccion_nueva(request, cliente):
+    """CU-04, A2: el cliente agrega otra dirección desde el carrito (una empresa con varias sucursales, un particular que se mudó)."""
+    try:
+        d = s.agregar_direccion(cliente, request.POST.get("calle_numero", ""), request.POST.get("comuna"))
+        messages.success(request, f"Agregamos «{d}» a tus direcciones.")
+        if d.lat is None:
+            messages.warning(request, "No pudimos ubicar esa dirección en el mapa. Puedes comprar igual; la revisaremos antes de despachar.")
+    except s.ErrorDeNegocio as e:
+        _mostrar_errores(request, e)
+    return redirect("carrito")
+
+
+@require_POST
+@solo_clientes
 def repetir(request, cliente):
     try:
         for aviso in s.repetir_ultimo_pedido(cliente):
@@ -109,6 +127,11 @@ def repetir(request, cliente):
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
     return redirect("carrito")
+
+
+def _quien_recibe_del_formulario(post):
+    """Dos formas de elegir quién recibe: una persona de la lista (`recibe`) o un nombre nuevo (`recibe_nuevo`, que tiene prioridad si se escribió)."""
+    return (post.get("recibe_nuevo") or "").strip() or post.get("recibe", "")
 
 
 def _mensaje_ordenes_creadas(ordenes):
@@ -133,7 +156,7 @@ def confirmar(request, cliente):
         messages.info(request, "Completa el pago con Mercado Pago en el formulario del carrito.")
         return redirect("carrito")
     try:
-        ordenes = s.generar_ordenes(cliente, direccion, numero_oc)
+        ordenes = s.generar_ordenes(cliente, direccion, numero_oc, recibe=_quien_recibe_del_formulario(request.POST))
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
         return redirect("carrito")
@@ -155,7 +178,7 @@ def mp_pagar_brick(request, cliente):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"ok": False, "mensaje": "Solicitud no válida."}, status=400)
     try:
-        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {})
+        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {}, recibe=str(datos.get("recibe") or ""))
         return JsonResponse({"ok": True, "redirect": f"/pedidos/{checkout.primera_orden_id}/?nueva=1"},
                             json_dumps_params={"ensure_ascii": False})
     except s.ErrorDeNegocio as e:
@@ -193,8 +216,11 @@ def _orden_del_cliente(cliente, orden_id):
 @solo_clientes
 def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
+    en_la_puerta = orden.estado_orden.nombre == "Camión en la puerta"
     return render(request, "pedidos/detalle.html", {
         "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "documentos": documentos.documentos_de_orden(orden), "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "revision": s.revision_de(orden) if en_la_puerta else None,          # paso de revisión al recibir: productos y temperatura del viaje
+        "reclamo": s.reclamo_al_recibir(orden) if orden.estado_orden.nombre == "Entregada" else None,
         "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
 
@@ -257,11 +283,20 @@ def entrega(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     quiere_json = request.headers.get("X-Requested-With") == "fetch" or "application/json" in request.headers.get("Accept", "")
     if request.method == "GET":
-        return JsonResponse(s.entrega_de(orden), json_dumps_params={"ensure_ascii": False})
+        datos = s.entrega_de(orden)
+        if request.GET.get("revision") and datos["puede_responder"]:          # el diálogo de la campanita arma el paso de revisión con esto
+            datos["revision"] = s.revision_de(orden)
+        return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
+    accion = request.POST.get("accion", "")
+    con_problema = accion == "aceptar" and request.POST.get("resultado") == "falla"      # sin «resultado» (clientes antiguos de la API) todo llegó bien
     try:
-        orden = s.resolver_entrega(cliente, orden_id, request.POST.get("accion", ""), request.POST.get("motivo", ""))
-        mensaje = ("Gracias por confirmar la recepción." if orden.estado_orden.nombre == "Entregada"
-                   else "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar.")
+        orden = s.resolver_entrega(cliente, orden_id, accion, request.POST.get("problema" if con_problema else "motivo", ""),
+                                   con_problema=con_problema, tipo_problema=request.POST.get("tipo_problema", "otro"))
+        if orden.estado_orden.nombre == "Entregada":
+            mensaje = ("Pedido entregado exitosamente. Registramos el problema que nos contaste y ventas te contactará."
+                       if con_problema else "Pedido entregado exitosamente. Gracias por confirmar la recepción.")
+        else:
+            mensaje = "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar."
         ok = True
     except s.ErrorDeNegocio as e:
         mensaje, ok = " ".join(e.mensajes), False

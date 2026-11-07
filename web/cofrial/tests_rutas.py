@@ -36,12 +36,15 @@ ESPERADO = {
     '/crm/solicitudes/999999/rechazar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/solicitudes/ →/crm/solicitudes/ 403 →/crm/solicitudes/'),
     '/crm/clientes/999999/': ('L 403 403 404 404 403 404', 'L 403 403 404 404 403 404'),
     '/crm/clientes/999999/interaccion/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
+    '/crm/clientes/999999/direccion/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/clientes/999999/pedido/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/requerimientos/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
     '/crm/requerimientos/999999/': ('L 403 403 404 404 403 404', 'L 403 403 404 404 403 404'),
     '/crm/requerimientos/999999/ia/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
     '/crm/requerimientos/999999/clasificar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
+    '/crm/requerimientos/999999/resolver/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
     '/crm/cobranza/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
+    '/crm/ordenes/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/ordenes/999999/factura/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/documentos/999999/pago/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/documentos/999999/nota-credito/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
@@ -53,9 +56,22 @@ ESPERADO = {
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 403 →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/flota/despacho-auto/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/flota/despacho-auto/correr/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ubicar/999999/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 404 404'),
+    '/operacion/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),            # solo el administrador
+    '/operacion/stock/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/stock/999999/sumar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
+    '/operacion/cuentas/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/cuentas/nueva/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/clientes/999999/cuenta/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/cuentas/999999/clave/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
     '/bi/': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),            # solo gerencia y admin; 502 porque en las pruebas no hay Grafana (ver test_bi)
     '/bi/x': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),
+    '/flota/escenarios/estado/': ('L 403 403 403 403 403 200', '405 405 405 405 405 405 405'),
+    '/flota/escenarios/interpretar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 422'),
+    '/flota/escenarios/activar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
+    '/flota/escenarios/cancelar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
     '/demo/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
     '/demo/pulso/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
     '/demo/apagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
@@ -72,6 +88,7 @@ ESPERADO = {
     '/carrito/actualizar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/repetir/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/confirmar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
+    '/carrito/direccion/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/mp/pagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 403'),  # B2C da 403 en pruebas porque Mercado Pago no tiene claves; B2B nunca paga con MP
     '/carrito/mp/webhook/': ('405 405 405 405 405 405 405', '204 204 204 204 204 204 204'),  # público: lo llama Mercado Pago sin sesión; sin claves responde 204 y no hace nada
     '/carrito/mp/vuelta/exito/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
@@ -215,11 +232,11 @@ class InicioPorRol(Base):
 
 class MenuPorRol(Base):
     PROHIBIDOS = {   # enlaces del menú que darían 403/redirección a esa cuenta
-        "B2B": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/'],
-        "B2C": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/'],
-        "vendedor": ['href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
-        "gerencia": ['href="/flota/despachar/', 'href="/admin/', 'href="/demo/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
-        "despachador": ['href="/crm/embudo/', 'href="/crm/clientes/', 'href="/admin/', 'href="/demo/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
+        "B2B": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/operacion/'],
+        "B2C": ['href="/crm/', 'href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/operacion/'],
+        "vendedor": ['href="/flota/', 'href="/admin/', 'href="/demo/', 'href="/operacion/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
+        "gerencia": ['href="/flota/despachar/', 'href="/admin/', 'href="/demo/', 'href="/operacion/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
+        "despachador": ['href="/crm/embudo/', 'href="/crm/clientes/', 'href="/admin/', 'href="/demo/', 'href="/operacion/', 'href="/carrito/', 'href="/pedidos/', 'href="/soporte/', 'href="/avisos/', 'href="/seguimiento/', 'href="/catalogo/'],
     }
 
     def test_el_menu_no_ofrece_enlaces_que_dan_403(self):
@@ -232,7 +249,7 @@ class MenuPorRol(Base):
     def test_cada_rol_si_ve_lo_suyo(self):
         esperado = {"B2B": ('href="/pedidos/"', 'href="/carrito/"', 'href="/soporte/"', 'href="/avisos/"'), "vendedor": ('href="/crm/embudo/"', 'href="/crm/ia/"'),
                     "gerencia": ('href="/crm/embudo/"', 'href="/flota/"'), "despachador": ('href="/flota/"', 'href="/crm/alertas/"'),
-                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/catalogo/"', 'href="/portada/"')}
+                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
         paginas = {"B2B": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
         for rol, enlaces in esperado.items():
             html = self.cliente(rol).get(paginas[rol]).content.decode()

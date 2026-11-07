@@ -1,0 +1,28 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}{% if tipo %}Agregar {{ tipo_nombre }}{% else %}Crear cuenta{% endif %} | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>{% if tipo %}Agregar: {{ tipo_nombre }}{% else %}Crear cuenta{% endif %}</h1><p class="sub">{% if tipo %}Solo los datos que pide este tipo de usuario. <a href="/operacion/cuentas/nueva/">Elegir otro tipo</a>.{% else %}Elige el rol y completa los datos que pide.{% endif %}</p></div><div class="acciones"><a class="btn btn-sec" href="/operacion/cuentas/{% if tipo %}?tipo={{ tipo }}{% endif %}">Cancelar</a></div></div>
+<div class="tarjeta-ui" style="max-width:560px">
+<form method="post" id="form-cuenta" data-carga autocomplete="off">{% csrf_token %}
+  {% if form.non_field_errors %}<div role="alert">{% for e in form.non_field_errors %}<p class="error-campo">{{ e }}</p>{% endfor %}</div>{% endif %}
+  {% if tipo %}
+    {{ form.rol }}
+    {% for c in form.visible_fields %}{% if c.name != "clave" and c.name != "clave2" %}{% include "operacion/_campo.html" with c=c %}{% endif %}{% endfor %}
+  {% else %}
+  {% include "operacion/_campo.html" with c=form.usuario %}
+  {% include "operacion/_campo.html" with c=form.rol %}
+  {% include "operacion/_campo.html" with c=form.nombre %}
+  <div data-roles="cliente-b2b cliente-b2c">
+    {% include "operacion/_campo.html" with c=form.rut %}
+    {% include "operacion/_campo.html" with c=form.direccion %}
+    {% include "operacion/_campo.html" with c=form.comuna %}
+  </div>
+  <div data-roles="cliente-b2b">{% include "operacion/_campo.html" with c=form.vendedor %}</div>
+  {% endif %}
+  {% include "operacion/_campo.html" with c=form.clave %}
+  {% include "operacion/_campo.html" with c=form.clave2 %}
+  <p class="frio" style="margin-top:12px">La clave no se muestra después de guardar: anótala o entrégala en mano a la persona.</p>
+  <button data-cargando="Creando…">Crear cuenta</button>
+</form></div>
+{% endblock %}
+{% block scripts %}{% load static %}{% if not tipo %}<script src="{% static 'js/operacion.js' %}"></script>{% endif %}{% endblock %}

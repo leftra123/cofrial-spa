@@ -1,0 +1,6 @@
+{% comment %}Formulario de una dirección nueva. Recibe `accion` (a dónde enviar) y `comunas`.{% endcomment %}
+<form method="post" action="{{ accion }}" data-carga>{% csrf_token %}
+  <label for="dir-calle">Calle y número</label><input id="dir-calle" name="calle_numero" maxlength="150" required autocomplete="street-address">
+  <label for="dir-comuna">Comuna</label><select id="dir-comuna" name="comuna" required>{% for c in comunas %}<option value="{{ c.pk }}">{{ c.nombre }}</option>{% endfor %}</select>
+  <p style="margin-top:12px"><button class="btn btn-sec" data-cargando="Guardando…">Guardar dirección</button></p>
+</form>

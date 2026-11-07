@@ -137,7 +137,7 @@ tabla("estado_orden", "Comercial", "Estados por los que pasa una orden.", [
     c("orden_flujo", "smallint", "Posición en el flujo del pedido.", "1", uk=True),
     c("es_final", "boolean", "Si cierra el pedido (entregada o cancelada).", "false", default="false"),
 ])
-tabla("camion", "Logística", "Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según la pauta).", [
+tabla("camion", "Logística", "Flota de camiones frigoríficos. La clave es el código que usa la telemetría (texto, según el requerimiento de Cofrial).", [
     pk("camion_id", "Código del camión, el mismo que envía la telemetría.", "CAM-01", tipo="varchar(20)"),
     c("patente", "varchar(8)", "Patente del vehículo.", "HJKL-42", uk=True),
     c("capacidad_kg", "integer", "Capacidad de carga en kilos.", "8000", check="capacidad_kg > 0"),
@@ -158,6 +158,7 @@ tabla("orden", "Comercial", "Órdenes de compra generadas en el portal. El clien
     c("despacho_id", "integer", "Despacho que la lleva (vacío hasta asignarla).", "88", fk="despacho", nulo=True),
     c("numero_oc", "varchar(30)", "Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número.", "OC-2026-0457", nulo=True),
     c("oc_pendiente", "boolean", "Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega.", "falso", default="false"),
+    c("recibe_nombre", "varchar(80)", "Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta.", "María Soto", default="''"),
     c("creada_en", "timestamptz", "Fecha y hora de la orden.", "2026-10-12 10:20:00-03", default="now()"),
 ])
 tabla("orden_item", "Comercial", "Líneas de una orden, con el precio vigente al momento de comprar.", [
@@ -187,7 +188,7 @@ tabla("pago", "Comercial", "Pagos recibidos contra una boleta o factura. El sald
 ])
 
 # ---------------------------------------------------------------- IoT
-tabla("telemetria", "Logística e IoT", "Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige la pauta.", [
+tabla("telemetria", "Logística e IoT", "Lecturas que envían los contenedores del simulador. Los nombres de campo son los que exige el requerimiento de Cofrial.", [
     pk("telemetria_id", "Identificador de la lectura.", "250311", tipo="bigint"),
     c("camion_id", "varchar(20)", "Camión que reporta (string).", "CAM-01", fk="camion"),
     c("temp_camara", "double precision", "Temperatura de la cámara en grados Celsius (float).", "3.6"),

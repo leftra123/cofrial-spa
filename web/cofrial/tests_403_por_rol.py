@@ -98,3 +98,49 @@ class ElEquipoNoCompraComoCliente(Base):
         c = self.entrar("ana@correo.test")
         self.assertRedirects(c.post("/carrito/agregar/", {"producto": self.producto.pk, "cantidad": 1}), "/catalogo/", fetch_redirect_response=False)
         self.assertEqual(c.post(f"/pedidos/{self.orden.pk}/cancelar/").status_code, 302)
+
+
+class SoloElAdministradorOpera(Base):
+    """Reponer stock, crear cuentas y asignar claves: el resto de los roles recibe 403 y no cambia nada."""
+    NO_ADMIN = ("vendedora@cofrial.cl", "gerencia@cofrial.cl", "despacho@cofrial.cl", "ana@correo.test", "abastecimiento@hospital.test")
+
+    def test_los_demas_roles_reciben_403_y_no_se_modifica_nada(self):
+        from django.contrib.auth import get_user_model
+        Usuario = get_user_model()
+        p = Producto.objects.filter(stock_disponible__gt=0).first()
+        stock, usuarios = p.stock_disponible, Usuario.objects.count()
+        ana = Usuario.objects.get(username="ana@correo.test")
+        clave_ana = ana.password
+        from clientes.models import Cliente, TipoCliente
+        sin_cuenta = Cliente.objects.create(tipo_cliente=TipoCliente.objects.get(codigo="B2B"), rut="76.111.222-8", nombre="Sin cuenta", email="s@t.test")
+        acciones = [(f"/operacion/stock/{p.pk}/sumar/", {"cantidad": 50}),
+                    ("/operacion/cuentas/nueva/", {"usuario": "intruso@t.test", "rol": "admin", "clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"}),
+                    (f"/operacion/cuentas/{ana.pk}/clave/", {"clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"}),
+                    (f"/operacion/clientes/{sin_cuenta.pk}/cuenta/", {"usuario": "intruso2@t.test", "clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"}),
+                    ("/operacion/cuentas/nueva/?tipo=admin", {"usuario": "intruso3@t.test", "clave": "Intr-uso-4821-x", "clave2": "Intr-uso-4821-x"})]
+        for usuario in self.NO_ADMIN:
+            c = self.entrar(usuario)
+            for url, datos in acciones:
+                with self.subTest(usuario=usuario, url=url):
+                    self.assertEqual(c.post(url, datos).status_code, 403)
+                    self.assertEqual(c.get(url).status_code, 403 if "sumar" not in url else 405)
+            for url in ("/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/?tipo=admin"):
+                self.assertEqual(c.get(url).status_code, 403, f"{usuario} {url}")
+        p.refresh_from_db()
+        ana.refresh_from_db()
+        sin_cuenta.refresh_from_db()
+        self.assertEqual((p.stock_disponible, Usuario.objects.count(), ana.password), (stock, usuarios, clave_ana))
+        self.assertIsNone(sin_cuenta.usuario)
+
+    def test_sin_sesion_lleva_al_login(self):
+        for url in ("/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/"):
+            r = Client().get(url)
+            self.assertRedirects(r, f"/cuenta/entrar/?next={url}", fetch_redirect_response=False)
+
+    def test_un_staff_con_permisos_de_django_tampoco_entra(self):
+        """El permiso es el rol admin (superusuario), no is_staff ni un permiso suelto del modelo."""
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Permission
+        u = get_user_model().objects.get(username="vendedora@cofrial.cl")
+        u.user_permissions.set(Permission.objects.filter(codename__in=("change_producto", "add_user", "change_user")))
+        self.assertEqual(self.entrar("vendedora@cofrial.cl").get("/operacion/stock/").status_code, 403)

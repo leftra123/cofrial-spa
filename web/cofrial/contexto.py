@@ -17,7 +17,7 @@ def menu(request):
     u = request.user
     tiles = {"mapa_tiles": settings.MAPA_TILES, "asistente_activo": settings.ASISTENTE_ACTIVO}
     if not u.is_authenticated:
-        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "demo": False, "tienda": True, "comercial": False}, "inicio_url": "/", "tipo_cuenta": "anonimo", "etiqueta_cuenta": "", "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "solicitudes_n": 0, "grafana_url": "", **tiles}
+        return {"menu": {"cliente": False, "crm": False, "flota": False, "admin": False, "operacion": False, "demo": False, "tienda": True, "comercial": False}, "inicio_url": "/", "tipo_cuenta": "anonimo", "etiqueta_cuenta": "", "carrito_n": 0, "cliente_tienda": None, "avisos_n": 0, "solicitudes_n": 0, "grafana_url": "", **tiles}
     rol = crm.rol(u)
     cliente = pedidos.cliente_de(u)
     n = 0
@@ -25,7 +25,7 @@ def menu(request):
         n = pedidos.lineas_en_carrito(cliente)
     tipo = tipo_de(u)
     return {"menu": {"cliente": cliente is not None, "crm": rol is not None,
-                     "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_superuser, "demo": u.is_superuser,
+                     "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_superuser, "operacion": u.is_superuser, "demo": u.is_superuser,
                      "tienda": tipo in ("cliente", "admin"),                       # la tienda es de los clientes; el administrador la ve para revisarla
                      "comercial": rol in ("admin", "gerencia", "vendedor")},       # el despachador del CRM solo usa demanda y alertas de frío
             "inicio_url": INICIOS[tipo], "tipo_cuenta": tipo, "etiqueta_cuenta": ETIQUETAS.get(tipo, ""),

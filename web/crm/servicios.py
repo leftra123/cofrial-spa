@@ -183,8 +183,17 @@ def registrar_interaccion(usuario, tipo, detalle, prospecto=None, cliente=None):
 
 
 # ---------------------------------------------------------------- RN-13: alerta de frío sobre las órdenes
+def fin_de_exposicion(orden, ahora=None):
+    """Hasta cuándo la carga de esta orden estuvo en el camión. Dos clientes pueden ir en el mismo viaje: el primero ya recibió cuando el
+    camión sigue, y una falla posterior no lo afecta. Quien aún no recibe (en la puerta o sin concretar) sigue a bordo hasta el regreso."""
+    d = orden.despacho
+    if orden.estado_orden.nombre == "Entregada":
+        return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
+    return d.regreso_en or ahora or timezone.now()
+
+
 def ordenes_con_alerta(ordenes):
-    """Agrega a cada orden `alertas_frio`: lecturas con alerta del camión del despacho durante el viaje."""
+    """Agrega a cada orden `alertas_frio`: lecturas con alerta del camión del despacho mientras la carga de esa orden iba a bordo."""
     resultado = []
     ahora = timezone.now()
     for o in ordenes:
@@ -192,7 +201,7 @@ def ordenes_con_alerta(ordenes):
         d = o.despacho
         if d is not None and d.salida_en is not None:
             n = Telemetria.objects.filter(camion_id=d.camion_id, alerta_ruptura_frio=True, registrado_en__gte=d.salida_en,
-                                          registrado_en__lte=d.llegada_en or ahora).count()
+                                          registrado_en__lte=fin_de_exposicion(o, ahora)).count()
         o.alertas_frio = n
         resultado.append(o)
     return resultado
@@ -298,7 +307,7 @@ def telemetria_del_viaje(orden):
     d = orden.despacho
     if d is None or d.salida_en is None:
         return None
-    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, registrado_en__gte=d.salida_en, registrado_en__lte=d.llegada_en or timezone.now())
+    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, registrado_en__gte=d.salida_en, registrado_en__lte=fin_de_exposicion(orden))
     ultima = lecturas.order_by("-registrado_en").first()
     if ultima is None:
         return {"camion": d.camion_id, "lecturas": 0}

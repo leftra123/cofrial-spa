@@ -292,7 +292,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio\n  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"
+     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó una lectura fuera de rango durante el viaje.",
@@ -352,7 +352,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio\n  AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now()))"
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
     }
    ],
    "description": "Monto de los pedidos afectados: lo que la ruptura de frío pone en juego.",
@@ -848,7 +848,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en AND m.registrado_en <= COALESCE(d.llegada_en, now())\nWHERE d.salida_en IS NOT NULL GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
+     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())\nWHERE d.salida_en IS NOT NULL AND e.nombre <> 'Cancelada' GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó temperatura fuera de rango mientras iba en ruta. Más lecturas con alerta = más tiempo expuesto al calor.",

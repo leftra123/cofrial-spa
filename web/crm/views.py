@@ -243,6 +243,9 @@ def requerimientos(request):
         categorias=CategoriaRequerimiento.objects.all(), umbral=s.UMBRAL_CONFIANZA))
 
 
+PALABRAS_DE_FRIO = ("temperatur", "tibi", "calient", "descongel", "frío", "frio", "derretid")
+
+
 @con_rol(*COMERCIAL)
 def requerimiento_detalle(request, pk):
     """Un requerimiento con el texto original, el desglose de la IA y, si es de temperatura, el dato real de la base al lado."""

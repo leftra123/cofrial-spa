@@ -61,6 +61,12 @@ class Orden(models.Model):
     entrega_motivo = models.TextField(blank=True)                            # por qué el cliente no pudo recibir
     entrega_automatica = models.BooleanField(default=False, db_default=False)    # se dio por entregada sola al vencer el plazo
     checkout_pago = models.ForeignKey("CheckoutPago", null=True, blank=True, on_delete=models.SET_NULL, related_name="ordenes")
+    recibe_nombre = models.CharField(max_length=80, blank=True, default="", db_default="")      # quién recibe el pedido, elegido por el comprador; vacío = pedidos anteriores (recibe el titular)
+
+    @property
+    def quien_recibe(self):
+        """Nombre de quien recibe: el elegido al comprar o, en pedidos anteriores a este campo, el titular de la cuenta."""
+        return self.recibe_nombre or self.direccion.cliente.nombre
 
     class Meta:
         db_table = "orden"
@@ -122,6 +128,7 @@ class CheckoutPago(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     direccion = models.ForeignKey(Direccion, on_delete=models.PROTECT)
     numero_oc = models.CharField(max_length=30, blank=True)
+    recibe_nombre = models.CharField(max_length=80, blank=True, default="", db_default="")      # lo elegido en el carrito; se copia a las órdenes cuando el pago se aprueba
     monto_clp = models.IntegerField()
     preference_id = models.CharField(max_length=64, blank=True)
     external_reference = models.CharField(max_length=64, unique=True)

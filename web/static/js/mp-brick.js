@@ -60,6 +60,17 @@
     var skeleton = document.getElementById("mp-brick-skeleton");
     var shell = document.querySelector(".mp-brick-shell");
     var direccion = document.getElementById("direccion");
+    var recibeLista = document.getElementById("recibe"), recibeNuevo = document.getElementById("recibe_nuevo");
+    /* Quién recibe: un nombre nuevo tiene prioridad sobre la lista. El servidor vuelve a validar; aquí se avisa antes de abrir el pago. */
+    function valorRecibe() { return ((recibeNuevo && recibeNuevo.value) || "").trim() || (recibeLista ? recibeLista.value : ""); }
+    function errorRecibe() {
+      var n = valorRecibe().replace(/\s+/g, " ");
+      if (!n) return "";
+      if (n.length > 80) return "El nombre de quien recibe admite hasta 80 caracteres.";
+      var letras = n.replace(/[^\p{L}]/gu, "").length;
+      if (letras < 2 || /[^\p{L} .'’-]/u.test(n)) return "Escribe el nombre de quien recibe solo con letras (puedes usar espacios, punto, guion o apóstrofo).";
+      return "";
+    }
     var errEl = document.getElementById("mp-brick-error");
     var estadoBox = document.getElementById("mp-modal-estado");
     var estadoTit = document.getElementById("mp-modal-estado-t");
@@ -340,7 +351,7 @@
           "X-CSRFToken": csrfActual(),
           "X-Requested-With": "fetch",
         },
-        body: JSON.stringify({ direccion: direccion.value, formData: formData }),
+        body: JSON.stringify({ direccion: direccion.value, recibe: valorRecibe(), formData: formData }),
       })
         .then(leerJsonRespuesta)
         .then(function (par) {
@@ -479,6 +490,15 @@
         return;
       }
       var inline = document.getElementById("mp-inline-error");
+      var errNombre = errorRecibe();
+      if (errNombre) {
+        if (inline) {
+          inline.textContent = errNombre;
+          inline.hidden = false;
+        }
+        (recibeNuevo || recibeLista) && (recibeNuevo || recibeLista).focus();
+        return;
+      }
       if (inline) {
         inline.hidden = true;
         inline.textContent = "";

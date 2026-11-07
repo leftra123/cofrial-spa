@@ -46,6 +46,7 @@
     <div class="checkout-mp" data-checkout="mp-modal-v4">{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      {% include "pedidos/_quien_recibe.html" %}
       <p class="ayuda" id="ayuda-pago">Elige dirección y abre el checkout seguro. El formulario aparece en un modal centrado (Mercado Pago, modo prueba).</p>
       <button type="button" class="confirmar" id="mp-mostrar-pago" aria-haspopup="dialog" aria-controls="mp-pago-modal"{% if sin_stock %} disabled{% endif %}>Continuar al pago · {{ total|clp }}</button>
       <p class="ayuda mp-inline-error" id="mp-inline-error" hidden role="alert"></p>
@@ -54,6 +55,7 @@
     <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+      {% include "pedidos/_quien_recibe.html" %}
       {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
       <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega.{% else %}Pagas ahora (Webpay simulado) y recibes tu boleta en seguida.{% endif %}</p>
       <button class="confirmar" data-cargando="{% if pide_oc %}Generando orden…{% else %}Procesando pago…{% endif %}"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>{% if pide_oc %}Generar orden{% else %}Pagar y generar orden{% endif %}</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}

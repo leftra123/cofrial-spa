@@ -73,6 +73,7 @@ def ver_carrito(request, cliente):
         "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
         "direcciones": cliente.direccion_set.select_related("comuna"),
         "pide_oc": cliente.tipo_cliente.codigo == "B2B",
+        "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
         "mp_brick": mp_brick,
     }
     if mp_brick:
@@ -111,6 +112,11 @@ def repetir(request, cliente):
     return redirect("carrito")
 
 
+def _quien_recibe_del_formulario(post):
+    """Dos formas de elegir quién recibe: una persona de la lista (`recibe`) o un nombre nuevo (`recibe_nuevo`, que tiene prioridad si se escribió)."""
+    return (post.get("recibe_nuevo") or "").strip() or post.get("recibe", "")
+
+
 def _mensaje_ordenes_creadas(ordenes):
     orden = ordenes[0]
     if len(ordenes) > 1:
@@ -133,7 +139,7 @@ def confirmar(request, cliente):
         messages.info(request, "Completa el pago con Mercado Pago en el formulario del carrito.")
         return redirect("carrito")
     try:
-        ordenes = s.generar_ordenes(cliente, direccion, numero_oc)
+        ordenes = s.generar_ordenes(cliente, direccion, numero_oc, recibe=_quien_recibe_del_formulario(request.POST))
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
         return redirect("carrito")
@@ -155,7 +161,7 @@ def mp_pagar_brick(request, cliente):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"ok": False, "mensaje": "Solicitud no válida."}, status=400)
     try:
-        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {})
+        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {}, recibe=str(datos.get("recibe") or ""))
         return JsonResponse({"ok": True, "redirect": f"/pedidos/{checkout.primera_orden_id}/?nueva=1"},
                             json_dumps_params={"ensure_ascii": False})
     except s.ErrorDeNegocio as e:
@@ -193,8 +199,11 @@ def _orden_del_cliente(cliente, orden_id):
 @solo_clientes
 def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
+    en_la_puerta = orden.estado_orden.nombre == "Camión en la puerta"
     return render(request, "pedidos/detalle.html", {
         "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "documentos": documentos.documentos_de_orden(orden), "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "revision": s.revision_de(orden) if en_la_puerta else None,          # paso de revisión al recibir: productos y temperatura del viaje
+        "reclamo": s.reclamo_al_recibir(orden) if orden.estado_orden.nombre == "Entregada" else None,
         "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
 
@@ -257,11 +266,20 @@ def entrega(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     quiere_json = request.headers.get("X-Requested-With") == "fetch" or "application/json" in request.headers.get("Accept", "")
     if request.method == "GET":
-        return JsonResponse(s.entrega_de(orden), json_dumps_params={"ensure_ascii": False})
+        datos = s.entrega_de(orden)
+        if request.GET.get("revision") and datos["puede_responder"]:          # el diálogo de la campanita arma el paso de revisión con esto
+            datos["revision"] = s.revision_de(orden)
+        return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
+    accion = request.POST.get("accion", "")
+    con_problema = accion == "aceptar" and request.POST.get("resultado") == "falla"      # sin «resultado» (clientes antiguos de la API) todo llegó bien
     try:
-        orden = s.resolver_entrega(cliente, orden_id, request.POST.get("accion", ""), request.POST.get("motivo", ""))
-        mensaje = ("Gracias por confirmar la recepción." if orden.estado_orden.nombre == "Entregada"
-                   else "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar.")
+        orden = s.resolver_entrega(cliente, orden_id, accion, request.POST.get("problema" if con_problema else "motivo", ""),
+                                   con_problema=con_problema, tipo_problema=request.POST.get("tipo_problema", "otro"))
+        if orden.estado_orden.nombre == "Entregada":
+            mensaje = ("Pedido entregado exitosamente. Registramos el problema que nos contaste y ventas te contactará."
+                       if con_problema else "Pedido entregado exitosamente. Gracias por confirmar la recepción.")
+        else:
+            mensaje = "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar."
         ok = True
     except s.ErrorDeNegocio as e:
         mensaje, ok = " ".join(e.mensajes), False

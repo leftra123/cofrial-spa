@@ -39,7 +39,7 @@
 3. Elige el camión y marca dos o más pedidos: el mapa traza la ruta más corta y numera el orden de entrega.
 4. **Despachar y salir ahora**: los pedidos pasan a **Despachada** y la ruta por calles queda guardada (la misma que ven el camión y el cliente).
 5. En la flota se ve cada camión: en base, en ruta, en la puerta del cliente o volviendo. El cliente ve su camión solo mientras va en camino.
-6. Al llegar, el pedido pasa solo a **Camión en la puerta**; el cliente confirma **Recibí mi pedido** o explica por qué no pudo (queda **Entrega no concretada** y llega a ventas). Si no responde, se confirma sola.
+6. Al llegar, el pedido pasa solo a **Camión en la puerta**; el cliente ve un banner en cualquier página, revisa los productos y la temperatura del viaje y confirma **Recibí mi pedido** (si algo falló, queda entregado y llega a ventas como reclamo) o explica por qué no pudo (queda **Entrega no concretada** y llega a ventas). Si no responde, se confirma sola. Cada cliente ve en su mapa solo el tramo hasta su parada, no el viaje completo.
 - Regla de cadena de frío: no se mezclan refrigerado y congelado en un mismo camión.
 
 **3. Ventas atiende un reclamo con IA** (vendedor, gerencia o admin)

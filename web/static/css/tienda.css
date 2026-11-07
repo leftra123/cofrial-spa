@@ -1226,3 +1226,11 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
   .nav-skel-acciones-carro { width: 100%; }
   .nav-skel-btn--sec { flex: 1 1 calc(50% - 4px); width: auto; min-width: 0; }
 }
+
+/* ---------- barra superior en móvil: la fila del buscador se pliega al bajar (nav.js) ---------- */
+@media (max-width: 860px) {
+  .tb-compacta .tb-buscar { display: none; }
+  .tb-compacta .tb-fila { padding-top: 6px; padding-bottom: 6px; }
+}
+.tb-ingresar, .tb-clave { white-space: nowrap; }
+@media (max-width: 480px) { .tb-ingresar { padding: 6px 10px; font-size: .8rem; } .tb-interno { padding: 6px 8px; font-size: .8rem; } .tb-cuenta { flex-wrap: wrap; justify-content: flex-end; } }

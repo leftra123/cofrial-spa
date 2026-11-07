@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
   {% block cabeza %}{% endblock %}
 </head>
-<body>
+<body data-u="{{ user.pk|default:'' }}">
 <a class="salto" href="#contenido">Saltar al contenido</a>
 {% with ruta=request.path %}
 <header class="barra-movil">
@@ -72,5 +72,7 @@
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
 {% block scripts %}{% endblock %}
+<script src="{% static 'js/nav.js' %}"></script>
+<script src="{% static 'js/filtros.js' %}"></script>
 </body>
 </html>

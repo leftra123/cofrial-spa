@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
   {% block cabeza %}{% endblock %}
 </head>
-<body class="tienda">
+<body class="tienda" data-u="{{ user.pk|default:'' }}">
 <a class="salto" href="#contenido">Saltar al contenido</a>
 {% with ruta=request.path %}
 <header class="tb">
@@ -26,9 +26,10 @@
     <nav class="tb-nav" aria-label="Principal">
       <span class="tb-nav-ind" id="tb-nav-ind" hidden aria-hidden="true"></span>
       <a href="/catalogo/" data-nav-slide{% if "/catalogo/" in ruta %} class="activo" aria-current="page"{% endif %}>Catálogo</a>
-      {% if menu.cliente %}<a href="/pedidos/" data-nav-slide{% if "/pedidos/" in ruta %} class="activo"{% endif %}>Mis pedidos</a>{% endif %}
-      {% if not user.is_authenticated %}<a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo"{% endif %}>Seguir mi pedido</a>{% endif %}   {# el cliente sigue sus pedidos en «Mis pedidos»; el equipo, en el CRM #}
-      {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/" data-nav-slide><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito<span class="tb-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
+      {% if menu.cliente %}<a href="/pedidos/" data-nav-slide{% if "/pedidos/" in ruta %} class="activo" aria-current="page"{% endif %}>Mis pedidos</a>{% endif %}
+      {% if not user.is_authenticated %}<a href="/seguimiento/" {% if "/seguimiento/" in ruta %}class="activo" aria-current="page"{% endif %}>Seguir mi pedido</a>{% endif %}   {# el cliente sigue sus pedidos en «Mis pedidos»; el equipo, en el CRM #}
+      <a href="/soporte/" {% if "/soporte/" in ruta %}class="activo" aria-current="page"{% endif %}>Soporte</a>
+      {% if menu.cliente %}<a class="tb-carro{% if "/carrito/" in ruta %} activo{% endif %}" href="/carrito/"{% if "/carrito/" in ruta %} aria-current="page"{% endif %} data-nav-slide><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito<span class="tb-n" data-carrito-n {% if not carrito_n %}hidden{% endif %}>{{ carrito_n }}</span></a>{% endif %}
     </nav>
     <div class="tb-cuenta">
       {% if menu.cliente %}<div class="campana" id="campana">
@@ -82,5 +83,7 @@
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}
+<script src="{% static 'js/nav.js' %}"></script>
+<script src="{% static 'js/filtros.js' %}"></script>
 </body>
 </html>

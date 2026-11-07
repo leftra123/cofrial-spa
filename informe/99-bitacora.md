@@ -79,3 +79,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 ## 2026-11-06: preparación de la defensa
 - Retención de telemetría implementada (`manage.py podar_telemetria` y servicio `podador`): el informe la declaraba como mitigación y no existía en el código. Se ajustó el riesgo de `03-arquitectura-cloud.md`, porque no se agrega por hora. El Word aún no incorpora ese cambio.
 - Guion de la defensa: el tope de la IA es de 12 s y no de 5 s, se agregan las preguntas sobre IA de pago y crecimiento de la telemetría, y se pide confirmar que `ANTHROPIC_API_KEY` esté vacía en AWS.
+
+## 2026-11-06: navegación fija y filtros que se recuerdan
+- Dos scripts nuevos (`web/static/js/nav.js` y `web/static/js/filtros.js`) mantienen la barra y recuerdan los filtros de cada pantalla sin editar las plantillas; detalle, límites y qué datos no se guardan en `docs/decisiones.md`.
+- Arreglos de vistas: submenú del CRM pegado arriba y con pista de desplazamiento en móvil, tablas con sombra en el borde cuando hay más columnas, estados vacíos que ya no se cortan en móvil, barra de la tienda más baja en móvil y «Soporte» en el menú de la tienda.
+- Prueba nueva `cofrial/tests_navegacion.py`: el menú de cada rol no ofrece enlaces que den 403 y marca la sección actual.

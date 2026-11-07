@@ -20,7 +20,7 @@
       <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "catalogo/_miniatura.html" with producto=f.producto %}</a>
       <div class="linea-info"><h3><a href="{% url 'producto' f.producto.producto_id %}" style="color:var(--texto)">{{ f.producto.nombre }}</a></h3>
         <span class="frio">{{ f.precio|clp }} c/u</span>
-        {% if not f.hay_stock %}<span class="chip alerta sin-punto" style="margin-top:6px">{% if f.producto.stock_disponible <= 0 %}Agotado por ahora{% else %}Solo quedan {{ f.producto.stock_disponible }}{% endif %}</span>{% endif %}</div>
+        {% if not f.hay_stock %}<span class="chip alerta sin-punto" style="margin-top:6px">{% if not f.producto.activo %}Ya no está disponible{% elif f.producto.stock_disponible <= 0 %}Agotado por ahora{% else %}Solo quedan {{ f.producto.stock_disponible }}{% endif %}</span>{% endif %}</div>
       <div class="linea-total">{{ f.subtotal|clp }}</div>
       <form class="linea-form" method="post" action="/carrito/actualizar/">{% csrf_token %}<input type="hidden" name="producto" value="{{ f.producto.producto_id }}">
         <span class="cant"><button type="button" data-menos aria-label="Una unidad menos">−</button><input type="number" name="cantidad" value="{{ f.cantidad }}" min="0" aria-label="Cantidad de {{ f.producto.nombre }}"><button type="button" data-mas aria-label="Una unidad más">+</button></span>

@@ -51,7 +51,10 @@ class ProductoRetirado(Base):
         Producto.objects.filter(pk=self.refrigerado.pk).update(activo=False)
         self.assertFalse(s.lineas(self.ana)[0]["hay_stock"])
         self.client.login(username="ana@correo.test", password=CLAVE)
-        self.assertTrue(self.client.get("/carrito/").context["sin_stock"])
+        r = self.client.get("/carrito/")
+        self.assertTrue(r.context["sin_stock"])
+        self.assertContains(r, "Ya no está disponible")                      # antes decía «Solo quedan N» de un producto retirado
+        self.assertNotContains(r, "Solo quedan")
 
 
 class DobleEnvio(Base):

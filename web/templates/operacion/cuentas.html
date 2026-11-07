@@ -1,0 +1,17 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}Claves de cuentas | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Claves de cuentas</h1><p class="sub">Elige una cuenta para asignarle una clave nueva. La clave nunca se muestra: se guarda cifrada.</p></div><div class="acciones"><a class="btn" href="/operacion/cuentas/nueva/">Crear cuenta</a></div></div>
+<form method="get" class="en-linea buscar-op" role="search"><label for="q" class="solo-lector">Buscar cuenta</label><input id="q" name="q" type="search" value="{{ q }}" placeholder="Correo, nombre o RUT" maxlength="80" autocomplete="off" style="width:min(100%,360px)"><button>Buscar</button>{% if q %}<a class="btn btn-sec" href="/operacion/cuentas/">Quitar filtro</a>{% endif %}</form>
+<div class="tabla-caja"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th><span class="solo-lector">Acción</span></th></tr></thead><tbody>
+{% for c in cuentas %}<tr>
+<td><b>{{ c.u.username }}</b>{% if c.es_yo %} <span class="chip entregado sin-punto">Tú</span>{% endif %}</td>
+<td>{{ c.nombre|default:"—" }}</td>
+<td>{{ c.rol }}</td>
+<td>{% if c.u.is_active %}<span class="chip entregado">Activa</span>{% else %}<span class="chip pendiente">Inactiva</span>{% endif %}</td>
+<td><a class="btn btn-sec" href="/operacion/cuentas/{{ c.u.pk }}/clave/">Asignar clave<span class="solo-lector"> a {{ c.u.username }}</span></a></td>
+</tr>
+{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="lupa" titulo="Ninguna cuenta coincide" texto="Prueba con otra parte del correo, del nombre o del RUT." %}{% endfor %}
+</tbody></table></div>
+{% if hay_mas %}<p class="frio" style="margin-top:12px">Se muestran las primeras 100 cuentas: afina la búsqueda para ver las demás.</p>{% endif %}
+{% endblock %}

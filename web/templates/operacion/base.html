@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block cabeza %}<style>
+.campo-op input:not([type=hidden]), .campo-op select { width: 100%; max-width: 460px; display: block; }
+.campo-op .frio { margin: 6px 0 0; }
+.error-campo { color: var(--alerta-fg); font-size: .85rem; font-weight: 600; margin: 6px 0 0; }
+.buscar-op { margin-bottom: 18px; }
+[data-roles][hidden] { display: none; }
+</style>{% endblock %}
+{% block contenido %}
+{% with ruta=request.path %}
+<nav class="subnav" aria-label="Secciones de operación">
+  <a href="/operacion/" {% if ruta == "/operacion/" %}class="activo" aria-current="page"{% endif %}>Resumen</a>
+  <a href="/operacion/stock/" {% if "/operacion/stock" in ruta %}class="activo" aria-current="page"{% endif %}>Reponer stock</a>
+  <a href="/operacion/cuentas/nueva/" {% if ruta == "/operacion/cuentas/nueva/" %}class="activo" aria-current="page"{% endif %}>Crear cuenta</a>
+  <a href="/operacion/cuentas/" {% if ruta == "/operacion/cuentas/" or "/clave/" in ruta %}class="activo" aria-current="page"{% endif %}>Claves de cuentas</a>
+  <span class="chip cancelado rol">Solo administrador</span>
+</nav>
+{% endwith %}
+{% block operacion %}{% endblock %}
+{% endblock %}

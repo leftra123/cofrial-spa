@@ -79,3 +79,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 ## 2026-11-06: preparación de la defensa
 - Retención de telemetría implementada (`manage.py podar_telemetria` y servicio `podador`): el informe la declaraba como mitigación y no existía en el código. Se ajustó el riesgo de `03-arquitectura-cloud.md`, porque no se agrega por hora. El Word aún no incorpora ese cambio.
 - Guion de la defensa: el tope de la IA es de 12 s y no de 5 s, se agregan las preguntas sobre IA de pago y crecimiento de la telemetría, y se pide confirmar que `ANTHROPIC_API_KEY` esté vacía en AWS.
+
+## 2026-11-06: operación del administrador
+- Eric no pudo agregar stock. Se probó editar `Producto` en `/admin/` en un entorno aislado: guarda bien y valida los casos límite; no hay un error en el servidor. Las causas probables son que las cuentas de vendedor y gerencia no entran a `/admin/` y que el formulario reemplaza el número en lugar de sumar. Para resolverlo se creó `/operacion/stock/`, enlazada desde *Demanda en espera*.
+- Nuevas pantallas solo para el administrador: reponer stock, crear cuentas con su rol y asignar claves (`/operacion/`). La lógica de `crear_cuenta` quedó en `web/clientes/cuentas.py` para no duplicarla. Detalle y seguridad en `docs/decisiones.md`; permisos en `informe/04d-crm.md`.
+- Pruebas nuevas en `web/operacion/tests.py` y las rutas agregadas a `tests_rutas.py` y `tests_403_por_rol.py`.

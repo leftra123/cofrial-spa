@@ -1,0 +1,11 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}Operación del sistema | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Operación del sistema</h1><p class="sub">Tareas del administrador que antes solo se podían hacer en la administración de Django o por línea de comandos.</p></div></div>
+<div class="rejilla dos">
+  <div class="tarjeta-ui"><h2>Reponer stock</h2><p class="muted">Suma unidades a un producto con búsqueda. Si un cliente había pedido aviso, lo ve en cuanto el stock alcanza lo que pidió.</p><div class="acciones"><a class="btn" href="/operacion/stock/">Reponer stock</a><a class="btn btn-sec" href="/crm/demanda/">Ver demanda en espera</a></div></div>
+  <div class="tarjeta-ui"><h2>Crear cuenta</h2><p class="muted">Cliente institucional, cliente particular, vendedor, gerencia, despachador o administrador, con su clave inicial.</p><div class="acciones"><a class="btn" href="/operacion/cuentas/nueva/">Crear cuenta</a></div></div>
+  <div class="tarjeta-ui"><h2>Claves de cuentas</h2><p class="muted">Busca una cuenta existente y asigna una clave nueva (por ejemplo, a quien la olvidó y no puede recibir el correo).</p><div class="acciones"><a class="btn" href="/operacion/cuentas/">Ver cuentas</a></div></div>
+  <div class="tarjeta-ui"><h2>Administración de Django</h2><p class="muted">Para lo que no tiene pantalla propia (precios, categorías, ediciones puntuales).</p><div class="acciones"><a class="btn btn-sec" href="{% url 'admin:index' %}">Abrir /admin/</a></div></div>
+</div>
+{% endblock %}

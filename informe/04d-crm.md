@@ -52,6 +52,8 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 
 *Nota.* Elaboración propia. Los clientes B2B y B2C no entran al CRM: usan solo el portal.
 
+**Operación del administrador.** Tres tareas tienen pantalla propia y solo la abre el rol administrador (`/operacion/`, 403 para los demás roles): reponer stock por producto (suma con `F()`, como `pedidos/servicios.py`, y enlazada desde *Demanda en espera*), crear cuentas con su rol y asignar una clave nueva a una cuenta existente. La clave se valida con los validadores de Django, se guarda con hash y no se muestra ni se registra. El administrador no puede quitarse el acceso: la pantalla no desactiva cuentas ni cambia roles, y al cambiar su propia clave conserva la sesión.
+
 **Alta de empresas desde el portal.** Una empresa puede pedir su cuenta en `/cuenta/registro/empresa/`. La cuenta nace inactiva y sin vendedor y aparece en la pestaña *Solicitudes* del CRM, con un contador. El vendedor que la aprueba la recibe en su cartera; el administrador la asigna a un vendedor; gerencia solo la consulta. La aprobación activa la cuenta y deja una interacción en la ficha, de modo que la decisión queda registrada y la lista institucional no se entrega a quien se registre sin revisión.
 
 ## Pipeline comercial

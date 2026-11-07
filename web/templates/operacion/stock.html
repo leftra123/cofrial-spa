@@ -1,0 +1,16 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}Reponer stock | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Reponer stock</h1><p class="sub">Escribe cuántas unidades <b>entraron</b> y se suman al stock actual; no se reemplaza el número. Primero se muestran los productos con menos stock.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/demanda/">Demanda en espera</a></div></div>
+<form method="get" class="en-linea buscar-op" role="search"><label for="q" class="solo-lector">Buscar producto</label><input id="q" name="q" type="search" value="{{ q }}" placeholder="SKU o nombre del producto" maxlength="80" autocomplete="off" style="width:min(100%,360px)"><button>Buscar</button>{% if q %}<a class="btn btn-sec" href="/operacion/stock/">Quitar filtro</a>{% endif %}</form>
+<div class="tabla-caja"><table><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Stock actual</th><th>Sumar unidades</th></tr></thead><tbody>
+{% for p in filas %}<tr>
+<td><b>{{ p.nombre }}</b>{% if not p.activo %} <span class="chip cancelado sin-punto">Inactivo</span>{% endif %}<br><span class="frio">{{ p.sku }}</span></td>
+<td>{{ p.categoria.nombre }}</td>
+<td class="num">{{ p.stock_disponible }} {{ p.unidad_medida }}{% if p.stock_disponible == 0 %}<br><span class="chip alerta">Sin stock</span>{% endif %}</td>
+<td><form method="post" action="/operacion/stock/{{ p.pk }}/sumar/" class="en-linea" data-carga>{% csrf_token %}<input type="hidden" name="q" value="{{ q }}"><label for="cant-{{ p.pk }}" class="solo-lector">Unidades que entraron de {{ p.nombre }}</label><input id="cant-{{ p.pk }}" name="cantidad" type="number" inputmode="numeric" min="1" max="{{ maximo }}" step="1" required placeholder="0" style="width:110px"><button data-cargando="Sumando…">Sumar</button></form></td>
+</tr>
+{% empty %}{% include "componentes/vacio_estado.html" with cols=4 ico="lupa" titulo="Ningún producto coincide" texto="Prueba con otra parte del nombre o con el SKU." %}{% endfor %}
+</tbody></table></div>
+{% if hay_mas %}<p class="frio" style="margin-top:12px">Se muestran los primeros 100 productos: afina la búsqueda para ver los demás.</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "operacion/base.html" %}
+{% block titulo %}Asignar clave | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Asignar clave</h1><p class="sub">Cuenta <b>{{ objetivo.username }}</b> · {{ rol }}{% if nombre %} · {{ nombre }}{% endif %}</p></div><div class="acciones"><a class="btn btn-sec" href="/operacion/cuentas/">Cancelar</a></div></div>
+<div class="tarjeta-ui" style="max-width:560px">
+{% if not objetivo.is_active %}<p class="aviso" role="note">Esta cuenta está inactiva (por ejemplo, una empresa que espera aprobación). Asignar una clave no la activa.</p>{% endif %}
+{% if es_yo %}<p class="aviso" role="note">Es tu propia cuenta: al guardar, tu sesión sigue abierta y entras con la clave nueva la próxima vez.</p>{% endif %}
+<form method="post" data-carga autocomplete="off">{% csrf_token %}
+  {% if form.non_field_errors %}<div role="alert">{% for e in form.non_field_errors %}<p class="error-campo">{{ e }}</p>{% endfor %}</div>{% endif %}
+  {% include "operacion/_campo.html" with c=form.clave %}
+  {% include "operacion/_campo.html" with c=form.clave2 %}
+  <p class="frio" style="margin-top:12px">La clave no se muestra ni se guarda en ningún registro. La persona puede cambiarla después en «Cambiar mi clave».</p>
+  <button data-cargando="Guardando…">Guardar la clave nueva</button>
+</form></div>
+{% endblock %}

@@ -81,7 +81,11 @@
   function actualizarCarrito(form, boton) {
     var linea = form.closest(".linea"), fin = ocupar(boton, "Actualizando…");
     if (linea) linea.classList.add("cargando");
-    pedir(form, {"Accept": "text/html"}).then(function (r) { return r.text(); }).then(function (html) {
+    pedir(form, {"Accept": "text/html"}).then(function (r) {
+      if (r.redirected && /\/cuenta\/entrar\//.test(r.url)) { location.href = r.url; return null; }   // sesión vencida: ir a ingresar, no pintar el login dentro del carrito
+      return r.text();
+    }).then(function (html) {
+      if (html === null) return;
       var doc = new DOMParser().parseFromString(html, "text/html"), nuevo = doc.getElementById("t-pagina"), actual = document.getElementById("t-pagina");
       if (!nuevo || !actual) throw new Error("sin contenido");
       actual.innerHTML = nuevo.innerHTML; iniciarCant(actual);

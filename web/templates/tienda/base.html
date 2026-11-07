@@ -78,8 +78,8 @@
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
-<script src="{% static 'js/tienda.js' %}"></script>
-{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-v2"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
+<script src="{% static 'js/tienda.js' %}?v=sesion-v1"></script>
+{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-v3"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

@@ -75,6 +75,10 @@
     })
       .then(function (r) {
         if (!r.ok) throw new Error("nav");
+        /* Sesión vencida: el servidor contesta con el login (un 200 tras redirigir). Esa página no es la pedida: si se mostrara
+           aquí, quedaría el formulario de ingreso dentro de la tienda, con el menú de cliente y la dirección equivocada.
+           Se falla a propósito: el que llama navega de verdad a la dirección y el servidor lleva a ingresar. */
+        if (r.redirected && /\/cuenta\/entrar\//.test(r.url)) throw new Error("sesion");
         return r.text();
       })
       .then(function (html) {

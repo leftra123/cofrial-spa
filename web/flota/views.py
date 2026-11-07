@@ -13,7 +13,7 @@ from pedidos.servicios import ErrorDeNegocio
 
 from crm.views import con_rol
 
-from . import rutas, servicios, sugerencias
+from . import autodespacho, rutas, servicios, sugerencias
 from .servicios import estado_flota
 
 DESPACHAN = ("admin", "despachador")          # gerencia ve la flota y la pantalla de despacho, pero no arma viajes ni toca direcciones
@@ -51,10 +51,11 @@ def ruta_sugerida(request):
 def panel(request):
     tarjetas, resumen = estado_flota()
     viajes = [x for x in tarjetas if x["viaje"]]
-    # Datos del mapa: la base, la posición de cada camión y las paradas ubicadas de cada viaje (la ruta sugerida se calcula en el navegador).
+    # Datos del mapa: la base, los camiones en operación, los guardados en la base (se muestran a pedido) y las paradas ubicadas de cada viaje.
     mapa = {"base": settings.BASE_LOGISTICA,
             "camiones": [{"id": x["camion"].camion_id, "patente": x["camion"].patente, "lat": x["lectura"].lat, "long": x["lectura"].long,
-                          "alerta": x["alerta"]} for x in tarjetas if x["lectura"]],
+                          "alerta": x["alerta"]} for x in tarjetas if x["lectura"] and x["en_operacion"]],
+            "en_base": [{"id": x["camion"].camion_id, "patente": x["camion"].patente} for x in tarjetas if not x["en_operacion"]],
             "viajes": [{"camion": x["camion"].camion_id, "patente": x["camion"].patente, "despacho": x["viaje"].despacho_id,
                         "situacion": x["situacion_texto"], "ruta": _ruta_para_mapa(x["viaje"]),
                         "paradas": [{"orden": o.orden_id, "direccion_id": o.direccion_id, "cliente": o.direccion.cliente.nombre,
@@ -62,7 +63,8 @@ def panel(request):
                                      "lat": o.direccion.lat, "long": o.direccion.long}
                                     for o in x["pedidos"] if o.direccion.lat is not None]} for x in viajes]}
     return render(request, "flota/panel.html", {"rol": request.rol, "tarjetas": tarjetas, "resumen": resumen,
-                                                "viajes": viajes, "mapa": mapa, "puede_cerrar": request.rol in ("admin", "despachador")})
+                                                "viajes": viajes, "mapa": mapa, "puede_cerrar": request.rol in DESPACHAN,
+                                                "auto": autodespacho.estado()})
 
 
 @require_POST
@@ -91,6 +93,30 @@ def sugerencias_despacho(request):
 
 
 @con_rol("admin", "gerencia", "despachador")
+def despacho_auto(request):
+    """El recuadro del despacho automático; el panel lo vuelve a pedir mientras el modo está encendido."""
+    return render(request, "flota/_despacho_auto.html", {"auto": autodespacho.estado(), "puede_cerrar": request.rol in DESPACHAN})
+
+
+@require_POST
+@con_rol("admin", "despachador")
+def correr_despacho_auto(request):
+    """Una pasada pedida por una persona, con las mismas reglas: muestra el modo automático sin reiniciar servicios y sin esperar la agrupación."""
+    if request.POST.get("confirmar") != "1":
+        messages.error(request, "Hay que confirmar para correr el despacho automático.")
+        return redirect("flota")
+    r = autodespacho.ejecutar(forzar=True, max_viajes=autodespacho.MAX_VIAJES_A_MANO)
+    n = len(r["despachos"])
+    if n:
+        messages.success(request, f"El despacho automático sacó {n} viaje{'s' if n != 1 else ''}. El motivo está en el recuadro.")
+    elif not r["omitidos"]:
+        messages.info(request, "El despacho automático no encontró ningún viaje que pueda salir ahora.")
+    for o in r["omitidos"]:
+        messages.warning(request, f"No salió el viaje con {o['camion']}: {' '.join(o['mensajes'])}")
+    return redirect("flota")
+
+
+@con_rol("admin", "gerencia", "despachador")
 def despachar(request):
     """Armar un viaje: elegir camión y pedidos; la ruta sugerida se previsualiza en el mapa antes de salir."""
     if request.method == "POST":
@@ -108,12 +134,17 @@ def despachar(request):
     for o in servicios.pedidos_por_despachar():
         rangos = servicios.rangos_de(o)
         pedidos.append({"o": o, "rangos": rangos, "mixto": len(rangos) > 1, "ubicada": o.direccion.lat is not None})
-    mapa = {"base": settings.BASE_LOGISTICA,
+    opciones = sugerencias.opciones_camion()         # del mejor al peor: el navegador toma el primero compatible con lo que se marque
+    camion_sugerido = request.GET.get("camion", "")
+    mapa = {"base": settings.BASE_LOGISTICA, "camion_fijado": bool(camion_sugerido),
+            "camiones": [{k: c[k] for k in ("id", "rango", "apto", "nota")} for c in opciones],
+            "rangos": {p["o"].orden_id: p["rangos"] for p in pedidos},
             "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
                                           "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}
     marcados = {entradas.entero(i) for i in request.GET.get("ordenes", "").split(",") if entradas.es_entero(i)}      # preselección que llega desde la sugerencia
     return render(request, "flota/despacho.html", {"pedidos": pedidos, "camiones": servicios.camiones_libres(), "mapa": mapa,
-                                                   "camion_sugerido": request.GET.get("camion", ""), "marcados": marcados,
+                                                   "camion_sugerido": camion_sugerido, "marcados": marcados,
+                                                   "camiones_en_alerta": {c["id"] for c in opciones if c["alerta"]},
                                                    "puede_despachar": request.rol in DESPACHAN})
 
 

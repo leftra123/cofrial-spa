@@ -12,6 +12,8 @@ from .vigente import ultimas_vigentes
 
 
 SITUACIONES = {"en_base": "en base", "en_ruta": "en ruta", "en_la_puerta": "en la puerta del cliente", "volviendo": "volviendo a la base"}
+COMBUSTIBLE_BAJO = 25         # bajo este porcentaje el panel lo marca y el despacho automático no lo usa
+SENAL_VIGENTE_SEG = 120       # el simulador reporta cada 5 s: más de esto sin lecturas es que el camión no se está viendo
 
 
 def situacion_de(viaje):
@@ -30,7 +32,7 @@ def estado_flota():
               .select_related("direccion__cliente", "direccion__comuna", "estado_orden")):
         ordenes.setdefault(o.despacho_id, []).append(o)
 
-    tarjetas = []
+    tarjetas, ahora = [], timezone.now()
     for c in camiones:
         t = ultimas.get(c.camion_id)
         d = viajes.get(c.camion_id)
@@ -39,14 +41,18 @@ def estado_flota():
                          "destino": pedidos[0].direccion if pedidos else None,
                          "situacion": situacion_de(d), "situacion_texto": SITUACIONES[situacion_de(d)],
                          "alerta": bool(t and t.alerta_ruptura_frio),
-                         "combustible_bajo": bool(t and t.combustible_pct < 25)})
+                         "combustible_bajo": bool(t and t.combustible_pct < COMBUSTIBLE_BAJO),
+                         "sin_senal": bool(t and (ahora - t.registrado_en).total_seconds() > SENAL_VIGENTE_SEG)})
+        tarjetas[-1]["en_operacion"] = tarjetas[-1]["situacion"] != "en_base" or tarjetas[-1]["alerta"]     # lo que el panel muestra por defecto
     resumen = {"total": len(camiones), "activos": sum(1 for c in camiones if c.activo),
                "en_ruta": sum(1 for x in tarjetas if x["situacion"] == "en_ruta"),
                "en_la_puerta": sum(1 for x in tarjetas if x["situacion"] == "en_la_puerta"),
                "volviendo": sum(1 for x in tarjetas if x["situacion"] == "volviendo"),
                "en_base": sum(1 for x in tarjetas if x["situacion"] == "en_base"),
+               "guardados": sum(1 for x in tarjetas if not x["en_operacion"]),
                "con_viaje": len(viajes), "con_alerta": sum(1 for x in tarjetas if x["alerta"]),
-               "sin_lectura": sum(1 for x in tarjetas if x["lectura"] is None)}
+               "sin_lectura": sum(1 for x in tarjetas if x["lectura"] is None),
+               "sin_senal": sum(1 for x in tarjetas if x["sin_senal"])}
     return tarjetas, resumen
 
 
@@ -92,23 +98,29 @@ def cerrar_despacho(despacho_id):
 
 
 @transaction.atomic
-def despachar(camion_id, orden_ids):
+def despachar(camion_id, orden_ids, decision=None):
     """Crea el despacho con salida ahora, le asigna las órdenes y las lleva hasta «Despachada».
 
-    Reglas: el camión debe estar libre y activo, y la cadena de frío no se mezcla (cada orden exige un solo rango de temperatura
-    y debe ser el del camión). Devuelve el despacho."""
+    Reglas: el camión debe estar libre y activo, cada orden debe estar ubicada en el mapa (sin parada, el camión no llega nunca y la
+    orden queda «Despachada» para siempre) y la cadena de frío no se mezcla (cada orden exige un solo rango de temperatura y debe ser
+    el del camión). `decision` es el porqué del despacho automático; una persona no lo llena. Devuelve el despacho.
+
+    Bloquea el camión y las órdenes hasta terminar: el despacho automático y una persona pueden pedir lo mismo a la vez, y el segundo
+    debe recibir el error de siempre y no un camión con dos viajes. El camión se bloquea antes de mirar si está ocupado."""
     ErrorDeNegocio = pedidos_servicios.ErrorDeNegocio
     if not orden_ids:
         raise ErrorDeNegocio("Marca al menos un pedido para despachar.")
-    camion = camiones_libres().filter(camion_id=camion_id).first()
-    if camion is None:
+    camion = Camion.objects.select_for_update(of=("self",)).select_related("rango_temperatura").filter(camion_id=camion_id, activo=True).first()
+    if camion is None or Despacho.objects.filter(camion=camion, salida_en__isnull=False, regreso_en__isnull=True).exists():
         raise ErrorDeNegocio("Ese camión no está disponible (inactivo o con un viaje en curso).")
-    ordenes = list(pedidos_por_despachar().filter(pk__in=orden_ids))
+    ordenes = list(pedidos_por_despachar().select_for_update(of=("self",)).filter(pk__in=orden_ids))
     if len(ordenes) != len(set(orden_ids)):
         raise ErrorDeNegocio("Algún pedido ya no está disponible para despachar; actualiza la pantalla.")
     problemas = []
     for o in ordenes:
         rangos = rangos_de(o)
+        if o.direccion.lat is None or o.direccion.long is None:
+            problemas.append(f"La orden N.º {o.orden_id} no está ubicada en el mapa: ubícala antes de despacharla.")
         if len(rangos) > 1:
             problemas.append(f"La orden N.º {o.orden_id} mezcla {' y '.join(r.lower() for r in rangos)}: no puede viajar en un solo camión.")
         elif rangos and rangos[0] != camion.rango_temperatura.nombre:
@@ -118,7 +130,7 @@ def despachar(camion_id, orden_ids):
     ahora = timezone.now()
     ruta = rutas.armar_ruta([(o.direccion_id, o.direccion.lat, o.direccion.long) for o in ordenes])       # la misma ruta que vio el despachador
     despacho = Despacho.objects.create(camion=camion, programado_para=ahora, salida_en=ahora, ruta_geojson=ruta,
-                                       ruta_aproximada=bool(ruta and ruta["aproximada"]))
+                                       ruta_aproximada=bool(ruta and ruta["aproximada"]), decision_auto=decision)
     for o in ordenes:
         o.despacho = despacho
         if o.estado_orden.nombre == "Entrega no concretada":                 # reprogramada: vuelve a salir con otro viaje

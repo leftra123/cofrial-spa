@@ -75,7 +75,7 @@ Los procesos se modelan con Business Process Model and Notation (BPMN) 2.0, est�
 | 3. Ruptura no detectada | La temperatura sube y nadie se entera | Cada lectura se evalúa contra el rango del camión y marca `alerta_ruptura_frio` |
 | 4. Pérdida | El cliente rechaza la carga al recibirla y se convierte en merma | El despachador ve la alerta mientras el camión está en ruta y puede actuar antes de entregar |
 
-*Nota.* Elaboración propia. Casos de uso asociados: CU-10, CU-11 y CU-12.
+*Nota.* Elaboración propia. Casos de uso asociados: CU-10, CU-11 y CU-12. El prototipo agrega un modo opcional, apagado por defecto, en que la plataforma arma y despacha los viajes con las mismas reglas y deja registrado por qué salió cada uno (`docs/decisiones.md`); la figura muestra el flujo con despachador.
 
 ## Proceso 3: gestión comercial de prospectos
 

@@ -9,7 +9,8 @@
 2. `python3 aws/verificar.py --ia`: todo con ✓ y un requerimiento **sin clasificar** para la demo de la IA.
 3. Abrir en pestañas: `/salud/`, `/` (sin sesión), el BI en `/bi/` (con la cuenta de gerencia o admin; Grafana ya no se abre por el puerto 3000), `/flota/`, `/crm/`.
 4. Plan B: capturas de `docs/capturas-visual/`, por si el laboratorio no responde.
-5. Confirmar que `ANTHROPIC_API_KEY` está vacía en `aws/.estado/secretos.env`: en la defensa la IA debe ser solo la gratuita (Gemini y Groq).
+5. En `/flota/`, confirmar que «Despacho automático» dice **Apagado** y que «Armar despacho» tiene al menos cuatro pedidos: dos para el armado manual y el resto para la pasada automática. Encendido, vaciaría la lista antes del bloque del despacho.
+6. Confirmar que `ANTHROPIC_API_KEY` está vacía en `aws/.estado/secretos.env`: en la defensa la IA debe ser solo la gratuita (Gemini y Groq).
 
 ## Guion
 
@@ -34,13 +35,20 @@
 5. En `/seguimiento/` ve el camión en el mapa, la ruta que falta y la temperatura de la cámara; si algo sale mal, **Reportar un problema**.
 
 **2. Despacho arma un viaje con la mejor ruta** (despacho, gerencia o admin)
-1. Abre `/flota/`: camiones, temperatura y mapa.
+1. Abre `/flota/`: el mapa y las tarjetas muestran los camiones en ruta, en la puerta, volviendo o con alerta. Los guardados se resumen en un contador y aparecen con **Mostrar los N en base**; los 50 siguen reportando.
 2. **Armar despacho** (`/flota/despachar/`): aparecen los pedidos sin camión y los camiones libres.
-3. Elige el camión y marca dos o más pedidos: el mapa traza la ruta más corta y numera el orden de entrega.
+3. Marca dos o más pedidos del mismo rango: el sistema propone el camión libre con más combustible y dice por qué, y el mapa traza la ruta más corta y numera el orden de entrega. Se puede elegir otro camión.
 4. **Despachar y salir ahora**: los pedidos pasan a **Despachada** y la ruta por calles queda guardada (la misma que ven el camión y el cliente).
 5. En la flota se ve cada camión: en base, en ruta, en la puerta del cliente o volviendo. El cliente ve su camión solo mientras va en camino.
 6. Al llegar, el pedido pasa solo a **Camión en la puerta**; el cliente confirma **Recibí mi pedido** o explica por qué no pudo (queda **Entrega no concretada** y llega a ventas). Si no responde, se confirma sola.
 - Regla de cadena de frío: no se mezclan refrigerado y congelado en un mismo camión.
+
+**Despacho sin personas** (después del armado manual; despachador o admin)
+1. Muestra el recuadro «Despacho automático» en `/flota/`: dice **Apagado**, las reglas y qué pedidos no saldrían solos y por qué.
+2. Pulsa **Correr una pasada ahora** y confirma. Es una pasada real con las mismas reglas del modo automático: despacha hasta 3 viajes sin esperar la agrupación y deja el resto de los pedidos.
+3. El recuadro muestra cada decisión: qué camión, qué pedidos, por qué salió y si el texto lo redactó la IA o el sistema.
+4. Di en voz alta: la decisión es código determinista; la IA solo redacta después de que el viaje salió y, si falla, queda el texto del sistema.
+- **No enciendas `DESPACHO_AUTO=1` durante la defensa:** recrea el contenedor web y deja la página sin responder mientras arranca. Para dejarlo encendido después, en la EC2 web: agrega `DESPACHO_AUTO=1` a `/opt/cofrial/.env` y corre `docker compose -f aws/docker-compose.web.yml --env-file .env up -d --build web despachador`. Apagarlo es lo mismo con `DESPACHO_AUTO=0`.
 
 **3. Ventas atiende un reclamo con IA** (vendedor, gerencia o admin)
 1. Un cliente escribe en `/soporte/` o desde un pedido con «Reportar un problema».
@@ -66,6 +74,8 @@
 - **¿Cómo sabe que está en tercera forma normal?** Dependencias funcionales por tabla en `informe/04b-modelo-datos.md`; se corrigió una dependencia transitiva en `orden`.
 - **¿Usan una IA de pago?** No en la demostración. El código admite Claude como tercer proveedor opcional, pero solo entra si existe `ANTHROPIC_API_KEY`, y en AWS esa variable queda vacía. Gemini y Groq, ambos en plan gratuito, cubren el requisito.
 - **¿La telemetría no llena la base?** Son unas 864 000 filas al día. `podar_telemetria` corre a diario y borra las lecturas normales de más de 7 días; las alertas, las lecturas de los viajes y la última de cada camión se conservan, porque sostienen los pedidos afectados y los reclamos. En producción iría a una base de series de tiempo.
+- **¿Quién decide en el despacho automático, la IA?** No. El código agrupa por rango de frío, junta las comunas y hace salir el viaje al completar 6 paradas o cuando el pedido más antiguo lleva 5 minutos. La IA recibe la decisión ya tomada, sin nombres ni direcciones, y solo la redacta. El detalle está en `docs/decisiones.md`.
+- **¿Qué sigue necesitando a una persona?** Las entregas no concretadas, porque repetir el viaje sin saber qué pasó sería repetir el error; los pedidos sin ubicar en el mapa, y los que no tienen camión apto. El recuadro dice cuáles son y por qué.
 - **¿Qué falta para producción?** Multi-AZ, HTTPS con dominio, permisos mínimos por rol de AWS, respaldos más largos y telemetría por cola en vez de inserción directa.
 
 ## Ensayo del plan B (pendiente de hacer)

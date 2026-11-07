@@ -492,13 +492,12 @@ class BarridoDeRutasTests(BaseSeguridad):
                 self.assertEqual(c.get(url).status_code, 200, url)
         self.assertEqual(c.get("/pedidos/999999/").status_code, 404)          # un enlace viejo ocasional es normal
 
-    def test_el_favicon_que_pide_el_navegador_no_cuenta_como_barrido(self):
-        """Un navegador pide /favicon.ico desde cada página de error: no puede sumar 404 hasta bloquear a la sala."""
+    def test_los_iconos_que_pide_el_navegador_no_cuentan_como_barrido(self):
+        """Un navegador pide /favicon.ico desde cada página de error: no puede sumar «no encontrado» hasta bloquear a la sala."""
         c = self.anonimo()
         for _ in range(self.M + 5):
-            r = c.get("/favicon.ico")
-            self.assertEqual(r.status_code, 302)
-            self.assertIn("favicon", r["Location"])
+            for ruta in ("/favicon.ico", "/apple-touch-icon.png"):
+                self.assertEqual(c.get(ruta).status_code, 404)
         self.assertEqual(c.get("/catalogo/").status_code, 200)
 
     def test_el_barrido_queda_en_el_registro(self):

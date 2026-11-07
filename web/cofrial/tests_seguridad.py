@@ -49,12 +49,12 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
-                    "/crm/cobranza/", "/crm/solicitudes/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/"]
+                    "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/"]
     PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
                      "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/limpiar/",
-                     "/pedidos/1/oc/", "/bi/x", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/"]
+                     "/pedidos/1/oc/", "/bi/x", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/operacion/stock/1/sumar/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/carrito/mp/pagar/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
         for url in self.PRIVADAS_GET:

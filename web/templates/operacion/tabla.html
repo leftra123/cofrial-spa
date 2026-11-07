@@ -1,0 +1,12 @@
+{% extends "operacion/base.html" %}{% load iconos %}
+{% block titulo %}{{ tabla.titulo }} | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>{{ tabla.titulo }}</h1>{% if tabla.ayuda %}<p class="sub">{{ tabla.ayuda }}</p>{% endif %}</div>
+<div class="acciones"><a class="btn btn-sec" href="/operacion/datos/">{% icono "volver" %}Todas las tablas</a>{% if tabla.crear %}<a class="btn" href="/operacion/datos/{{ tabla.slug }}/nuevo/">{% icono "agregar" %}Agregar</a>{% endif %}</div></div>
+<form method="get" class="en-linea buscar-op" role="search"><label for="q" class="solo-lector">Buscar en {{ tabla.titulo }}</label><input id="q" name="q" type="search" value="{{ q }}" placeholder="Buscar" maxlength="80" autocomplete="off"><button class="btn btn-sec" type="submit">{% icono "buscar" %}Buscar</button>{% if q %}<a class="btn btn-sec" href="/operacion/datos/{{ tabla.slug }}/">Ver todo</a>{% endif %}</form>
+<div class="tabla-caja"><table><thead><tr>{% for c in columnas %}<th>{{ c }}</th>{% endfor %}{% if tabla.editar %}<th><span class="solo-lector">Acción</span></th>{% endif %}</tr></thead><tbody>
+{% for f in filas %}<tr>{% for v in f.celdas %}<td>{{ v }}</td>{% endfor %}{% if tabla.editar %}<td><a class="btn btn-sec" href="/operacion/datos/{{ tabla.slug }}/{{ f.pk|urlencode }}/">{% icono "editar" %}Editar<span class="solo-lector"> {{ f.celdas.0 }}</span></a></td>{% endif %}</tr>
+{% empty %}<tr><td colspan="{{ columnas|length|add:1 }}" class="frio">Nada coincide con la búsqueda.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if hay_mas %}<p class="frio" style="margin-top:12px">Se muestran las primeras 100 filas: afina la búsqueda para ver las demás.</p>{% endif %}
+{% endblock %}

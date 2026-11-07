@@ -1,6 +1,6 @@
 """Estado de la flota para el panel y la API: última lectura de cada camión y su viaje activo."""
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from pedidos import servicios as pedidos_servicios
@@ -143,3 +143,13 @@ def despachar(camion_id, orden_ids, decision=None):
         while o.estado_orden.orden_flujo < ETAPA_DESPACHADA:
             o = pedidos_servicios.avanzar(o)
     return despacho
+
+
+def lecturas_prescindibles(corte):
+    """Lecturas normales anteriores al corte. Se conservan las alertas (RN-13 y el tablero), las forzadas de la demostración,
+    las tomadas durante un viaje (se cruzan con los reclamos) y la última de cada camión (la usa la flota)."""
+    durante_un_viaje = Despacho.objects.filter(camion_id=OuterRef("camion_id"), salida_en__lte=OuterRef("registrado_en")).filter(
+        Q(llegada_en__isnull=True) | Q(llegada_en__gte=OuterRef("registrado_en")))
+    ultimas = Telemetria.objects.order_by("camion_id", "-registrado_en").distinct("camion_id").values_list("pk", flat=True)
+    return (Telemetria.objects.filter(registrado_en__lt=corte, alerta_ruptura_frio=False, forzada=False)
+            .exclude(pk__in=list(ultimas)).filter(~Exists(durante_un_viaje)))

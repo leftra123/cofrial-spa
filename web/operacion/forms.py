@@ -2,8 +2,12 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
+from catalogo.models import ListaPrecio, Producto
 from clientes import cuentas, rut as rutlib
 from clientes.models import Comuna, Vendedor
+from cofrial.entradas import ENTERO_MAXIMO
+
+from .servicios import REPOSICION_MAXIMA
 
 CLASES_CLIENTE = ("cliente-b2b", "cliente-b2c")
 
@@ -153,3 +157,32 @@ class ClienteCuentaForm(ClaveMixin):
         valido = super().is_valid()
         self.marcar_errores()
         return valido
+
+
+class ProductoForm(forms.ModelForm):
+    """Datos del producto y un precio por lista. El stock se pide solo al crear: después lo mueven las ventas y Reponer stock,
+    y escribirlo aquí pisaría lo vendido mientras el formulario estaba abierto."""
+    class Meta:
+        model = Producto
+        fields = ["sku", "nombre", "descripcion", "categoria", "unidad_medida", "activo"]
+        widgets = {"descripcion": forms.Textarea(attrs={"rows": 3})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.listas = list(ListaPrecio.objects.order_by("nombre"))
+        existe = not self.instance._state.adding
+        precios = dict(self.instance.precioproducto_set.values_list("lista_precio_id", "precio_clp")) if existe else {}
+        for lista in self.listas:
+            self.fields[f"precio_{lista.pk}"] = forms.IntegerField(
+                label=f"Precio {lista.nombre} (CLP)", required=False, min_value=1, max_value=ENTERO_MAXIMO, initial=precios.get(lista.pk),
+                help_text="Déjalo vacío si el producto no se vende en esta lista.")
+        if existe:
+            self.fields["sku"].disabled = True                    # las fotos y las órdenes siguen al SKU
+        else:
+            self.fields["stock_inicial"] = forms.IntegerField(label="Stock inicial", min_value=0, max_value=REPOSICION_MAXIMA, initial=0)
+
+        from .tablas import en_espanol
+        en_espanol(self)
+
+    def campos_de_precio(self):
+        return [(lista, self.cleaned_data.get(f"precio_{lista.pk}")) for lista in self.listas]

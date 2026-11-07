@@ -46,4 +46,4 @@ class AvisosYAdmin(TestCase):
         self.assertNotIn('href="/admin/"', self.client.get("/crm/").content.decode())
         self.client.logout()
         self.entrar("admin@cofrial.cl")
-        self.assertIn('href="/admin/"', self.client.get("/crm/").content.decode())
+        self.assertNotIn('href="/admin/', self.client.get("/crm/").content.decode())      # todo se hace en /operacion/; la ruta queda de respaldo

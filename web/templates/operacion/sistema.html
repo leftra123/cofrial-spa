@@ -1,0 +1,11 @@
+{% extends "operacion/base.html" %}{% load iconos %}
+{% block titulo %}Sistema | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Sistema</h1><p class="sub">Revisiones que antes pedían entrar al servidor. Los datos de demostración, las migraciones y la poda diaria corren solos.</p></div></div>
+<div class="rejilla dos">
+  <div class="tarjeta-ui"><h2>{% icono "ia" %} Probar la IA</h2><p class="muted">Clasifica un mensaje de ejemplo con la IA real y muestra la categoría, la confianza y el modelo. Si falla, dice la causa.</p><form method="post" action="/operacion/sistema/ia/" data-carga data-cargando="Consultando…">{% csrf_token %}<div class="acciones"><button class="btn" type="submit">Probar ahora</button></div></form></div>
+  <div class="tarjeta-ui"><h2>{% icono "camion" %} Podar telemetría</h2><p class="muted">Borra las lecturas normales de más de {{ dias }} días. Las alertas, los viajes, las lecturas forzadas y la última de cada camión se conservan.</p>
+  {% if por_borrar is not None %}<p><b>Se borrarían {{ por_borrar }} lectura{{ por_borrar|pluralize }}.</b></p>{% endif %}
+  <div class="acciones">{% if por_borrar is None %}<a class="btn btn-sec" href="?contar=1">Ver cuántas se borrarían</a>{% elif por_borrar %}<form method="post" action="/operacion/sistema/podar/" class="en-linea">{% csrf_token %}<button class="btn" type="submit" data-confirmar="¿Borrar las lecturas?">{% icono "borrar" %}Podar ahora</button></form>{% endif %}</div></div>
+</div>
+{% endblock %}

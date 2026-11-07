@@ -1,0 +1,17 @@
+{% extends "operacion/base.html" %}{% load iconos %}
+{% block titulo %}Órdenes | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Órdenes</h1><p class="sub">Avanza o cancela una orden antes de que salga el camión. En viaje la mueven el simulador y la confirmación del cliente; el despacho se arma en <a href="/flota/">Flota</a>.</p></div></div>
+<form method="get" class="en-linea buscar-op" role="search"><label for="estado" class="solo-lector">Filtrar por estado</label><select id="estado" name="estado"><option value="">Todos los estados</option>{% for e in estados %}<option value="{{ e }}"{% if e == estado %} selected{% endif %}>{{ e }}</option>{% endfor %}</select><label for="q" class="solo-lector">Buscar orden</label><input id="q" name="q" type="search" value="{{ q }}" placeholder="N.º, orden de compra o cliente" maxlength="80" autocomplete="off"><button class="btn btn-sec" type="submit">{% icono "buscar" %}Buscar</button>{% if q or estado %}<a class="btn btn-sec" href="/operacion/ordenes/">Ver todas</a>{% endif %}</form>
+<div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Cliente</th><th>Estado</th><th>Creada</th><th><span class="solo-lector">Acciones</span></th></tr></thead><tbody>
+{% for f in filas %}<tr>
+<td class="id-orden">N.º {{ f.o.orden_id }}{% if f.o.numero_oc %}<br><span class="frio">{{ f.o.numero_oc }}</span>{% endif %}</td>
+<td><a href="/crm/clientes/{{ f.o.direccion.cliente_id }}/">{{ f.o.direccion.cliente.nombre }}</a></td>
+<td>{% include "componentes/chip_estado.html" with estado=f.o.estado_orden.nombre %}</td>
+<td>{{ f.o.creada_en|date:"d/m/Y H:i" }}</td>
+<td><div class="acciones">{% if f.avanzar %}<form method="post" action="/operacion/ordenes/{{ f.o.orden_id }}/avanzar/" class="en-linea" data-carga>{% csrf_token %}<input type="hidden" name="estado" value="{{ estado }}"><button class="btn btn-sec" type="submit">{% icono "avanzar" %}Avanzar<span class="solo-lector"> la orden {{ f.o.orden_id }}</span></button></form>{% endif %}{% if f.cancelar %}<form method="post" action="/operacion/ordenes/{{ f.o.orden_id }}/cancelar/" class="en-linea">{% csrf_token %}<input type="hidden" name="estado" value="{{ estado }}"><button class="btn btn-peligro" type="submit" data-confirmar="¿Cancelar la orden?">{% icono "cancelar" %}Cancelar<span class="solo-lector"> la orden {{ f.o.orden_id }}</span></button></form>{% endif %}</div></td>
+</tr>
+{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="lupa" titulo="Ninguna orden coincide" texto="Prueba con otro estado o con parte del nombre del cliente." %}{% endfor %}
+</tbody></table></div>
+{% if hay_mas %}<p class="frio" style="margin-top:12px">Se muestran las primeras 100 órdenes: afina la búsqueda para ver las demás.</p>{% endif %}
+{% endblock %}

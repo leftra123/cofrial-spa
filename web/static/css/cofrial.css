@@ -513,7 +513,15 @@ td.celda-acciones select { max-width: 100%; }
 .hero .marca-texto, .t-hero .marca-texto { background: var(--lima); color: var(--lima-fg); }
 .linea-lima { display: block; height: 4px; width: 72px; border-radius: 4px; background: var(--lima); margin: 12px 0 0; }
 .pagina-cab h1 + .linea-lima { margin-top: 10px; }
-.logo-chip { display: inline-block; background: #fff; border-radius: 12px; padding: 8px 14px; line-height: 0; }
+.logo-chip { display: inline-block; line-height: 0; }
+/* El logo tiene letras azul marino: con tema oscuro se usa la variante de letras blancas, sin caja de fondo. */
+.logo-chip .logo-tema-oscuro, .tb-marca .logo-tema-oscuro { display: none; }
+:root[data-tema="oscuro"] .logo-tema-claro { display: none; }
+:root[data-tema="oscuro"] .logo-tema-oscuro { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) .logo-tema-claro { display: none; }
+  :root:not([data-tema="claro"]) .logo-tema-oscuro { display: block; }
+}
 .logo-chip img { height: 54px; width: auto; display: block; }
 .marca-texto-logo { font-weight: 800; letter-spacing: .08em; color: var(--acento); }
 :root[data-tema="oscuro"] .marca-texto-logo { color: var(--texto); }

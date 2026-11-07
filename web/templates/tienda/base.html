@@ -19,7 +19,7 @@
 {% with ruta=request.path %}
 <header class="tb">
   <div class="tb-fila">
-    <a class="tb-marca" href="{{ inicio_url }}" aria-label="Cofrial, ir a mi inicio"><img src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA" width="120" height="40"></a>
+    <a class="tb-marca" href="{{ inicio_url }}" aria-label="Cofrial, ir a mi inicio">{% include "componentes/logo.html" with alt="Cofrial SpA" ancho=120 alto=40 %}</a>
     <form class="tb-buscar" action="/catalogo/" method="get" role="search" aria-label="Buscador del sitio">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="search" name="q" value="{{ q|default:'' }}" placeholder="Buscar SKU o producto" aria-label="Buscar productos o SKU" autocomplete="off">
     </form>
@@ -67,7 +67,7 @@
   {% include "componentes/carrito_flotante.html" %}
 </div>
 <footer class="t-pie"><div class="t-pie-fila">
-  <div class="t-pie-logo"><span class="logo-chip"><img src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA, distribución y cadena de frío" width="162" height="54"></span><small>Frigorífico y distribución en cadena de frío · La Araucanía</small></div>
+  <div class="t-pie-logo"><span class="logo-chip">{% include "componentes/logo.html" with alt="Cofrial SpA, distribución y cadena de frío" ancho=162 alto=54 %}</span><small>Frigorífico y distribución en cadena de frío · La Araucanía</small></div>
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
   <div>Prototipo académico INACAP Temuco</div></div></footer>
 {% block mp_modal_portal %}{% endblock %}
@@ -79,7 +79,7 @@
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
 <script src="{% static 'js/tienda.js' %}"></script>
-{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-skel-3p-v2"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
+{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-v1"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

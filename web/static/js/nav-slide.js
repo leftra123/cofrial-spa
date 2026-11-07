@@ -1,6 +1,8 @@
 /** Navegación slide Catálogo / Mis pedidos / Carrito: caché, doble panel y precarga. */
 (function () {
   var CACHE_MS = 120000;
+  /** «Mis pedidos» cambia con cada entrega: se guarda poco para no mostrar estados viejos. */
+  var CACHE_PEDIDOS_MS = 10000;
   /** Tiempo máximo esperando imágenes antes del slide (alineado a animación calmada). */
   var MEDIA_MS = 1200;
   /** Pausa breve con skeleton montado, antes del crossfade. */
@@ -13,6 +15,10 @@
   var SCRIPTS_FIJOS = /estados\.js|tienda\.js|nav-slide\.js|entrega\.js|campana\.js|tema_js|mercadopago\.com\/js\/v2|mp-brick\.js/;
   var cache = Object.create(null);
   var ocupado = false;
+  /** Último destino pedido durante una transición: se abre al terminar, en vez de perder el clic. */
+  var pendiente = null;
+  /** Dirección de la página en pantalla. Puede diferir de location mientras dura una transición. */
+  var mostrada = location.pathname + location.search;
 
   function reducido() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -51,16 +57,18 @@
     return new DOMParser().parseFromString(html, "text/html");
   }
 
+  function vigenciaMs(url) {
+    return claveUrl(url).indexOf("/pedidos/") === 0 ? CACHE_PEDIDOS_MS : CACHE_MS;
+  }
+
   function guardarCache(url, html) {
-    var key = claveUrl(url);
-    cache[key] = { html: html, doc: parseHtml(html), t: Date.now() };
-    return cache[key];
+    cache[url] = { html: html, doc: parseHtml(html), t: Date.now() };
+    return cache[url];
   }
 
   function obtenerPagina(url) {
-    var key = claveUrl(url);
-    var hit = cache[key];
-    if (hit && Date.now() - hit.t < CACHE_MS) return Promise.resolve(hit);
+    var hit = cache[url];
+    if (hit && Date.now() - hit.t < vigenciaMs(url)) return Promise.resolve(hit);
     return fetch(url, {
       credentials: "same-origin",
       headers: { "X-Requested-With": "fetch", Accept: "text/html" },
@@ -75,7 +83,9 @@
   }
 
   function invalidar(pref) {
-    delete cache[claveUrl(pref)];
+    Object.keys(cache).forEach(function (url) {
+      if (claveUrl(url) === claveUrl(pref)) delete cache[url];
+    });
   }
 
   function precargarVecinas() {
@@ -221,6 +231,7 @@
   function arrancarCarrito(doc, pathDestino) {
     var path = pathDestino || location.pathname;
     if (claveUrl(path).indexOf("/carrito/") !== 0) return Promise.resolve();
+    if (!doc.getElementById("mp-brick-cfg")) return Promise.resolve();      // B2B y cobro simulado no usan Mercado Pago
     return ensureMercadoPago(doc).then(function () {
       if (window.cofrialMpBrick && window.cofrialMpBrick.arrancarDesdeDom) {
         window.cofrialMpBrick.arrancarDesdeDom();
@@ -378,7 +389,8 @@
       window.CofrialTienda.iniciarCant(entrante);
     }
     window.scrollTo(0, 0);
-    return arrancarCarrito(doc, path).then(function () {
+    // Sin esperar: la pantalla ya cambió y un SDK externo lento no debe bloquear las pestañas.
+    arrancarCarrito(doc, path).then(function () {
       precargarVecinas();
     });
   }
@@ -404,7 +416,10 @@
 
   function irPagina(url, dir, opciones) {
     opciones = opciones || {};
-    if (ocupado) return Promise.resolve(false);
+    if (ocupado) {
+      pendiente = { url: url, dir: dir, opciones: opciones };
+      return Promise.resolve(false);
+    }
     var escena = document.getElementById("t-pagina-escena");
     var actual = document.getElementById("t-pagina");
     if (!escena || !actual || !window.fetch) return Promise.resolve(false);
@@ -415,11 +430,16 @@
     var fetchPromise = obtenerPagina(url);
 
     function finalizar(ok, doc, pathCommit) {
-      if (ok && opciones.push !== false) {
+      // Con «atrás» pendiente el navegador ya cambió la dirección: agregar esta entrada la desordenaría.
+      var volviendo = pendiente && pendiente.opciones.push === false;
+      if (ok && opciones.push !== false && !volviendo) {
         history.pushState({ navSlide: true, idx: indiceRuta(pathCommit) }, "", url);
       }
+      if (ok) mostrada = url;
       ocupado = false;
       document.body.classList.remove("t-nav-animando");
+      if (ok) abrirPendiente();
+      else pendiente = null;
       return ok;
     }
 
@@ -459,6 +479,15 @@
       });
   }
 
+  function abrirPendiente() {
+    var p = pendiente;
+    pendiente = null;
+    if (!p || p.url === mostrada) return;
+    var enlace = document.querySelector('.tb-nav a[data-nav-slide][href="' + claveUrl(p.url) + '"]');
+    if (enlace) colocarIndicador(enlace);
+    irPagina(p.url, p.dir, p.opciones);
+  }
+
   function initIndicador() {
     marcarNav(location.pathname);
     window.addEventListener("resize", function () {
@@ -476,7 +505,7 @@
       if (destino.origin !== location.origin) return;
       var desde = indiceRuta(location.pathname);
       var hacia = indiceRuta(destino.pathname);
-      if (desde < 0 || hacia < 0 || desde === hacia) return;
+      if (desde < 0 || hacia < 0 || (desde === hacia && !ocupado)) return;
       ev.preventDefault();
       colocarIndicador(a);
       var dir = hacia > desde ? 1 : -1;
@@ -494,7 +523,6 @@
   }
 
   window.addEventListener("popstate", function () {
-    if (ocupado) return;
     var idx = indiceRuta(location.pathname);
     if (idx < 0) {
       window.location.reload();

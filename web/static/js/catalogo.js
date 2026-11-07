@@ -76,6 +76,7 @@
   q.addEventListener("input", programar);                                                                  // buscador: con pausa
   form.addEventListener("submit", function (e) { e.preventDefault(); pintarEstado(); aplicar(); });         // Enter en el buscador
   document.addEventListener("click", function (e) {
+    if (!form.isConnected) return;       // al volver a esta pestaña el script corre de nuevo: este oyente quedó de la visita anterior
     var l = e.target.closest("[data-limpiar]"); if (l) { e.preventDefault(); restablecer(); return; }
     var x = e.target.closest("[data-quitar]");
     if (x) {

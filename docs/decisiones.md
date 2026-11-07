@@ -256,3 +256,11 @@ Desde `/demo/` el administrador pide un escenario para un viaje en curso: falla 
 - **`despachar` ahora rechaza órdenes sin ubicar:** el viaje no tenía parada para ellas, el camión volvía y la orden quedaba «Despachada» para siempre. La sesión que revisó los casos de uso lo reprodujo; la pantalla ya mostraba el botón «Ubicar».
 - **Camión sin señal:** el panel lo trataba igual que a uno sano y solo avisaba si nunca había reportado. Ahora marca «Sin señal» y lo cuenta cuando pasan 2 minutos sin lecturas, el mismo límite que usa el modo automático para no ocupar ese camión.
 - **Qué se cede:** el recuadro dice «Encendido» según la variable de la web y no comprueba que el contenedor esté vivo; eso se revisa con `docker compose ps`. La capacidad en kg sigue sin considerarse, porque los productos no tienen peso en la base.
+## Pestañas de la tienda: cola de un destino (6-nov-2026)
+
+En `web/static/js/nav-slide.js` un clic durante una transición se descartaba, pero la raya del menú ya se había movido: quedaba el carrito en pantalla con «Mis pedidos» marcado. La transición además seguía bloqueada mientras cargaba el SDK de Mercado Pago, que se descargaba también para clientes B2B que no lo usan.
+
+- **Cola:** se guarda solo el último destino y se abre al terminar la transición. Una ráfaga de clics termina en la última pestaña, sin recorrer las intermedias.
+- **Atrás:** ya no se ignora durante una transición.
+- **Mercado Pago:** el SDK carga solo si la página trae su configuración, y su carga ya no bloquea las pestañas.
+- **Caché:** la clave incluye los filtros de la dirección, y «Mis pedidos» se guarda 10 s en vez de 2 min para no mostrar estados viejos.

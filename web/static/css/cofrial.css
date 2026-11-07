@@ -712,7 +712,9 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 :root { --barra-movil: 61px; }
 /* el submenú del CRM queda pegado arriba al desplazarse; en móvil, justo bajo la barra superior */
 .subnav { position: sticky; top: 0; z-index: 10; background: var(--fondo); }
+.seccion[id] { scroll-margin-top: 90px; }   /* al saltar a una sección, el título no queda bajo el submenú fijo */
 @media (max-width: 860px) {
+  .seccion[id] { scroll-margin-top: calc(var(--barra-movil) + 90px); }
   .subnav { top: var(--barra-movil); margin-left: -16px; margin-right: -16px; width: auto; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
   .subnav::-webkit-scrollbar { display: none; }
   .subnav .rol { margin-left: 12px; }

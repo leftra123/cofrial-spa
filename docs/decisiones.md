@@ -296,3 +296,9 @@ Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
 - **Sin edición manual de telemetría, despachos, carritos, documentos ni pagos:** los genera el flujo y editarlos rompe la trazabilidad.
 - **Íconos:** el juego Lucide de `react-icons`, generado una vez a `catalogo/iconos.json` con `herramientas/iconos/generar.mjs`. La app sigue sin React y Docker no usa Node.
 - **CRM de 5 entradas:** Panel, Ventas, Clientes, Atención y Alertas de frío, con subpestañas dentro de cada grupo. Las URL no cambiaron.
+
+## Clientes morosos en Cobranza (07-nov-2026)
+- **Moroso** es el cliente con al menos una factura vencida; una factura que vence hoy todavía no cuenta. La lista va de mayor a menor monto vencido y separa `Vencido` de `Deuda total`, que suma también lo que aún no vence.
+- **Tramos:** 1 a 30, 31 a 60, 61 a 90 y más de 90 días, según la factura más atrasada del cliente.
+- **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
+- **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.

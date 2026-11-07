@@ -54,7 +54,7 @@ En la columna de pruebas, los archivos `tests_casos_*` son los nuevos de esta ra
 | RN-19 | Factura B2B | Vivo: antes de entregar rechazada, ajena rechazada | ✓ | `pedidos/tests_documentos.py`, `tests_casos_viaje` |
 | RN-20 | Pagos | Vivo: negativo, sobre el saldo, sobre una guía | ✓ | `pedidos/tests_documentos.py` |
 | RN-21 | Nota de crédito | Vivo: sin rango, sobre una guía | ✓ | `pedidos/tests_documentos.py` |
-| RN-22 | Cobranza | Vivo y Auto | ✓ | `pedidos/tests_documentos.py` |
+| RN-22 | Cobranza, filtro por estado y clientes morosos | Vivo y Auto | ✓ | `pedidos/tests_documentos.py`, `pedidos/tests_morosos.py` |
 
 Los nombres de algunas pruebas conservan una numeración antigua de reglas (`rn09_un_carrito_mixto` es RN-16). Vale la numeración del informe.
 

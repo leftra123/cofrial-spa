@@ -8,8 +8,9 @@
 - Entradas absurdas: bytes NUL, números fuera de rango o textos más largos que la columna dan 400 y no 500.
 - Base de datos caída: 503 con aviso de reintentar, sin traza y sin depender de la base para dibujar la página.
 
-Los contadores viven en la caché de Django (en memoria de cada proceso); para varias instancias detrás de un balanceador
-conviene una caché compartida (ver docs/decisiones.md)."""
+Los contadores viven en la caché de Django (en memoria de cada proceso): por eso gunicorn corre con un solo proceso y varios hilos.
+Con dos procesos cada uno llevaría su cuenta y el bloqueo saldría al azar. Para varias instancias detrás de un balanceador hace
+falta una caché compartida (ver docs/decisiones.md)."""
 import logging
 import sys
 

@@ -6,7 +6,7 @@ Revisado el 12-oct-2026. Es material de terceros; solo se usa como referencia.
 
 **Para qué sirve en el prototipo**
 - E-commerce y CRM: tablas, tarjetas de producto, formularios, filtros y paneles de estado del pipeline.
-- Torre de control: solo el marco visual (barra lateral, tarjetas de alertas). El mapa y los camiones van con Leaflet (D-08).
+- Torre de control: solo el marco visual (barra lateral, tarjetas de alertas). El mapa y los camiones van con MapLibre GL JS (D-08).
 
 **Límites**
 - No tiene mapas, telemetría ni componentes de IoT.

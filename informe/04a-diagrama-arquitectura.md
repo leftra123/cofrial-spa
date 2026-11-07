@@ -28,7 +28,7 @@ Nota. Elaboración propia. Las líneas indican acceso web, consultas SQL cifrada
 | sg-iot | 22 desde la IP del equipo | Administración; sin servicio público IoT |
 | sg-rds | 5432 desde sg-web y sg-iot | Acceso SQL de aplicación, BI y simulador |
 | API de IA externa | Gemini y Groq | Clasificación y asistente de tienda |
-| Mapas externos | OpenStreetMap, Nominatim y OSRM | Teselas, ubicación de direcciones y rutas |
+| Mapas externos | OpenFreeMap, Nominatim y OSRM | Estilo y teselas vectoriales (datos de OpenStreetMap), ubicación de direcciones y rutas |
 
 Nota. Elaboración propia. Zona A y zona B identifican las zonas seleccionadas por el script; no fijan letras de disponibilidad.
 

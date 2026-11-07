@@ -3,12 +3,14 @@
 Las clases marcadas con `abierto` documentan errores reales que está corrigiendo otra sesión: se saltan por defecto para no dejar la suite
 en rojo. Después de fusionar esa sesión hay que correrlas con `-e CASOS_ABIERTOS=1` y, si pasan, quitar el decorador."""
 import os
+import threading
 import unittest
 from datetime import timedelta
 
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.db import connections
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from catalogo.models import Producto
@@ -103,22 +105,6 @@ class ErroresAbiertosDeFlota(Base):
     """Se derivan a flota-autonoma."""
 
     @abierto
-    def test_despachar_dos_veces_la_misma_orden_no_la_da_por_entregada(self):
-        """Lo que pasa con un doble clic: la segunda solicitud leyó la orden antes de que la primera terminara."""
-        orden = self.orden_de(self.hospital)
-        vista_vieja = list(servicios.pedidos_por_despachar().filter(pk=orden.pk))
-        servicios.despachar(self.camion.pk, [orden.pk])
-        original = servicios.pedidos_por_despachar
-        servicios.pedidos_por_despachar = lambda: type("Q", (), {"filter": lambda *a, **k: vista_vieja})()
-        try:
-            otro = servicios.camiones_libres().filter(rango_temperatura__nombre="Refrigerado").first()
-            with self.assertRaises(pedidos.ErrorDeNegocio):
-                servicios.despachar(otro.pk, [orden.pk])
-        finally:
-            servicios.pedidos_por_despachar = original
-        self.assertEqual(self.estado(orden), "Despachada")
-
-    @abierto
     def test_un_pedido_sin_ubicar_no_queda_colgado_en_despachada(self):
         orden = self.orden_de(self.hospital)
         orden.direccion.lat = orden.direccion.long = None
@@ -138,6 +124,50 @@ class ErroresAbiertosDeFlota(Base):
         tarjetas, _ = servicios.estado_flota()
         tarjeta = next(t for t in tarjetas if t["camion"].pk == self.camion.pk)
         self.assertTrue(tarjeta.get("sin_senal"))
+
+
+@override_settings(OSRM_URL="")
+class ErroresAbiertosDeDespachoSimultaneo(TransactionTestCase):
+    """Se deriva a flota-autonoma. Doble clic en «Despachar» o dos pestañas: dos solicitudes leen la misma orden antes de que la otra termine."""
+
+    def dos_a_la_vez(self, pedidos_de_despacho):
+        arranque, resultados = threading.Barrier(len(pedidos_de_despacho)), []
+
+        def despachar(camion, ordenes):
+            try:
+                arranque.wait()
+                servicios.despachar(camion, ordenes)
+                resultados.append("ok")
+            except pedidos.ErrorDeNegocio:
+                resultados.append("rechazado")
+            finally:
+                connections.close_all()
+        hilos = [threading.Thread(target=despachar, args=p) for p in pedidos_de_despacho]
+        [h.start() for h in hilos]
+        [h.join() for h in hilos]
+        return sorted(resultados)
+
+    def preparar(self):
+        call_command("cargar_demo", verbosity=0)
+        hospital = Cliente.objects.get(rut="61.973.200-4")
+        producto = Producto.objects.filter(activo=True, stock_disponible__gt=20, categoria__rango_temperatura__nombre="Refrigerado").first()
+        ordenes = []
+        for _ in range(2):
+            pedidos.agregar(hospital, producto.pk, 1)
+            ordenes.append(pedidos.generar_orden(hospital, hospital.direccion_set.first().pk, "OC-1"))
+        return ordenes, list(servicios.camiones_libres().filter(rango_temperatura__nombre="Refrigerado")[:2])
+
+    @abierto
+    def test_la_misma_orden_en_dos_camiones_sale_una_sola_vez_y_no_queda_entregada(self):
+        (orden, _), (uno, otro) = self.preparar()
+        self.assertEqual(self.dos_a_la_vez([(uno.pk, [orden.pk]), (otro.pk, [orden.pk])]), ["ok", "rechazado"])
+        self.assertEqual(Orden.objects.get(pk=orden.pk).estado_orden.nombre, "Despachada")
+
+    @abierto
+    def test_un_camion_no_toma_dos_viajes_a_la_vez(self):
+        (una, otra), (camion, _) = self.preparar()
+        self.assertEqual(self.dos_a_la_vez([(camion.pk, [una.pk]), (camion.pk, [otra.pk])]), ["ok", "rechazado"])
+        self.assertEqual(Despacho.objects.filter(camion=camion, regreso_en__isnull=True).count(), 1)
 
 
 class ErroresAbiertosDeEntrega(Base):

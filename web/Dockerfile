@@ -8,4 +8,4 @@ RUN DJANGO_SECRET_KEY=build python manage.py collectstatic --noinput \
     && useradd --system --create-home cofrial && chown -R cofrial /app
 USER cofrial
 EXPOSE 8000
-CMD ["gunicorn", "cofrial.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2"]
+CMD ["gunicorn", "cofrial.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "16"]

@@ -8,6 +8,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
+from clientes.models import Comuna
 from cofrial import entradas
 from crm import servicios as crm
 from crm.models import Requerimiento
@@ -20,7 +21,9 @@ def solo_clientes(vista):
     @wraps(vista)
     def envoltura(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect(f"/cuenta/entrar/?next={request.path}")
+            if request.method != "GET":             # se explica por qué pide ingresar de nuevo; el carrito está en la base y no se pierde
+                messages.info(request, "Tu sesión terminó. Ingresa de nuevo: tu carrito sigue guardado.")
+            return redirect(entradas.url_de_ingreso(request, "/carrito/"))
         cliente = s.cliente_de(request.user)
         if cliente is None:
             if request.method == "POST":            # una cuenta del equipo no compra, no cancela ni abre reclamos como cliente: se le dice claro
@@ -71,7 +74,7 @@ def ver_carrito(request, cliente):
     total = s.total(filas)
     ctx = {
         "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
-        "direcciones": cliente.direccion_set.select_related("comuna"),
+        "direcciones": cliente.direccion_set.select_related("comuna"), "comunas": Comuna.objects.order_by("nombre"),
         "pide_oc": cliente.tipo_cliente.codigo == "B2B",
         "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
         "mp_brick": mp_brick,
@@ -95,6 +98,20 @@ def actualizar(request, cliente):
         s.fijar_cantidad(cliente, entradas.entero(request.POST["producto"]), entradas.entero(request.POST["cantidad"]))
     except (KeyError, ValueError):
         messages.error(request, "Cantidad no válida.")
+    except s.ErrorDeNegocio as e:
+        _mostrar_errores(request, e)
+    return redirect("carrito")
+
+
+@require_POST
+@solo_clientes
+def direccion_nueva(request, cliente):
+    """CU-04, A2: el cliente agrega otra dirección desde el carrito (una empresa con varias sucursales, un particular que se mudó)."""
+    try:
+        d = s.agregar_direccion(cliente, request.POST.get("calle_numero", ""), request.POST.get("comuna"))
+        messages.success(request, f"Agregamos «{d}» a tus direcciones.")
+        if d.lat is None:
+            messages.warning(request, "No pudimos ubicar esa dirección en el mapa. Puedes comprar igual; la revisaremos antes de despachar.")
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
     return redirect("carrito")

@@ -42,7 +42,7 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 | Clientes (su cartera) | L, E | — | L | L, E |
 | Clientes (cartera de otros) | — | — | L | L, E |
 | Prospectos (propios) | L, E | — | L | L, E |
-| Pedidos web (de sus clientes) | L | — | L | L, E |
+| Pedidos web (de sus clientes) | L, cancela hasta «En preparación» | — | L | L, E |
 | Crear pedido a nombre del cliente | E | — | — | E |
 | Requerimientos | L, E | — | L | L, E |
 | Solicitudes de cuenta de empresa | L, E (queda en su cartera) | — | L | L, E (elige el vendedor) |
@@ -86,11 +86,11 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 
 | ID | Regla | Efecto |
 |---|---|---|
-| RN-09 | **Cartera por vendedor.** Cada cliente B2B tiene un vendedor asignado y cada prospecto, un responsable. El vendedor solo ve su cartera; gerencia ve todas. | La cartera es de la empresa |
-| RN-10 | **Transiciones del pipeline.** Solo se permiten los movimientos de la Figura 2. No se puede saltar, por ejemplo, de Prospecto a Negociación. | Datos de embudo confiables |
-| RN-11 | **Cierre.** Perder un prospecto exige un motivo y registra la fecha de cierre. Ganarlo crea el cliente (tipo B2B, con la lista institucional y el mismo vendedor) y vincula el prospecto a él. | Se aprende de las ventas perdidas; la conversión se puede medir |
+| RN-09 | **Cartera por vendedor.** Cada cliente B2B tiene un vendedor asignado y cada prospecto, un responsable. El vendedor solo ve su cartera, incluidos los requerimientos de sus clientes; los de clientes sin vendedor (B2C) son una bandeja común. Gerencia ve todas. | La cartera es de la empresa |
+| RN-10 | **Transiciones del pipeline.** Solo se permiten los movimientos de la Figura 2. No se puede saltar, por ejemplo, de Prospecto a Negociación. El único retroceso es de «Propuesta enviada» a «Contactado», cuando el cliente pide aclaraciones. | Datos de embudo confiables |
+| RN-11 | **Cierre.** Perder un prospecto exige un motivo y registra la fecha de cierre. Ganarlo exige un RUT válido y no registrado, y crea el cliente (tipo B2B, con la lista institucional y el mismo vendedor) y vincula el prospecto a él. | Se aprende de las ventas perdidas; la conversión se puede medir |
 | RN-12 | **Registro de interacciones.** Toda llamada, correo o reunión con un prospecto o cliente se registra en su ficha. «Si no está en el CRM, no ocurrió.» | Historial en la empresa, no en el celular |
-| RN-13 | **Alerta de frío.** Cuando una lectura trae `alerta_ruptura_frio` durante el viaje de un despacho, sus órdenes se consideran afectadas y aparecen destacadas en la ficha del cliente y en el seguimiento del pedido. | El vendedor actúa antes del reclamo |
+| RN-13 | **Alerta de frío.** Cuando una lectura trae `alerta_ruptura_frio` durante el viaje de un despacho, las órdenes cuya carga seguía a bordo se consideran afectadas (una orden ya recibida en una parada anterior no) y aparecen destacadas en la ficha del cliente y en el seguimiento del pedido. | El vendedor actúa antes del reclamo |
 | RN-14 | **Clasificación con IA.** Cada requerimiento se clasifica con IA y se guarda con su confianza. Si la API falla o la confianza es menor que 0,60 (umbral supuesto), queda marcado para revisión manual. El servicio nunca pierde un requerimiento. | La IA ayuda, la persona decide |
 | RN-15 | **Pedido a nombre del cliente.** Durante la transición, el vendedor puede generar el pedido desde la ficha del cliente y debe registrar la interacción (llamada o correo) que lo originó. | Los clientes que aún llaman quedan dentro del sistema |
 | RN-22 | **Cobranza.** El CRM muestra lo que se entregó y todavía no se facturó (el vendedor emite la factura desde ahí), las facturas con saldo ordenadas por vencimiento y cuáles ya vencieron. El vendedor registra los pagos y emite notas de crédito dentro de su cartera; gerencia solo consulta. | Se sabe qué falta por cobrar y a quién |
@@ -105,7 +105,7 @@ La regla de clasificación con IA se implementó y se midió con la interfaz rea
 - **Tiempo de respuesta: de 4 a 7 segundos por consulta.** El diseño inicial fijaba un máximo de cinco segundos, plazo con el que casi todas las consultas habrían quedado sin clasificar; el prototipo concede doce segundos en total.
 - **La IA es visible y explicable.** La página «IA» del CRM muestra el estado de los proveedores, un resumen de lo clasificado por la IA, por personas y lo que quedó dudoso, y una prueba en vivo que compara los proveedores lado a lado (respuesta, confianza y tiempo) sin crear datos. Sirve para demostrar y explicar la integración durante la defensa.
 - **Categorías implementadas:** consulta de producto, reclamo por temperatura, atraso en entrega, facturación y otro.
-- **Alcance:** el enrutamiento automático por área y el aviso al supervisor cuando la IA falla no se implementaron; hoy existe una bandeja única de requerimientos en el CRM, que el vendedor ve y gestiona.
+- **Alcance:** el enrutamiento automático por área y el aviso al supervisor cuando la IA falla no se implementaron; hoy existe una bandeja de requerimientos en el CRM, que cada vendedor ve y gestiona dentro de su cartera (RN-09).
 - **Una lección sobre la capa gratuita.** El primer modelo elegido ya no estaba disponible para cuentas nuevas y los vigentes se consumen con otra interfaz. Por eso el nombre del modelo se configura y se prueba en cascada en lugar de fijarse en el código.
 
 ## Wireframes del CRM

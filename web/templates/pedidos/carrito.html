@@ -61,6 +61,7 @@
       <button class="confirmar" data-cargando="{% if pide_oc %}Generando orden…{% else %}Procesando pago…{% endif %}"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>{% if pide_oc %}Generar orden{% else %}Pagar y generar orden{% endif %}</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
     </form>
     {% endif %}
+    <details class="acc-doc"{% if not direcciones %} open{% endif %}><summary>Agregar otra dirección</summary>{% include "pedidos/_direccion_nueva.html" with accion="/carrito/direccion/" %}</details>
     <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde "Mis pedidos"</p>
   </aside>
 </div>

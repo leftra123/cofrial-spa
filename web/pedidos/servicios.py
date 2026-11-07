@@ -8,7 +8,8 @@ from django.db.models import F
 
 from catalogo import avisos
 from catalogo.models import Categoria, PrecioProducto, Producto
-from clientes.models import Cliente, Direccion
+from clientes import geo
+from clientes.models import Cliente, Comuna, Direccion
 from cofrial import entradas
 
 from . import documentos
@@ -57,11 +58,13 @@ def agregar(cliente, producto_id, cantidad):
         raise ErrorDeNegocio(f"{producto.nombre} no tiene precio en tu lista.")
     carrito = carrito_abierto(cliente)
     avisos.marcar_atendidos(cliente, producto.pk)          # si esperaba este producto, el aviso ya cumplió su función
-    item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
-    if not creado:
-        _validar_cantidad(item.cantidad + cantidad)
-        item.cantidad += cantidad
-        item.save(update_fields=["cantidad"])
+    with transaction.atomic():
+        item, creado = CarritoItem.objects.get_or_create(carrito=carrito, producto=producto, defaults={"cantidad": cantidad})
+        if not creado:
+            item = CarritoItem.objects.select_for_update().get(pk=item.pk)     # dos «Agregar» seguidos suman los dos, no se pisan
+            _validar_cantidad(item.cantidad + cantidad)
+            item.cantidad += cantidad
+            item.save(update_fields=["cantidad"])
     return item
 
 
@@ -80,7 +83,7 @@ def lineas(cliente):
     for item in CarritoItem.objects.filter(carrito=carrito_abierto(cliente)).select_related("producto").order_by("producto__nombre"):
         precio = precio_de(cliente, item.producto_id) or 0
         filas.append({"producto": item.producto, "cantidad": item.cantidad, "precio": precio,
-                      "subtotal": precio * item.cantidad, "hay_stock": item.cantidad <= item.producto.stock_disponible})
+                      "subtotal": precio * item.cantidad, "hay_stock": item.producto.activo and item.cantidad <= item.producto.stock_disponible})
     return filas
 
 
@@ -135,6 +138,9 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc="", recibe=""):
     if not items:
         raise ErrorDeNegocio("Tu carrito está vacío.")
     productos = {p.pk: p for p in Producto.objects.select_for_update().filter(pk__in=[i.producto_id for i in items]).order_by("pk")}
+    retirados = [p.nombre for p in productos.values() if not p.activo]
+    if retirados:                                          # se retiró del catálogo después de agregarlo al carrito: ya no se vende
+        raise ErrorDeNegocio("Ya no vendemos " + ", ".join(retirados) + ". Quítalo del carrito para generar la orden.")
     faltantes = [f"{productos[i.producto_id].nombre}: pides {i.cantidad} y quedan {productos[i.producto_id].stock_disponible}."
                  for i in items if i.cantidad > productos[i.producto_id].stock_disponible]
     if faltantes:
@@ -150,6 +156,25 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc="", recibe=""):
         grupos.setdefault(rango_de_categoria[productos[i.producto_id].categoria_id], []).append(i)
     return {"direccion": direccion, "carrito": carrito, "items": items, "productos": productos, "precios": precios,
             "grupos": grupos, "pendiente": pendiente, "numero_oc": numero_oc, "recibe": recibe}
+
+
+MAX_DIRECCIONES = 20
+
+
+def agregar_direccion(cliente, calle_numero, comuna_id):
+    """Dirección nueva de un cliente; la primera queda como principal. La ubicación en el mapa es de mejor esfuerzo."""
+    calle_numero = (calle_numero or "").strip()
+    if not calle_numero or len(calle_numero) > 150:
+        raise ErrorDeNegocio("Escribe la calle y el número (hasta 150 caracteres).")
+    comuna = Comuna.objects.filter(pk=entradas.entero(comuna_id)).first() if entradas.es_entero(comuna_id) else None
+    if comuna is None:
+        raise ErrorDeNegocio("Elige una comuna de la lista.")
+    existentes = cliente.direccion_set.count()
+    if existentes >= MAX_DIRECCIONES:
+        raise ErrorDeNegocio(f"Se admiten hasta {MAX_DIRECCIONES} direcciones por cliente.")
+    direccion = Direccion.objects.create(cliente=cliente, calle_numero=calle_numero, comuna=comuna, es_principal=existentes == 0)
+    geo.ubicar(direccion)
+    return direccion
 
 
 # ------------------------------------------------------------------------------------ órdenes
@@ -261,14 +286,21 @@ def avanzar(orden):
     return orden
 
 
+MISMA_COMPRA_SEG = 5         # las órdenes de una compra dividida se crean en la misma transacción, con milisegundos de diferencia
+
+
 @transaction.atomic
 def repetir_ultimo_pedido(cliente):
-    """RN-08: copia al carrito las líneas de la última orden no cancelada, ajustadas al stock; devuelve los avisos."""
-    ultima = ordenes_de(cliente).exclude(estado_orden__nombre="Cancelada").first()
+    """RN-08: copia al carrito las líneas de la última compra no cancelada, ajustadas al stock; devuelve los avisos.
+    Una compra con refrigerados y congelados se dividió en una orden por rango (RN-16), así que se toman todas las de esa compra."""
+    from datetime import timedelta
+    vigentes = ordenes_de(cliente).exclude(estado_orden__nombre="Cancelada")
+    ultima = vigentes.first()
     if ultima is None:
         raise ErrorDeNegocio("Aún no tienes pedidos que repetir.")
+    misma_compra = vigentes.filter(direccion=ultima.direccion, creada_en__gte=ultima.creada_en - timedelta(seconds=MISMA_COMPRA_SEG))
     avisos = []
-    for item in ultima.ordenitem_set.select_related("producto"):
+    for item in OrdenItem.objects.filter(orden__in=misma_compra).select_related("producto").order_by("orden_id", "pk"):
         p = item.producto
         if not p.activo or p.stock_disponible < 1 or precio_de(cliente, p.pk) is None:
             avisos.append(f"{p.nombre} no está disponible y no se agregó.")

@@ -9,12 +9,12 @@ from django.views.decorators.http import require_POST
 
 from catalogo.models import Producto
 from cofrial import entradas
-from clientes.models import Vendedor
+from clientes.models import Comuna, Vendedor
 from pedidos import documentos, servicios as pedidos
 from pedidos.models import Pago
 
 from . import ia, servicios as s
-from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto, Requerimiento
+from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto
 
 ERRORES = (pedidos.ErrorDeNegocio, ValueError)
 
@@ -25,7 +25,9 @@ def con_rol(*roles):
         @wraps(vista)
         def envoltura(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect(f"/cuenta/entrar/?next={request.path}")
+                if request.method != "GET":
+                    messages.info(request, "Tu sesión terminó. Ingresa de nuevo y repite la acción.")
+                return redirect(entradas.url_de_ingreso(request, "/crm/"))
             mi_rol = s.rol(request.user)
             if mi_rol not in roles:
                 return render(request, "403.html", {"detalle": "Tu cuenta no tiene acceso a esta sección del CRM."}, status=403)
@@ -40,7 +42,7 @@ COMERCIAL = ("admin", "gerencia", "vendedor")
 
 
 def _avisar(request, error):
-    for m in getattr(error, "mensajes", [str(error) or "Dato no válido."]):
+    for m in getattr(error, "mensajes", ["Dato no válido: revisa lo que escribiste."]):     # un ValueError trae texto de Python, no para el usuario
         messages.error(request, m)
 
 
@@ -191,7 +193,7 @@ def cliente_ficha(request, pk):
         saldo_total=sum(d.saldo for d in docs if d.saldo and d.saldo > 0), direcciones=c.direccion_set.select_related("comuna"),
         interacciones=c.interaccion_set.select_related("vendedor").order_by("-registrada_en"),
         productos=Producto.objects.filter(activo=True, stock_disponible__gt=0).order_by("nombre"),
-        pide_oc=c.tipo_cliente.codigo == "B2B"))
+        pide_oc=c.tipo_cliente.codigo == "B2B", comunas=Comuna.objects.order_by("nombre"), accion_direccion=f"/crm/clientes/{c.pk}/direccion/"))
 
 
 @require_POST
@@ -201,6 +203,20 @@ def cliente_interaccion(request, pk):
     try:
         s.registrar_interaccion(request.user, request.POST.get("tipo", "nota"), request.POST.get("detalle", ""), cliente=c)
         messages.success(request, "Interacción registrada.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_cliente", pk=pk)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def cliente_direccion(request, pk):
+    c = _cliente(request, pk)
+    try:
+        if not s.puede_editar(request.user):
+            raise s.ErrorDeNegocio("Tu rol no puede modificar clientes.")
+        d = pedidos.agregar_direccion(c, request.POST.get("calle_numero", ""), request.POST.get("comuna"))
+        messages.success(request, f"Dirección «{d}» agregada." if d.lat is not None else f"Dirección «{d}» agregada, pero no la encontramos en el mapa: despacho deberá ubicarla.")
     except ERRORES as e:
         _avisar(request, e)
     return redirect("crm_cliente", pk=pk)
@@ -223,16 +239,20 @@ def cliente_pedido(request, pk):
 @con_rol(*COMERCIAL)
 def requerimientos(request):
     return render(request, "crm/requerimientos.html", _contexto(
-        request, reqs=Requerimiento.objects.select_related("cliente", "categoria_requerimiento").order_by("-creado_en"),
+        request, reqs=s.requerimientos_visibles(request.user).order_by("-creado_en"),
         categorias=CategoriaRequerimiento.objects.all(), umbral=s.UMBRAL_CONFIANZA))
+
+
+PALABRAS_DE_FRIO = ("temperatur", "tibi", "calient", "descongel", "frío", "frio", "derretid")
 
 
 @con_rol(*COMERCIAL)
 def requerimiento_detalle(request, pk):
     """Un requerimiento con el texto original, el desglose de la IA y, si es de temperatura, el dato real de la base al lado."""
-    r = get_object_or_404(Requerimiento.objects.select_related("cliente", "categoria_requerimiento", "orden__despacho__camion__rango_temperatura", "orden__estado_orden"), pk=pk)
+    r = get_object_or_404(s.requerimientos_visibles(request.user).select_related("orden__despacho__camion__rango_temperatura", "orden__estado_orden"), pk=pk)
     d = r.desglose or None
-    dato = s.telemetria_del_viaje(r.orden) if r.orden_id and d and (d.get("motivo_principal") == "temperatura_inadecuada" or "temperatur" in r.descripcion.lower()) else None
+    habla_de_frio = (d or {}).get("motivo_principal") == "temperatura_inadecuada" or any(p in f"{r.asunto} {r.descripcion}".lower() for p in PALABRAS_DE_FRIO)
+    dato = s.telemetria_del_viaje(r.orden) if r.orden_id and habla_de_frio else None      # sin IA también: la telemetría no depende de ella
     return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
 
 
@@ -263,6 +283,19 @@ def requerimiento_ia(request, pk):
     return redirect("crm_requerimientos")
 
 
+@require_POST
+@con_rol(*COMERCIAL)
+def requerimiento_resolver(request, pk):
+    try:
+        s.resolver_requerimiento(request.user, pk)
+        messages.success(request, "Requerimiento resuelto: el cliente ya lo ve así en Soporte.")
+    except ObjectDoesNotExist:
+        messages.error(request, "No se pudo resolver el requerimiento.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_requerimientos")
+
+
 @con_rol(*COMERCIAL)
 def ia_panel(request):
     """Explica la IA y permite probarla en vivo: estado de los proveedores, una prueba lado a lado y un resumen de lo que ha hecho."""
@@ -275,13 +308,13 @@ def ia_panel(request):
             messages.error(request, "Escribe un mensaje de cliente para probar la IA.")
         else:
             prompt, filas = ia.comparar(asunto[:150], texto[:1000], categorias)
-    todos = Requerimiento.objects.all()
+    todos = s.requerimientos_visibles(request.user)
     resumen = {"total": todos.count(),
                "por_ia": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=False, clasificado_manual=False).count(),
                "ia_dudo": todos.filter(confianza_ia__isnull=False, categoria_requerimiento__isnull=True).count(),
                "manual": todos.filter(Q(clasificado_manual=True) | Q(confianza_ia__isnull=True, categoria_requerimiento__isnull=False)).count(),
                "sin_clasificar": todos.filter(estado="sin_clasificar").count()}
-    ultimos = list(todos.select_related("cliente", "categoria_requerimiento").order_by("-creado_en")[:12])
+    ultimos = list(todos.order_by("-creado_en")[:12])
     return render(request, "crm/ia.html", _contexto(request, ia=ia.estado(), categorias=categorias, asunto=asunto, texto=texto, prompt=prompt,
                                                     filas=filas, resumen=resumen, ultimos=ultimos, umbral=s.UMBRAL_CONFIANZA, acierto=s.acierto_de_la_ia()))
 
@@ -315,6 +348,17 @@ def orden_facturar(request, orden_id):
     try:
         f = s.facturar(request.user, orden_id)
         messages.success(request, f"Factura N.º {f.folio} emitida; vence el {f.vence_en:%d/%m/%Y}.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return _volver(request)
+
+
+@require_POST
+@con_rol(*COMERCIAL)
+def orden_cancelar(request, orden_id):
+    try:
+        o = s.cancelar_orden(request.user, orden_id)
+        messages.success(request, f"Pedido N.º {o.orden_id} cancelado; el stock quedó repuesto.")
     except ERRORES as e:
         _avisar(request, e)
     return _volver(request)

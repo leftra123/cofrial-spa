@@ -5,11 +5,12 @@ from django.utils import timezone
 
 from catalogo.asistente import estado_de_pedido
 from catalogo.models import ListaPrecio
+from clientes import rut as rutlib
 from clientes.models import Cliente, TipoCliente, Vendedor
 from cofrial import entradas
 from flota.models import Telemetria
 from pedidos import documentos, servicios as pedidos
-from pedidos.models import Documento, Orden
+from pedidos.models import CarritoItem, Documento, Orden
 
 from . import ia
 from .models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
@@ -55,6 +56,12 @@ def clientes_visibles(usuario):
 def prospectos_visibles(usuario):
     base = Prospecto.objects.select_related("etapa", "vendedor")
     return base if ve_todo(usuario) else base.filter(vendedor__usuario=usuario)
+
+
+def requerimientos_visibles(usuario):
+    """RN-09 también en los reclamos: el vendedor ve los de su cartera y los de quien no tiene vendedor (clientes B2C), que son una bandeja común."""
+    base = Requerimiento.objects.select_related("cliente", "categoria_requerimiento")
+    return base if ve_todo(usuario) else base.filter(Q(cliente__isnull=True) | Q(cliente__vendedor__isnull=True) | Q(cliente__vendedor__usuario=usuario))
 
 
 def puede_editar(usuario):
@@ -108,7 +115,8 @@ def rechazar_empresa(usuario, cliente_id):
 
 # ---------------------------------------------------------------- RN-10 y RN-11: pipeline
 def transiciones_de(prospecto):
-    """Etapas a las que puede pasar un prospecto: la siguiente del embudo o «Perdido» (Figura de pipeline)."""
+    """Etapas a las que puede pasar un prospecto: la siguiente del embudo o «Perdido» (Figura de pipeline). Desde «Propuesta enviada»
+    también vuelve a «Contactado», cuando el cliente pide aclaraciones (CU-07, A5)."""
     if prospecto.etapa.es_final:
         return []
     etapas = list(EtapaPipeline.objects.order_by("orden_etapa"))
@@ -117,7 +125,8 @@ def transiciones_de(prospecto):
     perdida = next(e for e in etapas if e.es_final and not e.es_ganada)
     idx = abiertas.index(prospecto.etapa)
     siguiente = abiertas[idx + 1] if idx + 1 < len(abiertas) else ganada
-    return [siguiente, perdida]
+    retroceso = [abiertas[idx - 1]] if prospecto.etapa.nombre == "Propuesta enviada" else []
+    return [siguiente, *retroceso, perdida]
 
 
 @transaction.atomic
@@ -138,14 +147,15 @@ def mover_prospecto(usuario, prospecto_id, etapa_id, motivo="", rut=""):
     elif destino.es_ganada:                                              # RN-11: ganar crea el cliente B2B
         if not rut.strip():
             raise ErrorDeNegocio("Para ganar el prospecto indica el RUT de la empresa.")
-        if len(rut.strip()) > 12:
-            raise ErrorDeNegocio("El RUT no es válido (máximo 12 caracteres, con puntos y guion).")
+        if not rutlib.es_valido(rut) or len(rutlib.limpiar(rut)) > 9:
+            raise ErrorDeNegocio("El RUT no es válido; revisa el dígito verificador.")
+        rut = rutlib.formatear(rut)                      # el mismo formato del registro: «76111222-3» y «76.111.222-3» son el mismo cliente
         if not prospecto.email:
             raise ErrorDeNegocio("El prospecto necesita un correo para crearlo como cliente.")
-        if Cliente.objects.filter(rut=rut.strip()).exists():
+        if Cliente.objects.filter(rut=rut).exists():
             raise ErrorDeNegocio("Ya existe un cliente con ese RUT.")
         tipo = TipoCliente.objects.get(codigo="B2B")
-        prospecto.cliente = Cliente.objects.create(tipo_cliente=tipo, vendedor=prospecto.vendedor, rut=rut.strip(),
+        prospecto.cliente = Cliente.objects.create(tipo_cliente=tipo, vendedor=prospecto.vendedor, rut=rut,
                                                    nombre=prospecto.empresa or prospecto.nombre_contacto,
                                                    email=prospecto.email, telefono=prospecto.telefono)
         prospecto.cerrado_en = ahora
@@ -173,8 +183,17 @@ def registrar_interaccion(usuario, tipo, detalle, prospecto=None, cliente=None):
 
 
 # ---------------------------------------------------------------- RN-13: alerta de frío sobre las órdenes
+def fin_de_exposicion(orden, ahora=None):
+    """Hasta cuándo la carga de esta orden estuvo en el camión. Dos clientes pueden ir en el mismo viaje: el primero ya recibió cuando el
+    camión sigue, y una falla posterior no lo afecta. Quien aún no recibe (en la puerta o sin concretar) sigue a bordo hasta el regreso."""
+    d = orden.despacho
+    if orden.estado_orden.nombre == "Entregada":
+        return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
+    return d.regreso_en or ahora or timezone.now()
+
+
 def ordenes_con_alerta(ordenes):
-    """Agrega a cada orden `alertas_frio`: lecturas con alerta del camión del despacho durante el viaje."""
+    """Agrega a cada orden `alertas_frio`: lecturas con alerta del camión del despacho mientras la carga de esa orden iba a bordo."""
     resultado = []
     ahora = timezone.now()
     for o in ordenes:
@@ -182,7 +201,7 @@ def ordenes_con_alerta(ordenes):
         d = o.despacho
         if d is not None and d.salida_en is not None:
             n = Telemetria.objects.filter(camion_id=d.camion_id, alerta_ruptura_frio=True, registrado_en__gte=d.salida_en,
-                                          registrado_en__lte=d.llegada_en or ahora).count()
+                                          registrado_en__lte=fin_de_exposicion(o, ahora)).count()
         o.alertas_frio = n
         resultado.append(o)
     return resultado
@@ -193,6 +212,7 @@ def ordenes_de_cliente(cliente):
     ordenes = list(ordenes)
     for o in ordenes:
         o.total = pedidos.total_orden(o)
+        o.cancelable = (not o.estado_orden.es_final and o.estado_orden.orden_flujo <= 3) or o.estado_orden.nombre == "Entrega no concretada"
     return ordenes_con_alerta(ordenes)
 
 
@@ -217,11 +237,26 @@ def crear_pedido_para_cliente(usuario, cliente_id, cantidades, direccion_id, num
         raise ErrorDeNegocio("Indica si el pedido llegó por llamada o por correo.")
     registrar_interaccion(usuario, tipo_interaccion, detalle_interaccion, cliente=cliente)
     carrito = pedidos.carrito_abierto(cliente)
+    guardado = list(carrito.carritoitem_set.values_list("producto_id", "cantidad"))    # lo que el cliente tenía armado en el portal no es del vendedor
     carrito.carritoitem_set.all().delete()
     for producto_id, cantidad in cantidades.items():
         if cantidad > 0:
             pedidos.agregar(cliente, producto_id, cantidad)
-    return pedidos.generar_orden(cliente, direccion_id, numero_oc)
+    orden = pedidos.generar_orden(cliente, direccion_id, numero_oc)
+    if guardado:
+        nuevo = pedidos.carrito_abierto(cliente)
+        CarritoItem.objects.bulk_create([CarritoItem(carrito=nuevo, producto_id=p, cantidad=c) for p, c in guardado])
+    return orden
+
+
+def cancelar_orden(usuario, orden_id):
+    """RN-07: el vendedor cancela hasta «En preparación» y da de baja una entrega no concretada, solo dentro de su cartera."""
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol no puede cancelar pedidos.")
+    orden = Orden.objects.filter(pk=orden_id, direccion__cliente__in=clientes_visibles(usuario)).first()
+    if orden is None:
+        raise ErrorDeNegocio("Orden no encontrada en tu cartera.")
+    return pedidos.cancelar(orden, como="vendedor")
 
 
 # ---------------------------------------------------------------- RN-14: clasificación con IA y manual
@@ -272,7 +307,7 @@ def telemetria_del_viaje(orden):
     d = orden.despacho
     if d is None or d.salida_en is None:
         return None
-    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, registrado_en__gte=d.salida_en, registrado_en__lte=d.llegada_en or timezone.now())
+    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, registrado_en__gte=d.salida_en, registrado_en__lte=fin_de_exposicion(orden))
     ultima = lecturas.order_by("-registrado_en").first()
     if ultima is None:
         return {"camion": d.camion_id, "lecturas": 0}
@@ -313,15 +348,32 @@ def crear_requerimiento(cliente, asunto, descripcion, orden=None, categoria_nomb
 def reintentar_ia(usuario, requerimiento_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
-    return clasificar_con_ia(Requerimiento.objects.get(pk=requerimiento_id))
+    r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
+    if r.estado == "resuelto":
+        raise ErrorDeNegocio("Este requerimiento ya está resuelto.")
+    return clasificar_con_ia(r)
 
 
 def clasificar_manual(usuario, requerimiento_id, categoria_id):
     if not puede_editar(usuario):
         raise ErrorDeNegocio("Tu rol no puede clasificar requerimientos.")
-    r = Requerimiento.objects.get(pk=requerimiento_id)
+    r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
+    if r.estado == "resuelto":
+        raise ErrorDeNegocio("Este requerimiento ya está resuelto.")
     r.categoria_requerimiento, r.estado, r.clasificado_manual = CategoriaRequerimiento.objects.get(pk=categoria_id), "clasificado", True     # una categoría inexistente no se guarda
     r.save(update_fields=["categoria_requerimiento", "estado", "clasificado_manual"])
+    return r
+
+
+def resolver_requerimiento(usuario, requerimiento_id):
+    """Cierra el caso: el cliente lo ve «resuelto» en Soporte y `respondido_en` alimenta el indicador de primera respuesta."""
+    if not puede_editar(usuario):
+        raise ErrorDeNegocio("Tu rol no puede resolver requerimientos.")
+    r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
+    if r.estado != "clasificado":
+        raise ErrorDeNegocio("Ya está resuelto." if r.estado == "resuelto" else "Clasifícalo antes de marcarlo como resuelto.")
+    r.estado, r.respondido_en = "resuelto", timezone.now()
+    r.save(update_fields=["estado", "respondido_en"])
     return r
 
 
@@ -348,7 +400,7 @@ def indicadores(usuario):
         "oc_pendientes": ordenes.filter(oc_pendiente=True).count(),
         "por_cobrar": cobro["por_cobrar"], "vencido": cobro["vencido"], "n_vencidas": cobro["n_vencidas"],
         "sin_facturar": len(cobro["sin_facturar"]),
-        "requerimientos_pendientes": Requerimiento.objects.filter(estado="sin_clasificar").count(),
+        "requerimientos_pendientes": requerimientos_visibles(usuario).filter(estado="sin_clasificar").count(),
         "por_etapa": list(abiertos.values("etapa__nombre", "etapa__orden_etapa").annotate(n=Count("pk"), monto=Sum("monto_estimado_clp")).order_by("etapa__orden_etapa")),
     }
 

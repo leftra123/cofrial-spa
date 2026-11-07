@@ -36,12 +36,15 @@ ESPERADO = {
     '/crm/solicitudes/999999/rechazar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/solicitudes/ →/crm/solicitudes/ 403 →/crm/solicitudes/'),
     '/crm/clientes/999999/': ('L 403 403 404 404 403 404', 'L 403 403 404 404 403 404'),
     '/crm/clientes/999999/interaccion/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
+    '/crm/clientes/999999/direccion/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/clientes/999999/pedido/': ('405 405 405 405 405 405 405', 'L 403 403 404 404 403 404'),
     '/crm/requerimientos/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
     '/crm/requerimientos/999999/': ('L 403 403 404 404 403 404', 'L 403 403 404 404 403 404'),
     '/crm/requerimientos/999999/ia/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
     '/crm/requerimientos/999999/clasificar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
+    '/crm/requerimientos/999999/resolver/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/requerimientos/ →/crm/requerimientos/ 403 →/crm/requerimientos/'),
     '/crm/cobranza/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
+    '/crm/ordenes/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/ordenes/999999/factura/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/documentos/999999/pago/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
     '/crm/documentos/999999/nota-credito/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/cobranza/ →/crm/cobranza/ 403 →/crm/cobranza/'),
@@ -79,6 +82,7 @@ ESPERADO = {
     '/carrito/actualizar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/repetir/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/confirmar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
+    '/carrito/direccion/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/mp/pagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 403'),  # B2C da 403 en pruebas porque Mercado Pago no tiene claves; B2B nunca paga con MP
     '/carrito/mp/webhook/': ('405 405 405 405 405 405 405', '204 204 204 204 204 204 204'),  # público: lo llama Mercado Pago sin sesión; sin claves responde 204 y no hace nada
     '/carrito/mp/vuelta/exito/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),

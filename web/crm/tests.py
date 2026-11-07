@@ -65,7 +65,7 @@ class ReglasDelCrm(TestCase):
         p = Prospecto.objects.get(nombre_contacto="Rosa Vega")              # Negociación, de Pedro
         with self.assertRaises(s.ErrorDeNegocio):
             s.mover_prospecto(self.pedro, p.pk, self.etapa("Cliente ganado"))   # falta el RUT
-        ganado = s.mover_prospecto(self.pedro, p.pk, self.etapa("Cliente ganado"), rut="77.111.222-3")
+        ganado = s.mover_prospecto(self.pedro, p.pk, self.etapa("Cliente ganado"), rut="77.111.222-6")
         self.assertEqual(ganado.cliente.tipo_cliente.codigo, "B2B")
         self.assertEqual(ganado.cliente.vendedor.usuario, self.pedro)
         self.assertIsNotNone(ganado.cerrado_en)

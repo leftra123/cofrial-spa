@@ -21,7 +21,8 @@ Este documento no contiene claves. Las claves viven solo en `aws/.estado/secreto
 
 | Cuenta | Rol | Puede | No puede (respuesta) |
 |---|---|---|---|
-| `admin@cofrial.cl`, `eric@cofrial.cl` | Administrador / despacho | Todo: CRM, flota, Torre de control (`/torre/`), cerrar despachos y `/operacion/` (usuarios, productos y precios, stock, órdenes, datos y sistema) | — |
+| `admin@cofrial.cl` | Administrador de empresa (grupo `administradores`, no superusuario) | Todo el CRM, flota, Torre de control (`/torre/`) y `/operacion/` (usuarios, productos y precios, stock, órdenes, datos y sistema) | `/admin/` de Django y `/demo/` |
+| `eric@cofrial.cl` | Superusuario técnico (mantenimiento) | Lo mismo que el administrador, más `/admin/` de Django y `/demo/` | — |
 | `felipe@cofrial.cl` | Cliente institucional B2B | Catálogo con lista institucional, carrito, órdenes, orden de compra | CRM y flota (403); pedidos ajenos (404) |
 | `sergio@cofrial.cl`, `ana@correo.test` | Cliente particular B2C | Catálogo al público, carrito, seguimiento de sus pedidos | CRM y flota (403); pedidos ajenos (404) |
 | `abastecimiento@hospital.test` | Cliente institucional B2B | Igual que Felipe | CRM y flota (403) |

@@ -291,8 +291,9 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"No se sembraron los clientes de muestra: {e}"))
 
-        if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
-            Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_para("admin@cofrial.cl"))
+        if not Usuario.objects.filter(username="admin@cofrial.cl").exists():      # administrador de empresa: personal con el grupo, no superusuario
+            admin_empresa = Usuario.objects.create_user("admin@cofrial.cl", email="admin@cofrial.cl", password=clave_para("admin@cofrial.cl"), is_staff=True)
+            admin_empresa.groups.add(Group.objects.get_or_create(name="administradores")[0])
         if por_cuenta:      # las cuentas que siguen con la clave común de antes pasan a la suya; una clave cambiada por su dueño no se toca
             pasadas = 0
             for u in Usuario.objects.filter(username__in=cuentas_demo.USUARIOS):

@@ -286,8 +286,6 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
 
 ## Panel del administrador sin Django (7-nov-2026)
 
-Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
-
 - **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
 - **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
 - **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».
@@ -316,3 +314,9 @@ Antes el cliente aceptaba o rechazaba el pedido completo y la rebaja dependía d
 - **La exposición al frío termina al resolver la recepción** también en el rechazo total (RN-13): lo que le pase al camión después ya no afecta a ese pedido.
 - **La devolución se registra, no se ejecuta.** Queda en `pago` con medio `devolucion`; el prototipo no llama a la API de devoluciones de Mercado Pago. Para producción faltaría esa llamada y su conciliación.
 - **El cliente decide solo en la pantalla.** No hay firma del chofer ni foto de la evidencia. En un proceso real el rechazo suele quedar firmado en la guía; es lo primero que conviene preguntarle a Cofrial.
+
+## Administrador de empresa, no superusuario (8-nov-2026)
+- **Problema:** el rol «Administrador» del CRM y de `/operacion/` dependía de ser superusuario de Django, así que la cuenta de administración daba acceso a `/admin/` de Django.
+- **Decisión:** `admin@cofrial.cl` es personal con el grupo `administradores`. El rol admin se resuelve por el grupo (`crm.servicios.rol` y `operacion.servicios.rol_de`, con la misma regla). Solo `eric@cofrial.cl` queda como superusuario técnico, para `/admin/` y `/demo/`.
+- **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
+- **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.

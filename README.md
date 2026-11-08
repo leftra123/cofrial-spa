@@ -63,7 +63,7 @@ Un ecosistema en AWS que une el **Front-Office comercial** (e-commerce B2B/B2C +
 | **Entrega Hito 2 + defensa — jue 12-nov** | Eric + Sergio | |
 
 ### Extras para destacar (después de cumplir lo obligatorio)
-- **Torre de control** al estilo WareTrack: mapa con los camiones en vivo, KPIs y panel de detalle (`docs/referencia-waretrack.md`).
+- **Torre de control** al estilo WareTrack: mapa con los camiones en vivo, KPIs y panel de detalle.
 - Alertas de ruptura de frío visibles en el CRM, para avisar al cliente afectado.
 - Respaldos automáticos de RDS documentados como respuesta al dolor del servidor sin respaldo.
 

@@ -155,9 +155,9 @@ def podar(dias, tope=PODA_TOPE):
 def rol_de(u):
     """Rol visible de una cuenta con las consultas ya traídas por `cuentas_con_rol` (mismo orden que crm.servicios.rol:
     una prueba compara las dos para que no se separen)."""
-    if u.is_superuser:
-        return "admin"
     grupos = {g.name for g in u.groups.all()}
+    if u.is_superuser or "administradores" in grupos:     # misma regla que crm.servicios.rol
+        return "admin"
     if "gerencia" in grupos:
         return "gerencia"
     vendedor = getattr(u, "vendedor", None)
@@ -221,7 +221,9 @@ def cambiar_activa(objetivo, activa, quien):
     else:
         if objetivo.pk == quien.pk:
             raise ErrorOperacion("No puedes desactivar tu propia cuenta.")
-        if objetivo.is_superuser and not get_user_model().objects.filter(is_superuser=True, is_active=True).exclude(pk=objetivo.pk).exists():
+        admin_empresa = objetivo.is_superuser or objetivo.groups.filter(name="administradores").exists()
+        otros = get_user_model().objects.filter(is_active=True).filter(Q(is_superuser=True) | Q(groups__name="administradores")).exclude(pk=objetivo.pk)
+        if admin_empresa and not otros.exists():
             raise ErrorOperacion("Es el último administrador activo.")
         if b2b_sin_vendedor:
             raise ErrorOperacion(f"{cliente.nombre} no tiene vendedor: aparecería como solicitud y podría borrarse al rechazarla. Asígnale un vendedor primero, en Datos, Clientes.")

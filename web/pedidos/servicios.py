@@ -19,6 +19,8 @@ from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
 
 RECHAZADA = "Rechazada en recepción"                # el cliente rechazó todas las líneas: el camión llegó, no se vendió nada (RN-23)
 RECEPCION_CERRADA = ("Entregada", RECHAZADA)         # el cliente ya resolvió la recepción: una falla posterior del camión no lo afecta (RN-13)
+SIN_VENTA = ("Cancelada", RECHAZADA)                 # órdenes que no son venta; misma regla que SIN_VENTA en grafana/generar_dashboard.py
+MONTO_ACEPTADO = (F("cantidad") - F("cantidad_rechazada")) * F("precio_unitario_clp")      # de una línea (RN-23); igual que v_orden_total.total_clp
 
 
 def cliente_de(usuario):

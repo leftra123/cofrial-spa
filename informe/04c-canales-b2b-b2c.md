@@ -127,7 +127,7 @@ El cliente no elige guías ni notas de crédito: son documentos que Cofrial emit
 
 ![Estados de la orden](img/estados-orden.png)
 
-*Nota.* Elaboración propia. Los estados corresponden a la tabla `estado_orden`. La figura muestra el flujo principal; después de «Despachada» la entrega pasa por «Camión en la puerta» y puede terminar en «Entregada», «Entrega no concretada» (no pudo recibir, se puede reprogramar) o «Rechazada en recepción» (revisó y rechazó todo, RN-23). El detalle está en `docs/ciclo-entrega.md`.
+*Nota.* Elaboración propia. La figura muestra los nueve estados de la tabla `estado_orden` y sus transiciones. Son finales «Entregada», «Cancelada» y «Rechazada en recepción» (el cliente revisó y rechazó todas las unidades, RN-23). «Entrega no concretada» no es final: nadie pudo recibir el pedido y este se reprograma en otro viaje o lo cancela ventas. La corrección manual la hacen el administrador o el despachador, con la orden «Despachada» o con el camión en la puerta. El detalle está en `docs/ciclo-entrega.md`.
 
 ## Reglas de negocio del portal
 

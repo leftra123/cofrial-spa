@@ -22,6 +22,14 @@ from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto
 ERRORES = (pedidos.ErrorDeNegocio, ValueError)
 
 
+def _seccion(ruta):
+    """Cómo nombra el 403 a la sección a la que se intentó entrar (antes todas decían «del CRM», también la flota)."""
+    for prefijo, nombre in (("/flota/", "a la flota"), ("/crm/", "al CRM"), ("/demo/", "al modo demostración")):
+        if ruta.startswith(prefijo):
+            return nombre
+    return "a esta sección"
+
+
 def con_rol(*roles):
     """Permiso por rol (Tabla 2 del informe). Los clientes del portal no entran al CRM."""
     def decorador(vista):
@@ -33,7 +41,7 @@ def con_rol(*roles):
                 return redirect(entradas.url_de_ingreso(request, "/crm/"))
             mi_rol = s.rol(request.user)
             if mi_rol not in roles:
-                return render(request, "403.html", {"detalle": "Tu cuenta no tiene acceso a esta sección del CRM."}, status=403)
+                return render(request, "403.html", {"detalle": f"Tu cuenta no tiene acceso {_seccion(request.path)}."}, status=403)
             request.rol = mi_rol
             return vista(request, *args, **kwargs)
         return envoltura

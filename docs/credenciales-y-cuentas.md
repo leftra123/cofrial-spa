@@ -51,9 +51,9 @@ python manage.py crear_cuenta gerencia2@cofrial.test --rol gerencia
 python manage.py crear_cuenta sergio --rol admin
 # Cliente institucional (B2B), con vendedor asignado
 python manage.py crear_cuenta compras@hotel.test --rol cliente-b2b --nombre "Hotel Villarrica" \
-    --rut 76.111.222-3 --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.cl
+    --rut 76.111.222-8 --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.cl
 # Cliente público (B2C)
-python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana Díaz" --rut 11.222.333-4 --direccion "Calle 1 123"
+python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana Díaz" --rut 11.222.333-9 --direccion "Calle 1 123"
 ```
 
 La clave se **pide por teclado** (dos veces) y se valida (largo mínimo y no una clave común). Los errores son claros: usuario o RUT repetido, comuna inexistente (lista las que existen), vendedor inexistente. Si algo falla no queda nada creado a medias. Para cambiar la clave de una cuenta existente: `python manage.py changepassword usuario`.
@@ -74,6 +74,9 @@ Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los no
 | `despacho@cofrial.cl` | Despachador |
 | `abastecimiento@hospital.test` | Cliente institucional B2B (Hospital Regional de Temuco) |
 | `ana@correo.test` | Cliente particular B2C (Ana Pérez) |
+| `abastecimiento@hospitalangol.test` | Cliente institucional B2B (Hospital de Angol, reparto regional a más de 100 km) |
+| `abastecimiento@hospitalvillarrica.test` | Cliente institucional B2B (Hospital de Villarrica, corredor de los lagos) |
+| `abastecimiento@hospitalpucon.test` | Cliente institucional B2B (Hospital de Pucón, corredor de los lagos) |
 
 Cada cuenta tiene su propia clave, derivada de `DEMO_PASSWORD` (las administradoras, de `ADMIN_PASSWORD`); se fija al crear la cuenta y no se pisa al reiniciar. La hoja con todas se genera con `python3 web/clientes/cuentas_demo.py --env aws/.estado/secretos.env --url http://IP --salida aws/.estado/hoja-cuentas.md`; cada persona la cambia en `/cuenta/clave/` y el administrador desde `/operacion/cuentas/`. Detalle en `docs/cuentas-y-permisos.md`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
 

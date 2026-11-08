@@ -316,6 +316,39 @@ window.CofrialTorre = (function () {
       "Además, " + miles(e.n_b2c) + (e.n_b2c === 1 ? " cliente particular (B2C) compra" : " clientes particulares (B2C) compran") + " solo en la tienda, sin vendedor.";
   }
 
+  /* ---------- 8.6 Front-Office y Back-Office ---------- */
+  function pintarLado(id, filas) {
+    var ul = $(id);
+    ul.replaceChildren.apply(ul, filas.map(function (f) {
+      var li = el("li");
+      li.append(el("h4", "", f.nombre), el("p", "torre-dato", f.dato), enlace(f.url, "Ver pantalla"));
+      return li;
+    }));
+  }
+  function pasoTraza(titulo, valor, url, tono) {
+    var li = el("li", tono ? "tpaso " + tono : "tpaso");
+    li.append(el("span", "frio", titulo), url ? enlace(url, valor) : el("b", "", valor));
+    return li;
+  }
+  function pintarTraza(t) {
+    var caja = $("torre-traza");
+    if (!t) { caja.replaceChildren(el("p", "frio", "Aún no hay un pedido en viaje para trazar")); return; }
+    var temp = t.temp_camara === null ? "sin lectura" : coma(t.temp_camara) + " °C";
+    var ol = el("ol", "torre-pasos");
+    ol.append(pasoTraza("Orden web", "N.º " + t.orden_id, t.orden_url),
+              pasoTraza("Cliente en el CRM", t.cliente, t.cliente_url),
+              pasoTraza("Camión", t.camion_id),
+              pasoTraza("Última temperatura", temp),
+              pasoTraza("Alerta de frío", t.alerta ? "Sí" : "No", null, t.alerta ? "alerta" : "ok"));
+    caja.replaceChildren(ol);
+  }
+  function pintarFrontBack(p) {
+    if (!p.front_back) { $("torre-front-back").hidden = true; return; }
+    siCambio("front-back", p.front_back, function (fb) { pintarLado("fb-front-lista", fb.front); pintarLado("fb-back-lista", fb.back); });
+    siCambio("traza", p.pedido_trazado, pintarTraza);
+    $("torre-front-back").hidden = false;
+  }
+
   /* ---------- 8.7 Rúbrica ---------- */
   var filasRubrica = {};
   function crearFilaRubrica(r) {
@@ -417,6 +450,7 @@ window.CofrialTorre = (function () {
     seccion("clientes frecuentes", function () { siCambio("frecuentes", p.frecuentes, function (f) { frecuentes = f; opcionesFiltro(); pintarFrecuentes(); }); });
     seccion("ahora", function () { pintarAhora(p.ahora); });
     seccion("embudo", function () { siCambio("embudo", p.embudo, pintarEmbudo); });
+    seccion("front-office y back-office", function () { pintarFrontBack(p); });
     pintarConexion();
   }
 

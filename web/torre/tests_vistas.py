@@ -77,8 +77,8 @@ class Respuestas(Base):
         for clave in ("lectura", "rubrica", "embudo", "ahora", "generado_en", "camiones", "clientes_mapa", "frecuentes"):
             self.assertIn(clave, d)
         self.assertEqual(len(d["rubrica"]), 5)
-        self.assertIsNone(d["front_back"])
-        self.assertIsNone(d["pedido_trazado"])
+        self.assertEqual(len(d["front_back"]["front"]), 3)
+        self.assertIn("pedido_trazado", d)
 
     def test_panel_lleva_rotulo(self):
         self.assertContains(self.como("admin").get("/torre/"), ROTULO)

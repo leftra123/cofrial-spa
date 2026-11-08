@@ -8,7 +8,8 @@ from django.utils import timezone
 
 from clientes.models import Cliente, Direccion
 from crm import servicios as crm
-from crm.models import Interaccion
+from catalogo.models import Producto
+from crm.models import Interaccion, Prospecto, Requerimiento
 from flota import vigente
 from flota.models import Despacho, Telemetria
 from pedidos.models import Orden, OrdenItem
@@ -120,12 +121,60 @@ def datos_negocio(usuario):
             "ahora": _ahora(vigentes, alertas)}
 
 
+def _plural(n, uno, varios):
+    return f"{n} {uno if n == 1 else varios}"
+
+
+def front_back():
+    """8.6: un dato vivo y un enlace por componente, tres de cada lado. Reusa de `rubrica` la comprobación de Grafana (con su caché) y la vigencia de
+    una lectura; el resto son conteos de una consulta cada uno."""
+    from . import rubrica
+    ultimo = Requerimiento.objects.filter(confianza_ia__isnull=False).select_related("categoria_ia", "categoria_requerimiento").order_by("-creado_en").first()
+    if ultimo is None:
+        ia = "Sin clasificaciones todavía"
+    else:
+        categoria = ultimo.categoria_ia or ultimo.categoria_requerimiento
+        ia = f"Última: {categoria.nombre if categoria else 'sin categoría'}, confianza {ultimo.confianza_ia}"
+    reportando = (Telemetria.objects.filter(forzada=False, registrado_en__gte=timezone.now() - timedelta(seconds=rubrica.LECTURA_VIGENTE_S))
+                  .values("camion").distinct().count())
+    en_rds = (connection.settings_dict.get("HOST") or "").endswith(".rds.amazonaws.com")
+    return {
+        "front": [
+            {"nombre": "E-commerce", "dato": _plural(Producto.objects.filter(activo=True).count(), "producto activo", "productos activos"), "url": "/catalogo/"},
+            {"nombre": "CRM", "dato": _plural(Prospecto.objects.filter(etapa__es_final=False).count(), "prospecto abierto", "prospectos abiertos"), "url": "/crm/"},
+            {"nombre": "IA", "dato": ia, "url": "/crm/ia/"},
+        ],
+        "back": [
+            {"nombre": "AWS", "dato": "Base de datos en RDS" if en_rds else "Base local, no es RDS", "url": "/salud/"},
+            {"nombre": "IoT", "dato": _plural(reportando, "camión reportando", "camiones reportando") if reportando
+             else f"Sin lecturas en {rubrica.LECTURA_VIGENTE_S // 60} min", "url": "/flota/"},
+            {"nombre": "BI", "dato": "Grafana responde" if rubrica.grafana_responde() else "Grafana no responde desde el servidor", "url": "/bi/"},
+        ],
+    }
+
+
+def pedido_trazado():
+    """8.6: el último pedido real con despacho en viaje o ya salido (nunca `HIS-`), con el cliente, el camión y la última lectura vigente de éste.
+    Tres consultas, sin importar cuántos pedidos haya. None si no hay ninguno."""
+    orden = (Orden.objects.filter(despacho__salida_en__isnull=False).exclude(numero_oc__startswith="HIS-")
+             .select_related("direccion__cliente").order_by("-despacho__salida_en", "-orden_id").first())
+    if orden is None:
+        return None
+    cliente, camion_id = orden.direccion.cliente, orden.despacho.camion_id
+    lectura = vigente.ultimas_vigentes().get(camion_id)
+    return {"orden_id": orden.pk, "cliente": cliente.nombre, "camion_id": camion_id,
+            "temp_camara": None if lectura is None else lectura.temp_camara,
+            "alerta": bool(lectura and lectura.alerta_ruptura_frio),
+            "orden_url": f"/crm/clientes/{cliente.pk}/#orden-{orden.pk}",      # la ficha del cliente lista sus pedidos; gerencia no puede abrir /pedidos/<id>/
+            "cliente_url": f"/crm/clientes/{cliente.pk}/"}
+
+
 CACHE_S = 4          # el sondeo es cada 5 s: varias pantallas abiertas comparten una sola consulta
 
 
 def pulso(usuario, rol=None):
     """Lo que `/torre/pulso/` entrega: datos del negocio, Lectura del momento y rúbrica. Caché de 4 s por rol (solo entran admin y gerencia,
-    y ambos ven lo mismo). `front_back` y `pedido_trazado` quedan en None: la Torre los completa en el navegador."""
+    y ambos ven lo mismo)."""
     from django.core.cache import cache
     from . import lectura, rubrica
     clave = f"torre:pulso:{rol or crm.rol(usuario)}"        # la vista ya sabe el rol (request.rol): evita otra consulta
@@ -133,6 +182,6 @@ def pulso(usuario, rol=None):
     if datos is None:
         datos = datos_negocio(usuario)
         datos.update({"generado_en": timezone.now().isoformat(), "lectura": lectura.redactar(datos["ahora"]), "rubrica": rubrica.evaluar(),
-                      "front_back": None, "pedido_trazado": None})
+                      "front_back": front_back(), "pedido_trazado": pedido_trazado()})
         cache.set(clave, datos, CACHE_S)
     return datos

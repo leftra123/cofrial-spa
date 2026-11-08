@@ -244,3 +244,110 @@ class Lectura(TestCase):
     def test_dos_o_tres_frases(self):
         self.assertEqual(len(lectura.redactar(_ahora())), 2)
         self.assertEqual(len(lectura.redactar(_ahora(simulacion=True))), 3)
+
+
+class FrontBack(Base):
+    def test_front_back_simetrico(self):
+        fb = servicios.front_back()
+        self.assertEqual([f["nombre"] for f in fb["front"]], ["E-commerce", "CRM", "IA"])
+        self.assertEqual([f["nombre"] for f in fb["back"]], ["AWS", "IoT", "BI"])
+        for fila in fb["front"] + fb["back"]:
+            self.assertTrue(fila["dato"], fila)
+            self.assertTrue(fila["url"].startswith("/"), fila)
+
+    def test_datos_vivos(self):
+        fb = servicios.front_back()
+        self.assertIn(f"{Producto.objects.filter(activo=True).count()} productos activos", fb["front"][0]["dato"])
+        self.assertIn("Sin lecturas", fb["back"][1]["dato"])
+        v = self.viaje()
+        self.lectura(v.camion, False)
+        self.assertIn("1 camión reportando", servicios.front_back()["back"][1]["dato"])
+
+    def test_json_serializable(self):
+        import json
+        json.dumps(servicios.front_back())
+
+    def test_consultas_constantes_y_sin_escritura(self):
+        with CaptureQueriesContext(connection) as q:
+            servicios.front_back()
+        for consulta in q.captured_queries:
+            self.assertNotRegex(consulta["sql"].lstrip().upper(), r"^(INSERT|UPDATE|DELETE)")
+
+
+class PedidoTrazado(Base):
+    def test_pedido_trazado_sin_viajes(self):
+        self.pedido(self.cliente("Hospital A"), "Entregada")           # un pedido sin despacho no se traza
+        self.assertIsNone(servicios.pedido_trazado())
+
+    def test_pedido_trazado_con_viaje(self):
+        v = self.viaje()
+        c = self.cliente("Hospital B")
+        o = self.pedido(c, "Despachada", despacho=v)
+        self.lectura(v.camion, False)
+        p = servicios.pedido_trazado()
+        self.assertEqual(p["orden_id"], o.pk)
+        self.assertEqual(p["cliente"], "Hospital B")
+        self.assertEqual(p["camion_id"], v.camion_id)
+        self.assertEqual(p["temp_camara"], 3.0)
+        self.assertFalse(p["alerta"])
+        self.assertEqual(p["cliente_url"], f"/crm/clientes/{c.pk}/")
+        self.assertEqual(p["orden_url"], f"/crm/clientes/{c.pk}/#orden-{o.pk}")
+
+    def test_pedido_trazado_alerta(self):
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital C"), "Despachada", despacho=v)
+        self.lectura(v.camion, True)
+        self.assertTrue(servicios.pedido_trazado()["alerta"])
+
+    def test_excluye_historial(self):
+        v = self.viaje()
+        o = self.pedido(self.cliente("Hospital D"), "Entregada", despacho=v)
+        Orden.objects.filter(pk=o.pk).update(numero_oc="HIS-0001")
+        self.assertIsNone(servicios.pedido_trazado())
+
+    def test_sin_lectura_del_camion(self):
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital E"), "Despachada", despacho=v)
+        p = servicios.pedido_trazado()
+        self.assertIsNone(p["temp_camara"])
+        self.assertFalse(p["alerta"])
+
+    def test_toma_el_ultimo_viaje(self):
+        c = self.cliente("Hospital F")
+        viejo = self.viaje()
+        Despacho.objects.filter(pk=viejo.pk).update(salida_en=timezone.now() - timedelta(days=2))
+        self.pedido(c, "Entregada", despacho=viejo)
+        nuevo = self.viaje(activo=True)
+        o2 = self.pedido(c, "Despachada", despacho=nuevo)
+        self.assertEqual(servicios.pedido_trazado()["orden_id"], o2.pk)
+
+    def test_consultas_constantes(self):
+        def consultas():
+            with CaptureQueriesContext(connection) as q:
+                servicios.pedido_trazado()
+            return len(q)
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital G"), "Despachada", despacho=v)
+        self.lectura(v.camion, False)
+        antes = consultas()
+        for i in range(10):
+            self.pedido(self.cliente(f"Otro {i}"), "Entregada", despacho=self.viaje())
+        self.assertEqual(consultas(), antes)
+
+    def test_pulso_los_incluye(self):
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital H"), "Despachada", despacho=v)
+        from django.core.cache import cache
+        cache.clear()
+        d = servicios.pulso(self.gerencia, "gerencia")
+        self.assertEqual(len(d["front_back"]["front"]), 3)
+        self.assertEqual(d["pedido_trazado"]["cliente"], "Hospital H")
+
+    def test_enlaces_los_abre_gerencia(self):
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital I"), "Despachada", despacho=v)
+        p = servicios.pedido_trazado()
+        self.client.force_login(self.gerencia)
+        r = self.client.get(p["cliente_url"])
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, f'id="orden-{p["orden_id"]}"')

@@ -82,8 +82,16 @@
   <div class="torre-aparte" id="torre-aparte"></div>
   <p class="sub" id="torre-b2c"></p>
 
-  {# 8.6 Front-Office y Back-Office: llega en la Tarea 9; vacío y oculto mientras pulso.front_back sea null #}
-  <div id="torre-front-back" hidden></div>
+  {# 8.6 Front-Office y Back-Office: dos columnas iguales unidas por la base, y un pedido trazado de punta a punta #}
+  <div id="torre-front-back" hidden>
+    <div class="seccion"><h2>Front-Office y Back-Office</h2></div>
+    <div class="torre-fb">
+      <section class="torre-lado" aria-labelledby="fb-front"><h3 id="fb-front">Front-Office</h3><ul id="fb-front-lista"></ul></section>
+      <div class="torre-union" aria-hidden="true"><span>Una sola base de datos</span></div>
+      <section class="torre-lado" aria-labelledby="fb-back"><h3 id="fb-back">Back-Office</h3><ul id="fb-back-lista"></ul></section>
+    </div>
+    <section class="tarjeta-ui torre-traza" aria-labelledby="fb-traza"><h3 id="fb-traza">Un pedido, de punta a punta</h3><div id="torre-traza"></div></section>
+  </div>
 
   {# 8.7 Cumplimiento de la rúbrica #}
   <div class="seccion" id="rubrica"><h2>Cumplimiento de la rúbrica, Hito 2</h2></div>

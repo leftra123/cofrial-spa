@@ -3,6 +3,7 @@
 Regla común: ante una entrada hostil o inexistente la respuesta es siempre controlada (302 al acceso, 400/403/404/405/429),
 nunca un 500, nunca una traza y nunca un dato de otra cuenta.
 """
+import html
 import re
 from unittest import mock
 
@@ -16,7 +17,8 @@ from django.urls import get_resolver
 from catalogo.models import Producto
 from clientes.models import Cliente
 from crm.models import Prospecto, Requerimiento
-from flota.models import Telemetria
+from flota import servicios as flota_servicios
+from flota.models import Camion, Telemetria
 from pedidos import servicios as s
 
 CLAVE = "demo-cofrial-2026"
@@ -414,12 +416,41 @@ class ListasDeParadasTests(BaseSeguridad):
             # Solo se admite vaciar un contenedor o poner el fragmento que el servidor ya escapó (la caja del despacho automático).
             self.assertLessEqual(set(re.findall(r"innerHTML\s*=\s*([^;]+);", codigo)), {'""', "html"}, plantilla)
 
-    def test_los_popups_con_datos_del_cliente_son_texto(self):
-        for plantilla in ("flota/panel", "flota/despacho", "pedidos/detalle"):
-            codigo = (settings.BASE_DIR / "templates" / f"{plantilla}.html").read_text(encoding="utf-8")
-            for contenido in re.findall(r"bindPopup\(([^;]*)\);", codigo):
-                if "cliente" in contenido or "direccion" in contenido:
-                    self.assertTrue(contenido.startswith("CofrialMapa.popupTexto("), f"{plantilla}: {contenido}")
+    def test_los_popups_con_datos_variables_son_texto(self):
+        # Leaflet interpreta como HTML el texto de un popup. Solo se admite el nombre de la base, que es una constante de settings.
+        for plantilla in (settings.BASE_DIR / "templates").rglob("*.html"):
+            for contenido in re.findall(r"bindPopup\(([^;]*)\)", plantilla.read_text(encoding="utf-8")):
+                if contenido != "d.base.nombre":
+                    self.assertTrue(contenido.startswith("CofrialMapa.popupTexto("), f"{plantilla.name}: {contenido}")
+
+    def test_la_etiqueta_del_camion_se_escapa_en_el_mapa(self):
+        codigo = (settings.BASE_DIR / "static" / "js" / "mapa.js").read_text(encoding="utf-8")
+        self.assertRegex(codigo, r"function esc\(")
+        self.assertIn("""'<b class="pin-etq">' + esc(etq) + "</b>\"""", codigo)
+
+    def test_un_id_de_camion_no_rompe_la_confirmacion_de_cerrar_viaje(self):
+        # Dentro de onsubmit el navegador decodifica &#x27; antes de leer el JavaScript: el autoescape de HTML no alcanza.
+        hostil = "'+(window.b=1)+'"
+        camion = Camion.objects.get(pk="CAM-03")
+        camion.pk = camion.camion_id = hostil
+        camion.patente = "XS-1"
+        camion.save(force_insert=True)
+        orden = self._pedido_hostil()
+        flota_servicios.despachar(hostil, [orden.orden_id])
+        self.client.login(username="despacho@cofrial.cl", password=CLAVE)
+        contenido = self.client.get("/flota/").content.decode()
+        confirmaciones = [html.unescape(x) for x in re.findall(r'onsubmit="([^"]*)"', contenido)]
+        self.assertTrue(any("\\u0027" in x for x in confirmaciones), "falta la confirmación del viaje hostil")
+        self.assertFalse(any(hostil in x for x in confirmaciones))
+
+    def test_las_variables_en_manejadores_de_eventos_van_con_escapejs(self):
+        # Valores que siempre son números: el resto debe pasar por escapejs.
+        numeros = {"x.viaje.despacho_id", "auto.max_viajes_a_mano"}
+        for plantilla in (settings.BASE_DIR / "templates").rglob("*.html"):
+            for atributo in re.findall(r"""\son[a-z]+="([^"]*\{\{[^"]*)\"""", plantilla.read_text(encoding="utf-8")):
+                for variable in re.findall(r"\{\{\s*(.*?)\s*\}\}", atributo):
+                    if variable not in numeros:
+                        self.assertIn("|escapejs", variable, f"{plantilla.name}: {variable}")
 
     def test_la_fila_de_una_parada_usa_solo_texto(self):
         codigo = (settings.BASE_DIR / "static" / "js" / "mapa.js").read_text(encoding="utf-8")

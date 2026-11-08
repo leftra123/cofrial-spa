@@ -291,6 +291,8 @@ Reproducido en un stack local: un cliente registrado con `<img src=x onerror=…
 
 - **Causa:** `json_script` protege el paso del dato a la página, no lo que se haga después. Las listas concatenaban el nombre y la dirección en `innerHTML` e `insertAdjacentHTML`, y `bindPopup` de Leaflet interpreta como HTML el texto que recibe.
 - **Decisión:** `CofrialMapa.filaParada` y `CofrialMapa.popupTexto` arman filas y popups con `textContent` y nodos del DOM. Se corrige al mostrar el dato y no al registrarlo: un nombre con `<` o `&` es válido y se guarda tal como lo escribió el cliente.
+- **Auditoría del resto de la app:** una revisión independiente no encontró otro camino para un usuario sin privilegios. La tabla de Grafana con el nombre del cliente se probó en vivo y muestra el texto literal. Sí aparecieron tres sumideros con `camion_id`, que con texto libre solo escribe un superusuario en `/admin/`: la etiqueta del mapa (ahora `esc` en `mapa.js`), los popups del camión (`popupTexto`) y el `onsubmit` de cerrar viaje (`escapejs`, porque el navegador decodifica las entidades antes de leer el JavaScript).
+- **Sin validador en `camion_id`:** con los sumideros corregidos no hace falta, y evita una migración a días de la defensa.
 - **Regla:** todo texto que venga de un usuario entra al DOM con `textContent`, nunca concatenado en HTML. `innerHTML` queda para texto fijo y para fragmentos que Django ya escapó.
 - **Pruebas:** `ListasDeParadasTests` (`web/cofrial/tests_seguridad.py`) revisa el escape y vigila el código. La imagen de la suite no trae navegador, así que la ejecución se comprobó aparte con Chromium, antes y después del cambio.
 

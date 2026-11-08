@@ -1,6 +1,13 @@
 /* Mapa minimalista con OpenStreetMap (teselas estándar, atenuadas con CSS para que resalten las rutas) y rutas con OSRM. Ninguno pide cuenta ni clave.
    Si OSRM no responde, el mapa sigue mostrando los puntos y se dibuja una línea recta entre ellos. */
 window.CofrialMapa = (function () {
+  /* Escapa un texto para ponerlo como contenido de un elemento dentro de un trozo de HTML. Fuera de eso (atributos, popups, listas) usar nodos y textContent. */
+  function esc(texto) {
+    var d = document.createElement("div");
+    d.textContent = texto;
+    return d.innerHTML;
+  }
+
   var OSRM = "https://router.project-osrm.org";
   /* Mosaicos: vienen de las variables de entorno MAP_TILE_* (settings.MAPA_TILES) a través de la plantilla; por defecto, OpenStreetMap.
      La atribución del proveedor se muestra siempre en el mapa (control de atribución de Leaflet). */
@@ -95,7 +102,7 @@ window.CofrialMapa = (function () {
     var cajaH = med.imgH + etqH;
     /* PNG de 512×320: <img> + reglas globales lo pintaban casi a tamaño real; fondo en caja fija = escala de mapa */
     var html = '<span class="pin-camion-graf" role="presentation" aria-hidden="true" style="width:' + med.w + "px;height:" + med.imgH + "px;background-image:url('" + url + "')\"></span>";
-    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + etq + "</b>";
+    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + esc(etq) + "</b>";
     return L.divIcon({
       className: "pin-camion" + (alerta ? " alerta" : ""),
       iconSize: [med.w, cajaH],
@@ -156,7 +163,7 @@ window.CofrialMapa = (function () {
     return li;
   }
 
-  /* Contenido de un popup con datos del cliente. Leaflet interpreta un texto como HTML; un nodo lo deja tal cual. Una línea por cada texto. */
+  /* Contenido de un popup con datos variables. Leaflet interpreta un texto como HTML; un nodo lo deja tal cual. Una línea por cada texto. */
   function popupTexto(lineas) {
     var caja = document.createElement("div");
     lineas.forEach(function (linea) {

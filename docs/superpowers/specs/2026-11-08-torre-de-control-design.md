@@ -71,7 +71,7 @@ Banda superior con el indicador «En vivo» y dos o tres frases redactadas por r
 
 **Cifras de riesgo [propuesta].** La Lectura usa solo el estado actual: camiones cuya última lectura trae alerta y pedidos a bordo sin entregar. Por eso puede decir «sin novedades». La sección «Ahora» muestra además «Ventas en riesgo (histórico)», con la misma definición que Grafana, para que ambas cifras coincidan si el profesor las compara. Las lecturas forzadas desde `/demo/` cuentan como alerta, igual que en Grafana, pero la Lectura agrega «simulación en curso» mientras existan.
 
-Actualización: sondeo cada 5 s a `/torre/pulso/` (JSON), igual que `/flota/`, con caché de 4 s en el servidor y pausa con la pestaña oculta. Si el sondeo falla, se muestra «Sin conexión desde hh:mm:ss» y las evidencias dejan de verse en verde.
+Actualización: sondeo cada 5 s a `/torre/pulso/` (JSON), igual que `/flota/`, con caché de 5 s en el servidor y pausa con la pestaña oculta. Si el sondeo falla, se muestra «Sin conexión desde hh:mm:ss» y las evidencias dejan de verse en verde.
 
 ### 8.2 Mapa de la macrozona sur
 
@@ -125,7 +125,7 @@ Dos columnas iguales, unidas por «Una sola base de datos»:
 - Front-Office: E-commerce, CRM, IA.
 - Back-Office: AWS, IoT, BI.
 
-Cada componente muestra un dato vivo y un enlace a su pantalla. Debajo, **un pedido trazado de punta a punta**: el último con despacho, con orden web → cliente en CRM → camión → última temperatura → alerta sí o no. Es la prueba concreta de que ambos lados comparten datos. Sin un pedido así, lo dice.
+Cada componente muestra un dato vivo y un enlace a su pantalla. Debajo, **un pedido trazado de punta a punta**: el último no cancelado cuyo viaje ya salió (nunca `HIS-`; sí un `OC-REG-…`, porque su despacho y su telemetría son reales), con orden web → cliente en CRM → camión → hora de salida → última lectura del camión → alerta sí o no. Una compra aparece aquí cuando se despacha, no antes. Es la prueba concreta de que ambos lados comparten datos. Sin un pedido así, lo dice.
 
 ### 8.7 Cumplimiento de la rúbrica
 
@@ -134,10 +134,12 @@ Una fila por cada dimensión de `informe/00-pauta-y-rubrica.md`: exigencia, evid
 | Dimensión | Evidencia en vivo | En verde solo si |
 |---|---|---|
 | D1 AWS | Motor y versión de la base, host terminado en `.rds.amazonaws.com` (sin mostrarlo completo), tiempo encendida, instancia EC2 | Consulta correcta y host de RDS |
-| D2 E-commerce y CRM | Productos activos, último pedido por canal, prospectos abiertos | Hay productos y pedidos de ambos canales |
+| D2 E-commerce y CRM | Productos activos, último pedido por canal, prospectos abiertos | Hay productos y un pedido real de cada canal: ni cancelado, ni `HIS-`, ni sembrado por la carga (`REFERENCIAS_SEMBRADAS`) |
 | D3 IoT | Última fila con los nombres exactos (`camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`), su antigüedad, camiones reportando en 2 min | Lectura de menos de 2 min, no forzada desde `/demo/` |
-| D4 BI | Ventas por canal cruzadas con alertas de 7 días, con la ventana a la vista; Grafana responde desde el servidor | Grafana responde y hay al menos una venta real (no `HIS-`) en la ventana; sin exigir alertas: que no haya rupturas también es un resultado válido |
-| D5 IA | Última clasificación de IA (categoría, confianza, hora), proveedores configurados sin mostrar claves, `ANTHROPIC_API_KEY` vacía | Hay clasificación y no hay IA de pago activa |
+| D4 BI | Ventas por canal cruzadas con alertas de 7 días, con la ventana a la vista; Grafana responde desde el servidor | Grafana responde y hay al menos una venta real (ni `HIS-` ni sembrada por la carga) en la ventana; sin exigir alertas: que no haya rupturas también es un resultado válido |
+| D5 IA | Última clasificación de IA (categoría, confianza, hora), proveedores configurados sin mostrar claves, `ANTHROPIC_API_KEY` vacía | Hay clasificación, hay un proveedor gratuito configurado y no hay IA de pago activa |
+
+**Qué es una venta real.** `REFERENCIAS_SEMBRADAS` (`web/clientes/muestra.py`) es la lista exacta de `numero_oc` que crea la carga de demostración (`cargar_demo` y `regionales`); son valores exactos y no un prefijo, salvo `HIS-`, porque un cliente podría escribir una OC parecida. Quedan fuera de D2, D4 y `ventas_24h`.
 
 Tres estados: **Verificado**, **Sin evidencia ahora** y **No se pudo comprobar**. Se distinguen con texto e ícono. Nada genera pedidos por sí solo, así que la Lectura dirá «sin ventas en 24 h» hasta que alguien compre; el guion mantiene la compra en vivo para ver el cambio. La defensa en vivo de D5 se anota como responsabilidad del equipo: la pantalla no la puede comprobar.
 

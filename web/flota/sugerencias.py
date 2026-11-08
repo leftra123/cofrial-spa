@@ -21,6 +21,7 @@ from .vigente import ultimas_vigentes
 
 MAX_PARADAS = 6           # pedidos por viaje sugerido
 CACHE_SEG = 300           # la misma situación no vuelve a consultar a la IA durante 5 minutos
+MAX_VIAJES_EN_MENU = 3    # viajes con enlace propio en el contador del menú; el resto se arma desde «Armar despacho»
 
 
 def _nota(c, t, alerta, reciente):
@@ -152,7 +153,7 @@ def texto_base(viajes, resto):
     frases = []
     for v in viajes:
         n = len(v["pedidos"])
-        frases.append(f"{n} pedido{'s' if n != 1 else ''} {_de_rango(v['rango'], n)} esperan despacho (el más antiguo, hace {_espera(v['espera_max_min'])}). "
+        frases.append(f"{n} pedido{'s' if n != 1 else ''} {_de_rango(v['rango'], n)} espera{'n' if n != 1 else ''} despacho (el más antiguo, hace {_espera(v['espera_max_min'])}). "
                       f"{v['camion']} está libre y su rango sirve.")
     for s in resto["sin_camion"]:
         frases.append(f"Hay {s['pedidos']} pedido(s) {s['rango'].lower()}(s) sin camión libre de ese rango.")
@@ -201,3 +202,14 @@ def redactar(viajes, resto):
 def con_enlaces(viajes):
     """Cada viaje con el enlace que abre «Armar despacho» con el camión y los pedidos ya marcados."""
     return [{**v, "enlace": f"/flota/despachar/?camion={v['camion']}&ordenes={','.join(str(p['orden']) for p in v['pedidos'])}"} for v in viajes]
+
+
+def acciones_del_menu(viajes, puede_armar):
+    """A dónde lleva el contador del menú. Gerencia consulta y no arma viajes: solo recibe el enlace a Flota."""
+    acciones = []
+    if puede_armar:
+        for v in con_enlaces(viajes[:MAX_VIAJES_EN_MENU]):
+            n = len(v["pedidos"])
+            acciones.append({"texto": f"Armar despacho con {v['camion']} ({n} pedido{'s' if n != 1 else ''})", "url": v["enlace"]})
+        acciones.append({"texto": "Armar despacho", "url": "/flota/despachar/"})
+    return acciones + [{"texto": "Ver la sugerencia en Flota", "url": "/flota/"}]

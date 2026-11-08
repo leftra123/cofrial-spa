@@ -6,6 +6,7 @@ from . import escenarios
 urlpatterns = [
     path("", views.panel, name="flota"),
     path("sugerencias/", views.sugerencias_despacho, name="sugerencias_despacho"),
+    path("por-despachar/", views.por_despachar, name="por_despachar"),
     path("despacho-auto/", views.despacho_auto, name="despacho_auto"),
     path("despacho-auto/correr/", views.correr_despacho_auto, name="correr_despacho_auto"),
     path("despachar/", views.despachar, name="despachar"),

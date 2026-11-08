@@ -108,7 +108,7 @@ def actualizar(request, cliente):
 def direccion_nueva(request, cliente):
     """CU-04, A2: el cliente agrega otra dirección desde el carrito (una empresa con varias sucursales, un particular que se mudó)."""
     try:
-        d = s.agregar_direccion(cliente, request.POST.get("calle_numero", ""), request.POST.get("comuna"))
+        d = s.agregar_direccion(cliente, request.POST.get("calle_numero", ""), request.POST.get("comuna"), request.POST.get("lat"), request.POST.get("long"))
         messages.success(request, f"Agregamos «{d}» a tus direcciones.")
         if d.lat is None:
             messages.warning(request, "No pudimos ubicar esa dirección en el mapa. Puedes comprar igual; la revisaremos antes de despachar.")
@@ -302,7 +302,8 @@ def api_avisos(request):
     cliente = s.cliente_de(request.user) if request.user.is_authenticated else None
     if cliente is None:
         return JsonResponse({"detail": "Inicia sesión con una cuenta de cliente."}, status=403)
-    return JsonResponse({"avisos": s.avisos_de_llegada(cliente)}, json_dumps_params={"ensure_ascii": False})
+    from catalogo import avisos as avisos_stock
+    return JsonResponse({"avisos": s.avisos_de_llegada(cliente), "stock_n": avisos_stock.cuantos_disponibles(cliente)}, json_dumps_params={"ensure_ascii": False})
 
 
 def _rechazos_del_formulario(post):

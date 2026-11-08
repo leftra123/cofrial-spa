@@ -52,7 +52,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/operacion/datos/x/", "/operacion/datos/x/nuevo/", "/operacion/datos/x/1/",
                     "/pedidos/1/documentos/1/", "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
-                    "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
+                    "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/", "/flota/por-despachar/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
                     "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/", "/torre/", "/torre/pulso/"]
     PRIVADAS_POST = ["/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
@@ -79,7 +79,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                     self.assertTrue(r["Location"].startswith("/cuenta/entrar/"), f"{url} -> {r['Location']}")
 
     def test_la_api_no_responde_datos_sin_sesion(self):
-        for url in ("/api/flota/", "/api/pedidos/", "/api/pedidos/1/seguimiento/"):
+        for url in ("/api/flota/", "/api/pedidos/", "/api/pedidos/1/seguimiento/", "/api/avisos-equipo/"):
             with self.subTest(url=url):
                 r = self.anonimo().get(url)
                 self.assertEqual(r.status_code, 403)

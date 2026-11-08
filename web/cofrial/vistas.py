@@ -8,7 +8,9 @@ from django import forms
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, PasswordResetView
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_GET
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -137,3 +139,14 @@ def csrf_fallo(request, reason=""):
     if not url_has_allowed_host_and_scheme(atras, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
         atras = "/"
     return render(request, "403_csrf.html", {"volver": atras}, status=403)
+
+
+@require_GET
+def api_avisos_equipo(request):
+    """Avisos del menú interno para el rol de quien inició sesión; igual que `/api/avisos/`, responde 403 en JSON para no redirigir a una consulta periódica."""
+    from crm import servicios as crm
+    from . import avisos_equipo
+    rol = crm.rol(request.user) if request.user.is_authenticated else None
+    if rol is None:
+        return JsonResponse({"detail": "Inicia sesión con una cuenta del equipo."}, status=403)
+    return JsonResponse({"avisos": avisos_equipo.avisos_de(request.user, rol)}, json_dumps_params={"ensure_ascii": False})

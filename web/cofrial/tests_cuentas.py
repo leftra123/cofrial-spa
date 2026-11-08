@@ -132,3 +132,35 @@ class RegistroEmpresaTests(TestCase):
         self.assertFalse(Cliente.objects.filter(pk=c.pk).exists())
         self.assertFalse(get_user_model().objects.filter(username="compras@hotelvillarrica.test").exists())
         self.assertContains(self.client.post(f"/crm/solicitudes/{c.pk}/rechazar/", follow=True), "ya no está pendiente")
+
+
+class PantallaEntrarTests(TestCase):
+    """Entrar sin Tab ni toques: Enter pasa del usuario a la clave y, en la clave, envía."""
+
+    def test_el_formulario_avanza_con_enter_y_el_teclado_rotula_siguiente_e_ir(self):
+        html = self.client.get("/cuenta/entrar/").content.decode()
+        self.assertRegex(html, r"<form[^>]*\bdata-enter-avanza\b")
+        usuario = re.search(r"<input[^>]*name=\"username\"[^>]*>", html).group(0)
+        clave = re.search(r"<input[^>]*name=\"password\"[^>]*>", html).group(0)
+        self.assertIn('enterkeyhint="next"', usuario)
+        self.assertIn('autocapitalize="none"', usuario)
+        self.assertIn('enterkeyhint="go"', clave)
+        self.assertLess(html.index('name="username"'), html.index('name="password"'))   # el orden del DOM es el orden de avance
+
+    def test_el_script_compartido_trae_el_avance_con_enter(self):
+        from pathlib import Path
+        from django.conf import settings
+        js = (Path(settings.BASE_DIR) / "static" / "js" / "estados.js").read_text(encoding="utf-8")
+        self.assertIn("data-enter-avanza", js)
+        self.assertIn("isComposing", js)
+
+    def test_enter_en_un_campo_vacio_no_pasa_al_siguiente_sin_avisar(self):
+        """Revisión del 8-nov-2026: con el usuario vacío, Enter movía el foco a la clave sin decir nada. Ahora envía y el navegador marca el campo
+        que falta; y si el gestor de claves ya llenó todo, Enter envía de una vez (sin un Enter de más)."""
+        from pathlib import Path
+        from django.conf import settings
+        js = (Path(settings.BASE_DIR) / "static" / "js" / "estados.js").read_text(encoding="utf-8")
+        self.assertIn("!c.value) return", js)                                     # campo vacío: no avanza
+        self.assertIn("filter(function (x) { return !x.value; })[0]", js)        # avanza al que falta, no al siguiente a ciegas
+        self.assertIn("if (!falta) return;", js)                                  # nada que llenar: Enter envía
+        self.assertNotIn("campos[i + 1].focus()", js)

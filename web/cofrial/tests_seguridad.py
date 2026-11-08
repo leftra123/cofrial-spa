@@ -591,6 +591,25 @@ class BarridoDeRutasTests(BaseSeguridad):
         self.assertEqual(set(codigos[self.M + 1:]), {429})
         self.assertEqual(c.get("/catalogo/").status_code, 429)         # mientras dura el bloqueo no entra a nada
 
+    def test_el_barrido_de_una_ip_no_bloquea_el_ingreso(self):
+        """La sala sale por una sola IP: si alguien prueba 60 direcciones que no existen, los demás siguen pudiendo ingresar."""
+        c = self.anonimo()
+        for i in range(self.M + 5):
+            c.get(f"/x/{i}")
+        self.assertEqual(c.get("/catalogo/").status_code, 429)             # el resto del sitio sigue cortado
+        self.assertEqual(c.get("/cuenta/entrar/").status_code, 200)
+        self.assertEqual(c.get("/admin/login/").status_code, 200)
+        r = self.anonimo().post("/cuenta/entrar/", {"username": "ana@correo.test", "password": CLAVE})
+        self.assertEqual(r.status_code, 302)                               # y la clave correcta entra
+
+    def test_el_barrido_no_le_quita_al_ingreso_su_limite_de_claves_malas(self):
+        c = self.anonimo()
+        for i in range(self.M + 5):
+            c.get(f"/x/{i}")
+        for _ in range(settings.ACCESO_MAX_FALLOS_USUARIO):
+            self.assertEqual(c.post("/cuenta/entrar/", {"username": "ana@correo.test", "password": "mala"}).status_code, 200)
+        self.assertEqual(c.post("/cuenta/entrar/", {"username": "ana@correo.test", "password": CLAVE}).status_code, 429)
+
     def test_pasada_la_ventana_la_ip_vuelve_a_entrar(self):
         c = self.anonimo()
         for i in range(self.M + 5):

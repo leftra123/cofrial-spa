@@ -144,3 +144,16 @@ class SoloElAdministradorOpera(Base):
         u = get_user_model().objects.get(username="vendedora@cofrial.cl")
         u.user_permissions.set(Permission.objects.filter(codename__in=("change_producto", "add_user", "change_user")))
         self.assertEqual(self.entrar("vendedora@cofrial.cl").get("/operacion/stock/").status_code, 403)
+
+
+class TextoDelAccesoNegadoTests(Base):
+    """Revisión de usuarios del 8-nov-2026: un cliente que escribía /flota/ leía «esta sección del CRM»."""
+
+    def test_el_403_nombra_la_seccion_a_la_que_se_intento_entrar(self):
+        c = self.entrar("ana@correo.test")
+        flota_403 = c.get("/flota/")
+        self.assertEqual(flota_403.status_code, 403)
+        self.assertContains(flota_403, "acceso a la flota", status_code=403)
+        self.assertNotContains(flota_403, "CRM", status_code=403)
+        crm_403 = c.get("/crm/")
+        self.assertContains(crm_403, "acceso al CRM", status_code=403)

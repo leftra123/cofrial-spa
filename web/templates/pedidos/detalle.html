@@ -143,7 +143,7 @@
   </div>
   <div class="tarjeta-ui">
     <h2>Temperatura de la cámara</h2>
-    <div class="temp-grande"><b id="seg-temp" class="{% if not seg.ultima %}skeleton{% endif %}">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}00,0{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}alerta{% elif seg.ultima %}entregado{% else %}cancelado{% endif %}" id="seg-estado" role="status">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% elif seg.ultima %}Dentro de rango{% else %}Sin lecturas{% endif %}</span></div>
+    <div class="temp-grande"><b id="seg-temp">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}–{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}alerta{% elif seg.ultima %}entregado{% else %}cancelado{% endif %}" id="seg-estado" role="status">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% elif seg.ultima %}Dentro de rango{% else %}Sin lecturas{% endif %}</span></div>
     <p class="sub" style="color:var(--texto-3)">Rango de conservación: {{ seg.banda.min|floatformat:"-1" }} a {{ seg.banda.max|floatformat:"-1" }} °C ({{ seg.banda.nombre }})</p>
     <div class="grafico"><svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora" hidden></svg><span class="gy" id="spark-ymax" hidden></span><span class="gy" id="spark-ymin" hidden></span></div>
     <div class="grafico-x" id="spark-x" hidden><span id="spark-t0"></span><span id="spark-t1"></span></div>

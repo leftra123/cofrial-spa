@@ -124,7 +124,7 @@ class SiembraRegionalTests(Base):
         self.assertEqual(len(por_despachar), len(regionales.PEDIDOS))
         self.assertEqual(servicios.rangos_de(por_despachar["OC-REG-008"]), ["Congelado"])
         with self.assertRaises(pedidos.ErrorDeNegocio):
-            servicios.despachar("CAM-05", [por_despachar["OC-REG-008"].pk])                # CAM-05 es refrigerado: la regla no cambia
+            servicios.despachar("CAM-04", [por_despachar["OC-REG-008"].pk])                # CAM-04 es solo refrigerado: la regla no cambia
 
     def test_las_cuentas_regionales_entran_y_estan_en_la_hoja(self):
         for usuario in (ANGOL_USUARIO, "abastecimiento@hospitalvillarrica.test", "abastecimiento@hospitalpucon.test"):

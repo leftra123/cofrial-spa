@@ -137,7 +137,7 @@ def despachar(request):
     opciones = sugerencias.opciones_camion()         # del mejor al peor: el navegador toma el primero compatible con lo que se marque
     camion_sugerido = request.GET.get("camion", "")
     mapa = {"base": settings.BASE_LOGISTICA, "camion_fijado": bool(camion_sugerido),
-            "camiones": [{k: c[k] for k in ("id", "rango", "apto", "nota")} for c in opciones],
+            "camiones": [{k: c[k] for k in ("id", "rango", "rangos", "apto", "nota")} for c in opciones],
             "rangos": {p["o"].orden_id: p["rangos"] for p in pedidos},
             "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
                                           "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}

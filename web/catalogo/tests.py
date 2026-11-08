@@ -1,5 +1,7 @@
 from io import StringIO
 from unittest.mock import patch
+from pathlib import Path
+
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -299,7 +301,7 @@ class EtiquetaTemperaturaTests(TestCase):
 
 
 class MosaicosDelMapa(TestCase):
-    """OpenStreetMap bloquea («403 Access blocked») las peticiones de mosaicos sin Referer: la web debe enviarlo y dejar el proveedor configurable."""
+    """El mapa base es una URL de estilo de MapLibre (OpenFreeMap por defecto): debe llegar a la página con su atribución y poder cambiarse por configuración."""
 
     def test_la_politica_de_referer_envia_el_origen_a_otros_sitios(self):
         self.assertEqual(self.client.get("/").headers["Referrer-Policy"], "strict-origin-when-cross-origin")
@@ -309,16 +311,72 @@ class MosaicosDelMapa(TestCase):
         import re
         html = self.client.get("/").content.decode()
         cfg = json.loads(re.search(r'<script id="mapa-tiles" type="application/json">(.*?)</script>', html, re.S).group(1))
-        self.assertEqual(cfg["url"], "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
-        self.assertIn("OpenStreetMap", cfg["attribution"])
+        self.assertEqual(cfg["estilo"], "https://tiles.openfreemap.org/styles/dark")
+        for fuente in ("OpenFreeMap", "OpenMapTiles", "OpenStreetMap"):
+            self.assertIn(fuente, cfg["attribution"])
 
     def test_el_proveedor_se_puede_cambiar_por_configuracion(self):
         import json
         import re
         from django.test import override_settings
-        with override_settings(MAPA_TILES={"url": "https://proveedor.test/{z}/{x}/{y}.png?key=K", "attribution": "&copy; OSM &copy; Proveedor", "maxZoom": 18, "subdomains": "abc"}):
+        with override_settings(MAPA_TILES={"estilo": "https://proveedor.test/estilo.json?key=K", "attribution": "&copy; OSM &copy; Proveedor", "maxZoom": 18}):
             html = self.client.get("/").content.decode()
         self.assertIn("proveedor.test", html)
+
+
+class MapaConMapLibre(TestCase):
+    """MapLibre va autoalojado y las plantillas solo usan CofrialMapa: nada de Leaflet ni de recursos de terceros salvo el estilo y sus teselas."""
+    WEB = Path(__file__).resolve().parent.parent
+
+    def test_las_pantallas_con_mapa_cargan_maplibre_y_no_leaflet(self):
+        for plantilla in ("flota/panel.html", "flota/despacho.html", "pedidos/detalle.html"):
+            texto = (self.WEB / "templates" / plantilla).read_text()
+            self.assertIn("vendor/maplibre/maplibre-gl.js", texto)
+            self.assertIn("vendor/maplibre/maplibre-gl.css", texto)
+            self.assertNotIn("leaflet", texto.lower())
+            self.assertNotIn("L.marker", texto)
+
+    def test_maplibre_no_apunta_a_un_mapa_de_codigo_que_no_existe(self):
+        """Con la huella de WhiteNoise, un sourceMappingURL a un archivo ausente hace fallar collectstatic."""
+        for archivo in ("maplibre-gl.js", "maplibre-gl.css"):
+            self.assertNotIn("sourceMappingURL", (self.WEB / "static" / "vendor" / "maplibre" / archivo).read_text())
+
+    def test_ida_y_vuelta_se_distinguen_por_color_y_por_trazo(self):
+        """Un par apto para daltonismo, línea continua y a trazos, flechas, y botones que filtran cada tramo."""
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        for pieza in ('COLOR_IDA = "#56B4E9"', 'COLOR_VUELTA = "#FFB000"', '"line-dasharray"] = [2, 1.6]', '"symbol-placement": "line"', "function partirRuta(", '"line-offset"'):
+            self.assertIn(pieza, js)
+        for plantilla, filtro in (("flota/panel.html", "filtros-flota"), ("flota/despacho.html", "filtros-despacho")):
+            self.assertIn(f'id="{filtro}"', (self.WEB / "templates" / plantilla).read_text())
+        self.assertIn("aria-pressed", (self.WEB / "static" / "js" / "leyenda.js").read_text())
+
+    def test_las_listas_y_popups_de_paradas_llevan_el_cliente_como_texto(self):
+        for plantilla in ("flota/panel.html", "flota/despacho.html"):
+            texto = (self.WEB / "templates" / plantilla).read_text()
+            self.assertIn("CofrialMapa.filaParada(", texto)
+            self.assertNotIn('"<li><b>" + p.cliente', texto)
+            self.assertNotIn("insertAdjacentHTML", texto)
+
+    def test_lo_nuevo_del_mapa_no_interpreta_html_de_datos_variables(self):
+        """Un nombre como <img src=x onerror=...> debe verse como texto en popups, marcadores, leyenda y filtros."""
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        self.assertNotIn(".setHTML(", js)                                       # los popups entran por setDOMContent con textContent
+        self.assertIn("setDOMContent(contenidoPopup(", js)
+        self.assertRegex(js, r"function contenidoPopup[^}]*?textContent = linea")
+        for pieza in ("esc(texto)", "esc(etq)", "esc(etiqueta)"):
+            self.assertIn(pieza, js)
+        leyenda = (self.WEB / "static" / "js" / "leyenda.js").read_text()
+        self.assertIn("new Option(c.texto, c.id)", leyenda)                     # el selector de camión no arma HTML
+        self.assertNotIn("c.texto +", leyenda)
+
+    def test_el_comprador_no_recibe_la_vuelta_del_viaje(self):
+        """La vuelta pasaría por otras entregas: el seguimiento solo dibuja el tramo que entrega ruta_del_pedido."""
+        self.assertNotIn("partirRuta", (self.WEB / "templates" / "pedidos" / "detalle.html").read_text())
+
+    def test_el_mapa_tiene_respaldo_sin_red_y_sin_webgl(self):
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        for pieza in ("function estiloLocal(", "function hayWebGL(", "mapa-vacio", "prefers-reduced-motion"):
+            self.assertIn(pieza, js)
 
 
 class AsistenteDeIA(TestCase):

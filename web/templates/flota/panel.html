@@ -32,9 +32,10 @@
 
 <div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
 <div class="tarjeta-ui">
+  <div class="filtros-tramo" id="filtros-flota" role="group" aria-label="Qué mostrar en el mapa"></div>
   <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
   <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
-  <p class="frio" style="margin:8px 0 0">Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino. Por defecto se ven los camiones en ruta, en la puerta, volviendo o con alerta; donde dos etiquetas chocan se oculta una, y el camión sigue ahí: acerca el mapa o tócalo para ver su código.</p>
+  <p class="frio" style="margin:8px 0 0">La ida va en línea continua azul y la vuelta a trazos ámbar; toca una ruta o elige un camión para ver solo su viaje. Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino. Por defecto se ven los camiones en ruta, en la puerta, volviendo o con alerta; donde dos etiquetas chocan se oculta una, y el camión sigue ahí: acerca el mapa o tócalo para ver su código.</p>
   <div id="rutas-sugeridas"></div>
 </div>
 
@@ -76,7 +77,7 @@
   <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}{% if not x.lectura %} sin-lectura{% endif %}" data-camion="{{ x.camion.camion_id }}"{% if not x.en_operacion %} data-guardado{% endif %}>
     <div class="vehiculo-cab">
       <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
-        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
+        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rangos_texto }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
       <div class="vehiculo-chips"><span class="chip pendiente" data-campo="sin-senal"{% if not x.sin_senal %} hidden{% endif %}>Sin señal</span>
       {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
       {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
@@ -85,7 +86,8 @@
     </div>
     {% if x.lectura %}
     <div class="mini">
-      <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
+      {% if x.camion.dos_camaras %}{% for l in x.lectura.camaras %}<div><span>Cámara {{ l.camara }}</span><b data-campo="temp-{{ l.camara }}" class="{% if l.alerta_ruptura_frio %}mal{% endif %}">{{ l.temp_camara|floatformat:1 }} °C</b></div>{% endfor %}
+      {% else %}<div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>{% endif %}
       <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
       <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div>
     </div>
@@ -101,7 +103,7 @@
 </div>
 
 {% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">
 <style>
   #vehiculos:not(.ver-base) [data-guardado] { display: none; }   /* siguen en la página y reportando; solo no ocupan pantalla */
   .base-contador { font-weight: 700; }
@@ -112,7 +114,7 @@
 </style>{% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
-<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
 <script>
@@ -132,37 +134,41 @@
     }).catch(function () {});               // sin sugerencia el panel funciona igual
   })();
 </script>
-<script>CofrialLeyenda("leyenda-flota", ["camion", "alerta", "base", "destino"]);</script>
+<script>CofrialLeyenda("leyenda-flota", ["camion", "alerta", "base", "salida", "parada", "ultima", "regreso"]);</script>
 <script>
   (function () {
     var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
-    var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
-    var enBase = {}, capaBase = L.layerGroup(), verBase = false;
-    var marcaBase = L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
-    marcaBase.bindTooltip("", {permanent: true, direction: "bottom", offset: [0, 16], className: "base-contador"});
-    function agregarCamion(c) {
-      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id, m.getZoom()), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(CofrialMapa.popupTexto([c.id + " · " + c.patente]));
-      marcas[c.id].enAlerta = c.alerta;
+    var m = CofrialMapa.crear("mapa-flota", base, 12), marcas = {}, filtros = {elegir: function () {}};
+    var rec = m.recorridos({base: base, alElegir: function (id) { filtros.elegir(id); enfocar(id); }});
+    var enBase = {}, puntosBase = m.puntos([], {color: "#94A3B8"}).mostrar(false), verBase = false;
+    function enfocar(id) {
+      rec.enfocar(id); puntosParadas.enfocar(id);
+      Object.keys(marcas).forEach(function (k) { marcas[k].el.classList.toggle("atenuado", !!id && k !== id); });
     }
+    var marcaBase = m.base(base, {titulo: d.base.nombre, popup: d.base.nombre, etiqueta: ""});
+    function agregarCamion(c) {
+      marcas[c.id] = m.camion([c.lat, c.long], {alerta: c.alerta, etiqueta: c.id, titulo: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), popup: c.id + " · " + c.patente});
+      marcas[c.id].el.addEventListener("click", function () { if (viajeDe[c.id]) { filtros.elegir(c.id); enfocar(c.id); } });
+    }
+    var viajeDe = {};
+    d.viajes.forEach(function (v) { if (v.ruta) viajeDe[v.camion] = v; });
     d.camiones.forEach(agregarCamion);
     d.en_base.forEach(function (c) { enBase[c.id] = c; });
     /* Los guardados están a metros unos de otros: como camiones con etiqueta serían una mancha. Se dibujan como puntos sin etiqueta,
        repartidos en espiral alrededor de la base (solo el dibujo; su posición real es la base). */
     function dibujarBase() {
-      var z = m.getZoom(), centro = m.project(base, z), ids = Object.keys(enBase).sort();
-      capaBase.clearLayers();
-      ids.forEach(function (id, i) {
-        var r = 30 + 7 * Math.sqrt(i), angulo = i * 2.39996;
-        L.circleMarker(m.unproject(centro.add([r * Math.cos(angulo), r * Math.sin(angulo)]), z), {radius: 5, weight: 1, color: "#fff", fillColor: "#0F172A", fillOpacity: .85})
-          .bindPopup(CofrialMapa.popupTexto([id + " · " + enBase[id].patente + " · en base"])).addTo(capaBase);
-      });
-      marcaBase.setTooltipContent(ids.length + " en base");
+      var ids = Object.keys(enBase).sort();
+      puntosBase.actualizar(ids.map(function (id, i) {
+        var r = 46 + 7 * Math.sqrt(i), angulo = i * 2.39996;
+        return {pos: base, offset: [r * Math.cos(angulo), r * Math.sin(angulo)], popup: id + " · " + enBase[id].patente + " · en base"};
+      }));
+      marcaBase.etiqueta(ids.length + " en base");
     }
     /* Etiquetas que chocan con otra o con un camión vecino se ocultan; las de alerta tienen prioridad. El camión y su popup quedan. */
-    var enCola = false;
+    function kmTexto(linea) { return CofrialMapa.largoKm(linea).toFixed(1).replace(".", ",") + " km"; }
     function choca(a, b) { return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom); }
     function ordenarEtiquetas() {
-      var caja = m.getContainer(), puestas = [], cuerpos = [], tip = caja.querySelector(".base-contador");
+      var caja = m.contenedor, puestas = [], cuerpos = [], tip = caja.querySelector(".base-contador");
       if (tip) puestas.push(tip.getBoundingClientRect());
       caja.querySelectorAll(".pin-camion").forEach(function (p) { var g = p.querySelector(".pin-camion-graf"); if (g) cuerpos.push({dueno: p, r: g.getBoundingClientRect()}); });
       var etiquetas = Array.prototype.slice.call(caja.querySelectorAll(".pin-camion .pin-etq"));
@@ -174,47 +180,62 @@
         if (!tapada) puestas.push(r);
       });
     }
-    function agendarEtiquetas() {             // dos cuadros: mapa.js separa los camiones en el primero y aquí se mide el resultado
-      if (enCola) return;
-      enCola = true;
-      requestAnimationFrame(function () { requestAnimationFrame(function () { enCola = false; ordenarEtiquetas(); }); });
-    }
-    m.on("moveend zoomend layeradd", agendarEtiquetas);
-    m.on("zoomend", dibujarBase);
+    m.al("camiones", ordenarEtiquetas);       // mapa.js avisa después de repartir los camiones: aquí se mide el resultado
     dibujarBase();
-    var todos = [base];
+    var todos = [base], paradas = [], recorridos = [], enElLugar = {}, marcaParada = {};
+    /* Dos camiones pueden ir a la misma dirección: sus pines se abren hacia los lados (solo el dibujo) para que no se tape el número de ninguno. */
+    function desplazamientoEn(p, camion) {
+      var lugar = p.lat + "," + p.long, lista = enElLugar[lugar] || (enElLugar[lugar] = []);
+      if (lista.indexOf(camion) < 0) lista.push(camion);
+      var k = lista.indexOf(camion);
+      return [(k % 2 ? 1 : -1) * Math.ceil(k / 2) * (m.contenedor.clientWidth < 500 ? 24 : 30), 0];
+    }
     d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });          // el encuadre incluye a los camiones, no solo la bodega y las paradas
     d.viajes.forEach(function (v, i) {
       if (!v.paradas.length) return;
-      var color = colores[i % colores.length];
       v.paradas.forEach(function (p) { todos.push([p.lat, p.long]); });
       if (!v.ruta) return;
       (function () {
         var r = CofrialMapa.rutaGuardada(v.ruta), lista = [];       // la MISMA polilínea que sigue el camión y que ve el cliente
-        L.polyline(r.linea, {color: color, weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(m);
+        recorridos.push({id: v.camion, ruta: v.ruta, fase: v.situacion.indexOf("volviendo") === 0 ? "vuelta" : "ida"});
+        var partes = CofrialMapa.partirRuta(v.ruta), total = v.ruta.paradas.length;
         var posicion = {}; v.ruta.paradas.forEach(function (q, k) { posicion[q.direccion_id] = k + 1; });
         v.paradas.forEach(function (p) {
           var n = posicion[p.direccion_id] || 1;                  // posición de la parada en el recorrido (la base es 0)
-          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(CofrialMapa.popupTexto([p.cliente, p.direccion]));
+          var clave = v.camion + ":" + p.direccion_id;
+          if (marcaParada[clave]) marcaParada[clave].popup.push(p.cliente, p.direccion);       // varias órdenes en la misma dirección: un solo pin
+          else paradas.push(marcaParada[clave] = {pos: [p.lat, p.long], numero: n, radio: m.contenedor.clientWidth < 500 ? 11 : 14, color: CofrialMapa.COLOR_IDA, borde: n === total ? CofrialMapa.COLOR_VUELTA : null, grupo: v.camion,
+                        offset: desplazamientoEn(p, v.camion), popup: [v.camion + " · parada " + n + " de " + total, p.cliente, p.direccion]});
           lista[n - 1] = CofrialMapa.filaParada(p.cliente, p.direccion, "(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")");
         });
         var caja = document.getElementById("rutas-sugeridas"), info = document.createElement("p"), camion = document.createElement("b"), ol = document.createElement("ol");
         info.className = "ruta-info"; ol.className = "ruta-lista";
         camion.textContent = v.camion + " · " + v.patente;
         info.appendChild(camion);
-        info.appendChild(document.createTextNode(" · " + v.situacion + ". Un solo recorrido, en este orden. " + CofrialMapa.texto(r)));
+        info.appendChild(document.createTextNode(" · " + v.situacion + ". Un solo recorrido, en este orden. " + CofrialMapa.texto(r) + (r.metros != null ? " (ida " + kmTexto(partes.ida) + ", vuelta " + kmTexto(partes.vuelta) + ")" : "")));
         lista.filter(Boolean).forEach(function (fila) { ol.appendChild(fila); });
         caja.appendChild(info); caja.appendChild(ol);
       })();
     });
-    if (todos.length > 1) m.fitBounds(todos, {padding: [36, 36], maxZoom: 15});
+    rec.poner(recorridos);
+    var puntosParadas = m.puntos(paradas);    // una sola capa para todas las paradas: con la flota en ruta serían cientos de nodos en la página
+    if (todos.length > 1) m.encuadrar(todos, {padding: 36, maxZoom: 14, animar: false});
     var puntosRutas = todos.slice();
+    filtros = CofrialLeyenda.filtros("filtros-flota", rec, {
+      camiones: recorridos.map(function (x) { return {id: x.id, texto: x.id + " · " + viajeDe[x.id].patente}; }),
+      alElegir: function (id) {
+        enfocar(id);
+        if (!id) { m.encuadrar(puntosRutas.length > 1 ? puntosRutas : [base], {padding: 40, maxZoom: 13}); return; }
+        var v = viajeDe[id];
+        m.encuadrar(v.ruta.puntos.concat(marcas[id] ? [marcas[id].latlon()] : []), {padding: 44, maxZoom: 14});
+      }
+    });
     document.getElementById("ver-flota").addEventListener("click", function () {      // toda la flota, incluidos los camiones en viajes lejanos
       var pts = [base];
-      Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].getLatLng()); });
-      m.fitBounds(pts, {padding: [30, 30], maxZoom: 15});
+      Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].latlon()); });
+      m.encuadrar(pts, {padding: 30, maxZoom: 14});
     });
-    document.getElementById("ver-rutas").addEventListener("click", function () { m.fitBounds(puntosRutas.length > 1 ? puntosRutas : [base], {padding: [40, 40], maxZoom: 14}); });
+    document.getElementById("ver-rutas").addEventListener("click", function () { m.encuadrar(puntosRutas.length > 1 ? puntosRutas : [base], {padding: 40, maxZoom: 13}); });
     var botones = document.querySelectorAll(".alternar-base"), rejilla = document.getElementById("vehiculos"), vacio = document.getElementById("vehiculos-vacio");
     function pintarControl() {
       var n = Object.keys(enBase).length;
@@ -229,7 +250,7 @@
     botones.forEach(function (b) {
       b.addEventListener("click", function () {
         verBase = !verBase;
-        if (verBase) capaBase.addTo(m); else capaBase.remove();
+        puntosBase.mostrar(verBase);
         pintarControl();
       });
     });
@@ -238,17 +259,23 @@
     window.moverCamion = function (c, lat, lon) {
       var id = c.camion_id, guardado = c.situacion === "en_base" && !c.alerta, cambio = guardado !== !!enBase[id];
       if (guardado) {
-        if (marcas[id]) { marcas[id].remove(); delete marcas[id]; }
+        if (marcas[id]) { marcas[id].quitar(); delete marcas[id]; }
+        if (viajeDe[id]) {                     // volvió a la base: su recorrido ya no es parte de la operación
+          delete viajeDe[id];
+          rec.sacar(id);
+          paradas = paradas.filter(function (p) { return p.grupo !== id; });
+          puntosParadas.actualizar(paradas);
+        }
         enBase[id] = {id: id, patente: c.patente};
       } else {
         delete enBase[id];
         if (!marcas[id]) agregarCamion({id: id, patente: c.patente, lat: lat, long: lon, alerta: c.alerta});
-        marcas[id].setLatLng([lat, lon]);
-        if (marcas[id].enAlerta !== c.alerta) { marcas[id].enAlerta = c.alerta; marcas[id].setIcon(CofrialMapa.camion(c.alerta, id, m.getZoom())); }
+        marcas[id].animarA([lat, lon]).alerta(c.alerta);
+        rec.fase(id, c.situacion === "volviendo" ? "vuelta" : "ida");
       }
       if (cambio) dibujarBase();
     };
-    window.despuesDeMover = function () { pintarControl(); agendarEtiquetas(); };
+    window.despuesDeMover = function () { pintarControl(); m.ordenarCamiones(); };
   })();
 </script>
 <script>
@@ -271,7 +298,8 @@
         var chip = t.querySelector('[data-campo="situacion"]');
         pon(chip, c.situacion_texto.charAt(0).toUpperCase() + c.situacion_texto.slice(1));
         if (chip) { chip.classList.toggle("entregado", c.situacion === "en_base"); chip.classList.toggle("transito", c.situacion !== "en_base"); }
-        pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
+        if (l.camaras && l.camaras.length > 1) l.camaras.forEach(function (x) { pon(t.querySelector('[data-campo="temp-' + x.camara + '"]'), x.temp_camara.toFixed(1).replace(".", ",") + " °C", x.alerta_ruptura_frio); });
+        else pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
         pon(t.querySelector('[data-campo="comb"]'), l.combustible_pct + " %", c.combustible_bajo);
         var b = t.querySelector('[data-campo="barra"] i');
         if (b) { b.style.width = l.combustible_pct + "%"; b.classList.toggle("bajo", c.combustible_bajo); }

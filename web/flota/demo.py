@@ -21,7 +21,7 @@ SEPARACION_S = 20        # si pasan más segundos sin pulsos, la siguiente ruptu
 
 
 def _camion(request):
-    return Camion.objects.filter(pk=request.POST.get("camion", ""), activo=True).select_related("rango_temperatura").first()
+    return Camion.objects.filter(pk=request.POST.get("camion", ""), activo=True).select_related("rango_temperatura", "rango_secundario").first()
 
 
 def _ultima_real(camion):
@@ -38,17 +38,21 @@ def _estado(request, camion):
 
 @con_rol("admin")
 def pagina(request):
-    camiones = Camion.objects.filter(activo=True).select_related("rango_temperatura").order_by("camion_id")
+    camiones = Camion.objects.filter(activo=True).select_related("rango_temperatura", "rango_secundario").order_by("camion_id")
     return render(request, "flota/demo.html", {"rol": request.rol, "camiones": camiones, "duracion": DURACION_MAX_S,
                                                "forzadas": Telemetria.objects.filter(forzada=True).count(),
                                                "predefinidos": escenarios.PREDEFINIDOS, "escenarios_datos": escenarios.contexto()})
 
 
-def _insertar(camion, temp, alerta):
+def _camara(request, camion):
+    return 2 if camion.dos_camaras and request.POST.get("camara") == "2" else 1
+
+
+def _insertar(camion, temp, alerta, camara=1):
     ref = _ultima_real(camion)
     base = settings.BASE_LOGISTICA
     return Telemetria.objects.create(
-        camion=camion, temp_camara=round(temp, 1), alerta_ruptura_frio=alerta, forzada=True,
+        camion=camion, camara=camara, temp_camara=round(temp, 1), alerta_ruptura_frio=alerta, forzada=True,
         lat=ref.lat if ref else base["lat"], long=ref.long if ref else base["long"], combustible_pct=ref.combustible_pct if ref else 70)
 
 
@@ -71,8 +75,9 @@ def pulso(request):
     t["ultimo"] = ahora
     request.session[clave] = t
     transcurrido = ahora - t["inicio"]
-    tmax = float(camion.rango_temperatura.temp_max_c)
-    lectura = _insertar(camion, tmax + 3 + min(5.0, transcurrido / 20), True)
+    camara = _camara(request, camion)
+    tmax = float(camion.rango_de_camara(camara).temp_max_c)
+    lectura = _insertar(camion, tmax + 3 + min(5.0, transcurrido / 20), True, camara)
     return JsonResponse({**_estado(request, camion), "temp": lectura.temp_camara})
 
 
@@ -84,8 +89,9 @@ def apagar(request):
     if camion is None:
         return JsonResponse({"detail": "Camión no válido."}, status=400)
     request.session.pop("demo_" + camion.camion_id, None)
-    r = camion.rango_temperatura
-    lectura = _insertar(camion, (float(r.temp_min_c) + float(r.temp_max_c)) / 2, False)
+    camara = _camara(request, camion)
+    r = camion.rango_de_camara(camara)
+    lectura = _insertar(camion, (float(r.temp_min_c) + float(r.temp_max_c)) / 2, False, camara)
     return JsonResponse({**_estado(request, camion), "temp": lectura.temp_camara})
 
 

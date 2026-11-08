@@ -68,7 +68,7 @@ COMUNAS_ARAUCANIA = ["Angol", "Carahue", "Cholchol", "Collipulli", "Cunco", "Cur
                      "Loncoche", "Lonquimay", "Melipeuco", "Nueva Imperial", "Padre Las Casas", "Pitrufquén", "Pucón", "Traiguén",
                      "Victoria", "Vilcún", "Villarrica"]        # Temuco se crea aparte (comuna de la base y de las direcciones de demostración)
 ESTADOS_ORDEN = [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False), ("Camión en la puerta", False),
-                ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True)]
+                ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True), ("Rechazada en recepción", True)]
 ETAPAS = [("Prospecto", False, False), ("Contactado", False, False), ("Propuesta enviada", False, False), ("Negociación", False, False), ("Cliente ganado", True, True), ("Perdido", True, False)]
 CATEGORIAS_REQ = ["Consulta de producto", "Reclamo por temperatura", "Atraso en entrega", "Facturación", "Problema en la entrega", "Otro"]
 CAMIONES = [("CAM-01", "HJKL-42", 8000, "Refrigerado"), ("CAM-02", "PQRS-17", 6000, "Congelado"), ("CAM-03", "TUVW-93", 8000, "Refrigerado")]

@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 
 from catalogo.models import Producto
 from clientes.models import Cliente, Direccion
@@ -81,10 +81,19 @@ class Orden(models.Model):
 
 
 class OrdenItem(models.Model):
+    """Línea de la orden. `cantidad` es lo pedido y no cambia; lo aceptado se calcula (cantidad - cantidad_rechazada), no se guarda."""
+    MOTIVOS_RECHAZO = [("temperatura", "Los productos llegaron tibios o descongelados"), ("faltante", "Faltan o sobran productos"),
+                       ("danado", "Producto dañado o en mal estado"), ("otro", "Otro problema")]
     orden = models.ForeignKey(Orden, on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
     cantidad = models.IntegerField()
     precio_unitario_clp = models.IntegerField()
+    cantidad_rechazada = models.IntegerField(default=0, db_default=0)                                # RN-23: unidades que el cliente no aceptó al recibir
+    motivo_rechazo = models.CharField(max_length=12, choices=MOTIVOS_RECHAZO, blank=True, default="", db_default="")      # vacío si no rechazó nada
+
+    @property
+    def cantidad_aceptada(self):
+        return self.cantidad - self.cantidad_rechazada
 
     class Meta:
         db_table = "orden_item"
@@ -92,6 +101,9 @@ class OrdenItem(models.Model):
             models.UniqueConstraint(fields=["orden", "producto"], name="uq_orden_producto"),
             models.CheckConstraint(condition=Q(cantidad__gt=0), name="orden_cantidad_positiva"),
             models.CheckConstraint(condition=Q(precio_unitario_clp__gt=0), name="orden_precio_positivo"),
+            models.CheckConstraint(condition=Q(cantidad_rechazada__gte=0, cantidad_rechazada__lte=F("cantidad")), name="orden_item_rechazo_en_rango"),
+            models.CheckConstraint(condition=Q(cantidad_rechazada=0, motivo_rechazo="") | Q(cantidad_rechazada__gt=0, motivo_rechazo__in=["temperatura", "faltante", "danado", "otro"]),
+                                   name="orden_item_rechazo_con_motivo"),
         ]
 
 

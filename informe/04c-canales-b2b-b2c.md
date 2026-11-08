@@ -116,7 +116,7 @@ El cliente no elige guías ni notas de crédito: son documentos que Cofrial emit
 | Guía de despacho | Ambos canales | Al despachar (RN-17) | No se paga: ampara el traslado |
 | Factura | Cliente B2B (con RUT, razón social y giro) | Después de la entrega (RN-19) | A crédito, 30 días desde la factura |
 | Factura a elección | Cliente B2C que la elige en el carrito (con su RUT, nombre y giro) | Tras pago aprobado (RN-18) | Queda pagada al comprar |
-| Nota de crédito | Quien tenga un reclamo o una cancelación | Cuando el vendedor la emite (RN-21) | Rebaja la deuda o se devuelve lo pagado |
+| Nota de crédito | Quien tenga un reclamo, una cancelación o un rechazo al recibir | Cuando el vendedor la emite (RN-21) o, sola, si el cliente rechaza unidades de un documento ya emitido (RN-23) | Rebaja la deuda o se devuelve lo pagado |
 
 *Nota.* Elaboración propia. Los plazos de pago y el momento de emisión de la factura son supuestos a validar con Cofrial; en la práctica algunas empresas facturan varias guías juntas a fin de mes. El CRM muestra qué se entregó y aún no se facturó, y qué facturas están por cobrar o vencidas (RN-22 de `04d-crm.md`).
 
@@ -127,7 +127,7 @@ El cliente no elige guías ni notas de crédito: son documentos que Cofrial emit
 
 ![Estados de la orden](img/estados-orden.png)
 
-*Nota.* Elaboración propia. Los estados corresponden a la tabla `estado_orden`.
+*Nota.* Elaboración propia. Los estados corresponden a la tabla `estado_orden`. La figura muestra el flujo principal; después de «Despachada» la entrega pasa por «Camión en la puerta» y puede terminar en «Entregada», «Entrega no concretada» (no pudo recibir, se puede reprogramar) o «Rechazada en recepción» (revisó y rechazó todo, RN-23). El detalle está en `docs/ciclo-entrega.md`.
 
 ## Reglas de negocio del portal
 
@@ -149,8 +149,9 @@ El cliente no elige guías ni notas de crédito: son documentos que Cofrial emit
 | RN-19 | **Factura B2B.** Los clientes institucionales no pagan al comprar. La factura se emite una sola vez, cuando la orden ya fue entregada, con el IVA sumado al neto y el vencimiento según el crédito del tipo de cliente (30 días). | W5 |
 | RN-20 | **Pagos.** Un pago se registra contra una boleta o factura y no puede superar su saldo pendiente. El saldo se calcula (monto menos pagos y notas de crédito); no se guarda. | CRM |
 | RN-21 | **Nota de crédito.** Rebaja un documento por un reclamo, una ruptura de frío o una cancelación. Exige motivo y no puede superar lo que aún no se ha rebajado. Si el cliente ya había pagado, el excedente se le devuelve en el mismo acto. Cancelar una orden con boleta emitida la anula completa. | CRM, W5 |
+| RN-23 | **Recepción parcial (supuesto a validar con Cofrial).** Al revisar la entrega, el cliente indica por producto cuántas unidades rechaza y el motivo (temperatura, faltante, dañado u otro); por ejemplo, vienesas a buena temperatura pero con la bolsa abierta. Lo aceptado queda «Entregada». En B2B la factura se emite solo por lo aceptado; si ya existe un documento, se genera una nota de crédito por lo rechazado, con tope en lo que aún no se ha rebajado, y lo ya pagado se devuelve (B2C siempre, porque paga al comprar). Si rechaza todas las unidades, la orden queda «Rechazada en recepción», estado final distinto de «Entrega no concretada»: no se reprograma ni se factura. Lo rechazado no vuelve al stock sin revisión de bodega, el reclamo llega a ventas y el silencio del cliente no rechaza nada. | W5, CRM |
 
-*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15 y RN-22) y la separación térmica del portal (RN-16) están en `04d-crm.md`.
+*Nota.* Elaboración propia. Las reglas del CRM (RN-09 a RN-15 y RN-22) y la separación térmica del portal (RN-16) están en `04d-crm.md`. RN-23 no viene del caso: se inspira en cómo un supermercado recibe parte de la mercadería tras su control de calidad y debe validarse con Cofrial, en especial si el cliente decide solo o lo hace junto al chofer, qué pasa físicamente con lo rechazado y quién revisa el stock.
 
 
 

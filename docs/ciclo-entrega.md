@@ -25,6 +25,9 @@ El botón «Marcar entregado y cerrar despacho» queda solo como **corrección m
 | 6 | Entregada | **sí** | el cliente acepta, o vence el plazo, o corrección manual |
 | 7 | Entrega no concretada | no | el cliente informa que no pudo recibir |
 | 8 | Cancelada | **sí** | cliente (solo «Recibida») o ventas (hasta «En preparación» o desde «Entrega no concretada») |
+| 9 | Rechazada en recepción | **sí** | el cliente revisó y rechazó todas las unidades (RN-23, supuesto a validar con Cofrial) |
+
+**Dos finales que se parecen y no son lo mismo.** «Entrega no concretada» dice que nadie pudo recibir: la mercadería no se revisó y se puede reprogramar. «Rechazada en recepción» dice que el cliente la revisó y no la aceptó: no se reprograma, no se factura y, si ya pagó, se le devuelve. Si necesita los productos, hace un pedido nuevo.
 
 «Entrega no concretada» **no es final**: sale de ahí de dos maneras. (a) **Reprogramar:** el despachador la ve de nuevo en *Armar despacho* y la despacha en otro viaje; el pedido vuelve a **Despachada**, con otro despacho y sin la hora de puerta, y el motivo queda guardado como historial. (b) **Cancelar:** ventas la da de baja y el stock se repone. Mientras no esté en «Despachada», el simulador no la trata como una parada pendiente (solo visita pedidos «Despachada»).
 
@@ -47,12 +50,12 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 
 | Método y ruta | Qué hace |
 |---|---|
-| `GET /pedidos/<id>/entrega/` | JSON `{estado, puede_responder, puerta_en, se_confirma_sola_en_seg, resuelta_en, motivo, automatica}` |
-| `GET /pedidos/<id>/entrega/?revision=1` | lo mismo más `revision` (`productos`, `temperatura`, `problemas`) mientras se puede responder; es lo que arma el diálogo de revisión de la campanita |
-| `POST /pedidos/<id>/entrega/` | `accion=aceptar` (con `resultado=bien` o `resultado=falla` más `tipo_problema` y `problema`, al menos 5 caracteres; sin `resultado` cuenta como «todo bien», por compatibilidad) o `accion=no_recibido` con `motivo` (obligatorio, al menos 5 caracteres). Con `X-Requested-With: fetch` o `Accept: application/json` responde `{ok, mensaje, entrega}` (400 si falla); sin esas cabeceras redirige al pedido con un mensaje |
+| `GET /pedidos/<id>/entrega/` | JSON `{estado, puede_responder, puerta_en, se_confirma_sola_en_seg, resuelta_en, motivo, automatica, unidades_rechazadas}` |
+| `GET /pedidos/<id>/entrega/?revision=1` | lo mismo más `revision` (`productos` con `producto_id`, `temperatura`, `problemas`, `efecto`) mientras se puede responder; es lo que arma el diálogo de revisión de la campanita |
+| `POST /pedidos/<id>/entrega/` | `accion=aceptar` (con `resultado=bien` o `resultado=falla` más, por producto, `rechazo_<producto_id>` y `motivo_<producto_id>`, y `tipo_problema` y `problema`, al menos 5 caracteres si no rechaza unidades; sin `resultado` cuenta como «todo bien», por compatibilidad) o `accion=no_recibido` con `motivo` (obligatorio, al menos 5 caracteres). Con `X-Requested-With: fetch` o `Accept: application/json` responde `{ok, mensaje, entrega}` (400 si falla); sin esas cabeceras redirige al pedido con un mensaje |
 | `GET /api/pedidos/<id>/seguimiento/` | `estado`, `mapa_en_vivo`, `mensaje` («Tu pedido aún no sale.» sin despacho), `entrega` y `seguimiento` (posición, temperatura, `ruta_url`, `llegada_en`, ETA). Con el mapa apagado, `lat`, `long` y `destino` van `null` |
 | `GET /api/pedidos/<id>/ruta/` | `{puntos, parada, aproximada, km}`: **solo el tramo** desde la posición actual del camión hasta la parada de este pedido (`parada` es solo su `lat` y `long`). 404 si el pedido no está «Despachada» ni «Camión en la puerta» |
-| `GET /api/avisos/` | campanita; tipos `puerta`, `llego` y `no_concretada`. Los avisos `cerca` (con `minutos`) y `puerta` mientras espera respuesta traen `destacado: true` |
+| `GET /api/avisos/` | campanita; tipos `puerta`, `llego`, `no_concretada` y `rechazada`. Los avisos `cerca` (con `minutos`) y `puerta` mientras espera respuesta traen `destacado: true` |
 | `GET /pedidos/<id>/documentos/<doc>/` | boleta o factura de ese pedido. Con `?descarga=1` entrega el PDF |
 | `GET /flota/despachar/ruta/?ordenes=1,2` | (despachador) vista previa de la ruta que quedará guardada |
 
@@ -69,6 +72,19 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 **Quién recibe.** El comprador elige en el carrito quién recibe el pedido (`orden.recibe_nombre`); la revisión al recibir lo muestra («Recibe: …») para que quien abre la puerta sepa a nombre de quién va. Detalle y reglas en `docs/decisiones.md`.
 
 **Reclamo al recibir.** `resolver_entrega(..., con_problema=True, tipo_problema=...)`: el pedido queda «Entregada» (el camión sí entregó) y se crea un `requerimiento` con asunto «Problema al recibir el pedido N.º X: <tipo>», la descripción del cliente y el pedido ligado. Los tipos «Los productos llegaron tibios o descongelados» → categoría «Reclamo por temperatura»; «Faltan o sobran productos» y «Producto dañado o en mal estado» → «Problema en la entrega»; «Otro problema» lo clasifica la IA como cualquier consulta. No hay tablas ni campos nuevos.
+
+**Recepción parcial (RN-23, supuesto a validar con Cofrial).** Con «No, algo falló», el paso de revisión pide por producto cuántas unidades rechaza y el motivo (`PROBLEMAS_AL_RECIBIR`: temperatura, faltante, dañado u otro). Se guarda por línea en `orden_item.cantidad_rechazada` y `motivo_rechazo`; `cantidad` no cambia. Los campos del formulario son `rechazo_<producto_id>` y `motivo_<producto_id>`, y el servicio los valida todos en la transacción que tiene bloqueada la orden: un producto ajeno, un número inválido, más de lo pedido o un motivo faltante no dejan nada a medias. El comentario solo es obligatorio si no rechaza unidades o elige «Otro problema». Si marcó «Sí, todo llegó bien», lo que hubiera en esos campos no cuenta.
+
+| Caso | Estado | Documentos | Dinero |
+|---|---|---|---|
+| B2B, sin factura (lo normal) | Entregada | La factura se emite después, solo por lo aceptado | Lo rechazado nunca se cobra |
+| B2B, con factura previa | Entregada | Nota de crédito por lo rechazado | Baja la deuda; si ya había pagado más que el nuevo total, se devuelve lo que sobra |
+| B2C, boleta o factura pagada al comprar | Entregada | El documento no cambia (es una foto); nota de crédito por lo rechazado | Devolución: `pago` con monto negativo, medio `devolucion` y referencia `NC-<folio>` |
+| Rechazo total B2B | Rechazada en recepción | Sin factura (no aparece en «entregadas sin factura») | Nada que cobrar |
+| Rechazo total B2C | Rechazada en recepción | Nota de crédito por todo; la boleta queda anulada | Devolución de todo |
+| Sin respuesta (`confirmar_vencidas`) | Entregada, automática | Pedido completo | El silencio no rechaza nada |
+
+La nota de crédito sale de `documentos.rebajar_por_rechazo`. Su monto es la diferencia entre el total pedido y el total aceptado, ambos ya redondeados con IVA, para que documento menos nota dé lo mismo que una factura por lo aceptado. El tope es lo que el documento aún no tiene rebajado (notas anteriores del vendedor incluidas); si ya está rebajado entero, no se emite otra y el rechazo igual se registra. **Stock:** lo rechazado no se repone; bodega lo revisa y, si sirve, lo devuelve con «Reponer» en `/operacion/` (ver `docs/decisiones.md`). El reclamo (`requerimiento`) tiene asunto «Problema al recibir el pedido N.º X: Recepción parcial» o «Rechazo total»; su categoría sale de los motivos (la temperatura manda) y la ficha del cliente y el reclamo en el CRM muestran la tabla de lo rechazado. El prototipo registra la devolución en `pago`; no llama a la API de devoluciones de Mercado Pago.
 
 **Comprobante (COF-04).** En el carrito el público elige boleta o factura. El RUT es el de la cuenta y la factura pide el giro si falta. Lo recibe pagado al comprar. La institución no elige: recibe factura a crédito después de la entrega, como hasta ahora, y el carrito le pide el giro si falta. Desde el pedido se consulta el documento y se descarga el PDF, que declara que no es un DTE del SII.
 
@@ -99,7 +115,11 @@ Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegad
 
 **`orden`** (se agregan): `puerta_en` timestamptz nulo (llegada del camión a esa dirección; inicia el plazo), `entrega_resuelta_en` timestamptz nulo, `entrega_motivo` text (vacío por defecto), `entrega_automatica` boolean (falso) y `comprobante` (`boleta` o `factura`, por defecto `boleta`; las órdenes institucionales ya existentes quedan en `factura`). Los cuatro primeros son hechos de una entrega de esa orden; se dejan en `orden` porque cada orden tiene a lo más una entrega vigente y se sobrescriben al reprogramar (el motivo se conserva como historial). `comprobante` es la elección de la compra y no cambia con la entrega.
 
-**`estado_orden`** (datos): dos filas nuevas, «Camión en la puerta» y «Entrega no concretada», ambas con `es_final = false`; el flujo se renumera (Entregada pasa a 6 y Cancelada a 8).
+**`estado_orden`** (datos): dos filas nuevas, «Camión en la puerta» y «Entrega no concretada», ambas con `es_final = false`; el flujo se renumera (Entregada pasa a 6 y Cancelada a 8). Con RN-23 se agrega «Rechazada en recepción» (9, `es_final = true`).
+
+**`orden_item`** (se agregan, migración `pedidos/0011`): `cantidad_rechazada` integer, 0 por defecto, con CHECK entre 0 y `cantidad`, y `motivo_rechazo` varchar(12), vacío por defecto, con CHECK de que hay motivo si y solo si hay unidades rechazadas. Dependen de la clave completa de la línea (3FN). Lo aceptado no se guarda: es `cantidad - cantidad_rechazada`.
+
+**`v_orden_total`**: `total_clp` y `unidades` pasan a contar solo lo aceptado y se agregan `rechazado_clp` y `unidades_rechazadas`. Sin rechazos da lo mismo de antes.
 
 **`ruta_cache`** (tabla nueva): `clave` varchar(64) PK (SHA-256 de la secuencia de coordenadas), `ruta_geojson` jsonb, `km` double, `aproximada` boolean, `creada_en` timestamptz. Es una caché técnica sin relaciones; todo depende de la clave.
 
@@ -117,4 +137,4 @@ Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegad
 
 ## 8. Pruebas
 
-`flota/tests_rutas.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.
+`flota/tests_rutas.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py`, `pedidos/tests_recepcion_parcial.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.

@@ -30,13 +30,24 @@ def _clp(valor):
 
 
 def _neto_orden(orden):
-    return sum(i.cantidad * i.precio_unitario_clp for i in orden.ordenitem_set.all())
+    """Neto de lo aceptado (RN-23). Mientras nadie rechace nada es el pedido completo: así cobra la compra y así factura la entrega."""
+    return sum(i.cantidad_aceptada * i.precio_unitario_clp for i in orden.ordenitem_set.all())
+
+
+def _con_iva(orden, neto):
+    """Los precios B2B son netos (se suma el IVA); los B2C ya lo incluyen."""
+    return round(neto * (1 + IVA)) if orden.direccion.cliente.tipo_cliente.codigo == "B2B" else neto
 
 
 def monto_con_iva(orden):
-    """Los precios B2B son netos (se suma el IVA); los B2C ya lo incluyen."""
-    neto = _neto_orden(orden)
-    return round(neto * (1 + IVA)) if orden.direccion.cliente.tipo_cliente.codigo == "B2B" else neto
+    return _con_iva(orden, _neto_orden(orden))
+
+
+def monto_rechazado(orden):
+    """Lo que vale lo rechazado. Es la diferencia entre los dos totales ya redondeados: así documento - nota de crédito da lo mismo
+    que una factura por lo aceptado, sin que el redondeo del IVA deje un peso de saldo."""
+    pedido = sum(i.cantidad * i.precio_unitario_clp for i in orden.ordenitem_set.all())
+    return _con_iva(orden, pedido) - monto_con_iva(orden)
 
 
 def _emitir(orden, tipo, monto=None, vence_en=None, referencia=None, motivo=""):
@@ -183,6 +194,33 @@ def emitir_nota_credito(documento_id, monto, motivo):
     return nota
 
 
+MOTIVO_RECHAZO = "Rechazo en recepción"      # empieza así el motivo de la nota: distingue la automática de las que emite el vendedor
+
+
+@transaction.atomic
+def rebajar_por_rechazo(orden, detalle):
+    """RN-23: si ya hay boleta o factura, lo rechazado se rebaja con una nota de crédito. El tope es lo que el documento aún no tiene
+    rebajado (monto menos notas anteriores), no lo pendiente de pago: una boleta pagada no debe nada y aun así se rebaja. Lo ya pagado
+    se devuelve en `emitir_nota_credito`. Sin documento (institución sin facturar) no hay nada que rebajar: se factura solo lo aceptado."""
+    primero = Documento.objects.filter(orden=orden, tipo__in=COBRABLES).order_by("documento_id").first()
+    if primero is None:
+        return None
+    documento = _cobrable(primero.pk)
+    monto = min(monto_rechazado(orden), documento.monto_clp - _rebajado(documento))
+    if monto < 1:
+        return None
+    return emitir_nota_credito(documento.pk, monto, f"{MOTIVO_RECHAZO}: {detalle}")
+
+
+def nota_de_rechazo(orden):
+    """La nota de crédito automática del rechazo y cuánto se devolvió con ella: (nota, devuelto). (None, 0) si no se emitió."""
+    nota = Documento.objects.filter(orden=orden, tipo="nota_credito", motivo__startswith=MOTIVO_RECHAZO).order_by("documento_id").first()
+    if nota is None:
+        return None, 0
+    devuelto = Pago.objects.filter(documento_id=nota.referencia_id, medio="devolucion", referencia=f"NC-{nota.folio}").aggregate(t=Sum("monto_clp"))["t"] or 0
+    return nota, -devuelto
+
+
 def anular_por_cancelacion(orden):
     """Cancelar una orden con boleta o factura emitida la anula completa con una nota de crédito (RN-21)."""
     for doc in Documento.objects.filter(orden=orden, tipo__in=COBRABLES):
@@ -201,6 +239,19 @@ def entregadas_sin_factura(clientes):
     return ordenes
 
 
+def lineas_de_documento(documento):
+    """Lo que ampara este documento. Una factura emitida después de un rechazo trae solo lo aceptado y sus montos cuadran con esas líneas.
+    Una boleta o factura pagada al comprar es una foto de lo comprado: muestra lo pedido y la rebaja queda en su nota de crédito. Devuelve (filas, neto)."""
+    orden = documento.orden
+    solo_aceptado = documento.monto_clp == monto_con_iva(orden)
+    filas = []
+    for i in orden.ordenitem_set.select_related("producto").order_by("producto__nombre"):
+        cantidad = i.cantidad_aceptada if solo_aceptado else i.cantidad
+        if cantidad:
+            filas.append({"producto": i.producto.nombre, "cantidad": cantidad, "precio": i.precio_unitario_clp, "subtotal": cantidad * i.precio_unitario_clp})
+    return filas, sum(f["subtotal"] for f in filas)
+
+
 def comprobante_pdf(documento):
     """PDF con la boleta o factura ya emitida. No es un DTE del SII: es el comprobante del prototipo, para verlo y guardarlo."""
     orden = documento.orden
@@ -212,17 +263,19 @@ def comprobante_pdf(documento):
         lineas.append(f"Giro: {cliente.giro}")
     lineas.append(f"Dirección: {orden.direccion}")
     lineas.append("")
-    for item in orden.ordenitem_set.select_related("producto"):
-        lineas.append(f"{item.cantidad} x {item.producto.nombre}: {_clp(item.precio_unitario_clp)} c/u, {_clp(item.cantidad * item.precio_unitario_clp)}")
+    filas, neto = lineas_de_documento(documento)
+    for f in filas:
+        lineas.append(f"{f['cantidad']} x {f['producto']}: {_clp(f['precio'])} c/u, {_clp(f['subtotal'])}")
     lineas.append("")
     total = documento.monto_clp or 0
     if cliente.tipo_cliente.codigo == "B2B":          # los precios institucionales son netos: sin este desglose los ítems no suman el total
-        neto = _neto_orden(orden)
         lineas += [f"Neto {_clp(neto)}", f"IVA 19 % {_clp(total - neto)}", f"Total con IVA {_clp(total)}"]
     else:
         lineas.append(f"Total (IVA incluido) {_clp(total)}")
     if documento.vence_en:
         lineas.append(f"Vence el {documento.vence_en.strftime('%d/%m/%Y')}")
+    for nota in Documento.objects.filter(referencia=documento, tipo="nota_credito").order_by("documento_id"):
+        lineas.append(f"Rebajada por {nota}: {_clp(nota.monto_clp)} ({nota.motivo})")
     lineas.append("Documento simulado para la demostración. No es un documento tributario electrónico del SII.")
     return _pdf(lineas)
 

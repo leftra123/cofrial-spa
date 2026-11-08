@@ -187,7 +187,7 @@ def fin_de_exposicion(orden, ahora=None):
     """Hasta cuándo la carga de esta orden estuvo en el camión. Dos clientes pueden ir en el mismo viaje: el primero ya recibió cuando el
     camión sigue, y una falla posterior no lo afecta. Quien aún no recibe (en la puerta o sin concretar) sigue a bordo hasta el regreso."""
     d = orden.despacho
-    if orden.estado_orden.nombre == "Entregada":
+    if orden.estado_orden.nombre in pedidos.RECEPCION_CERRADA:
         return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
     return d.regreso_en or ahora or timezone.now()
 
@@ -212,6 +212,7 @@ def ordenes_de_cliente(cliente):
     ordenes = list(ordenes)
     for o in ordenes:
         o.total = pedidos.total_orden(o)
+        o.rechazo = pedidos.rechazo_de(o)
         o.cancelable = (not o.estado_orden.es_final and o.estado_orden.orden_flujo <= 3) or o.estado_orden.nombre == "Entrega no concretada"
     return ordenes_con_alerta(ordenes)
 

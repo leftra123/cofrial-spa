@@ -88,36 +88,51 @@ window.CofrialTorre = (function () {
   }
 
   /* ---------- 8.2 Mapa ---------- */
-  var mapa = null, marcasCliente = {}, marcasCamion = {}, marcaBase = null;
+  /* Mapa nocturno de CofrialMapa (MapLibre + OpenFreeMap). Las coordenadas van como [lat, lon], igual que en el resto de la app. */
+  var mapa = null, marcasCliente = {}, marcasCamion = {}, marcaBase = null, contornos = null;
   var ENCUADRE = [[-36.85, -74.1], [-40.95, -70.4]];        // del sur de Biobío a la entrada de Los Lagos: La Araucanía queda al centro y grande
   /* Dónde va el nombre de cada región: La Araucanía, justo sobre su borde, porque sus clientes llenan el polígono; Los Lagos, en la parte que entra en el encuadre. */
   var ETIQUETAS = {"Biobío": [-37.0, -72.15], "La Araucanía": [-37.4, -71.35], "Los Ríos": [-40.05, -71.95], "Los Lagos": [-40.72, -72.6]};
   var ANCLA = 12, PASO = 25;                                // marcador de 24 px; separación mínima entre dos en pantalla
+  var COLOR_PRINCIPAL = "#BDE63A", COLOR_VECINA = "#8BA3C4"; // sobre el azul noche del mapa: lima de la marca y gris azulado
+  var Z_CLIENTE = 1, Z_CAMION = 3, Z_BASE = 5;               // clientes al fondo, camiones encima, el frigorífico sobre todo
 
   function iniciarMapa(base) {
-    if (!window.L || !window.CofrialMapa) return;
+    if (!window.maplibregl || !window.CofrialMapa) return;
     var caja = $("mapa-torre");
-    mapa = CofrialMapa.crear("mapa-torre", [base.lat, base.long], 7);
-    mapa.options.zoomSnap = 0.25;
-    mapa.scrollWheelZoom.disable();                         // la página es larga: la rueda debe seguir bajando por ella
-    if (L.Browser.mobile) mapa.dragging.disable();          // en el teléfono, un dedo desplaza la página; dos mueven el mapa
-    mapa.fitBounds(ENCUADRE);
-    var titulo = el("b", "", base.nombre);
-    marcaBase = L.marker([base.lat, base.long], {icon: CofrialMapa.base(), title: base.nombre, alt: base.nombre, zIndexOffset: 500}).addTo(mapa).bindPopup(titulo);
-    mapa.on("zoomend", separarClientes);
+    mapa = CofrialMapa.crear("mapa-torre", [base.lat, base.long], 6);
+    if (!mapa.disponible) { mapa = null; return; }          // sin WebGL el div ya muestra el aviso; el resto de la Torre sigue
+    var n = mapa.nativo;
+    n.scrollZoom.disable();                                 // la página es larga: la rueda debe seguir bajando por ella
+    if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) n.dragPan.disable();    // en el teléfono, un dedo desplaza la página; dos mueven el mapa
+    mapa.encuadrar(ENCUADRE, {padding: 8, maxZoom: 9, animar: false});
+    marcaBase = mapa.base([base.lat, base.long], {titulo: base.nombre, popup: el("b", "", base.nombre)});
+    marcaBase.el.style.zIndex = Z_BASE;
+    mapa.al("estilo", ponerContornos);                      // cambiar de estilo (local a OpenFreeMap) borra las capas: se vuelven a poner
+    mapa.al("zoomend", separarClientes);
     fetch(caja.dataset.geo).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(pintarContornos).catch(function () {
       caja.appendChild(el("p", "torre-mapa-nota", "No se pudieron cargar los contornos de las regiones."));
     });
   }
   function pintarContornos(geo) {
-    L.geoJSON(geo, {
-      interactive: false,
-      style: function (f) { return {className: f.properties.principal ? "geo-principal" : "geo-vecina"}; },
-      onEachFeature: function (f, capa) {
-        capa.bindTooltip(el("span", "", f.properties.nombre), {permanent: true, direction: "center", className: "geo-etiqueta" + (f.properties.principal ? " principal" : "")});
-        capa.on("add", function () { var punto = ETIQUETAS[f.properties.nombre]; if (punto) capa.openTooltip(L.latLng(punto)); });
-      }
-    }).addTo(mapa);
+    contornos = geo;
+    ponerContornos();
+    geo.features.forEach(function (f) {                     // el nombre de cada región, como marcador de texto (no depende de las tipografías del estilo)
+      var punto = ETIQUETAS[f.properties.nombre];
+      if (!punto) return;
+      var marca = mapa.marcador(punto, {clase: "geo-etiqueta" + (f.properties.principal ? " principal" : ""), ancho: 150, alto: 26, ancla: "center", html: ""});
+      marca.el.appendChild(el("span", "", f.properties.nombre));
+      marca.el.style.zIndex = 0;
+    });
+  }
+  function ponerContornos() {
+    var n = mapa && mapa.nativo;
+    if (!n || !contornos || !mapa.estiloListo || n.getSource("torre-geo")) return;       // sin estilo cargado no hay dónde poner capas: el aviso de estilo lo vuelve a llamar
+    n.addSource("torre-geo", {type: "geojson", data: contornos});
+    var principal = ["==", ["get", "principal"], true], vecina = ["!=", ["get", "principal"], true];
+    n.addLayer({id: "torre-geo-relleno", type: "fill", source: "torre-geo", paint: {"fill-color": ["case", principal, COLOR_PRINCIPAL, COLOR_VECINA], "fill-opacity": ["case", principal, 0.2, 0.05]}});
+    n.addLayer({id: "torre-geo-vecina", type: "line", source: "torre-geo", filter: vecina, layout: {"line-join": "round"}, paint: {"line-color": COLOR_VECINA, "line-width": 1.2, "line-opacity": 0.65, "line-dasharray": [4, 3]}});
+    n.addLayer({id: "torre-geo-principal", type: "line", source: "torre-geo", filter: principal, layout: {"line-join": "round"}, paint: {"line-color": COLOR_PRINCIPAL, "line-width": 3, "line-opacity": 1}});
   }
   function popupCliente(c) {
     var n = el("div", "torre-popup");
@@ -129,10 +144,7 @@ window.CofrialTorre = (function () {
     n.appendChild(pie);
     return n;
   }
-  function iconoCliente(nombre) {
-    var s = segmento(nombre), html = el("span", "seg-marca " + s.clase, s.letra);
-    return L.divIcon({className: "torre-pin", iconSize: [ANCLA * 2, ANCLA * 2], iconAnchor: [ANCLA, ANCLA], popupAnchor: [0, -ANCLA], html: html});
-  }
+  function htmlCliente(nombre) { var s = segmento(nombre); return '<span class="seg-marca ' + s.clase + '">' + s.letra + "</span>"; }       // clase y letra salen de una tabla fija, no de la base
   function pintarClientes(lista) {
     if (!mapa) return;
     var vivos = {};
@@ -140,24 +152,26 @@ window.CofrialTorre = (function () {
       vivos[c.url] = true;
       var m = marcasCliente[c.url];
       if (!m) {
-        m = L.marker([c.lat, c.long], {icon: iconoCliente(c.segmento), title: c.nombre, alt: c.nombre, zIndexOffset: -2000}).addTo(mapa).bindPopup(popupCliente(c));
+        m = mapa.marcador([c.lat, c.long], {clase: "torre-pin", ancho: ANCLA * 2, alto: ANCLA * 2, ancla: "center", altoPopup: ANCLA, html: htmlCliente(c.segmento), titulo: c.nombre, popup: popupCliente(c)});
+        m.el.style.zIndex = Z_CLIENTE;
         marcasCliente[c.url] = m;
       } else {
-        m.setLatLng([c.lat, c.long]);
-        m.setPopupContent(popupCliente(c));
+        m.mover([c.lat, c.long]);
+        m.popup(popupCliente(c));
       }
     });
-    Object.keys(marcasCliente).forEach(function (url) { if (!vivos[url]) { mapa.removeLayer(marcasCliente[url]); delete marcasCliente[url]; } });
+    Object.keys(marcasCliente).forEach(function (url) { if (!vivos[url]) { marcasCliente[url].quitar(); delete marcasCliente[url]; } });
     separarClientes();
   }
   /* Varios clientes comparten ciudad (ocho en Temuco): en pantalla se reparten alrededor de su punto para que cada uno se vea y se pueda tocar.
      Solo se mueve el dibujo; la coordenada sigue siendo la real. */
   function separarClientes() {
-    if (!mapa) return;
-    var puestos = marcaBase ? [mapa.latLngToLayerPoint(marcaBase.getLatLng())] : [];
-    var urls = Object.keys(marcasCliente).sort();
-    urls.forEach(function (url) {
-      var m = marcasCliente[url], p = mapa.latLngToLayerPoint(m.getLatLng()), dx = 0, dy = 0;
+    if (!mapa || !mapa.nativo) return;
+    var n = mapa.nativo;
+    function px(pos) { return n.project([pos[1], pos[0]]); }
+    var puestos = marcaBase ? [px(marcaBase.latlon())] : [];
+    Object.keys(marcasCliente).sort().forEach(function (url) {
+      var m = marcasCliente[url], p = px(m.latlon()), dx = 0, dy = 0;
       for (var anillo = 0, libre = false; anillo < 6 && !libre; anillo++) {
         var cuantos = anillo === 0 ? 1 : anillo * 6;
         for (var i = 0; i < cuantos && !libre; i++) {
@@ -166,9 +180,8 @@ window.CofrialTorre = (function () {
           if (libre) { dx = Math.round(x); dy = Math.round(y); }
         }
       }
-      puestos.push(L.point(p.x + dx, p.y + dy));
-      m.options.icon.options.popupAnchor = [dx, dy - ANCLA];
-      if (m._icon) { m._icon.style.marginLeft = (dx - ANCLA) + "px"; m._icon.style.marginTop = (dy - ANCLA) + "px"; }
+      puestos.push({x: p.x + dx, y: p.y + dy});
+      if (m.despl[0] !== dx || m.despl[1] !== dy) m.desplazar([dx, dy]);
     });
   }
   function pintarCamiones(lista) {
@@ -179,19 +192,19 @@ window.CofrialTorre = (function () {
       vivos[id] = true;
       var m = marcasCamion[id];
       if (!m) {
-        m = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, id, mapa.getZoom()), title: id, alt: id}).addTo(mapa).bindPopup(el("div"));
+        m = mapa.camion([c.lat, c.long], {alerta: c.alerta, etiqueta: id, titulo: id, popup: el("div")});
+        m.el.style.zIndex = Z_CAMION;
         marcasCamion[id] = m;
       } else {
-        m.setLatLng([c.lat, c.long]);
-        if (m.torreAlerta !== c.alerta) m.setIcon(CofrialMapa.camion(c.alerta, id, mapa.getZoom()));
+        m.animarA([c.lat, c.long]);
+        m.alerta(c.alerta);
       }
-      m.torreAlerta = c.alerta;
       var texto = el("div", "torre-popup");
       texto.appendChild(el("b", "", id));
       texto.appendChild(el("div", c.alerta ? "torre-popup-alerta" : "frio", c.alerta ? "Con ruptura de frío" : "En ruta"));
-      m.setPopupContent(texto);
+      m.popup(texto);
     });
-    Object.keys(marcasCamion).forEach(function (id) { if (!vivos[id]) { mapa.removeLayer(marcasCamion[id]); delete marcasCamion[id]; } });
+    Object.keys(marcasCamion).forEach(function (id) { if (!vivos[id]) { marcasCamion[id].quitar(); delete marcasCamion[id]; } });
   }
   function pintarLeyenda(p) {
     var cuenta = {};

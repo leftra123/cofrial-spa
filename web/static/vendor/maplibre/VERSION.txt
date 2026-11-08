@@ -1,0 +1,1 @@
+maplibre-gl 5.24.0 (npm, dist/maplibre-gl.js y dist/maplibre-gl.css, sin el mapa de código fuente)

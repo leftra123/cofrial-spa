@@ -1,5 +1,7 @@
 from io import StringIO
 from unittest.mock import patch
+from pathlib import Path
+
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -299,7 +301,7 @@ class EtiquetaTemperaturaTests(TestCase):
 
 
 class MosaicosDelMapa(TestCase):
-    """OpenStreetMap bloquea («403 Access blocked») las peticiones de mosaicos sin Referer: la web debe enviarlo y dejar el proveedor configurable."""
+    """El mapa base es una URL de estilo de MapLibre (OpenFreeMap por defecto): debe llegar a la página con su atribución y poder cambiarse por configuración."""
 
     def test_la_politica_de_referer_envia_el_origen_a_otros_sitios(self):
         self.assertEqual(self.client.get("/").headers["Referrer-Policy"], "strict-origin-when-cross-origin")
@@ -309,16 +311,40 @@ class MosaicosDelMapa(TestCase):
         import re
         html = self.client.get("/").content.decode()
         cfg = json.loads(re.search(r'<script id="mapa-tiles" type="application/json">(.*?)</script>', html, re.S).group(1))
-        self.assertEqual(cfg["url"], "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
-        self.assertIn("OpenStreetMap", cfg["attribution"])
+        self.assertEqual(cfg["estilo"], "https://tiles.openfreemap.org/styles/dark")
+        for fuente in ("OpenFreeMap", "OpenMapTiles", "OpenStreetMap"):
+            self.assertIn(fuente, cfg["attribution"])
 
     def test_el_proveedor_se_puede_cambiar_por_configuracion(self):
         import json
         import re
         from django.test import override_settings
-        with override_settings(MAPA_TILES={"url": "https://proveedor.test/{z}/{x}/{y}.png?key=K", "attribution": "&copy; OSM &copy; Proveedor", "maxZoom": 18, "subdomains": "abc"}):
+        with override_settings(MAPA_TILES={"estilo": "https://proveedor.test/estilo.json?key=K", "attribution": "&copy; OSM &copy; Proveedor", "maxZoom": 18}):
             html = self.client.get("/").content.decode()
         self.assertIn("proveedor.test", html)
+
+
+class MapaConMapLibre(TestCase):
+    """MapLibre va autoalojado y las plantillas solo usan CofrialMapa: nada de Leaflet ni de recursos de terceros salvo el estilo y sus teselas."""
+    WEB = Path(__file__).resolve().parent.parent
+
+    def test_las_pantallas_con_mapa_cargan_maplibre_y_no_leaflet(self):
+        for plantilla in ("flota/panel.html", "flota/despacho.html", "pedidos/detalle.html"):
+            texto = (self.WEB / "templates" / plantilla).read_text()
+            self.assertIn("vendor/maplibre/maplibre-gl.js", texto)
+            self.assertIn("vendor/maplibre/maplibre-gl.css", texto)
+            self.assertNotIn("leaflet", texto.lower())
+            self.assertNotIn("L.marker", texto)
+
+    def test_maplibre_no_apunta_a_un_mapa_de_codigo_que_no_existe(self):
+        """Con la huella de WhiteNoise, un sourceMappingURL a un archivo ausente hace fallar collectstatic."""
+        for archivo in ("maplibre-gl.js", "maplibre-gl.css"):
+            self.assertNotIn("sourceMappingURL", (self.WEB / "static" / "vendor" / "maplibre" / archivo).read_text())
+
+    def test_el_mapa_tiene_respaldo_sin_red_y_sin_webgl(self):
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        for pieza in ("function estiloLocal(", "function hayWebGL(", "mapa-vacio", "prefers-reduced-motion"):
+            self.assertIn(pieza, js)
 
 
 class AsistenteDeIA(TestCase):

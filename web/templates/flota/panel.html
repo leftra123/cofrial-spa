@@ -100,7 +100,7 @@
 </div>
 
 {% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">
 <style>
   #vehiculos:not(.ver-base) [data-guardado] { display: none; }   /* siguen en la página y reportando; solo no ocupan pantalla */
   .base-contador { font-weight: 700; }
@@ -111,7 +111,7 @@
 </style>{% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
-<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
 <script>
@@ -135,33 +135,28 @@
 <script>
   (function () {
     var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
-    var m = CofrialMapa.crear("mapa-flota", base, 13), marcas = {}, colores = ["#1D4ED8", "#7C3AED", "#0891B2", "#EA580C"];
-    var enBase = {}, capaBase = L.layerGroup(), verBase = false;
-    var marcaBase = L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
-    marcaBase.bindTooltip("", {permanent: true, direction: "bottom", offset: [0, 16], className: "base-contador"});
+    var m = CofrialMapa.crear("mapa-flota", base, 12), marcas = {}, colores = CofrialMapa.PALETA;
+    var enBase = {}, puntosBase = m.puntos([], {color: "#94A3B8"}).mostrar(false), verBase = false;
+    var marcaBase = m.base(base, {titulo: d.base.nombre, popup: d.base.nombre, etiqueta: ""});
     function agregarCamion(c) {
-      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id, m.getZoom()), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
-      marcas[c.id].enAlerta = c.alerta;
+      marcas[c.id] = m.camion([c.lat, c.long], {alerta: c.alerta, etiqueta: c.id, titulo: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), popup: c.id + " · " + c.patente});
     }
     d.camiones.forEach(agregarCamion);
     d.en_base.forEach(function (c) { enBase[c.id] = c; });
     /* Los guardados están a metros unos de otros: como camiones con etiqueta serían una mancha. Se dibujan como puntos sin etiqueta,
        repartidos en espiral alrededor de la base (solo el dibujo; su posición real es la base). */
     function dibujarBase() {
-      var z = m.getZoom(), centro = m.project(base, z), ids = Object.keys(enBase).sort();
-      capaBase.clearLayers();
-      ids.forEach(function (id, i) {
+      var ids = Object.keys(enBase).sort();
+      puntosBase.actualizar(ids.map(function (id, i) {
         var r = 30 + 7 * Math.sqrt(i), angulo = i * 2.39996;
-        L.circleMarker(m.unproject(centro.add([r * Math.cos(angulo), r * Math.sin(angulo)]), z), {radius: 5, weight: 1, color: "#fff", fillColor: "#0F172A", fillOpacity: .85})
-          .bindPopup(id + " · " + enBase[id].patente + " · en base").addTo(capaBase);
-      });
-      marcaBase.setTooltipContent(ids.length + " en base");
+        return {pos: base, offset: [r * Math.cos(angulo), r * Math.sin(angulo)], popup: id + " · " + enBase[id].patente + " · en base"};
+      }));
+      marcaBase.etiqueta(ids.length + " en base");
     }
     /* Etiquetas que chocan con otra o con un camión vecino se ocultan; las de alerta tienen prioridad. El camión y su popup quedan. */
-    var enCola = false;
     function choca(a, b) { return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom); }
     function ordenarEtiquetas() {
-      var caja = m.getContainer(), puestas = [], cuerpos = [], tip = caja.querySelector(".base-contador");
+      var caja = m.contenedor, puestas = [], cuerpos = [], tip = caja.querySelector(".base-contador");
       if (tip) puestas.push(tip.getBoundingClientRect());
       caja.querySelectorAll(".pin-camion").forEach(function (p) { var g = p.querySelector(".pin-camion-graf"); if (g) cuerpos.push({dueno: p, r: g.getBoundingClientRect()}); });
       var etiquetas = Array.prototype.slice.call(caja.querySelectorAll(".pin-camion .pin-etq"));
@@ -173,15 +168,9 @@
         if (!tapada) puestas.push(r);
       });
     }
-    function agendarEtiquetas() {             // dos cuadros: mapa.js separa los camiones en el primero y aquí se mide el resultado
-      if (enCola) return;
-      enCola = true;
-      requestAnimationFrame(function () { requestAnimationFrame(function () { enCola = false; ordenarEtiquetas(); }); });
-    }
-    m.on("moveend zoomend layeradd", agendarEtiquetas);
-    m.on("zoomend", dibujarBase);
+    m.al("camiones", ordenarEtiquetas);       // mapa.js avisa después de repartir los camiones: aquí se mide el resultado
     dibujarBase();
-    var todos = [base];
+    var todos = [base], paradas = [];
     d.camiones.forEach(function (c) { todos.push([c.lat, c.long]); });          // el encuadre incluye a los camiones, no solo la bodega y las paradas
     d.viajes.forEach(function (v, i) {
       if (!v.paradas.length) return;
@@ -190,25 +179,26 @@
       if (!v.ruta) return;
       (function () {
         var r = CofrialMapa.rutaGuardada(v.ruta), lista = [];       // la MISMA polilínea que sigue el camión y que ve el cliente
-        L.polyline(r.linea, {color: color, weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(m);
+        m.ruta(r.linea, {color: color, aproximada: r.aproximada});
         var posicion = {}; v.ruta.paradas.forEach(function (q, k) { posicion[q.direccion_id] = k + 1; });
         v.paradas.forEach(function (p) {
           var n = posicion[p.direccion_id] || 1;                  // posición de la parada en el recorrido (la base es 0)
-          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
+          paradas.push({pos: [p.lat, p.long], numero: n, color: color, popup: [p.cliente, p.direccion]});
           lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")</span></li>";
         });
         document.getElementById("rutas-sugeridas").insertAdjacentHTML("beforeend",
           "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b> · " + v.situacion + ", ruta por calles: " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.filter(Boolean).join("") + "</ol>");
       })();
     });
-    if (todos.length > 1) m.fitBounds(todos, {padding: [36, 36], maxZoom: 15});
+    m.puntos(paradas);                        // una sola capa para todas las paradas: con la flota en ruta serían cientos de nodos en la página
+    if (todos.length > 1) m.encuadrar(todos, {padding: 36, maxZoom: 14, animar: false});
     var puntosRutas = todos.slice();
     document.getElementById("ver-flota").addEventListener("click", function () {      // toda la flota, incluidos los camiones en viajes lejanos
       var pts = [base];
-      Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].getLatLng()); });
-      m.fitBounds(pts, {padding: [30, 30], maxZoom: 15});
+      Object.keys(marcas).forEach(function (id) { pts.push(marcas[id].latlon()); });
+      m.encuadrar(pts, {padding: 30, maxZoom: 14});
     });
-    document.getElementById("ver-rutas").addEventListener("click", function () { m.fitBounds(puntosRutas.length > 1 ? puntosRutas : [base], {padding: [40, 40], maxZoom: 14}); });
+    document.getElementById("ver-rutas").addEventListener("click", function () { m.encuadrar(puntosRutas.length > 1 ? puntosRutas : [base], {padding: 40, maxZoom: 13}); });
     var botones = document.querySelectorAll(".alternar-base"), rejilla = document.getElementById("vehiculos"), vacio = document.getElementById("vehiculos-vacio");
     function pintarControl() {
       var n = Object.keys(enBase).length;
@@ -223,7 +213,7 @@
     botones.forEach(function (b) {
       b.addEventListener("click", function () {
         verBase = !verBase;
-        if (verBase) capaBase.addTo(m); else capaBase.remove();
+        puntosBase.mostrar(verBase);
         pintarControl();
       });
     });
@@ -232,17 +222,16 @@
     window.moverCamion = function (c, lat, lon) {
       var id = c.camion_id, guardado = c.situacion === "en_base" && !c.alerta, cambio = guardado !== !!enBase[id];
       if (guardado) {
-        if (marcas[id]) { marcas[id].remove(); delete marcas[id]; }
+        if (marcas[id]) { marcas[id].quitar(); delete marcas[id]; }
         enBase[id] = {id: id, patente: c.patente};
       } else {
         delete enBase[id];
         if (!marcas[id]) agregarCamion({id: id, patente: c.patente, lat: lat, long: lon, alerta: c.alerta});
-        marcas[id].setLatLng([lat, lon]);
-        if (marcas[id].enAlerta !== c.alerta) { marcas[id].enAlerta = c.alerta; marcas[id].setIcon(CofrialMapa.camion(c.alerta, id, m.getZoom())); }
+        marcas[id].animarA([lat, lon]).alerta(c.alerta);
       }
       if (cambio) dibujarBase();
     };
-    window.despuesDeMover = function () { pintarControl(); agendarEtiquetas(); };
+    window.despuesDeMover = function () { pintarControl(); m.ordenarCamiones(); };
   })();
 </script>
 <script>

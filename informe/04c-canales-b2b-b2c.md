@@ -188,6 +188,6 @@ El chat utiliza Groq y luego Gemini por defecto, con presupuesto nominal de diez
 
 ## Presentación y estados de interfaz
 
-El catálogo de demostración contiene veinte productos en cuatro categorías. Las imágenes prioritarias son representaciones referenciales generadas con IA y no fotografías de envases reales de Cofrial; los recursos previos quedan como respaldo. Se utilizan AVIF adaptables y JPG de respaldo, tipografía y Leaflet autoalojados. Los mapas conservan dependencias externas para teselas, geocodificación y rutas.
+El catálogo de demostración contiene veinte productos en cuatro categorías. Las imágenes prioritarias son representaciones referenciales generadas con IA y no fotografías de envases reales de Cofrial; los recursos previos quedan como respaldo. Se utilizan AVIF adaptables y JPG de respaldo, tipografía y MapLibre GL JS autoalojados. Los mapas conservan dependencias externas para teselas, geocodificación y rutas; si OpenFreeMap no responde, siguen mostrando rutas y puntos sobre un fondo local.
 
 Las pantallas contemplan vacío, carga, errores de formulario, confirmación de acciones y pérdida de conexión con señal de antigüedad. El cliente puede solicitar avisos de reposición por cantidad mínima; se muestran dentro del portal y el CRM consulta la demanda en espera. No se ha implementado correo de reposición, pasarela de pago, factura electrónica ni integración automática con el sistema contable.

@@ -118,6 +118,7 @@ ESPERADO = {
     '/pedidos/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
     '/soporte/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
     '/pedidos/999999/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
+    '/pedidos/999999/documentos/999999/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
     '/pedidos/999999/oc/': ('405 405 405 405 405 405 405', 'L →/pedidos/… →/pedidos/… 403 403 403 403'),
     '/pedidos/999999/entrega/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
     '/pedidos/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 404 404 403 403 403 403'),

@@ -47,7 +47,7 @@ class BaseSeguridad(TestCase):
 class AccesoAnonimoTests(BaseSeguridad):
     PRIVADAS_GET = ["/operacion/productos/", "/operacion/productos/nuevo/", "/operacion/productos/1/", "/operacion/ordenes/", "/operacion/sistema/", "/operacion/datos/",
                     "/operacion/datos/x/", "/operacion/datos/x/nuevo/", "/operacion/datos/x/1/",
-                    "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
+                    "/pedidos/1/documentos/1/", "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
@@ -266,6 +266,23 @@ class MetodosCsrfYRedireccionesTests(BaseSeguridad):
         self.assertEqual(c.get("/carrito/").status_code, 200)         # la sesión sigue viva
         c.post("/cuenta/salir/")
         self.assertEqual(c.get("/carrito/").status_code, 302)
+
+    def test_salir_de_la_tienda_pregunta_y_vuelve_al_ingreso(self):
+        c = self.entrar("ana@correo.test")
+        pagina = c.get("/catalogo/")
+        self.assertContains(pagina, 'id="salir-dialogo"')
+        self.assertContains(pagina, "¿Salir de la cuenta?")
+        self.assertContains(pagina, ">Cancelar<")
+        self.assertContains(pagina, ">Confirmar<")
+        self.assertContains(pagina, 'name="next" value="/cuenta/entrar/"')
+        self.assertNotContains(self.anonimo().get("/catalogo/"), 'id="salir-dialogo"')
+        r = c.post("/cuenta/salir/", {"next": "/cuenta/entrar/"})
+        self.assertRedirects(r, "/cuenta/entrar/", fetch_redirect_response=False)
+        self.assertEqual(c.get("/carrito/").status_code, 302)
+        c = self.entrar("ana@correo.test")
+        malo = c.post("/cuenta/salir/", {"next": "https://malo.example/"})
+        self.assertEqual(malo.status_code, 302)
+        self.assertNotIn("malo.example", malo["Location"])
 
 
 # ---------------------------------------------------------------- 5. Entradas hostiles: ni 500 ni código inyectado

@@ -28,15 +28,19 @@
   <div>
     {% if n == "Cancelada" %}<h2 id="ep-t">Esta orden fue cancelada</h2><p>El stock de los productos quedó repuesto. Si fue un error, arma el pedido de nuevo desde el catálogo.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Ir al catálogo</a><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Consultar por esta orden</a></div>
-    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado exitosamente</h2>
-      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> El pedido llegó a su destino{% if orden.quien_recibe %} y lo recibió {{ orden.quien_recibe }}{% endif %}.</p>
-      {% if orden.entrega_automatica %}<p>No recibimos tu respuesta a tiempo y lo dimos por entregado{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Si no lo recibiste, cuéntanoslo y lo revisamos.</p>
-      <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">No lo recibí</a><a class="btn" href="/catalogo/">Seguir comprando</a></div>
-      {% else %}<p>Confirmaste la recepción{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura.</p>
+    {% elif n == "Entregada" and not orden.entrega_automatica and orden.entrega_resuelta_en %}<h2 id="ep-t">Pedido entregado exitosamente</h2>
+      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> El pedido llegó a su destino{% if orden.quien_recibe %} y lo recibió {{ orden.quien_recibe }}{% endif %}.{% if viaje_sigue %} El camión sigue con otros pedidos de este viaje.{% else %} No quedan entregas pendientes: el camión vuelve a la bodega.{% endif %}</p>
+      <p>Confirmaste la recepción a las {{ orden.entrega_resuelta_en|date:"H:i" }}. Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura.</p>
       {% if reclamo %}<p class="entrega-reclamo"><b>Ventas ya tiene tu aviso:</b> {{ reclamo.descripcion }} <a href="/soporte/?orden={{ orden.orden_id }}">Ver mis consultas</a></p>{% endif %}
+      <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado</h2>
+      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> El pedido llegó a su destino{% if orden.quien_recibe %} y lo recibió {{ orden.quien_recibe }}{% endif %}.</p>
+      {% if orden.entrega_automatica %}<p>No recibimos tu respuesta a tiempo y lo dimos por entregado{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. No es una confirmación tuya. Si no lo recibiste, cuéntanoslo y lo revisamos.</p>
+      <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">No lo recibí</a><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+      {% else %}<p>Este pedido figura como entregado. Abajo queda el registro del viaje y de la temperatura.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>{% endif %}
-    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Estamos afuera de tu dirección</h2>
-      <p>El camión llegó con tu pedido N.º {{ orden.orden_id }} a {{ orden.direccion }}. ¿Lo pudiste recibir?</p>
+    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Tu paquete llegó</h2>
+      <p>El camión está en {{ orden.direccion }} con tu pedido N.º {{ orden.orden_id }}. Hasta que confirmes, no queda como entregado.</p>
       <div class="entrega" id="entrega" data-url="/pedidos/{{ orden.orden_id }}/entrega/">
         <form class="entrega-revision" method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar" aria-labelledby="rev-t">{% csrf_token %}<input type="hidden" name="accion" value="aceptar">
           <h3 id="rev-t">Revisa tu pedido antes de confirmar</h3>
@@ -143,13 +147,15 @@
   </dl>
 </div>
 {% if documentos %}
-<div class="seccion" id="documentos"><h2>Documentos y pago</h2></div>
+<div class="seccion" id="documentos"><h2>Documentos y pago</h2>
+{% if venta %}<p>Este pedido tiene {{ venta }}. <a href="/pedidos/{{ orden.orden_id }}/documentos/{{ venta.documento_id }}/">Ver</a> · <a href="/pedidos/{{ orden.orden_id }}/documentos/{{ venta.documento_id }}/?descarga=1">Descargar</a></p>{% elif orden.comprobante == "factura" and not orden.estado_orden.es_final %}<p class="frio">La factura de este pedido se emite después de la entrega.{% if cliente_tienda %} Usa el RUT {{ cliente_tienda.rut }}{% if cliente_tienda.giro %} y el giro {{ cliente_tienda.giro }}{% endif %}.{% endif %}</p>{% elif orden.comprobante == "factura" and orden.estado_orden.nombre == "Entregada" %}<p class="frio">La factura de este pedido se emite después de la entrega.</p>{% endif %}
+</div>
 <div class="tabla-caja tabla-cards"><table>
   <thead><tr><th>Documento</th><th>Emitido</th><th>Vence</th><th class="num">Monto</th><th>Estado</th></tr></thead>
-  <tbody>{% for d in documentos %}<tr><td data-label="Documento">{{ d }}{% if d.referencia %} <span class="frio">({{ d.motivo }})</span>{% endif %}</td><td data-label="Emitido">{{ d.emitido_en|date:"d/m/Y" }}</td><td data-label="Vence">{{ d.vence_en|date:"d/m/Y"|default:"–" }}</td><td class="num" data-label="Monto">{% if d.monto_clp %}{{ d.monto_clp|clp }}{% else %}–{% endif %}</td><td data-label="Estado">{% if d.estado_pago %}{% include "componentes/chip_pago.html" with estado=d.estado_pago %}{% else %}<span class="frio">{% if d.tipo == "guia_despacho" %}Acompaña la entrega{% else %}Rebaja de documento{% endif %}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+  <tbody>{% for d in documentos %}<tr><td data-label="Documento">{{ d }}{% if d.referencia %} <span class="frio">({{ d.motivo }})</span>{% endif %}{% if d.tipo == "boleta" or d.tipo == "factura" %} <a href="/pedidos/{{ orden.orden_id }}/documentos/{{ d.documento_id }}/">Ver</a>{% endif %}</td><td data-label="Emitido">{{ d.emitido_en|date:"d/m/Y" }}</td><td data-label="Vence">{{ d.vence_en|date:"d/m/Y"|default:"–" }}</td><td class="num" data-label="Monto">{% if d.monto_clp %}{{ d.monto_clp|clp }}{% else %}–{% endif %}</td><td data-label="Estado">{% if d.estado_pago %}{% include "componentes/chip_pago.html" with estado=d.estado_pago %}{% else %}<span class="frio">{% if d.tipo == "guia_despacho" %}Acompaña la entrega{% else %}Rebaja de documento{% endif %}</span>{% endif %}</td></tr>{% endfor %}</tbody>
 </table></div>
-{% elif es_b2b and not orden.estado_orden.es_final %}
-<p class="frio">La guía de despacho sale con el camión y la factura se emite después de la entrega, con pago a {{ orden.direccion.cliente.tipo_cliente.dias_credito }} días.</p>
+{% elif orden.comprobante == "factura" and not orden.estado_orden.es_final %}
+<p class="frio">La guía de despacho sale con el camión. La factura de este pedido se emite después de la entrega.{% if es_b2b %} El pago es a {{ orden.direccion.cliente.tipo_cliente.dias_credito }} días.{% endif %}{% if cliente_tienda %} Usa el RUT {{ cliente_tienda.rut }}{% if cliente_tienda.giro %} y el giro {{ cliente_tienda.giro }}{% endif %}.{% endif %}</p>
 {% endif %}
 <div class="seccion"><h2>Productos</h2></div>
 <div class="tabla-caja tabla-cards">

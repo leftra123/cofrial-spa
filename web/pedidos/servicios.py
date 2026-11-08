@@ -178,14 +178,37 @@ def agregar_direccion(cliente, calle_numero, comuna_id):
 
 
 # ------------------------------------------------------------------------------------ órdenes
+def elegir_comprobante(cliente, comprobante=None, giro=""):
+    """La boleta usa el nombre y el RUT ya guardados en la cuenta. La factura, además, exige el giro.
+
+    Elige solo el público. La institución compra a crédito y recibe factura después de la entrega: una boleta suya
+    quedaría sin cobro, porque no pasa por un pago al comprar. Si no se elige nada, queda el comprobante del canal.
+    El RUT no se vuelve a pedir ni se reemplaza: es el que se validó al crear la cuenta."""
+    if comprobante not in (None, "", "boleta", "factura"):
+        raise ErrorDeNegocio("Elige boleta o factura.")
+    explicito = bool(comprobante)
+    b2b = cliente.tipo_cliente.codigo == "B2B"
+    if b2b and comprobante == "boleta":
+        raise ErrorDeNegocio("Las instituciones reciben factura después de la entrega.")
+    comprobante = comprobante or ("factura" if b2b else "boleta")
+    giro = str(giro or "").strip()[:80]
+    if comprobante == "factura" and giro and giro != cliente.giro:
+        cliente.giro = giro
+        cliente.save(update_fields=["giro"])
+    if comprobante == "factura" and explicito and not cliente.giro:
+        raise ErrorDeNegocio("Para la factura indica el giro. El RUT y la razón social son los de tu cuenta.")
+    return comprobante
+
+
 @transaction.atomic
-def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe=""):
+def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe="", comprobante=None, giro=""):
     """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
 
     RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
     (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección, la misma OC y la misma persona que recibe.
     Devuelve la lista.
     """
+    comprobante = elegir_comprobante(cliente, comprobante, giro)
     ctx = _contexto_desde_carrito(cliente, direccion_id, numero_oc, recibe)
     direccion, carrito, items, productos, precios, grupos = ctx["direccion"], ctx["carrito"], ctx["items"], ctx["productos"], ctx["precios"], ctx["grupos"]
     pendiente, numero_oc = ctx["pendiente"], ctx["numero_oc"]
@@ -194,7 +217,7 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
     ordenes = []
     for rango_id in sorted(grupos):
         orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado,
-                                     checkout_pago=checkout_pago, recibe_nombre=ctx["recibe"])
+                                     checkout_pago=checkout_pago, recibe_nombre=ctx["recibe"], comprobante=comprobante)
         if pendiente:
             orden.numero_oc = referencia_web(orden)
             orden.save(update_fields=["numero_oc"])
@@ -203,7 +226,10 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
                                      precio_unitario_clp=precios[i.producto_id])
             Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
         if cliente.tipo_cliente.codigo == "B2C" and cobrar_b2c_al_crear:
-            documentos.cobrar_b2c(orden)
+            if comprobante == "factura":
+                documentos.cobrar_factura_contado(orden)
+            else:
+                documentos.cobrar_b2c(orden)
         ordenes.append(orden)
     carrito.estado = "convertido"
     carrito.save(update_fields=["estado"])
@@ -554,8 +580,8 @@ def avisos_de_llegada(cliente):
                            if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}."})
         if nombre == "Entregada" and o.entrega_resuelta_en:
             salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": o.entrega_resuelta_en.isoformat(),
-                           "texto": f"Pedido entregado exitosamente: tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
-                           + (" (confirmado automáticamente)." if o.entrega_automatica else ".")})
+                           "texto": f"Tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)} (confirmado automáticamente)."
+                           if o.entrega_automatica else f"Pedido entregado exitosamente: tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}."})
         if nombre == "Entrega no concretada":
             salida.append({"id": f"{o.orden_id}-no-concretada", "orden_id": o.orden_id, "tipo": "no_concretada",
                            "cuando": (o.entrega_resuelta_en or o.puerta_en or d.salida_en).isoformat(),
@@ -666,6 +692,7 @@ def resolver_entrega(cliente, orden_id, accion, motivo="", con_problema=False, t
         if accion == "no_recibido":
             orden.entrega_motivo = motivo[:500]
         orden.save(update_fields=["estado_orden", "entrega_resuelta_en", "entrega_automatica", "entrega_motivo"])
+        cerrar_entregas_sin_pendientes([orden.despacho_id])
     from crm import servicios as crm
     if accion == "no_recibido":
         crm.crear_requerimiento(orden.direccion.cliente, f"Entrega no concretada del pedido N.º {orden.pk}", motivo, orden=orden)
@@ -691,9 +718,28 @@ def confirmar_vencidas(ahora=None):
     from django.conf import settings
     from django.utils import timezone
     ahora = ahora or timezone.now()
-    return Orden.objects.filter(estado_orden__nombre="Camión en la puerta",
-                                puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG)).update(
-        estado_orden=_estado("Entregada"), entrega_resuelta_en=ahora, entrega_automatica=True)
+    vencidas = Orden.objects.filter(estado_orden__nombre="Camión en la puerta", puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG))
+    despachos = list(vencidas.values_list("despacho_id", flat=True).distinct())
+    n = vencidas.update(estado_orden=_estado("Entregada"), entrega_resuelta_en=ahora, entrega_automatica=True)
+    if n:
+        cerrar_entregas_sin_pendientes(despachos)
+    return n
+
+
+def cerrar_entregas_sin_pendientes(despachos):
+    """Si uno de estos viajes ya no tiene pedidos en camino ni en la puerta, su recorrido de entregas queda finalizado.
+
+    No cierra un viaje que todavía debe atender otra parada. No marca el regreso a la bodega: eso lo registra el
+    simulador cuando el camión llega. Poner `llegada_en` avisa que la última entrega ya se cerró."""
+    from django.db.models import Exists, OuterRef
+    from django.db.models.functions import Coalesce, Greatest, Now
+
+    from flota.models import Despacho
+
+    pendiente = Orden.objects.filter(despacho_id=OuterRef("pk"), estado_orden__nombre__in=("Despachada", "Camión en la puerta"))
+    return Despacho.objects.filter(pk__in=despachos, salida_en__isnull=False, regreso_en__isnull=True).exclude(fase="volviendo").annotate(
+        hay_pendiente=Exists(pendiente)).filter(hay_pendiente=False).update(
+        fase="volviendo", llegada_en=Greatest(Coalesce(F("llegada_en"), Now()), F("salida_en")))
 
 
 def llegar_a_la_puerta(ordenes, ahora=None):

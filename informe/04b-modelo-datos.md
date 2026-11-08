@@ -519,6 +519,7 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `numero_oc` | varchar(30) | Sí | — | Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número. | OC-2026-0457 |
 | `oc_pendiente` | boolean | No | — | Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega. | falso |
 | `recibe_nombre` | varchar(80) | No | — | Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta. | María Soto |
+| `comprobante` | varchar(8) | No | CHECK boleta o factura | Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura. | boleta |
 | `creada_en` | timestamptz | No | — | Fecha y hora de la orden. | 2026-10-12 10:20:00-03 |
 
 *Nota.* Elaboración propia.
@@ -792,6 +793,7 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | direccion.long | double precision | Sí | Longitud de entrega para seguimiento y ruta |
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
 | orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
+| orden.comprobante | varchar(8), por defecto boleta, CHECK boleta o factura | No | Documento de venta elegido al comprar; las órdenes institucionales quedan en factura (migración `pedidos/0010_orden_comprobante`) |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas de demostración: las forzadas desde la web y las que el simulador envía durante la falla de un escenario |
 | despacho.decision_auto | text | Sí | Por qué salió el viaje, escrito por el despacho automático; vacío si lo armó una persona |
 | despacho.decision_ia | text | Sí | La misma decisión redactada por la IA; vacío si no hubo IA utilizable |

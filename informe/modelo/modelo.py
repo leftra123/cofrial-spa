@@ -159,6 +159,7 @@ tabla("orden", "Comercial", "Órdenes de compra generadas en el portal. El clien
     c("numero_oc", "varchar(30)", "Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número.", "OC-2026-0457", nulo=True),
     c("oc_pendiente", "boolean", "Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega.", "falso", default="false"),
     c("recibe_nombre", "varchar(80)", "Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta.", "María Soto", default="''"),
+    c("comprobante", "varchar(8)", "Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura.", "boleta", default="'boleta'"),
     c("creada_en", "timestamptz", "Fecha y hora de la orden.", "2026-10-12 10:20:00-03", default="now()"),
 ])
 tabla("orden_item", "Comercial", "Líneas de una orden, con el precio vigente al momento de comprar.", [

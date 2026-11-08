@@ -163,6 +163,7 @@ CREATE TABLE orden (
   numero_oc varchar(30),
   oc_pendiente boolean NOT NULL DEFAULT false,
   recibe_nombre varchar(80) NOT NULL DEFAULT '',
+  comprobante varchar(8) NOT NULL DEFAULT 'boleta' CHECK (comprobante IN ('boleta', 'factura')),
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 

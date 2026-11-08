@@ -199,6 +199,9 @@ class Command(BaseCommand):
             cliente, _ = Cliente.objects.get_or_create(rut=rut, defaults=dict(usuario=u, tipo_cliente=tipo, vendedor=vendedor, nombre=nombre, email=username))
             if not cliente.direccion_set.exists():
                 Direccion.objects.create(cliente=cliente, calle_numero=calle, comuna=temuco, es_principal=True)
+            if tipo == tipo_b2b and not cliente.giro:          # la factura lo exige; el hospital de la demostración no debe tener que escribirlo
+                cliente.giro = "Servicios de salud"
+                cliente.save(update_fields=["giro"])
 
         # segunda vendedora, gerencia y despachador: sirven para mostrar los permisos por rol (RN-09)
         grupo_gerencia, _ = Group.objects.get_or_create(name="gerencia")

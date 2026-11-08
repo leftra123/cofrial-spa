@@ -116,7 +116,7 @@
     }
     consulta(); setInterval(consulta, 8000);
     setInterval(function () { if (restante != null) pintarResta(Math.max(0, restante - Math.round((Date.now() - ultimo) / 1000))); }, 5000);
-    if (anuncio) anuncio.textContent = "El camión llegó con tu pedido. Confirma si lo recibiste.";
+    if (anuncio) anuncio.textContent = "Tu paquete llegó. Confirma si lo recibiste. Todavía no figura como entregado.";
   }
 
   /* ---------- diálogo para la campanita ---------- */

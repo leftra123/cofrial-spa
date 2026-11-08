@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Verificación de punta a punta de la instalación de Cofrial en AWS. Solo lee (no crea datos) salvo con --ia.
+"""Verificación de punta a punta de la instalación de Cofrial en AWS. Solo lee (no crea datos) salvo con --ia y --compra-ensayo.
 
     python3 aws/verificar.py                 # usa la IP de aws/.estado/ip.txt o la variable COFRIAL_URL
     python3 aws/verificar.py http://IP       # o una dirección explícita
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
+    python3 aws/verificar.py --compra-ensayo # además hace la compra de ensayo B2B y B2C (crea pedidos reales); no repite si ya hay una vigente
+    python3 aws/verificar.py --defensa       # modo previo a la defensa: las 5 filas D1 a D5 de la Torre deben quedar «verificado» y /torre/pulso/ rápido
 
-Las claves se toman de DEMO_PASSWORD y ADMIN_PASSWORD (variables o aws/.estado/secretos.env); no se imprimen.
-Cada cuenta entra con su clave propia (web/clientes/cuentas_demo.py) y, si no, con la común de antes (despliegue anterior).
+Las claves se toman de DEMO_PASSWORD, ADMIN_PASSWORD y CLAVE_UNICA_DEMO (variables o aws/.estado/secretos.env); no se imprimen.
+Cada cuenta entra con la clave única (si se aplicó cambiar_clave_demo --misma), con su clave propia (web/clientes/cuentas_demo.py) o, si no, con la común de antes.
 Solo usa la biblioteca estándar de Python (sin instalar nada). Sale con código 0 si todo pasó y 1 si algo falló.
 """
 import datetime
@@ -53,8 +55,13 @@ BASE = direccion()
 HOST = BASE.split("//", 1)[1].split("/")[0].split(":")[0]
 CLAVE = os.environ.get("DEMO_PASSWORD") or leer_estado("DEMO_PASSWORD")
 CLAVE_ADMIN = os.environ.get("ADMIN_PASSWORD") or leer_estado("ADMIN_PASSWORD") or CLAVE
+CLAVE_UNICA = os.environ.get("CLAVE_UNICA_DEMO") or leer_estado("CLAVE_UNICA_DEMO")
+DEFENSA = "--defensa" in sys.argv
+COMPRA_ENSAYO = "--compra-ensayo" in sys.argv
+PULSO_MAX_MS = 3000          # peor caso aceptado de /torre/pulso/ sin caché; la pantalla marca «Sin conexión» a los 8000 ms (ESPERA_MS)
+VIGENCIA_ENSAYO_DIAS = 7     # la rúbrica D2/D4 de la Torre mira los últimos 7 días
 ADMINISTRADORES = cuentas_demo.ADMINISTRADORES
-MODO_CLAVE = ["propia"]
+MODO_CLAVE = ["unica" if os.environ.get("CLAVE_UNICA_DEMO") or leer_estado("CLAVE_UNICA_DEMO") else "propia"]
 
 
 class SinRedireccion(urllib.request.HTTPRedirectHandler):
@@ -81,17 +88,19 @@ class Sesion:
         except (urllib.error.URLError, TimeoutError, OSError):
             return 0, "", url
 
-    def token(self, ruta):
-        _, html, _ = self.pedir(ruta)
+    def token(self, ruta, base=None):
+        _, html, _ = self.pedir(ruta, base=base)
         m = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html)
         return m.group(1) if m else ""
 
-    def entrar(self, usuario):
+    def entrar(self, usuario, base=None):
         comun = CLAVE_ADMIN if usuario in ADMINISTRADORES else CLAVE
         opciones = {"propia": cuentas_demo.clave_de(usuario, comun), "comun": comun}    # la común si el despliegue es anterior
+        if CLAVE_UNICA:
+            opciones["unica"] = CLAVE_UNICA                                         # cambiar_clave_demo --misma: la misma clave en las 13 cuentas
         for modo in sorted(opciones, key=lambda m: m != MODO_CLAVE[0]):            # primero la que ya funcionó: menos intentos fallidos
-            t = self.token("/cuenta/entrar/")
-            st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": opciones[modo], "next": "/"})
+            t = self.token("/cuenta/entrar/", base)
+            st, html, url = self.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": t, "username": usuario, "password": opciones[modo], "next": "/"}, base=base)
             if st == 200 and "/cuenta/salir/" in html:        # el formulario de salida solo aparece con sesión iniciada
                 MODO_CLAVE[0] = modo
                 return True
@@ -141,6 +150,76 @@ def consulta_grafana(sesion, sql):
         return json.loads(e.read())["results"]["A"]
 
 
+def exigir(cond, nombre, detalle_mal=""):
+    """Falla en modo --defensa; antes de la demo es solo un aviso (todavía puede faltar una venta o una lectura real)."""
+    if DEFENSA:
+        return chk(cond, nombre, detalle_mal)
+    marca("ok" if cond else "aviso", nombre, "" if cond else detalle_mal)
+    return bool(cond)
+
+
+def nombre_sslip(host):
+    """54.82.100.161 -> 54-82-100-161.sslip.io (sslip.io devuelve la IP escrita en el nombre); None si el host ya es un nombre."""
+    return host.replace(".", "-") + ".sslip.io" if re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", host) else None
+
+
+def fila_del_requerimiento(html, asunto):
+    """Fila de la lista de requerimientos con ese asunto (o None): para leer su estado sin depender de otras filas."""
+    for fila in html.split("<tr>"):
+        if f"<b>{asunto}</b>" in fila:
+            return fila
+    return None
+
+
+def pedidos_vigentes(sesion, solo_ensayo):
+    """Pedidos reales del cliente de la sesión de los últimos días: ni cancelados, ni rechazados enteros, ni del historial HIS-.
+    Con solo_ensayo, solo los de OC ENSAYO-. Devuelve None si la API no responde."""
+    st, d = sesion.json("/api/pedidos/")
+    if st != 200 or not d:
+        return None
+    desde = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=VIGENCIA_ENSAYO_DIAS)
+    vigentes = []
+    for o in d["ordenes"]:
+        if o["estado"] in ("Cancelada", "Rechazada en recepción") or (o["numero_oc"] or "").startswith("HIS-"):
+            continue
+        if datetime.datetime.fromisoformat(o["creada_en"].replace("Z", "+00:00")) < desde:
+            continue
+        if solo_ensayo and not (o["numero_oc"] or "").startswith("ENSAYO-"):
+            continue
+        vigentes.append(o)
+    return vigentes
+
+
+def comprar_ensayo(sesion, canal, producto="VAC-LOM-5K"):
+    """Una compra real por el flujo del sitio (catálogo, carrito, confirmar). Devuelve (estado, detalle): «creada», «vigente», «mp» o «error».
+    No repite si ya hay una vigente de los últimos 7 días; el B2C con Mercado Pago activo se paga en el navegador (el script no maneja el Brick)."""
+    previas = pedidos_vigentes(sesion, solo_ensayo=(canal == "B2B"))
+    if previas is None:
+        return "error", "la API de pedidos no responde"
+    if previas:
+        return "vigente", f"orden {previas[0]['orden_id']} ({previas[0]['numero_oc'] or 'sin OC'}, {previas[0]['estado']})"
+    m = re.search(r'data-sku="' + re.escape(producto) + r'".*?name="producto" value="(\d+)"', sesion.pedir("/catalogo/")[1], re.S)
+    if not m:
+        return "error", f"no encontré {producto} en el catálogo"
+    st, _, _ = sesion.pedir("/carrito/agregar/", {"csrfmiddlewaretoken": sesion.token("/carrito/"), "producto": m.group(1), "cantidad": "1", "volver": "/carrito/"})
+    st, html, _ = sesion.pedir("/carrito/")
+    if 'data-checkout="mp-modal-v4"' in html:
+        sesion.pedir("/carrito/actualizar/", {"csrfmiddlewaretoken": sesion.token("/carrito/"), "producto": m.group(1), "cantidad": "0"})     # deja el carrito como estaba
+        return "mp", "el carrito de este canal paga con Mercado Pago (sandbox): hacerlo a mano en el navegador"
+    d = re.search(r'<select name="direccion"[^>]*>.*?<option value="(\d+)"', html, re.S)
+    if not d:
+        return "error", "el carrito no ofrece dirección de entrega"
+    oc = "ENSAYO-" + datetime.datetime.now().strftime("%Y%m%d-%H%M")
+    datos = {"csrfmiddlewaretoken": sesion.token("/carrito/"), "direccion": d.group(1), "recibe": "", "recibe_nuevo": "",
+             "comprobante": "factura" if canal == "B2B" else "boleta"}
+    if canal == "B2B":
+        datos["numero_oc"] = oc
+    st, _, url = sesion.pedir("/carrito/confirmar/", datos)
+    if "/pedidos/" in url and "nueva=1" in url:
+        return "creada", f"{url.split(BASE)[-1]}" + (f" (OC {oc})" if canal == "B2B" else "")
+    return "error", f"no se generó la orden (HTTP {st}, terminó en {url.split(BASE)[-1]})"
+
+
 USUARIOS = {"hospital": "abastecimiento@hospital.test", "ana": "ana@correo.test",
             "vendedora": "vendedora@cofrial.cl", "vendedor2": "vendedor2@cofrial.cl", "gerente": "gerencia@cofrial.cl",
             "despachador": "despacho@cofrial.cl", "admin": "admin@cofrial.cl",
@@ -170,7 +249,26 @@ def main():
         sesiones[clave] = s if s.entrar(usuario) else None
         chk(sesiones[clave] is not None, f"Inicio de sesión: {usuario}", "usuario o clave rechazados")
     if not all(sesiones.values()):
-        print("\nHay cuentas que no entran: revisar las claves (DEMO_PASSWORD, ADMIN_PASSWORD o la que se cambió desde la cuenta).")
+        print("\nHay cuentas que no entran: revisar las claves (DEMO_PASSWORD, ADMIN_PASSWORD, CLAVE_UNICA_DEMO o la que se cambió desde la cuenta).")
+
+    otras = [u for u in cuentas_demo.USUARIOS if u not in USUARIOS.values()]       # las que no se usan en las demás pruebas (Angol, Villarrica, Pucón…)
+    entran = sum(1 for s in sesiones.values() if s)
+    for usuario in otras:
+        entran += chk(Sesion().entrar(usuario), f"Inicio de sesión: {usuario}", "usuario o clave rechazados")
+    chk(entran == len(cuentas_demo.USUARIOS) == len(USUARIOS) + len(otras), f"Las {len(cuentas_demo.USUARIOS)} cuentas de demostración entran: {entran}/{len(cuentas_demo.USUARIOS)}",
+        "revisar las claves: tras recrear la web hay que repetir cambiar_clave_demo --misma")
+    st, _, _ = Sesion().pedir("/cuenta/entrar/", {"username": "no-existe@cofrial.test", "password": "x"})      # sin token CSRF
+    chk(st == 403, "Un envío del formulario de ingreso sin token CSRF se rechaza (403)", f"HTTP {st}")
+    falso = Sesion()
+    st, html, _ = falso.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": falso.token("/cuenta/entrar/"), "username": "no-existe@cofrial.test", "password": "x", "next": "/"})
+    chk(st == 200 and "/cuenta/salir/" not in html, "Con token CSRF pero clave falsa el ingreso se rechaza", f"HTTP {st}")
+    nombre = nombre_sslip(HOST)
+    if nombre:
+        base_nombre = "http://" + nombre
+        sesion_nombre = Sesion()
+        st, cuerpo, _ = sesion_nombre.pedir("/salud/", base=base_nombre)
+        chk(st == 200 and '"ok"' in cuerpo, f"El nombre {nombre} responde (/salud/)", f"HTTP {st}: sin respuesta (¿sin internet o sin DNS?)")
+        chk(sesion_nombre.entrar("gerencia@cofrial.cl", base=base_nombre), f"Ingreso con formulario y CSRF por {nombre}", "el formulario no entra por el nombre (¿DJANGO_CSRF_ORIGINS?)")
 
     titulo("2. E-commerce: perfiles B2B y B2C")
     if sesiones["hospital"] and sesiones["ana"]:
@@ -257,33 +355,10 @@ def main():
         except (OSError, KeyError, ValueError) as e:
             marca("aviso", "No pude revisar las consultas del tablero", str(e)[:80])
 
-    titulo("6. Torre de control (gerencia; solo lectura)")
-    if sesiones["gerente"]:
-        st, html, _ = sesiones["gerente"].pedir("/torre/")
-        chk(st == 200 and "Torre de control" in html, "La Torre de control abre para gerencia (/torre/)", f"HTTP {st}")
-        st, d = sesiones["gerente"].json("/torre/pulso/")
-        filas = d.get("rubrica") if d else None
-        if chk(st == 200 and isinstance(filas, list) and len(filas) == 5, "El pulso trae las 5 filas de la rúbrica", f"HTTP {st}"):
-            etiqueta = {"verificado": "ok", "sin_evidencia": "aviso", "no_comprobado": "aviso"}
-            for f in filas:       # un estado sin evidencia no es falla: antes de la demo todavía no hay ventas ni lecturas reales
-                marca(etiqueta.get(f.get("estado"), "aviso"), f"Rúbrica {f.get('dim')} {f.get('titulo')}: {f.get('estado')}")
-            marca("info", "Un aviso de la rúbrica no hace fallar este verificador: en el punto de decisión, leer también estas cinco filas")
-    if sesiones["vendedora"]:
-        st, _, _ = sesiones["vendedora"].pedir("/torre/")
-        chk(st == 403, "La Torre responde 403 a una vendedora (verían clientes fuera de su cartera)", f"HTTP {st}")
-
-    titulo("7. CRM e IA")
-    if sesiones["vendedora"]:
-        st, html, _ = sesiones["vendedora"].pedir("/crm/requerimientos/")
-        sin = html.count("sin clasificar")
-        if sin:
-            marca("ok", f"Hay {sin} requerimiento(s) sin clasificar con el botón \"Clasificar con IA\" (listo para la demo en vivo)")
-        else:
-            marca("aviso", "No queda ningún requerimiento sin clasificar: la demostración en vivo de la IA necesita uno")
-    if sesiones["vendedora"]:
-        st, html, _ = sesiones["vendedora"].pedir("/crm/ia/")
-        chk(st == 200 and "Panel de IA" in html and "Probar la IA ahora" in html, "El CRM tiene el panel de IA (estado y prueba en vivo)", f"HTTP {st}")
+    titulo("6. IA: reclamo de prueba (--ia; D5 de la Torre necesita una clasificación registrada)")
+    creo_datos = False
     if "--ia" in sys.argv and sesiones["ana"]:
+        creo_datos = True
         t = sesiones["ana"].token("/soporte/")
         t1 = time.time()
         st, html, _ = sesiones["ana"].pedir("/soporte/", {"csrfmiddlewaretoken": t, "asunto": "Verificación automática",
@@ -294,6 +369,75 @@ def main():
             "quedó sin clasificar: revisar las claves de IA (manage.py probar_ia)")
     elif "--ia" not in sys.argv:
         marca("info", "Prueba de IA omitida (crearía un requerimiento). Para incluirla: python3 aws/verificar.py --ia")
+
+    titulo("7. Compra de ensayo (D2 y D4 exigen un pedido real por canal)")
+    if COMPRA_ENSAYO:
+        creada = False
+        for canal, clave in (("B2B", "hospital"), ("B2C", "ana")):
+            if not sesiones[clave]:
+                marca("mal", f"Compra de ensayo {canal}", "la cuenta no entró")
+                continue
+            estado, detalle = comprar_ensayo(sesiones[clave], canal)
+            if estado == "mp":
+                marca("aviso", f"Compra de ensayo {canal}: {detalle}")
+            else:
+                chk(estado in ("creada", "vigente"), f"Compra de ensayo {canal}: " + {"creada": "pedido creado", "vigente": "ya hay uno vigente (no se repite)"}.get(estado, "falló") + f" {detalle}" * (estado != "error"), detalle)
+            creada |= estado == "creada"
+        creo_datos |= creada
+    else:
+        for canal, clave in (("B2B", "hospital"), ("B2C", "ana")):
+            if sesiones[clave]:
+                vigentes = pedidos_vigentes(sesiones[clave], solo_ensayo=(canal == "B2B"))
+                marca("info", f"Pedidos reales de {canal} en {VIGENCIA_ENSAYO_DIAS} días: " + ("no se pudo leer" if vigentes is None else str(len(vigentes))))
+        marca("info", "No se hizo compra de ensayo. Para hacerla (crea pedidos reales y descuenta stock): python3 aws/verificar.py --compra-ensayo")
+
+    if creo_datos:
+        time.sleep(6)                     # la Torre calcula el pulso con una caché de 5 s: esperar para que vea lo que se acaba de crear
+    titulo("8. Torre de control (gerencia; solo lectura)" + (" · modo --defensa: las cinco filas deben estar verificadas" if DEFENSA else ""))
+    if sesiones["gerente"]:
+        st, html, _ = sesiones["gerente"].pedir("/torre/")
+        chk(st == 200 and "Torre de control" in html, "La Torre de control abre para gerencia (/torre/)", f"HTTP {st}")
+        t1 = time.perf_counter()
+        st, d = sesiones["gerente"].json("/torre/pulso/")
+        tiempos = [round((time.perf_counter() - t1) * 1000)]
+        filas = d.get("rubrica") if d else None
+        if chk(st == 200 and isinstance(filas, list) and len(filas) == 5, "El pulso trae las 5 filas de la rúbrica", f"HTTP {st}"):
+            etiqueta = {"verificado": "ok", "sin_evidencia": "aviso", "no_comprobado": "aviso"}
+            for f in filas:       # un estado sin evidencia no es falla antes de la demo: todavía no hay ventas ni lecturas reales
+                nombre = f"Rúbrica {f.get('dim')} {f.get('titulo')}: {f.get('estado')}"
+                if DEFENSA:
+                    chk(f.get("estado") == "verificado", nombre, "; ".join(f.get("evidencia") or [])[:240])
+                else:
+                    marca(etiqueta.get(f.get("estado"), "aviso"), nombre)
+            por_dim = {f.get("dim"): f for f in filas}
+            d1, d5 = (por_dim.get("D1") or {}).get("evidencia") or [], (por_dim.get("D5") or {}).get("evidencia") or []
+            exigir(any(re.fullmatch(r"Instancia EC2: i-[0-9a-f]{8,17}", e) for e in d1), "D1 muestra el ID de la instancia EC2 (Instancia EC2: i-…)",
+                   "sin ID: ¿se recreó la web con provision.sh de main? (escribe INSTANCIA_EC2 en el .env)")
+            exigir("IA de pago (ANTHROPIC_API_KEY): no configurada" in d5, "D5 sin clave de IA de pago (ANTHROPIC_API_KEY vacía)",
+                   "hay una clave de pago activa: vaciar ANTHROPIC_API_KEY en secretos.env y recrear la web")
+            if not DEFENSA:
+                marca("info", "Un aviso de la rúbrica no hace fallar este verificador: en el punto de decisión usar --defensa")
+        for _ in range(3 if DEFENSA else 0):          # varias lecturas espaciadas más que la caché de 5 s: miden el cálculo, no la caché
+            time.sleep(6)
+            t1 = time.perf_counter()
+            sesiones["gerente"].json("/torre/pulso/")
+            tiempos.append(round((time.perf_counter() - t1) * 1000))
+        exigir(max(tiempos) < PULSO_MAX_MS, f"/torre/pulso/ responde en {max(tiempos)} ms" + (f" (peor de {len(tiempos)} lecturas sin caché)" if len(tiempos) > 1 else ""),
+               f"más de {PULSO_MAX_MS} ms: la pantalla marca «Sin conexión» a los 8000 ms; revisar el tamaño de telemetria y el índice de fecha")
+    if sesiones["vendedora"]:
+        st, _, _ = sesiones["vendedora"].pedir("/torre/")
+        chk(st == 403, "La Torre responde 403 a una vendedora (verían clientes fuera de su cartera)", f"HTTP {st}")
+
+    titulo("9. Requerimiento de la demostración y panel de IA")
+    if sesiones["vendedor2"]:
+        st, html, _ = sesiones["vendedor2"].pedir("/crm/requerimientos/")      # el reclamo es de Supermercados del Sur, cartera de vendedor2; gerencia mira pero no tiene el botón
+        fila = fila_del_requerimiento(html, "Mi pedido llegó tibio")
+        chk(fila is not None and "sin clasificar</span>" in fila and "Clasificar con IA" in fila,
+            "«Mi pedido llegó tibio» está sin clasificar, con el botón \"Clasificar con IA\" (listo para la demo en vivo)",
+            "no existe o ya está clasificado: ejecutar en la EC2 web  docker compose -f aws/docker-compose.web.yml --env-file .env exec -T web python manage.py restablecer_demo_ia")
+    if sesiones["vendedora"]:
+        st, html, _ = sesiones["vendedora"].pedir("/crm/ia/")
+        chk(st == 200 and "Panel de IA" in html and "Probar la IA ahora" in html, "El CRM tiene el panel de IA (estado y prueba en vivo)", f"HTTP {st}")
 
     malos = [r for r in RESULTADOS if r[0] == "mal"]
     print(f"\nResumen: {sum(1 for r in RESULTADOS if r[0] == 'ok')} correctas, {len(malos)} con falla, "

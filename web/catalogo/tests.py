@@ -357,6 +357,18 @@ class MapaConMapLibre(TestCase):
             self.assertNotIn('"<li><b>" + p.cliente', texto)
             self.assertNotIn("insertAdjacentHTML", texto)
 
+    def test_lo_nuevo_del_mapa_no_interpreta_html_de_datos_variables(self):
+        """Un nombre como <img src=x onerror=...> debe verse como texto en popups, marcadores, leyenda y filtros."""
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        self.assertNotIn(".setHTML(", js)                                       # los popups entran por setDOMContent con textContent
+        self.assertIn("setDOMContent(contenidoPopup(", js)
+        self.assertRegex(js, r"function contenidoPopup[^}]*?textContent = linea")
+        for pieza in ("esc(texto)", "esc(etq)", "esc(etiqueta)"):
+            self.assertIn(pieza, js)
+        leyenda = (self.WEB / "static" / "js" / "leyenda.js").read_text()
+        self.assertIn("new Option(c.texto, c.id)", leyenda)                     # el selector de camión no arma HTML
+        self.assertNotIn("c.texto +", leyenda)
+
     def test_el_comprador_no_recibe_la_vuelta_del_viaje(self):
         """La vuelta pasaría por otras entregas: el seguimiento solo dibuja el tramo que entrega ruta_del_pedido."""
         self.assertNotIn("partirRuta", (self.WEB / "templates" / "pedidos" / "detalle.html").read_text())

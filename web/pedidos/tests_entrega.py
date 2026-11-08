@@ -40,7 +40,7 @@ class EstadosTests(EntregaBase):
     def test_flujo_con_los_dos_estados_nuevos(self):
         nombres = list(EstadoOrden.objects.order_by("orden_flujo").values_list("nombre", "es_final"))
         self.assertEqual(nombres, [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False),
-                                   ("Camión en la puerta", False), ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True)])
+                                   ("Camión en la puerta", False), ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True), ("Rechazada en recepción", True)])
 
     def test_avanzar_no_salta_a_estados_de_excepcion(self):
         cliente, orden, _ = self.orden_despachada()
@@ -183,7 +183,8 @@ class EndpointEntregaTests(EntregaBase):
         self.assertNotContains(self.client.get(f"/pedidos/{orden.pk}/"), "Recibí mi pedido")
         s.llegar_a_la_puerta([orden])
         r = self.client.get(f"/pedidos/{orden.pk}/")
-        self.assertContains(r, "Estamos afuera de tu dirección")
+        self.assertContains(r, "Tu paquete llegó")
+        self.assertNotContains(r, "Pedido entregado exitosamente")
         self.assertContains(r, "Recibí mi pedido")
         self.assertContains(r, "No pude recibirlo")
 
@@ -245,7 +246,9 @@ class MapaSegunEstadoTests(EntregaBase):
         cliente, orden, despacho = self.orden_despachada()
         Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Entregada"))
         self.entrar()
-        self.assertContains(self.client.get(f"/pedidos/{orden.pk}/"), "El mapa en vivo ya no está disponible")
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, "El mapa en vivo ya no está disponible")
+        self.assertNotContains(pagina, "Pedido entregado exitosamente")            # no lo confirmó el cliente
 
 
 class ReprogramarTests(EntregaBase):
@@ -262,3 +265,107 @@ class ReprogramarTests(EntregaBase):
         self.assertIsNone(orden.puerta_en)
         self.assertEqual(orden.entrega_motivo, "No pude recibirlo hoy")                       # el historial del motivo se conserva
         self.assertNotEqual(nuevo.pk, despacho.pk)
+
+
+class ParadasDelViajeTests(EntregaBase):
+    """COF-01: el conductor ve las paradas en el mismo orden del viaje guardado."""
+
+    def _dos_en_el_mismo_camion(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        ana = s.cliente_de(User.objects.get(username="ana@correo.test"))
+        hospital = s.cliente_de(User.objects.get(username="abastecimiento@hospital.test"))
+        s.agregar(ana, Producto.objects.get(sku="POL-PEC-10K").pk, 1)
+        s.agregar(hospital, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        oa = s.generar_ordenes(ana, ana.direccion_set.first().pk)[0]
+        ob = s.generar_ordenes(hospital, hospital.direccion_set.first().pk)[0]
+        rango = flota.rangos_de(oa)[0]
+        camion = next(c for c in flota.camiones_libres() if c.rango_temperatura.nombre == rango)
+        despacho = flota.despachar(camion.camion_id, [oa.pk, ob.pk])
+        oa.refresh_from_db()
+        ob.refresh_from_db()
+        return oa, ob, despacho
+
+    def test_el_conductor_lista_las_paradas_en_el_mismo_orden(self):
+        oa, ob, despacho = self._dos_en_el_mismo_camion()
+        esperado = []
+        for parada in despacho.ruta_geojson["paradas"]:
+            esperado.append(oa.orden_id if parada["direccion_id"] == oa.direccion_id else ob.orden_id)
+        self.entrar("despacho@cofrial.cl")
+        html = self.client.get("/flota/").content.decode()
+        posiciones = [html.index(f"Orden N.º {n}") for n in esperado]
+        self.assertEqual(posiciones, sorted(posiciones))
+        self.assertIn("Un solo recorrido. Las paradas se atienden en este orden.", html)
+
+
+class EntregaExitosaTests(EntregaBase):
+    """COF-02: el paquete llegado no se da por entregado hasta confirmar, y ahí se cierra el recorrido de ese viaje."""
+
+    def test_al_confirmar_la_pantalla_dice_entregado_y_el_viaje_queda_finalizado(self):
+        cliente, orden, despacho = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        self.entrar()
+        puerta = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(puerta, "Tu paquete llegó")
+        self.assertNotContains(puerta, "Pedido entregado exitosamente")
+        s.resolver_entrega(cliente, orden.pk, "aceptar")
+        despacho.refresh_from_db()
+        self.assertEqual(despacho.fase, "volviendo")
+        self.assertIsNotNone(despacho.llegada_en)
+        self.assertIsNone(despacho.regreso_en)
+        hecho = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(hecho, "Pedido entregado exitosamente")
+        self.assertContains(hecho, "Recorrido cerrado")
+        self.assertContains(hecho, "el camión vuelve a la bodega")
+        self.assertNotContains(hecho, "Tu paquete llegó")
+
+    def test_si_queda_otra_parada_el_camion_no_cierra_el_viaje(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        ana = s.cliente_de(User.objects.get(username="ana@correo.test"))
+        hospital = s.cliente_de(User.objects.get(username="abastecimiento@hospital.test"))
+        s.agregar(ana, Producto.objects.get(sku="POL-PEC-10K").pk, 1)
+        s.agregar(hospital, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        oa = s.generar_ordenes(ana, ana.direccion_set.first().pk)[0]
+        ob = s.generar_ordenes(hospital, hospital.direccion_set.first().pk)[0]
+        rango = flota.rangos_de(oa)[0]
+        camion = next(c for c in flota.camiones_libres() if c.rango_temperatura.nombre == rango)
+        despacho = flota.despachar(camion.camion_id, [oa.pk, ob.pk])
+        s.llegar_a_la_puerta([oa])
+        s.resolver_entrega(ana, oa.pk, "aceptar")
+        despacho.refresh_from_db()
+        ob.refresh_from_db()
+        self.assertEqual(despacho.fase, "en_ruta")
+        self.assertEqual(ob.estado_orden.nombre, "Despachada")
+        self.entrar()
+        self.assertContains(self.client.get(f"/pedidos/{oa.pk}/"), "El camión sigue con otros pedidos")
+
+    def test_la_confirmacion_automatica_no_se_presenta_como_exitosa(self):
+        cliente, orden, despacho = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        orden.refresh_from_db()
+        s.confirmar_vencidas(orden.puerta_en + timedelta(seconds=121))
+        self.entrar()
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, "lo dimos por entregado")
+        self.assertNotContains(pagina, "Pedido entregado exitosamente")
+        despacho.refresh_from_db()
+        self.assertEqual(despacho.fase, "volviendo")
+
+    def test_si_la_ultima_parada_no_pudo_recibir_tambien_termina_el_recorrido(self):
+        cliente, orden, despacho = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        s.resolver_entrega(cliente, orden.pk, "no_recibido", "No había nadie en casa")
+        despacho.refresh_from_db()
+        self.assertEqual(despacho.fase, "volviendo")
+        self.assertIsNotNone(despacho.llegada_en)
+
+    def test_confirmar_una_entrega_no_cierra_el_viaje_de_otro_camion(self):
+        from flota.models import Despacho
+        cliente, orden, despacho = self.orden_despachada()
+        otro = Despacho.objects.create(camion=flota.camiones_libres()[0], programado_para=despacho.programado_para, salida_en=despacho.salida_en, fase="en_ruta")     # sin pedidos pendientes
+        s.llegar_a_la_puerta([orden])
+        s.resolver_entrega(cliente, orden.pk, "aceptar")
+        otro.refresh_from_db()
+        self.assertEqual(otro.fase, "en_ruta")
+        self.assertIsNone(otro.llegada_en)

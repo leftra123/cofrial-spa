@@ -200,6 +200,7 @@ td.vacio { text-align: center; color: var(--texto-3); padding: 40px 20px; }
 .chip.alerta, .alerta { background: var(--alerta-bg); color: var(--alerta-fg); }
 .chip.sin-punto::before { display: none; }
 .alerta { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.rechazo-crm { display: block; margin-top: 4px; min-width: 240px; max-width: 44ch; white-space: normal; overflow-wrap: anywhere; font-size: .85rem; color: var(--alerta-fg); }
 
 /* ---------- pestañas con contador ---------- */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }

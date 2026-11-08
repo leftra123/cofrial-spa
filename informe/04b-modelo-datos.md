@@ -210,13 +210,14 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 ### Resultado por forma normal
 
 - **Primera forma normal (1FN).** Todos los campos son atómicos y no hay grupos repetitivos: los productos de un carrito o de una orden están en tablas de líneas (`carrito_item`, `orden_item`), no en columnas como `producto1`, `producto2`. Cada tabla tiene clave primaria.
-- **Segunda forma normal (2FN).** Solo tres tablas tienen clave compuesta: `precio_producto`, `carrito_item` y `orden_item`. En ellas, cada atributo depende de la clave completa: el precio depende de la lista y del producto a la vez, la cantidad del carrito depende del carrito y del producto. Las demás tablas tienen clave de una columna, por lo que no pueden tener dependencias parciales.
+- **Segunda forma normal (2FN).** Solo tres tablas tienen clave compuesta: `precio_producto`, `carrito_item` y `orden_item`. En ellas, cada atributo depende de la clave completa: el precio depende de la lista y del producto a la vez, la cantidad del carrito depende del carrito y del producto, y en `orden_item` lo rechazado al recibir y su motivo dependen de esa línea de esa orden, no solo del producto ni solo de la orden. Las demás tablas tienen clave de una columna, por lo que no pueden tener dependencias parciales.
 - **Tercera forma normal (3FN).** El núcleo evita dependencias transitivas mediante catálogos y relaciones. La tabla física requerimiento mantiene una redundancia condicional, analizada a continuación; no se afirma 3FN estricta universal para todo el esquema físico. Las decisiones del núcleo son:
   - La región no se guarda en la dirección: está en `comuna`, y la dirección apunta a la comuna.
   - La lista de precios no se guarda en el cliente: está en `tipo_cliente`.
   - El rango de temperatura no se guarda en el producto ni en el camión: está en `rango_temperatura`, al que apuntan `categoria` y `camion`.
   - **El cliente de una orden no se guarda en la orden:** se obtiene por su dirección de entrega, porque cada dirección pertenece a un cliente. Guardarlo habría creado una dependencia transitiva. La vista `v_orden` lo expone sin repetirlo.
   - El canal (B2B o B2C) y el total de la orden tampoco se guardan: se calculan con `v_orden` y `v_orden_total`.
+  - Lo aceptado y el monto rechazado de una línea no se guardan: se calculan con `cantidad - cantidad_rechazada` y el precio de la línea (RN-23). La etiqueta del motivo tampoco: `motivo_rechazo` guarda un código y su texto está en la aplicación, igual que `documento.tipo` y `pago.medio`, por lo que no aparece un atributo que dependa de otro no clave.
   - El estado de un despacho no se guarda: se deduce de `salida_en` y `llegada_en`.
 - **Alcance de la afirmación.** No se declara BCNF para todo el esquema. Las claves candidatas y dependencias se revisan por relación; la coexistencia de cliente y orden en requerimiento exige una distinción entre diseño lógico normalizado y representación física.
 
@@ -245,7 +246,7 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 | `camion` | `camion_id` | → `patente`, `capacidad_kg`, `rango_temperatura_id`; `patente` → `camion_id` (clave candidata) | 3FN |
 | `despacho` | `despacho_id` | → `camion_id`, `programado_para`, `salida_en`, `llegada_en` | 3FN |
 | `orden` | `orden_id` | → `direccion_id`, `estado_orden_id`, `despacho_id`, `numero_oc`, `creada_en`; sin cliente, canal ni total | 3FN |
-| `orden_item` | (`orden_id`, `producto_id`) | clave completa → `cantidad`, `precio_unitario_clp` | 3FN |
+| `orden_item` | (`orden_id`, `producto_id`) | clave completa → `cantidad`, `precio_unitario_clp`, `cantidad_rechazada`, `motivo_rechazo` | 3FN |
 | `documento` | `documento_id` | → `tipo`, `folio`, `orden_id`, `referencia_id`, `monto_clp`, `vence_en`, `motivo`, `emitido_en`; (`tipo`, `folio`) es clave candidata; sin cliente ni saldo | 3FN, ver D4 |
 | `pago` | `pago_id` | → `documento_id`, `monto_clp`, `medio`, `referencia`, `pagado_en`; el saldo no se guarda | 3FN |
 | `telemetria` | `telemetria_id` | → todas las lecturas; (`camion_id`, `registrado_en`) es clave candidata | 3FN, ver D1 |
@@ -322,6 +323,8 @@ Nota. Elaboración propia. La parte superior es una representación lógica norm
 
 Esta distinción permite evaluar con precisión el diseño en 3FN y la decisión física del prototipo. La correspondencia se documenta sin cambiar código ni eliminar referencias a pedidos. Una migración física futura requeriría adaptar servicios y consultas; no forma parte de esta actualización documental.
 
+**Recepción parcial (RN-23, supuesto a validar con Cofrial).** Lo rechazado se guarda en la línea: `cantidad` sigue siendo lo pedido y no cambia, y una restricción en la base asegura que `cantidad_rechazada` esté entre 0 y `cantidad` y que exista un motivo si y solo si hay unidades rechazadas. Se usa un motivo por línea porque es lo que el cliente alcanza a indicar en la puerta; si Cofrial necesitara varios motivos en una misma línea, 1FN obligaría a separarlos en una tabla hija (`orden_item_rechazo`) en vez de repetir columnas. El rechazo total es la fila «Rechazada en recepción» de `estado_orden` (orden de flujo 9, final), no un atributo nuevo. `v_orden_total.total_clp` pasa a sumar solo lo aceptado y entrega `rechazado_clp` y `unidades_rechazadas`. El monto del documento (D4) sigue siendo una foto: un rechazo no lo modifica, lo rebaja la nota de crédito.
+
 ## Cómo responde el modelo a los requerimientos de Cofrial y a los casos de uso
 
 **Tabla 4**
@@ -334,6 +337,7 @@ Esta distinción permite evaluar con precisión el diseño en 3FN y la decisión
 | CU-03 Carrito | `carrito`, `carrito_item` |
 | CU-04 Generar orden | `orden`, `orden_item`, `direccion`, `estado_orden`, `producto` (stock), `documento` y `pago` (boleta pagada en B2C) |
 | CU-05 y CU-08 Seguimiento del pedido | `orden`, `estado_orden`, `despacho`, `telemetria` |
+| Recepción parcial (RN-23, supuesto a validar con Cofrial) | `orden_item` (lo rechazado por línea), `orden`, `estado_orden`, `documento` y `pago` (nota de crédito y devolución), `requerimiento` (reclamo), `v_orden_total` |
 | CU-06 y CU-07 Clientes y prospectos | `cliente`, `prospecto`, `etapa_pipeline`, `interaccion`, `vendedor` |
 | CU-09 Requerimiento con IA | `requerimiento`, `categoria_requerimiento` |
 | CU-10 y CU-11 Telemetría y ruptura de frío | `telemetria`, `camion`, `rango_temperatura` |
@@ -519,7 +523,10 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `numero_oc` | varchar(30) | Sí | — | Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número. | OC-2026-0457 |
 | `oc_pendiente` | boolean | No | — | Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega. | falso |
 | `recibe_nombre` | varchar(80) | No | — | Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta. | María Soto |
+| `comprobante` | varchar(8) | No | — | Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura. | boleta |
 | `creada_en` | timestamptz | No | — | Fecha y hora de la orden. | 2026-10-12 10:20:00-03 |
+
+*Restricciones adicionales:* `comprobante IN ('boleta', 'factura')`.
 
 *Nota.* Elaboración propia.
 
@@ -532,8 +539,10 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `producto_id` | integer | No | PK, FK → producto | Producto. | 101 |
 | `cantidad` | integer | No | — | Cantidad comprada. | 10 |
 | `precio_unitario_clp` | integer | No | — | Precio pagado por unidad, copiado de la lista al comprar. | 38990 |
+| `cantidad_rechazada` | integer | No | — | Unidades que el cliente no aceptó al recibir (RN-23, supuesto a validar con Cofrial). Lo aceptado se calcula: cantidad menos esto. | 2 |
+| `motivo_rechazo` | varchar(12) | No | — | Motivo principal del rechazo de esta línea; vacío si no rechazó nada. | danado |
 
-*Restricciones adicionales:* `cantidad > 0`; `precio_unitario_clp > 0`.
+*Restricciones adicionales:* `CHECK (cantidad_rechazada BETWEEN 0 AND cantidad)`; `CHECK ((cantidad_rechazada = 0 AND motivo_rechazo = '') OR (cantidad_rechazada > 0 AND motivo_rechazo IN ('temperatura', 'faltante', 'danado', 'otro')))`; `cantidad > 0`; `precio_unitario_clp > 0`.
 
 *Nota.* Elaboración propia.
 
@@ -792,6 +801,7 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | direccion.long | double precision | Sí | Longitud de entrega para seguimiento y ruta |
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
 | orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
+| orden.comprobante | varchar(8), por defecto boleta, CHECK boleta o factura | No | Documento de venta elegido al comprar; las órdenes institucionales quedan en factura (migración `pedidos/0010_orden_comprobante`) |
 | cliente.segmento_id | integer | Sí | FK a segmento_cliente: tipo de comprador (hospital, supermercado, feria o institucional) para la Torre de control; nulo en B2C y en clientes sin asignar. Al borrar el segmento queda nulo |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas de demostración: las forzadas desde la web y las que el simulador envía durante la falla de un escenario |
 | despacho.decision_auto | text | Sí | Por qué salió el viaje, escrito por el despacho automático; vacío si lo armó una persona |

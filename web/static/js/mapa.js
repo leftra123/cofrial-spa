@@ -48,6 +48,13 @@
    Respaldo: el mapa parte con un estilo local (fondo azul noche, sin pedir nada a la red) y cambia al de OpenFreeMap cuando llega. Si no llega, se queda
    en el local y siguen las rutas y los puntos. Si OSRM no responde, ruta() entrega una línea recta entre los puntos. */
 window.CofrialMapa = (function () {
+  /* Escapa un texto para ponerlo como contenido de un elemento dentro de un trozo de HTML. Fuera de eso (atributos, popups, listas) usar nodos y textContent. */
+  function esc(texto) {
+    var d = document.createElement("div");
+    d.textContent = texto;
+    return d.innerHTML;
+  }
+
   var OSRM = "https://router.project-osrm.org";
   /* Estilo: viene de la variable MAP_STYLE_URL (settings.MAPA_TILES) a través de la plantilla. "local" no pide nada a la red. */
   var CONFIG = {estilo: "https://tiles.openfreemap.org/styles/dark", maxZoom: 19,
@@ -146,7 +153,7 @@ window.CofrialMapa = (function () {
   /* Pin redondo con texto (número de parada). */
   function pin(texto, color) {
     return {clase: "pin-mapa", ancho: 30, alto: 30, ancla: "center", altoPopup: 16,
-            html: '<span style="background:' + color + '">' + texto + "</span>"};
+            html: '<span style="background:' + color + '">' + esc(texto) + "</span>"};
   }
 
   /* Camión frigorífico (imagen de marca, vista lateral mirando a la derecha). Con alerta (ruptura de frío) usa la versión roja y late.
@@ -160,7 +167,7 @@ window.CofrialMapa = (function () {
     var url = BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png");
     /* PNG de 512×320: <img> + reglas globales lo pintaban casi a tamaño real; fondo en caja fija = escala de mapa */
     var html = '<span class="pin-camion-graf" role="presentation" aria-hidden="true" style="width:' + med.w + "px;height:" + med.imgH + "px;background-image:url('" + url + "')\"></span>";
-    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + etq + "</b>";
+    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + esc(etq) + "</b>";
     return {clase: "pin-camion" + (alerta ? " alerta" : ""), ancho: med.w, alto: med.imgH, ancla: "bottom", altoPopup: med.imgH + 4, html: html};
   }
 
@@ -176,7 +183,7 @@ window.CofrialMapa = (function () {
     return {clase: "pin-base", ancho: 34, alto: 34, ancla: "center", altoPopup: 18,
       html: '<svg viewBox="0 0 34 34" width="34" height="34" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="31" rx="8" fill="#0F172A" stroke="#fff" stroke-width="2"/>' +
         '<path d="M7 14l10-5.5L27 14v11H7z" fill="#fff"/><rect x="12" y="18" width="10" height="7" rx="1" fill="#0F172A"/><path d="M12 21.5h10" stroke="#fff" stroke-width="1"/></svg>' +
-        (etiqueta == null ? "" : '<b class="pin-etq base-contador">' + etiqueta + "</b>")};
+        (etiqueta == null ? "" : '<b class="pin-etq base-contador">' + esc(etiqueta) + "</b>")};
   }
 
   /* ---------- marcadores ---------- */
@@ -812,19 +819,6 @@ window.CofrialMapa = (function () {
     Mapa.prototype[nombre] = function () { return this.raiz[nombre].apply(this.raiz, arguments); };
   });
 
-  /* Fila de una lista de paradas: «**cliente** · dirección (detalle)». El nombre y la dirección los escribe el cliente al registrarse, así que
-     entran como texto y nunca como HTML. */
-  function filaParada(cliente, direccion, detalle) {
-    var li = document.createElement("li"), nombre = document.createElement("b"), nota = document.createElement("span");
-    nombre.textContent = cliente;
-    nota.className = "frio";
-    nota.textContent = detalle;
-    li.appendChild(nombre);
-    li.appendChild(document.createTextNode(" · " + direccion + " "));
-    li.appendChild(nota);
-    return li;
-  }
-  function popupTexto(lineas) { return contenidoPopup(lineas); }
 
   function crear(id, centro, zoom, opciones) { return new Mapa(id, centro, zoom, opciones); }
 
@@ -850,6 +844,30 @@ window.CofrialMapa = (function () {
   function texto(r) {
     if (r.metros == null) return "ruta aproximada (sin servicio de rutas)";
     return (r.metros / 1000).toFixed(1).replace(".", ",") + " km · unos " + Math.max(1, Math.round(r.segundos / 60)) + " min";
+  }
+
+  /* Fila de una lista de paradas: «**cliente** · dirección (detalle)». El nombre y la dirección los escribe el cliente al registrarse, así que
+     entran como texto y nunca como HTML. */
+  function filaParada(cliente, direccion, detalle) {
+    var li = document.createElement("li"), nombre = document.createElement("b"), nota = document.createElement("span");
+    nombre.textContent = cliente;
+    nota.className = "frio";
+    nota.textContent = detalle;
+    li.appendChild(nombre);
+    li.appendChild(document.createTextNode(" · " + direccion + " "));
+    li.appendChild(nota);
+    return li;
+  }
+
+  /* Contenido de un popup con datos variables. Leaflet interpreta un texto como HTML; un nodo lo deja tal cual. Una línea por cada texto. */
+  function popupTexto(lineas) {
+    var caja = document.createElement("div");
+    lineas.forEach(function (linea) {
+      var d = document.createElement("div");
+      d.textContent = linea;
+      caja.appendChild(d);
+    });
+    return caja;
   }
 
   /* La ruta que calculó y guardó el servidor ({puntos, km, minutos, aproximada}): se dibuja tal cual, sin volver a pedirle nada a OSRM. */

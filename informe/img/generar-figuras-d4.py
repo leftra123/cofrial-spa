@@ -396,19 +396,32 @@ PIPELINE = """flowchart LR
   G -->|"se crea el cliente<br/>y se asigna la lista"| CL
 """
 
+# Transiciones de docs/ciclo-entrega.md, sección 2, contrastadas con pedidos/servicios.py y flota/servicios.py.
+# Vertical porque en horizontal no se lee a ancho de página. El orden de las salidas de EnPuerta es deliberado:
+# Mermaid ubica los estados según ese orden y este es el que deja menos cruces y ninguna etiqueta pisada.
 ESTADOS_ORDEN = """stateDiagram-v2
-  direction LR
-  [*] --> Recibida: el cliente confirma, stock descontado
-  Recibida --> Confirmada: el vendedor o bodega valida
-  Confirmada --> EnPreparacion: bodega prepara
-  EnPreparacion --> Despachada: se asigna camión y sale
-  Despachada --> Entregada: el cliente recibe
+  direction TB
+  state "En preparación" as EnPreparacion
+  state "Camión en la puerta" as EnPuerta
+  state "Entrega no concretada" as NoConcretada
+  state "Rechazada en recepción" as Rechazada
+  [*] --> Recibida: el cliente genera la orden, descuenta stock
+  Recibida --> Confirmada: se confirma
+  Confirmada --> EnPreparacion: se prepara
+  EnPreparacion --> Despachada: se asigna camión
+  Despachada --> EnPuerta: el camión llega
+  Despachada --> Entregada: corrección manual
+  EnPuerta --> Rechazada: rechazó todas las unidades
+  EnPuerta --> Entregada: acepta o vence el plazo
+  EnPuerta --> NoConcretada: no pudo recibir
+  NoConcretada --> Despachada: se reprograma
   Recibida --> Cancelada: repone stock
   Confirmada --> Cancelada: repone stock
   EnPreparacion --> Cancelada: repone stock
+  NoConcretada --> Cancelada: repone stock
   Entregada --> [*]
   Cancelada --> [*]
-  state "En preparación" as EnPreparacion
+  Rechazada --> [*]
 """
 
 CASOS_USO = """flowchart LR

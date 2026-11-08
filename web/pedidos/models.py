@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 
 from catalogo.models import Producto
 from clientes.models import Cliente, Direccion
@@ -55,6 +55,8 @@ class Orden(models.Model):
     despacho = models.ForeignKey(Despacho, null=True, blank=True, on_delete=models.SET_NULL)
     numero_oc = models.CharField(max_length=30, blank=True)
     oc_pendiente = models.BooleanField(default=False, db_default=False)       # B2B que compró sin su OC: numero_oc lleva una referencia WEB-aaaa-nnnn hasta que la agregue
+    COMPROBANTES = [("boleta", "Boleta"), ("factura", "Factura")]
+    comprobante = models.CharField(max_length=8, choices=COMPROBANTES, default="boleta", db_default="boleta")
     creada_en = models.DateTimeField(auto_now_add=True)
     puerta_en = models.DateTimeField(null=True, blank=True)                  # el camión llegó a la dirección: desde aquí corre la confirmación del cliente
     entrega_resuelta_en = models.DateTimeField(null=True, blank=True)        # cuando el cliente (o el tiempo) cerró la entrega
@@ -72,16 +74,26 @@ class Orden(models.Model):
         db_table = "orden"
         verbose_name_plural = "órdenes"
         indexes = [models.Index(fields=["creada_en"], name="idx_orden_creada")]
+        constraints = [models.CheckConstraint(condition=Q(comprobante__in=["boleta", "factura"]), name="orden_comprobante_valido")]
 
     def __str__(self):
         return f"Orden {self.orden_id}"
 
 
 class OrdenItem(models.Model):
+    """Línea de la orden. `cantidad` es lo pedido y no cambia; lo aceptado se calcula (cantidad - cantidad_rechazada), no se guarda."""
+    MOTIVOS_RECHAZO = [("temperatura", "Los productos llegaron tibios o descongelados"), ("faltante", "Faltan o sobran productos"),
+                       ("danado", "Producto dañado o en mal estado"), ("otro", "Otro problema")]
     orden = models.ForeignKey(Orden, on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
     cantidad = models.IntegerField()
     precio_unitario_clp = models.IntegerField()
+    cantidad_rechazada = models.IntegerField(default=0, db_default=0)                                # RN-23: unidades que el cliente no aceptó al recibir
+    motivo_rechazo = models.CharField(max_length=12, choices=MOTIVOS_RECHAZO, blank=True, default="", db_default="")      # vacío si no rechazó nada
+
+    @property
+    def cantidad_aceptada(self):
+        return self.cantidad - self.cantidad_rechazada
 
     class Meta:
         db_table = "orden_item"
@@ -89,6 +101,9 @@ class OrdenItem(models.Model):
             models.UniqueConstraint(fields=["orden", "producto"], name="uq_orden_producto"),
             models.CheckConstraint(condition=Q(cantidad__gt=0), name="orden_cantidad_positiva"),
             models.CheckConstraint(condition=Q(precio_unitario_clp__gt=0), name="orden_precio_positivo"),
+            models.CheckConstraint(condition=Q(cantidad_rechazada__gte=0, cantidad_rechazada__lte=F("cantidad")), name="orden_item_rechazo_en_rango"),
+            models.CheckConstraint(condition=Q(cantidad_rechazada=0, motivo_rechazo="") | Q(cantidad_rechazada__gt=0, motivo_rechazo__in=["temperatura", "faltante", "danado", "otro"]),
+                                   name="orden_item_rechazo_con_motivo"),
         ]
 
 
@@ -129,6 +144,7 @@ class CheckoutPago(models.Model):
     direccion = models.ForeignKey(Direccion, on_delete=models.PROTECT)
     numero_oc = models.CharField(max_length=30, blank=True)
     recibe_nombre = models.CharField(max_length=80, blank=True, default="", db_default="")      # lo elegido en el carrito; se copia a las órdenes cuando el pago se aprueba
+    comprobante = models.CharField(max_length=8, choices=Orden.COMPROBANTES, default="boleta", db_default="boleta")
     monto_clp = models.IntegerField()
     preference_id = models.CharField(max_length=64, blank=True)
     external_reference = models.CharField(max_length=64, unique=True)

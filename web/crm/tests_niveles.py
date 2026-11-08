@@ -72,6 +72,20 @@ class Embudo(TestCase):
     def etapas(self, datos):
         return {e["nombre"]: e for f in datos["fases"] for e in f["etapas"]} | {e["nombre"]: e for e in datos["aparte"]}
 
+    def test_rechazo_total_no_cuenta_como_pedido(self):
+        c = self.cliente("Solo Rechazada", segmento=SegmentoCliente.objects.first())
+        o = self.pedido(c, estado="Rechazada en recepción")
+        OrdenItem.objects.filter(orden=o).update(cantidad_rechazada=2, motivo_rechazo="temperatura")
+        self.assertIn("Solo Rechazada", [i["nombre"] for i in self.etapas(s.embudo_por_niveles(self.gerencia))["Ganado sin pedido"]["items"]])
+        self.assertEqual(s.nivel_de_cliente(c), "Ganado sin pedido")
+
+    def test_monto_solo_lo_aceptado(self):
+        base = self.etapas(s.embudo_por_niveles(self.gerencia))["Primer pedido"]["monto_clp"]
+        c = self.cliente("Recibe parte", segmento=SegmentoCliente.objects.first())
+        o = self.pedido(c, cantidad=3, precio=1000)
+        OrdenItem.objects.filter(orden=o).update(cantidad_rechazada=1, motivo_rechazo="danado")
+        self.assertEqual(self.etapas(s.embudo_por_niveles(self.gerencia))["Primer pedido"]["monto_clp"] - base, 2000)
+
     def test_cancelados_no_cuentan(self):
         c = self.cliente("Solo Cancelada", segmento=SegmentoCliente.objects.first())
         self.pedido(c, estado="Cancelada")

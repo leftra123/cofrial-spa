@@ -167,7 +167,8 @@ class CrearCuenta(Base):
         self.assertEqual((b2b.tipo_cliente.codigo, b2b.vendedor, b2b.direccion_set.count()), ("B2B", vendedora, 1))
         self.assertEqual(Cliente.objects.get(rut="11.222.333-9").tipo_cliente.codigo, "B2C")
         self.assertIsNone(crm.rol(b2b.usuario))                                   # un cliente no entra al CRM
-        self.assertTrue(Usuario.objects.get(username="adm@t.test").is_superuser)
+        self.assertFalse(Usuario.objects.get(username="adm@t.test").is_superuser)     # administrador de empresa: grupo, no superusuario
+        self.assertEqual(crm.rol(Usuario.objects.get(username="adm@t.test")), "admin")
         self.assertFalse(Usuario.objects.get(username="b2c@t.test").is_staff)
 
     def test_el_usuario_se_guarda_en_minusculas(self):
@@ -288,7 +289,7 @@ class DarClave(Base):
         self.assertRedirects(self.asignar(c, "admin@cofrial.cl"), "/operacion/cuentas/", fetch_redirect_response=False)
         self.assertEqual(c.get("/operacion/").status_code, 200)                    # la sesión sigue abierta
         u = Usuario.objects.get(username="admin@cofrial.cl")
-        self.assertTrue(u.is_active and u.is_superuser and u.is_staff)
+        self.assertTrue(u.is_active and u.is_staff and crm.rol(u) == "admin" and not u.is_superuser)
         self.assertTrue(Client().login(username="admin@cofrial.cl", password=NUEVA))
         self.assertContains(c.get("/operacion/cuentas/"), "Tú")
 
@@ -300,7 +301,7 @@ class DarClave(Base):
         c = self.entrar()
         c.post(f"/operacion/cuentas/{u.pk}/clave/", {"clave": NUEVA, "clave2": NUEVA, "is_active": "", "is_superuser": "", "is_staff": ""})
         u.refresh_from_db()
-        self.assertTrue(u.is_active and u.is_superuser)
+        self.assertTrue(u.is_active and crm.rol(u) == "admin")
 
     def test_una_cuenta_inactiva_sigue_inactiva(self):
         Usuario.objects.filter(username="felipe@cofrial.cl").update(is_active=False)

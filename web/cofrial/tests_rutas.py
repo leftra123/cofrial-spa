@@ -134,7 +134,7 @@ ESPERADO = {
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/salud/bd/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
-    '/admin/': ('L L L L L L 200', 'L L L L L L 200'),
+    '/admin/': ('L L L L L L L', 'L L L L L L L'),       # el administrador de empresa no entra a /admin/ de Django
 }
 
 
@@ -306,4 +306,4 @@ class MenuPorRol(Base):
     def test_el_admin_de_django_es_solo_del_superusuario(self):
         for rol in ("vendedor", "gerencia", "despachador", "B2C"):
             self.assertEqual(_resultado(self.cliente(rol).get("/admin/")), "L", rol)
-        self.assertEqual(self.cliente("admin").get("/admin/").status_code, 200)
+        self.assertEqual(_resultado(self.cliente("admin").get("/admin/")), "L")     # admin@ es de empresa, no superusuario

@@ -140,7 +140,9 @@ CREATE TABLE camion (
   patente varchar(8) NOT NULL UNIQUE,
   capacidad_kg integer NOT NULL CHECK (capacidad_kg > 0),
   rango_temperatura_id integer NOT NULL REFERENCES rango_temperatura (rango_temperatura_id),
-  activo boolean NOT NULL DEFAULT true
+  rango_secundario_id integer REFERENCES rango_temperatura (rango_temperatura_id),
+  activo boolean NOT NULL DEFAULT true,
+  CHECK (rango_secundario_id <> rango_temperatura_id)
 );
 
 -- Viaje de un camión con una o más órdenes. Su estado se deduce de las marcas de tiempo.
@@ -163,7 +165,8 @@ CREATE TABLE orden (
   numero_oc varchar(30),
   oc_pendiente boolean NOT NULL DEFAULT false,
   recibe_nombre varchar(80) NOT NULL DEFAULT '',
-  comprobante varchar(8) NOT NULL DEFAULT 'boleta' CHECK (comprobante IN ('boleta', 'factura')),
+  comprobante varchar(8) NOT NULL DEFAULT 'boleta',
+  camara smallint NOT NULL DEFAULT 1 CHECK (camara IN (1, 2)),
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -211,8 +214,9 @@ CREATE TABLE telemetria (
   "long" double precision NOT NULL CHECK ("long" BETWEEN -180 AND 180),
   combustible_pct integer NOT NULL CHECK (combustible_pct BETWEEN 0 AND 100),
   alerta_ruptura_frio boolean NOT NULL,
+  camara smallint NOT NULL DEFAULT 1 CHECK (camara IN (1, 2)),
   registrado_en timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (camion_id, registrado_en)
+  UNIQUE (camion_id, camara, registrado_en)
 );
 
 -- Etapas del embudo comercial.

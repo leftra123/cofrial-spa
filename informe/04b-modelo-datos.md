@@ -32,6 +32,7 @@ erDiagram
   comuna ||--o{ direccion : "ubica"
   rango_temperatura ||--o{ categoria : "exige"
   rango_temperatura ||--o{ camion : "opera en"
+  rango_temperatura |o--o{ camion : "segunda cámara"
   categoria ||--o{ producto : "agrupa"
   lista_precio ||--o{ precio_producto : "fija"
   producto ||--o{ precio_producto : "tiene"
@@ -124,6 +125,7 @@ erDiagram
   camion {
     varchar camion_id PK
     integer rango_temperatura_id FK
+    integer rango_secundario_id FK
   }
   despacho {
     integer despacho_id PK
@@ -156,6 +158,7 @@ erDiagram
     double_precision long
     integer combustible_pct
     boolean alerta_ruptura_frio
+    smallint camara
     timestamptz registrado_en
   }
   etapa_pipeline {
@@ -242,13 +245,13 @@ La normalización sigue el modelo relacional propuesto por Codd (1970): cada tab
 | `carrito` | `carrito_id` | → `cliente_id`, `estado`, `creado_en` | 3FN |
 | `carrito_item` | (`carrito_id`, `producto_id`) | clave completa → `cantidad` | 3FN |
 | `estado_orden` | `estado_orden_id` | → `nombre`, `orden_flujo`, `es_final` | 3FN |
-| `camion` | `camion_id` | → `patente`, `capacidad_kg`, `rango_temperatura_id`; `patente` → `camion_id` (clave candidata) | 3FN |
+| `camion` | `camion_id` | → `patente`, `capacidad_kg`, `rango_temperatura_id`, `rango_secundario_id`; `patente` → `camion_id` (clave candidata) | 3FN |
 | `despacho` | `despacho_id` | → `camion_id`, `programado_para`, `salida_en`, `llegada_en` | 3FN |
 | `orden` | `orden_id` | → `direccion_id`, `estado_orden_id`, `despacho_id`, `numero_oc`, `creada_en`; sin cliente, canal ni total | 3FN |
 | `orden_item` | (`orden_id`, `producto_id`) | clave completa → `cantidad`, `precio_unitario_clp` | 3FN |
 | `documento` | `documento_id` | → `tipo`, `folio`, `orden_id`, `referencia_id`, `monto_clp`, `vence_en`, `motivo`, `emitido_en`; (`tipo`, `folio`) es clave candidata; sin cliente ni saldo | 3FN, ver D4 |
 | `pago` | `pago_id` | → `documento_id`, `monto_clp`, `medio`, `referencia`, `pagado_en`; el saldo no se guarda | 3FN |
-| `telemetria` | `telemetria_id` | → todas las lecturas; (`camion_id`, `registrado_en`) es clave candidata | 3FN, ver D1 |
+| `telemetria` | `telemetria_id` | → todas las lecturas; (`camion_id`, `camara`, `registrado_en`) es clave candidata | 3FN, ver D1 |
 | `etapa_pipeline` | `etapa_id` | → `nombre`, `orden_etapa`, `es_final`, `es_ganada` | 3FN |
 | `prospecto` | `prospecto_id` | → `vendedor_id`, `etapa_id`, `cliente_id`, datos de contacto, `origen`, `monto_estimado_clp`, `cerrado_en`, `motivo_perdida` | 3FN |
 | `interaccion` | `interaccion_id` | → `vendedor_id`, `prospecto_id`, `cliente_id`, `tipo`, `detalle` | 3FN |
@@ -519,8 +522,11 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `numero_oc` | varchar(30) | Sí | — | Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número. | OC-2026-0457 |
 | `oc_pendiente` | boolean | No | — | Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega. | falso |
 | `recibe_nombre` | varchar(80) | No | — | Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta. | María Soto |
-| `comprobante` | varchar(8) | No | CHECK boleta o factura | Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura. | boleta |
+| `comprobante` | varchar(8) | No | — | Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura. | boleta |
+| `camara` | smallint | No | — | Cámara del camión en la que viaja la orden; se fija al despachar. Una ruptura de frío solo la afecta si ocurre en esa cámara. | 1 |
 | `creada_en` | timestamptz | No | — | Fecha y hora de la orden. | 2026-10-12 10:20:00-03 |
+
+*Restricciones adicionales:* `camara IN (1, 2)`.
 
 *Nota.* Elaboración propia.
 
@@ -735,10 +741,11 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `camion_id` | varchar(20) | No | PK | Código del camión, el mismo que envía la telemetría. | CAM-01 |
 | `patente` | varchar(8) | No | UK | Patente del vehículo. | HJKL-42 |
 | `capacidad_kg` | integer | No | — | Capacidad de carga en kilos. | 8000 |
-| `rango_temperatura_id` | integer | No | FK → rango_temperatura | Rango en que opera su cámara. | 1 |
+| `rango_temperatura_id` | integer | No | FK → rango_temperatura | Rango en que opera su cámara 1, la única en la mayoría de la flota. | 1 |
+| `rango_secundario_id` | integer | Sí | FK → rango_temperatura | Rango de su cámara 2; vacío si el camión tiene una sola cámara. | 2 |
 | `activo` | boolean | No | — | Si está en servicio. | true |
 
-*Restricciones adicionales:* `capacidad_kg > 0`.
+*Restricciones adicionales:* `CHECK (rango_secundario_id <> rango_temperatura_id)`; `capacidad_kg > 0`.
 
 *Nota.* Elaboración propia.
 
@@ -770,10 +777,11 @@ Formato por tabla: campo, tipo, nulo, clave, descripción y ejemplo. Todos los d
 | `lat` | double precision | No | — | Latitud en grados decimales. | -38.7359 |
 | `long` | double precision | No | — | Longitud en grados decimales. En SQL se escribe entre comillas. | -72.5904 |
 | `combustible_pct` | integer | No | — | Nivel de combustible, de 0 a 100 (integer). | 64 |
-| `alerta_ruptura_frio` | boolean | No | — | Verdadero si temp_camara sale del rango crítico del camión. | false |
+| `alerta_ruptura_frio` | boolean | No | — | Verdadero si temp_camara sale del rango de la cámara que informa. | false |
+| `camara` | smallint | No | — | Cámara que informa: 1 en todo camión; 2 solo en los de dos cámaras, que envían una lectura por cada una. | 1 |
 | `registrado_en` | timestamptz | No | — | Momento de la lectura. | 2026-10-13 08:15:05-03 |
 
-*Restricciones adicionales:* `UNIQUE (camion_id, registrado_en)`; `lat BETWEEN -90 AND 90`; `"long" BETWEEN -180 AND 180`; `combustible_pct BETWEEN 0 AND 100`.
+*Restricciones adicionales:* `UNIQUE (camion_id, camara, registrado_en)`; `lat BETWEEN -90 AND 90`; `"long" BETWEEN -180 AND 180`; `combustible_pct BETWEEN 0 AND 100`; `camara IN (1, 2)`.
 
 *Nota.* Elaboración propia.
 <!-- FIN:diccionario -->
@@ -794,7 +802,10 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
 | orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
 | orden.comprobante | varchar(8), por defecto boleta, CHECK boleta o factura | No | Documento de venta elegido al comprar; las órdenes institucionales quedan en factura (migración `pedidos/0010_orden_comprobante`) |
+| orden.camara | smallint, por defecto 1, CHECK 1 o 2 | No | Hecho del despacho, igual que `despacho_id`: en qué cámara viaja la orden. Permite que una ruptura afecte solo a los pedidos de esa cámara (migración `pedidos/0011_orden_camara`) |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas de demostración: las forzadas desde la web y las que el simulador envía durante la falla de un escenario |
+| telemetria.camara | smallint, por defecto 1, CHECK 1 o 2 | No | Una lectura por cámara. Los campos que exige Cofrial no cambian; `UNIQUE` pasa a `(camion_id, camara, registrado_en)` (migración `flota/0007_camion_dos_camaras`) |
+| camion.rango_secundario_id | integer, FK a rango_temperatura, nulo | Sí | Cámara 2 de la parte renovada de la flota (5 de 50 en la demostración) |
 | despacho.decision_auto | text | Sí | Por qué salió el viaje, escrito por el despacho automático; vacío si lo armó una persona |
 | despacho.decision_ia | text | Sí | La misma decisión redactada por la IA; vacío si no hubo IA utilizable |
 

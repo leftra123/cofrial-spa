@@ -74,6 +74,10 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 
 **Visibilidad del mapa (RN-16):** el cliente ve el mapa en vivo solo con el pedido «Despachada» o «Camión en la puerta». Antes de salir ve «Tu pedido aún no sale»; al terminar ve el resumen de temperatura sin mapa.
 
+**Camiones de dos cámaras.** Una parte de la flota (`CAM-05`, `CAM-14`, `CAM-23`, `CAM-32` y `CAM-41`) lleva refrigerado en la cámara 1 y congelado en la cámara 2. El carrito mixto sigue generando una orden por rango, pero ambas pueden salir en un solo viaje y con una sola parada. `despachar` guarda en `orden.camara` dónde viaja cada una. La sugerencia y el despacho automático juntan en un camión de dos cámaras las direcciones que esperan pedidos de ambos rangos, y para un solo rango prefieren un camión simple. El simulador envía una lectura por cámara: seguimiento, avisos, CRM y Grafana miran solo la cámara del pedido, mientras la flota muestra ambas y marca el camión en alerta si cualquiera lo está. En `/demo/` se elige qué cámara falla; los escenarios por viaje fallan en la cámara 1.
+
+**Al desplegar:** primero la web, que migra la base; después el simulador, que debe reiniciarse para leer la segunda cámara.
+
 ## 5. Rutas por calles: decisiones y respaldo
 
 - **Servidor, no navegador:** la ruta se pide a OSRM una vez, desde la web, y se guarda. Las pantallas no vuelven a pedirle nada.
@@ -117,4 +121,4 @@ Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegad
 
 ## 8. Pruebas
 
-`flota/tests_rutas.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.
+`flota/tests_rutas.py`, `flota/tests_dos_camaras.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.

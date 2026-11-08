@@ -141,9 +141,10 @@ tabla("camion", "Logística", "Flota de camiones frigoríficos. La clave es el c
     pk("camion_id", "Código del camión, el mismo que envía la telemetría.", "CAM-01", tipo="varchar(20)"),
     c("patente", "varchar(8)", "Patente del vehículo.", "HJKL-42", uk=True),
     c("capacidad_kg", "integer", "Capacidad de carga en kilos.", "8000", check="capacidad_kg > 0"),
-    c("rango_temperatura_id", "integer", "Rango en que opera su cámara.", "1", fk="rango_temperatura"),
+    c("rango_temperatura_id", "integer", "Rango en que opera su cámara 1, la única en la mayoría de la flota.", "1", fk="rango_temperatura"),
+    c("rango_secundario_id", "integer", "Rango de su cámara 2; vacío si el camión tiene una sola cámara.", "2", fk="rango_temperatura", nulo=True),
     c("activo", "boolean", "Si está en servicio.", "true", default="true"),
-])
+], extra=["CHECK (rango_secundario_id <> rango_temperatura_id)"])
 tabla("despacho", "Logística", "Viaje de un camión con una o más órdenes. Su estado se deduce de las marcas de tiempo.", [
     pk("despacho_id", "Identificador del despacho.", "88"),
     c("camion_id", "varchar(20)", "Camión asignado.", "CAM-01", fk="camion"),
@@ -160,6 +161,7 @@ tabla("orden", "Comercial", "Órdenes de compra generadas en el portal. El clien
     c("oc_pendiente", "boolean", "Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega.", "falso", default="false"),
     c("recibe_nombre", "varchar(80)", "Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta.", "María Soto", default="''"),
     c("comprobante", "varchar(8)", "Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura.", "boleta", default="'boleta'"),
+    c("camara", "smallint", "Cámara del camión en la que viaja la orden; se fija al despachar. Una ruptura de frío solo la afecta si ocurre en esa cámara.", "1", default="1", check="camara IN (1, 2)"),
     c("creada_en", "timestamptz", "Fecha y hora de la orden.", "2026-10-12 10:20:00-03", default="now()"),
 ])
 tabla("orden_item", "Comercial", "Líneas de una orden, con el precio vigente al momento de comprar.", [
@@ -196,9 +198,10 @@ tabla("telemetria", "Logística e IoT", "Lecturas que envían los contenedores d
     c("lat", "double precision", "Latitud en grados decimales.", "-38.7359", check="lat BETWEEN -90 AND 90"),
     c("long", "double precision", "Longitud en grados decimales. En SQL se escribe entre comillas.", "-72.5904", check='"long" BETWEEN -180 AND 180'),
     c("combustible_pct", "integer", "Nivel de combustible, de 0 a 100 (integer).", "64", check="combustible_pct BETWEEN 0 AND 100"),
-    c("alerta_ruptura_frio", "boolean", "Verdadero si temp_camara sale del rango crítico del camión.", "false"),
+    c("alerta_ruptura_frio", "boolean", "Verdadero si temp_camara sale del rango de la cámara que informa.", "false"),
+    c("camara", "smallint", "Cámara que informa: 1 en todo camión; 2 solo en los de dos cámaras, que envían una lectura por cada una.", "1", default="1", check="camara IN (1, 2)"),
     c("registrado_en", "timestamptz", "Momento de la lectura.", "2026-10-13 08:15:05-03", default="now()"),
-], extra=["UNIQUE (camion_id, registrado_en)"])
+], extra=["UNIQUE (camion_id, camara, registrado_en)"])
 
 # ---------------------------------------------------------------- CRM
 tabla("etapa_pipeline", "CRM", "Etapas del embudo comercial.", [
@@ -252,7 +255,7 @@ tabla("requerimiento", "CRM", "Consultas y reclamos de clientes, clasificados po
 # ---------------------------------------------------------------- Relaciones para el diagrama
 REL = [
     ("region", "||--o{", "comuna", "contiene"), ("comuna", "||--o{", "direccion", "ubica"),
-    ("rango_temperatura", "||--o{", "categoria", "exige"), ("rango_temperatura", "||--o{", "camion", "opera en"),
+    ("rango_temperatura", "||--o{", "categoria", "exige"), ("rango_temperatura", "||--o{", "camion", "opera en"), ("rango_temperatura", "|o--o{", "camion", "segunda cámara"),
     ("categoria", "||--o{", "producto", "agrupa"), ("lista_precio", "||--o{", "precio_producto", "fija"),
     ("producto", "||--o{", "precio_producto", "tiene"), ("lista_precio", "||--o{", "tipo_cliente", "usa"),
     ("tipo_cliente", "||--o{", "cliente", "clasifica"), ("usuario", "|o--o|", "cliente", "accede como"),

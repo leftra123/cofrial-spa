@@ -302,3 +302,12 @@ Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
 - **Tramos:** 1 a 30, 31 a 60, 61 a 90 y más de 90 días, según la factura más atrasada del cliente.
 - **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
 - **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.
+
+## Camiones de dos cámaras (8-nov-2026)
+- **Por qué:** un carrito con refrigerados y congelados obligaba a mandar dos camiones a la misma dirección. Decisión de Eric: parte de la flota lleva ambos rangos. Una empresa no renueva 50 camiones de golpe, así que son 5 (10 %), uno por contenedor del simulador.
+- **Qué no cambia:** una orden por rango (RN-16), porque el documento, el seguimiento y el reclamo son por orden. Tampoco cambian los campos de telemetría que exige la pauta.
+- **Lecturas:** una fila por cámara (`telemetria.camara`) en vez de una sola temperatura por camión. Así, una falla del congelado no le avisa al cliente del pedido refrigerado.
+- **`orden.camara`:** se guarda como hecho del despacho, igual que `despacho_id`, en vez de deducirlo de los productos en cada lectura. Simplifica el cruce de ventas con alertas (RN-13) en el CRM y en Grafana.
+- **`camion.rango_secundario_id` y no una tabla de cámaras:** ningún camión de la flota tiene más de dos, y casi todo el sistema sigue leyendo `rango_temperatura`. Con tres cámaras o más, convendría una tabla propia.
+- **Uso de la flota:** para un solo rango se prefiere un camión simple, porque los de dos cámaras son escasos; si no hay uno simple libre, sirve uno de dos cámaras.
+- **Qué no se hizo:** repartir la capacidad por cámara; `capacidad_kg` es del camión completo. Los escenarios por viaje fallan solo en la cámara 1; para mostrar una falla en la cámara 2 se usa `/demo/`.

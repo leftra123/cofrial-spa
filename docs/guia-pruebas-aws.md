@@ -89,6 +89,48 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 28. Como `vendedora@cofrial.cl`, la pestaña **Solicitudes** del CRM muestra un contador y la empresa; **Aprobar y asignármela**. La empresa ya entra, con el distintivo B2B y la lista institucional; en su ficha queda la nota «Cuenta de empresa aprobada». Con `gerencia@` la solicitud se ve pero no hay botones.
 29. En Ingresar, **¿Olvidaste tu clave?** con un correo real de una cuenta creada en el paso anterior o en `/cuenta/registro/`: llega un enlace (si `EMAIL_HOST` está configurado; si no, queda en `docker compose logs web`). El enlace permite elegir una clave nueva **una sola vez**; al abrirlo de nuevo dice «El enlace ya no sirve».
 
+## Torre de control (`/torre/`): pruebas y puesta en AWS
+
+> Estado: **no está desplegada en AWS.** Todo lo de esta sección se probó solo en local; el despliegue requiere el visto bueno de Eric y se hace en el orden de abajo. La pantalla es solo de lectura: no escribe en la base.
+
+**Quién entra.** `gerencia@cofrial.cl` (inicia directo en `/torre/`) y `admin@cofrial.cl`. Un vendedor, el despachador o un cliente reciben 403. `aws/verificar.py` lo comprueba (sección 6): `/torre/` responde 200 a gerencia, `/torre/pulso/` trae las 5 filas de la rúbrica y se imprime el estado de cada una, y una vendedora recibe 403. Un estado «sin evidencia» no es falla antes de la demo.
+
+**Qué exige cada fila de la rúbrica para quedar en verde** (la Torre nunca marca verde sin evidencia):
+
+| Fila | Para verde | Qué hacer antes de la defensa |
+|---|---|---|
+| D1 AWS | Consulta a la base correcta, host de RDS (`.rds.amazonaws.com`) e ID de la instancia EC2 | El ID lo escribe `provision.sh` en el `.env` al crear la EC2 web (variable `INSTANCIA_EC2`, por IMDSv2). **Una EC2 creada antes de este cambio no la tiene**: `recrear-web` la crea. Sin el ID, D1 dice «No se pudo comprobar» |
+| D2 E-commerce y CRM | Productos activos y pedidos reales de **ambos canales** | **Compra de ensayo como B2B y como B2C** (pasos 5 a 7 y 19). No cuentan los pedidos cancelados, los `HIS-` del historial de muestra ni los que crea la carga de demostración (`OC-2026-…`, `OC-SUR-…`, `OC-REG-…`: lista exacta `REFERENCIAS_SEMBRADAS` en `clientes/muestra.py`) |
+| D3 IoT | Lectura de menos de 2 minutos, no forzada desde `/demo/` | Confirmar que la EC2 IoT corre el simulador |
+| D4 BI | Grafana responde desde el servidor y hay **al menos una venta real (no `HIS-` ni sembrada por la carga) en los últimos 7 días** | La misma compra de ensayo. No exige alertas de frío: que no haya rupturas también es un resultado válido |
+| D5 IA | Hay una clasificación de IA, **un proveedor gratuito configurado** (`GEMINI_API_KEY` o `GROQ_API_KEY` en el contenedor) y `ANTHROPIC_API_KEY` vacía | La defensa en vivo de la IA la hace el equipo: la pantalla no puede comprobarla |
+
+**Clientes de muestra y niveles del embudo.** La siembra (`clientes/muestra.py`) crea clientes ilustrativos, cuatro prospectos y 67 pedidos `HIS-` repartidos en los últimos 90 días. **Los niveles se desplazan con el tiempo:** los clientes en «Recompra» y «Primer pedido» tienen pedidos de hasta 27 días atrás y, al pasar los 30 días sin comprar, caen a «En riesgo». Si el embudo se ve distinto a lo ensayado, antes de la defensa:
+
+```bash
+# en la EC2 web (el --env-file .env es obligatorio): quitar la muestra...
+docker compose -f aws/docker-compose.web.yml --env-file .env exec -T web python manage.py limpiar_muestra
+# ...y volver a sembrarla con el procedimiento FORZAR_CARGA_DEMO de más abajo (con productos en RDS, cargar_demo --solo-primera-vez no siembra)
+```
+
+`limpiar_muestra` borra solo los pedidos `HIS-` con sus facturas y líneas, los clientes de muestra y los prospectos nuevos; no toca pedidos reales, stock ni cobranza. Hacerlo con tiempo, no durante la defensa.
+
+**Cómo llegan los datos a AWS** (solo con el visto bueno de Eric). `cargar_demo` corre con `--solo-primera-vez`: con productos ya en RDS no carga nada, así que la muestra no llega sola. Procedimiento, desde el worktree que tiene `aws/.estado/secretos.env` (el estado vigente puede estar en otro worktree que `main`: confirmarlo antes, porque `provision.sh` donde no exista `secretos.env` genera claves nuevas y la web pierde la conexión con RDS), coordinando antes con las otras sesiones que operan el laboratorio.
+
+**Si la Torre aún no está en `main`:** la EC2 clona la rama con `git clone --branch`, y su user-data corre con `set -e`, así que **una rama que no esté en GitHub aborta el arranque** de la EC2. Antes de empezar, publicar la rama o fusionarla a `main` (decisión de Eric). Y `RAMA` no se guarda entre pasos: hacer `export RAMA=<rama>` en la terminal, una sola vez, para que valga en **todos** los `provision.sh` de abajo; si una llamada queda sin ella, esa EC2 se crea desde `main`.
+
+1. **Intentar un snapshot de RDS** antes de tocar nada. Si el laboratorio no lo permite, queda como vuelta atrás solo `limpiar_muestra`; anotar que no hubo snapshot.
+2. Agregar `FORZAR_CARGA_DEMO=1` a `aws/.estado/secretos.env` (con `printf '\nFORZAR_CARGA_DEMO=1\n' >> ...`, para no pegarla a la última línea) y correr `bash aws/provision.sh recrear-web`. Esperar a que `/salud/` responda.
+3. **Quitar** `FORZAR_CARGA_DEMO` de `secretos.env` y correr `bash aws/provision.sh recrear-web` otra vez: `provision.sh` escribe una lista fija de variables en la EC2 que persiste en cada reinicio, y dejarla en 1 recargaría la demostración en cada arranque.
+4. **Siempre, aunque la carga no cree cuentas:** repetir `cambiar_clave_demo --misma` como se hizo el 7-nov, porque la carga forzada pasa las cuentas que siguen con la clave común a su clave propia. Después, **probar un ingreso** con una cuenta de la hoja antes de seguir.
+5. `bash aws/provision.sh recrear-iot` solo si cambió algo del simulador (la migración corre antes, con la web arriba), y `python3 aws/verificar.py`.
+
+**Opción con un solo `recrear-web` (sin verificar en AWS).** En vez de los pasos 2 y 3: un `recrear-web` sin la variable, para que llegue el código, y después, en la EC2 web, `docker compose -f aws/docker-compose.web.yml --env-file .env exec -T -e FORZAR_CARGA_DEMO=1 web python manage.py cargar_demo --solo-primera-vez`. La variable vale solo para ese comando y no queda en el `.env`. El código lo permite (`cargar_demo` la lee del entorno del proceso) y se probó en local; **nunca se ha corrido en AWS**. El paso 4 se hace igual.
+
+**Punto de decisión: miércoles 11-nov a las 18:00.** A esa hora se corre `verificar.py` **y se leen las cinco filas «Rúbrica» de su sección 6**: un estado «sin evidencia» es solo un aviso y no hace fallar el verificador. Si no pasa completo en AWS, se revierte a la versión anterior (el código viejo sigue funcionando sobre la base migrada, porque la migración solo agrega una tabla y una columna anulable; `limpiar_muestra` quita los datos) y la defensa sigue el guion actual sin la Torre.
+
+**Prueba manual en el navegador (gerencia).** Abrir `/torre/`: banda «En vivo» con la Lectura, mapa con La Araucanía resaltada, clientes con el rótulo «Clientes ilustrativos…», Antes y ahora, embudo por niveles, Front-Office y Back-Office, y la rúbrica. Detener el simulador unos 2 minutos: D3 debe salir de verde y la Lectura decirlo. Con la sesión vencida, la pantalla debe mostrar «Tu sesión terminó» con el enlace, no el login adentro. Comprar como B2B y B2C y comprobar que D2 y D4 pasan a verificado. El pedido trazado no cambia con la compra: muestra el último pedido cuyo viaje ya salió, así que la compra aparece ahí cuando se despacha.
+
 ## Pruebas automáticas (sin AWS)
 
 Con una base PostgreSQL local y el entorno de `aws/README.md`:
@@ -98,6 +140,8 @@ cd web && python manage.py test        # 57 pruebas, todas deben pasar
 ```
 
 (No definir `DEMO_PASSWORD` en el entorno al correrlas, o fallan las de inicio de sesión.)
+
+**Ojo con `--keepdb`:** los `TransactionTestCase` de `pedidos` y `flota` vacían las tablas al terminar, también las filas que crea una migración, como las de `segmento_cliente`. Con una base de pruebas conservada, las corridas siguientes fallan por falta de esas filas. Para la corrida final, usar una base nueva (sin `--keepdb`).
 
 ## Si Sergio quiere su propia instalación
 

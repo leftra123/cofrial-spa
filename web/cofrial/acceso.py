@@ -4,7 +4,7 @@ from crm import servicios as crm
 from pedidos import servicios as pedidos
 
 PORTADA = "/"
-INICIOS = {"anonimo": "/", "cliente": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/", "personal": "/catalogo/"}
+INICIOS = {"anonimo": "/", "cliente": "/catalogo/", "vendedor": "/crm/", "gerencia": "/torre/", "despachador": "/flota/", "admin": "/crm/", "personal": "/catalogo/"}
 ETIQUETAS = {"cliente": "Cliente", "vendedor": "Vendedor", "gerencia": "Gerencia", "despachador": "Despachador", "admin": "Administrador", "personal": "Personal"}
 
 

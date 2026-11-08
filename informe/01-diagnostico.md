@@ -137,8 +137,10 @@ Ni el caso ni el equipo consultor disponen de las cifras reales de Cofrial. Para
 | Viajes semanales | 300 | 50 camiones por 6 viajes |
 | Valor medio de la carga por viaje | 1 500 000 pesos | Supuesto del equipo consultor |
 | Fracción de la carga que se pierde si hay ruptura | 100 % (rechazo total) | Supuesto conservador de pérdida máxima |
+| Tiempo de coordinación por viaje (llamadas y mensajes personales entre bodega, chofer y cliente) | 15 minutos | **Supuesto del equipo consultor**, no es un dato del caso |
+| Horas semanales de coordinación | 75 horas | 300 viajes por 15 minutos |
 
-*Nota.* Elaboración propia. Fórmula: pérdida semanal = viajes semanales × proporción de viajes con ruptura no detectada × valor medio de la carga × fracción perdida.
+*Nota.* Elaboración propia. Fórmula: pérdida semanal = viajes semanales × proporción de viajes con ruptura no detectada × valor medio de la carga × fracción perdida. Los 15 minutos de coordinación por viaje y, por tanto, las 75 horas semanales son un supuesto agregado el 8-nov-2026 para la pantalla «Antes y ahora» de la Torre de control; se reemplazará con datos de Cofrial (Tabla 7). La pantalla no presenta ningún ahorro como medido.
 
 **Tabla 6**
 *Escenarios de pérdida semanal según la frecuencia de rupturas (ilustrativo)*
@@ -152,6 +154,8 @@ Ni el caso ni el equipo consultor disponen de las cifras reales de Cofrial. Para
 *Nota.* Elaboración propia con los parámetros de la Tabla 5. El orden de magnitud es coherente con las "pérdidas millonarias semanales" que describe el caso, pero no lo prueba.
 
 El resultado no pretende ser una predicción: sirve para mostrar que una variación de un par de puntos porcentuales en la frecuencia de rupturas mueve las pérdidas en decenas de millones, y que por eso detectar la ruptura a tiempo tiene un retorno alto frente al costo de una plataforma de bajo costo. Las otras dos pérdidas (entregas fallidas y horas de digitación duplicada) siguen la misma lógica y se calcularán cuando se disponga de los datos.
+
+**Macrozona sur: definición del equipo.** El caso describe la operación en La Araucanía y no define una macrozona. Para el mapa de la Torre de control, el equipo **supone** que la macrozona sur comprende las regiones del Biobío, La Araucanía, Los Ríos y Los Lagos, con La Araucanía como foco de la operación. Es una definición de trabajo del equipo consultor, no una delimitación entregada por Cofrial, y se reemplazará con la zona de cobertura real cuando Cofrial la informe.
 
 **Datos que se solicitarán a Cofrial para reemplazar los supuestos**
 
@@ -167,6 +171,8 @@ El resultado no pretende ser una predicción: sirve para mostrar que una variaci
 | Frecuencia de caídas del servidor y fecha del último respaldo | Cuantificar el riesgo del dolor 1 |
 | Cantidad de vendedores y tamaño de su cartera | Dimensionar el riesgo de fuga de cartera |
 | Exigencias de temperatura de los clientes institucionales | Definir los rangos críticos de la alerta |
+| Tiempo de coordinación por viaje (llamadas y mensajes entre bodega, chofer y cliente) | Reemplazar el supuesto de 15 minutos y de 75 horas semanales de la Tabla 5 |
+| Zona de cobertura real de la operación | Reemplazar la definición supuesta de macrozona sur |
 
 *Nota.* Elaboración propia.
 

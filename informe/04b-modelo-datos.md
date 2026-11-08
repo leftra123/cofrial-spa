@@ -792,6 +792,7 @@ El diccionario anterior corresponde al diseño lógico de referencia. Las siguie
 | direccion.long | double precision | Sí | Longitud de entrega para seguimiento y ruta |
 | orden.oc_pendiente | boolean, por defecto false | No | Diferencia referencia WEB temporal y OC institucional informada |
 | orden.recibe_nombre | varchar(80), por defecto vacío | No | Persona que recibe, elegida por el comprador; vacío = el titular. No se envía a proveedores de IA |
+| cliente.segmento_id | integer | Sí | FK a segmento_cliente: tipo de comprador (hospital, supermercado, feria o institucional) para la Torre de control; nulo en B2C y en clientes sin asignar. Al borrar el segmento queda nulo |
 | telemetria.forzada | boolean, por defecto false | No | Distingue lecturas de demostración: las forzadas desde la web y las que el simulador envía durante la falla de un escenario |
 | despacho.decision_auto | text | Sí | Por qué salió el viaje, escrito por el despacho automático; vacío si lo armó una persona |
 | despacho.decision_ia | text | Sí | La misma decisión redactada por la IA; vacío si no hubo IA utilizable |
@@ -859,3 +860,13 @@ Nota. Elaboración propia. UNIQUE parcial sobre despacho_id mientras el estado s
 | actualizado_en | timestamptz | No | Momento del último cambio |
 
 Nota. Elaboración propia. La escribe `/demo/` y la leen los contenedores del simulador en cada ciclo; si no tiene fila, el tiempo corre a 1×. No cambia la frecuencia de la telemetría. Está en 3FN: los campos dependen solo de la clave y la tabla guarda un parámetro de operación, no datos de otra entidad.
+
+**Tabla D31**
+*Diccionario físico de segmento_cliente*
+
+| Campo | Tipo | Nulo | Clave y función |
+|---|---|---|---|
+| segmento_id | integer autogenerado | No | PK |
+| nombre | varchar(40) | No | UNIQUE; Hospital, Supermercado, Feria o Institucional |
+
+Nota. Elaboración propia. La referencia `cliente.segmento_id` es nula para los clientes B2C y los B2B sin asignar; se edita en `/admin/`, sin formularios nuevos. No se reutilizó `cliente.giro`, que es texto libre para la factura. Está en 3FN: el nombre del segmento depende solo de la clave y el cliente solo guarda la referencia. El nivel del cliente en el embudo no se guarda en ninguna tabla: se calcula (ver `04d-crm.md`). La migración solo agrega una tabla y una columna anulable, así que el código anterior sigue funcionando sobre la base migrada. El MER de la Figura 1 corresponde al diseño de referencia y no incluye esta extensión.

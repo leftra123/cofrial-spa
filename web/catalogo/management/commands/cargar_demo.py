@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from catalogo.models import Categoria, ListaPrecio, PrecioProducto, Producto, RangoTemperatura
-from clientes import cuentas_demo, regionales
+from clientes import cuentas_demo, muestra, regionales
 from clientes.models import Cliente, Comuna, Direccion, Region, TipoCliente, Vendedor
 from crm.models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 from flota.models import Camion, Despacho
@@ -279,9 +279,17 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f"Pedido regional sin crear: {omitido}"))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f"No se sembraron los clientes regionales: {e}"))
-
+        # Antes de la muestra: sus facturas HIS- harían creer que la cobranza de demostración ya está
         if not Documento.objects.filter(tipo="factura").exists():
             self.historial_de_cobranza(Cliente.objects.get(rut="61.973.200-4"), sur)
+
+        if sys.argv[1:2] != ["test"]:                # las pruebas no la necesitan y alargarían 800 pruebas; las suyas llaman a muestra.sembrar
+            try:                                    # clientes de muestra, historial y prospectos para la Torre de control; tampoco debe impedir el arranque
+                with transaction.atomic():
+                    for aviso in muestra.sembrar(tipo_b2b):
+                        self.stdout.write(self.style.WARNING(f"Muestra: {aviso}"))
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"No se sembraron los clientes de muestra: {e}"))
 
         if not Usuario.objects.filter(username="admin@cofrial.cl").exists():      # administrador de empresa: personal con el grupo, no superusuario
             admin_empresa = Usuario.objects.create_user("admin@cofrial.cl", email="admin@cofrial.cl", password=clave_para("admin@cofrial.cl"), is_staff=True)

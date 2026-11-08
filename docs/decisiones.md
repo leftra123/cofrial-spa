@@ -306,3 +306,10 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
 - **Decisión:** `admin@cofrial.cl` es personal con el grupo `administradores`. El rol admin se resuelve por el grupo (`crm.servicios.rol` y `operacion.servicios.rol_de`, con la misma regla). Solo `eric@cofrial.cl` queda como superusuario técnico, para `/admin/` y `/demo/`.
 - **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
 - **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.
+
+## El barrido de rutas no bloquea el ingreso (8-nov-2026)
+- **Problema (revisión de usuarios del 8-nov):** el contador de «no encontrado» es por IP y, pasado el umbral, cortaba todo el sitio con 429, también `/cuenta/entrar/`. En la defensa y en el laboratorio toda la sala sale por una IP: un visitante que probara unas 60 direcciones dejaba a los demás sin poder ingresar.
+- **Decisión:** el ingreso de la tienda (`/cuenta/entrar/`) y el del panel (`/admin/login/`) quedan fuera de ese bloqueo. El resto del sitio sigue cortado mientras dura la ventana. El ingreso conserva su propia protección: 10 claves malas seguidas bloquean esa cuenta 15 minutos, y el límite por IP sigue apagado (`ACCESO_MAX_FALLOS_IP=0`).
+- **Umbral documentado:** 60 «no encontrado» en 10 minutos por IP (`ESCANEO_MAX_404`, `ESCANEO_VENTANA_SEG`; los íconos que el navegador pide solo no cuentan). Se cambia por variable de entorno.
+- **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
+- **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).

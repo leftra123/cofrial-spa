@@ -79,6 +79,24 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 
 *Nota.* Elaboración propia. Las etapas corresponden a la tabla `etapa_pipeline`.
 
+### Niveles del embudo en la Torre de control
+
+La Torre de control (`/torre/`, solo administración y gerencia) agrupa las etapas de la Tabla 3 y el comportamiento de compra de cada cliente B2B en cinco fases, con el vocabulario de un embudo de ventas. **Los niveles se calculan cada vez que se consultan y no se guardan en ninguna tabla** (3FN: lo calculable no se guarda); la función única está en `crm/servicios.py` y sus umbrales son constantes. El embudo de `/crm/embudo/` y las reglas RN-10 y RN-11 no cambian.
+
+**Tabla 3a**
+*Fases y niveles del embudo en la Torre de control: de dónde sale cada nivel*
+
+| Fase | Nivel (etapa de Cofrial) | De dónde sale |
+|---|---|---|
+| Atracción | Prospecto | `etapa_pipeline` |
+| Interés | Contactado | `etapa_pipeline` |
+| Consideración | Propuesta enviada, Negociación | `etapa_pipeline` |
+| Acción | Ganado sin pedido, Primer pedido | Cliente B2B con 0 pedidos o con 1 pedido |
+| Fidelización | Recompra, Fidelizado | Recompra: 2 o más pedidos. Fidelizado: 4 o más en 90 días |
+| Aparte | En riesgo, Perdido | En riesgo: tiene pedidos, pero ninguno en los últimos 30 días. Perdido: `etapa_pipeline` |
+
+*Nota.* Elaboración propia. «En riesgo» tiene prioridad sobre Recompra, Fidelizado y Primer pedido. No se cuentan los pedidos cancelados. Los umbrales (30 días, 4 pedidos, ventana de 90 días) son supuestos del equipo, a validar con Cofrial. Entran los clientes B2B con segmento, con prospecto ganado o con pedidos; quedan fuera las solicitudes de empresa por aprobar y las cuentas de prueba sin actividad. Los clientes B2C compran sin vendedor y solo se cuentan aparte. Los clientes y pedidos de muestra son ilustrativos: la Torre lo declara en pantalla.
+
 ## Reglas de negocio del CRM
 
 **Tabla 4**

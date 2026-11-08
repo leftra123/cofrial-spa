@@ -201,6 +201,9 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get install -y docker.io docker-compose-v2 git
 systemctl enable --now docker
 git clone --branch ${RAMA} ${REPO_URL} /opt/cofrial && cd /opt/cofrial
+# ID de esta instancia (IMDSv2) para la fila D1 de la Torre de control; si el metadato no responde, queda vacío y la Torre lo dice
+TOKEN_IMDS=\$(curl -s -m 3 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)
+INSTANCIA_EC2=\$(curl -s -m 3 -H "X-aws-ec2-metadata-token: \$TOKEN_IMDS" http://169.254.169.254/latest/meta-data/instance-id || true)
 cat > .env <<E
 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
 DJANGO_DEBUG=0
@@ -212,6 +215,7 @@ DB_NAME=cofrial
 DB_USER=cofrial
 DB_PASSWORD=${DB_PASSWORD}
 DB_SSLMODE=require
+INSTANCIA_EC2=\${INSTANCIA_EC2}
 DEMO_PASSWORD=${DEMO_PASSWORD}
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
 GRAFANA_DB_PASSWORD=${GRAFANA_DB_PASSWORD}

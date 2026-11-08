@@ -1,6 +1,8 @@
 """Reglas de negocio del CRM (RN-09 a RN-15 del informe, sección de arquitectura funcional del CRM)."""
+from datetime import timedelta
+
 from django.db import transaction
-from django.db.models import Count, F, Max, Q, Sum
+from django.db.models import Count, Exists, F, Max, OuterRef, Q, Sum
 from django.utils import timezone
 
 from catalogo.asistente import estado_de_pedido
@@ -10,7 +12,7 @@ from clientes.models import Cliente, TipoCliente, Vendedor
 from cofrial import entradas
 from flota.models import Telemetria
 from pedidos import documentos, servicios as pedidos
-from pedidos.models import CarritoItem, Documento, Orden
+from pedidos.models import CarritoItem, Documento, Orden, OrdenItem
 
 from . import ia
 from .models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
@@ -439,3 +441,90 @@ def registrar_pago(usuario, documento_id, monto, medio, referencia=""):
 def emitir_nota_credito(usuario, documento_id, monto, motivo):
     _exigir_edicion(usuario)
     return documentos.emitir_nota_credito(_documento_visible(usuario, documento_id).pk, monto, motivo)
+
+
+# ---------------------------------------------------------------- nivel del cliente en el embudo (Torre de control)
+DIAS_EN_RIESGO = 30             # sin pedidos en tantos días, un cliente que ya compró queda «En riesgo»
+PEDIDOS_FIDELIZADO = 4          # pedidos dentro de la ventana para ser «Fidelizado»
+VENTANA_FIDELIZADO_DIAS = 90
+
+FASES_DEL_EMBUDO = [
+    ("Atracción", ["Prospecto"]),
+    ("Interés", ["Contactado"]),
+    ("Consideración", ["Propuesta enviada", "Negociación"]),
+    ("Acción", ["Ganado sin pedido", "Primer pedido"]),
+    ("Fidelización", ["Recompra", "Fidelizado"]),
+]
+ETAPAS_APARTE = ["En riesgo", "Perdido"]
+
+
+def nivel_de(total, en_ventana, ultimo, ahora):
+    """Nivel de un cliente B2B según sus pedidos no cancelados: cuántos tiene, cuántos en la ventana de fidelización y cuándo fue el último."""
+    if total == 0:
+        return "Ganado sin pedido"
+    if ultimo < ahora - timedelta(days=DIAS_EN_RIESGO):
+        return "En riesgo"
+    if en_ventana >= PEDIDOS_FIDELIZADO:
+        return "Fidelizado"
+    return "Recompra" if total >= 2 else "Primer pedido"
+
+
+def _pedidos_vigentes():
+    return Orden.objects.exclude(estado_orden__nombre="Cancelada")
+
+
+def _con_pedidos(clientes, ahora):
+    """Agrega a cada cliente `n_pedidos`, `n_ventana` y `ultimo_pedido` en una sola consulta (sin contar cancelados)."""
+    vigente = ~Q(direccion__orden__estado_orden__nombre="Cancelada")
+    ventana = vigente & Q(direccion__orden__creada_en__gte=ahora - timedelta(days=VENTANA_FIDELIZADO_DIAS))
+    return clientes.annotate(n_pedidos=Count("direccion__orden", filter=vigente, distinct=True),
+                             n_ventana=Count("direccion__orden", filter=ventana, distinct=True),
+                             ultimo_pedido=Max("direccion__orden__creada_en", filter=vigente))
+
+
+def nivel_de_cliente(cliente):
+    ahora = timezone.now()
+    c = _con_pedidos(Cliente.objects.filter(pk=cliente.pk), ahora).get()
+    return nivel_de(c.n_pedidos, c.n_ventana, c.ultimo_pedido, ahora)
+
+
+def _plata(monto):
+    return "$" + f"{monto:,}".replace(",", ".")
+
+
+def embudo_por_niveles(usuario):
+    """Embudo por fases: prospectos según su etapa y clientes B2B según su nivel, con la cartera que el usuario puede ver.
+    Entran los B2B con segmento, con prospecto ganado o con pedidos; quedan fuera las solicitudes por aprobar. Los B2C solo se cuentan."""
+    ahora = timezone.now()
+    etapas = {nombre: {"nombre": nombre, "n": 0, "monto_clp": 0, "items": []} for _, nombres in FASES_DEL_EMBUDO for nombre in nombres}
+    etapas.update({nombre: {"nombre": nombre, "n": 0, "monto_clp": 0, "items": []} for nombre in ETAPAS_APARTE})
+
+    prospectos = prospectos_visibles(usuario).filter(Q(etapa__es_final=False) | Q(etapa__es_ganada=False, cerrado_en__gte=ahora - timedelta(days=90)))
+    for p in prospectos.order_by("-creado_en"):
+        e = etapas.get(p.etapa.nombre)
+        if e is None:
+            continue
+        monto = p.monto_estimado_clp or 0
+        e["n"] += 1
+        e["monto_clp"] += monto
+        e["items"].append({"nombre": p.empresa or p.nombre_contacto, "url": f"/crm/prospectos/{p.pk}/",
+                           "detalle": _plata(monto) if p.monto_estimado_clp is not None else "Sin monto"})
+
+    ganado = Prospecto.objects.filter(cliente=OuterRef("pk"), etapa__es_ganada=True)
+    con_pedidos = Orden.objects.filter(direccion__cliente=OuterRef("pk"))
+    clientes = clientes_visibles(usuario).filter(tipo_cliente__codigo="B2B").exclude(pk__in=solicitudes_empresa().values("pk")).filter(
+        Q(segmento__isnull=False) | Exists(ganado) | Exists(con_pedidos))
+    clientes = list(_con_pedidos(clientes, ahora).order_by("nombre"))
+    montos = dict(OrdenItem.objects.filter(orden__direccion__cliente__in=[c.pk for c in clientes]).exclude(orden__estado_orden__nombre="Cancelada")
+                  .values_list("orden__direccion__cliente").annotate(t=Sum(F("cantidad") * F("precio_unitario_clp"))))
+    for c in clientes:
+        e = etapas[nivel_de(c.n_pedidos, c.n_ventana, c.ultimo_pedido, ahora)]
+        monto = montos.get(c.pk, 0)
+        e["n"] += 1
+        e["monto_clp"] += monto
+        detalle = "Sin pedidos" if not c.n_pedidos else f"{c.n_pedidos} pedido{'s' if c.n_pedidos != 1 else ''}, último {timezone.localtime(c.ultimo_pedido):%d/%m}"
+        e["items"].append({"nombre": c.nombre, "url": f"/crm/clientes/{c.pk}/", "detalle": detalle})
+
+    return {"fases": [{"nombre": f, "etapas": [etapas[n] for n in nombres]} for f, nombres in FASES_DEL_EMBUDO],
+            "aparte": [etapas[n] for n in ETAPAS_APARTE],
+            "n_b2c": clientes_visibles(usuario).filter(tipo_cliente__codigo="B2C").count()}

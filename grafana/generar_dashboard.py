@@ -6,8 +6,8 @@ DS = {"type": "postgres", "uid": "cofrial-pg"}
 SIN_CANCELADAS = "e.nombre <> 'Cancelada'"
 VENTAS = f"""FROM v_orden o JOIN v_orden_total t USING (orden_id)
 JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE {SIN_CANCELADAS}"""
-# RN-13, igual que crm.servicios.fin_de_exposicion: una orden entregada deja de estar expuesta al recibirse; las demás, al volver el camión.
-A_BORDO = """m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
+# Solo cuenta la cámara en la que viaja la orden. RN-13, igual que crm.servicios.fin_de_exposicion: una orden entregada deja de estar expuesta al recibirse; las demás, al volver el camión.
+A_BORDO = """m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
   AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
 AFECTADAS = f"""FROM v_orden o JOIN v_orden_total t USING (orden_id)
 JOIN orden x USING (orden_id)
@@ -101,7 +101,7 @@ paneles = [
           descripcion="Cuánto del total vendido vino de cada canal: B2B (instituciones con lista de precios) y B2C (público general)."),
     seccion("3 · Flota en vivo: 50 camiones en toda La Araucanía, con base en Temuco (se actualiza cada 5 s)", 15),
     tiempo_simulacion(0, 16, 14),
-    panel("Posición actual de la flota", "geomap", 0, 18, 14, 13, [consulta("SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC")],
+    panel("Posición actual de la flota", "geomap", 0, 18, 14, 13, [consulta("SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC, alerta_ruptura_frio DESC")],
           {"view": {"id": "coords", "lat": -38.58, "lon": -72.55, "zoom": 7.6}, "controls": {"showZoom": True, "mouseWheelZoom": True},
            "basemap": {"type": "osm-standard", "name": "Mapa"},
            "layers": [{"type": "markers", "name": "Camiones", "config": {"showLegend": False, "style": {"size": {"fixed": 11, "min": 2, "max": 15}, "opacity": 0.95, "color": {"field": "estado", "fixed": "dark-green"},
@@ -110,7 +110,7 @@ paneles = [
           {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]},
            "mappings": [{"type": "value", "options": {"0": {"text": "Normal", "color": "green", "index": 0}, "1": {"text": "Ruptura de frío", "color": "red", "index": 1}}}]},
           descripcion="Última posición de cada camión que reportó en los últimos 2 minutos. Verde = temperatura normal, rojo = ruptura de frío. Los camiones cercanos al centro hacen reparto urbano en Temuco; los lejanos van o vuelven de ciudades de La Araucanía. Pasa el mouse sobre un camión para ver su temperatura."),
-    panel("Temperatura de cámara (camiones elegidos arriba)", "timeseries", 14, 16, 10, 7, [consulta("SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1", "time_series")],
+    panel("Temperatura de cámara (camiones elegidos arriba)", "timeseries", 14, 16, 10, 7, [consulta("SELECT registrado_en AS time, CASE WHEN camara = 2 THEN camion_id || ' cámara 2' ELSE camion_id END AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1", "time_series")],
           {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}, {"unit": "celsius", "custom": {"lineWidth": 2, "fillOpacity": 0}},
           descripcion="Una línea por camión elegido en el selector «Camión» de la parte superior (por defecto CAM-01 a CAM-03). Una subida brusca fuera del rango del camión es una ruptura de frío."),
     panel("Camiones con más alertas de frío (período)", "bargauge", 14, 23, 10, 8, [consulta("SELECT camion_id AS camion, count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 2 DESC LIMIT 10")],

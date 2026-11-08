@@ -32,15 +32,16 @@ FROM v FULL JOIN a ON a.dia = v.dia ORDER BY 1;
 SELECT DISTINCT o.orden_id, c.nombre AS cliente, d.camion_id
 FROM v_orden o
 JOIN cliente c ON c.cliente_id = o.cliente_id
+JOIN orden x ON x.orden_id = o.orden_id
 JOIN despacho d ON d.despacho_id = o.despacho_id
-JOIN telemetria t ON t.camion_id = d.camion_id AND t.alerta_ruptura_frio
+JOIN telemetria t ON t.camion_id = d.camion_id AND t.camara = x.camara AND t.alerta_ruptura_frio
  AND t.registrado_en BETWEEN d.salida_en AND coalesce(d.llegada_en, now());
 
--- 5. Control de consistencia: lecturas cuya alerta no coincide con el rango del camión (debe dar 0 filas).
+-- 5. Control de consistencia: lecturas cuya alerta no coincide con el rango de su cámara (debe dar 0 filas).
 SELECT t.telemetria_id, t.camion_id, t.temp_camara, t.alerta_ruptura_frio
 FROM telemetria t
 JOIN camion ca ON ca.camion_id = t.camion_id
-JOIN rango_temperatura r ON r.rango_temperatura_id = ca.rango_temperatura_id
+JOIN rango_temperatura r ON r.rango_temperatura_id = CASE WHEN t.camara = 2 THEN ca.rango_secundario_id ELSE ca.rango_temperatura_id END
 WHERE t.alerta_ruptura_frio <> (t.temp_camara < r.temp_min_c OR t.temp_camara > r.temp_max_c);
 
 -- 6. Conversión del mes: prospectos ganados sobre cerrados (ganados + perdidos).

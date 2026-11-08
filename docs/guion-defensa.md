@@ -64,7 +64,7 @@ Sirve para mostrar el negocio real: Cofrial reparte en toda La Araucanía, no so
 1. En `/flota/despachar/` marcar los pedidos de Lautaro, Victoria y Angol. El mapa muestra la ruta por carretera, 273,5 km ida y vuelta y unos 328 minutos a velocidad real, y propone un camión refrigerado.
 2. Pulsar **Despachar y salir ahora**.
 3. En `/demo/`, sección 5, elegir **60×**. El aviso naranja aparece en todas las pantallas, también en la del cliente, y en Grafana.
-4. Con la cuenta de Angol, abrir el pedido: los km bajan unos 4 por lectura y «Llega entre» es una ventana de 2 minutos. Con las tres paradas, el camión llega a Angol en unos 4 minutos y vuelve a la base en unos 7.
+4. Con la cuenta de Angol, abrir el pedido: los km bajan unos 4 por lectura y la franja de llegada es una ventana de 2 minutos. Con las tres paradas, el camión llega a Angol en unos 4 minutos y vuelve a la base en unos 7.
 5. Antes de llegar aparece «Tu pedido está por llegar» y luego «Camión en la puerta». El cliente confirma con **Recibí mi pedido**: tiene los mismos 2 minutos de siempre.
 6. En `/flota/` el camión pasa a «volviendo» y regresa por la carretera. En Grafana se ve en el mapa de toda la región.
 7. Cerrar con **Borrar lo de la demostración**, que deja el tiempo en 1×.

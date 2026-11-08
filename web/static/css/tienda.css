@@ -699,7 +699,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 .seg-datos span { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-3); font-weight: 600; }
 .seg-datos b { font-size: 1.1rem;  }
 .seg-datos b.cerca { background: var(--lima); color: var(--lima-fg); padding: 0 .3em; border-radius: 3px; }
-.seg-llego { background: var(--entregado-bg); color: var(--entregado-fg); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 1.05rem; border: 1px solid var(--ok); }
 @media (max-width: 480px) { .seg-datos { grid-template-columns: 1fr 1fr; } .seg-datos div:last-child { grid-column: 1 / -1; } }
 /* aviso de stock */
 .aviso-stock { margin: 8px 0 0; font-size: .85rem; color: var(--texto-2); }

@@ -11,7 +11,7 @@
   </div>
 </div>
 {% endblock %}
-{% block cabeza %}{% if seg %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endif %}{% endblock %}
+{% block cabeza %}{% if seg %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">{% endif %}{% endblock %}
 {% block contenido %}
 {% if request.GET.nueva and orden.estado_orden.orden_flujo <= 2 %}
 <section class="confirmacion" aria-labelledby="conf-t">
@@ -193,7 +193,7 @@
 {% block scripts %}
 {% if orden.estado_orden.nombre == "Camión en la puerta" %}<script>CofrialEntrega.iniciar(document.getElementById("entrega"));</script>{% endif %}
 {% if seg %}
-<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
 <script>CofrialLeyenda("leyenda-pedido", ["camion", "destino", "ruta"]);</script>
@@ -244,20 +244,19 @@
       if (u.lat != null) document.getElementById("mapa-vacio").hidden = true;
       document.getElementById("seg-hace").textContent = u.hace_seg > 300 ? "sin señal reciente" : "última posición hace " + u.hace_seg + " s";
       var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "alerta" : "entregado");
-      if (window.L && u.lat != null) {
+      if (u.lat != null) {
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
-          mapa = CofrialMapa.crear("mapa", cam, 14);
-          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom()), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup(CofrialMapa.popupTexto(["Camión " + s.camion_id]));
-          if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(CofrialMapa.popupTexto([s.destino.direccion]));
-        } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom())); }
+          mapa = CofrialMapa.crear("mapa", cam, 13);
+          marcador = mapa.camion(cam, {alerta: u.alerta_ruptura_frio, etiqueta: s.camion_id, titulo: "Camión " + s.camion_id, popup: "Camión " + s.camion_id});
+          if (dest) mapa.destino(dest, {titulo: "Tu dirección de entrega", popup: s.destino.direccion});
+        } else marcador.animarA(cam).alerta(u.alerta_ruptura_frio);
         if (dest && s.ruta_url && Date.now() - ultimaRuta > (s.tiempo_x > 1 ? 5000 : 15000)) {       // el servidor entrega solo el tramo que le falta al camión hasta esta dirección (sale de la ruta guardada, sin consultar a OSRM): se pide cada 15 s para que la línea parta del camión
           ultimaRuta = Date.now();
           fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
             if (!r) return;
-            if (linea) mapa.removeLayer(linea);
-            linea = L.polyline(r.puntos, {color: "#143A7B", weight: 4, opacity: .8, dashArray: r.aproximada ? "6 8" : null}).addTo(mapa);
-            if (!encuadrado) { mapa.fitBounds(linea.getBounds(), {padding: [30, 30], maxZoom: 16}); encuadrado = true; }
+            if (linea) linea.actualizar(r.puntos, {aproximada: !!r.aproximada}); else linea = mapa.ruta(r.puntos, {aproximada: !!r.aproximada});
+            if (!encuadrado) { mapa.encuadrar(r.puntos, {padding: 30, animar: false}); encuadrado = true; }
           });
         }
         document.getElementById("ruta-info").textContent = (s.km_restantes != null ? "Faltan " + String(s.km_restantes).replace(".", ",") + " km hasta " : "Entrega en ") + (s.destino ? s.destino.direccion : "tu dirección");

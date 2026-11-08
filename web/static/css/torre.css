@@ -33,7 +33,6 @@
 .torre-mapa-grid .tarjeta-ui { margin-top: 0; }
 .torre-mapa-caja { padding: 8px; }
 #mapa-torre { height: 560px; }
-#mapa-torre.leaflet-container { background: var(--fondo-2); }     /* sin mosaicos, el fondo gris fijo de Leaflet rompía el tema oscuro */
 .torre-mapa-lado { display: flex; flex-direction: column; gap: 8px; padding: 20px; }
 .torre-mapa-lado h3 { margin: 0; }
 .torre-mapa-lado h3:not(:first-child) { margin-top: 14px; }
@@ -44,11 +43,10 @@
 .torre-segmentos b { margin-left: auto; font-variant-numeric: tabular-nums; }
 .torre-mapa-nota { position: absolute; left: 10px; bottom: 26px; z-index: 500; margin: 0; padding: 4px 10px; background: var(--tarjeta); border-radius: var(--radio-sm); font-size: .84rem; color: var(--texto-2); }
 
-/* Polígonos: La Araucanía se impone; las vecinas apenas se insinúan. Sigue viéndose aunque no carguen los mosaicos. */
-.geo-principal { fill: var(--acento); fill-opacity: .3; stroke: var(--acento); stroke-opacity: 1; stroke-width: 3.5; stroke-linejoin: round; }
-.geo-vecina { fill: var(--texto-3); fill-opacity: .05; stroke: var(--texto-3); stroke-opacity: .65; stroke-width: 1.2; stroke-dasharray: 4 3; }
-.leaflet-tooltip.geo-etiqueta { background: transparent; border: 0; box-shadow: none; padding: 0; color: var(--texto-2); font: 600 .84rem/1.1 "Schibsted Grotesk", "Schibsted Fallback", sans-serif; text-shadow: 0 0 3px var(--tarjeta), 0 0 3px var(--tarjeta), 0 0 6px var(--tarjeta); }
-.leaflet-tooltip.geo-etiqueta.principal { color: var(--acento); font-size: 1.3rem; font-weight: 800; letter-spacing: -.01em; }
+/* Contornos: los dibuja el mapa (capas de MapLibre). Aquí solo el nombre de cada región, que va como marcador de texto. */
+.geo-etiqueta { pointer-events: none; display: grid; place-items: center; text-align: center; }
+.geo-etiqueta span { white-space: nowrap; color: #B4C6DF; font: 600 .84rem/1.1 "Schibsted Grotesk", "Schibsted Fallback", sans-serif; text-shadow: 0 0 3px #0B1A33, 0 0 3px #0B1A33, 0 0 6px #0B1A33; }
+.geo-etiqueta.principal span { color: #BDE63A; font-size: 1.3rem; font-weight: 800; letter-spacing: -.01em; }
 
 /* Segmentos: la letra distingue sin depender del color; el color sale de los tonos de estado para contrastar en ambos temas. */
 .seg-marca { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: .78rem; font-weight: 800; line-height: 1; flex: none; box-shadow: 0 0 0 2px var(--tarjeta); }
@@ -57,15 +55,12 @@
 .seg-feria { background: var(--pendiente-fg); color: var(--pendiente-bg); }
 .seg-institucional { background: var(--asignado-fg); color: var(--asignado-bg); }
 .seg-otro { background: var(--cancelado-fg); color: var(--cancelado-bg); }
-.torre-pin.leaflet-div-icon { background: transparent; border: 0; }
 .torre-popup { min-width: 180px; font-family: "Schibsted Grotesk", "Schibsted Fallback", sans-serif; }
 .torre-popup b { display: block; }
 .torre-popup-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
 .torre-popup-alerta { color: var(--alerta-fg); font-weight: 600; }
-#mapa-torre .leaflet-popup-content-wrapper, #mapa-torre .leaflet-popup-tip { background: var(--tarjeta); color: var(--texto); }
-#mapa-torre .leaflet-popup-content a { color: var(--acento); font-weight: 600; }
-#mapa-torre a.leaflet-popup-close-button { color: var(--texto-2); }
-#mapa-torre .leaflet-bar a { background: var(--tarjeta); color: var(--texto); border-color: var(--borde); }
+#mapa-torre .maplibregl-popup-content a { color: #BDE63A; font-weight: 600; }     /* el popup es azul noche con el tema claro y el oscuro */
+#mapa-torre .torre-popup-alerta { color: #FCA5A5; }
 
 /* ---------- 8.3 Clientes frecuentes ---------- */
 .torre-filtro { display: inline-flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--texto-2); margin: 0; font-weight: 500; white-space: nowrap; }
@@ -179,7 +174,7 @@
   .torre-lectura { padding: 16px 16px 16px 22px; }
   .torre-lectura-cab .btn { margin-left: 0; }
   #mapa-torre { height: 400px; }
-  .leaflet-tooltip.geo-etiqueta.principal { font-size: 1.05rem; }
+  .geo-etiqueta.principal span { font-size: 1.05rem; }
   .torre-aparte { grid-template-columns: minmax(0, 1fr); }
   .torre .seccion { flex-wrap: wrap; }
   .torre-rotulo { font-size: .72rem; padding: 6px 10px; line-height: 1.3; }

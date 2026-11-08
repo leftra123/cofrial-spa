@@ -132,10 +132,10 @@ def _api(metodo, ruta, cuerpo=None, error_usuario=None, idempotencia=None):
         raise ErrorMercadoPago("No hay conexión con Mercado Pago en este momento.") from e
 
 
-def _crear_checkout(cliente, ctx):
+def _crear_checkout(cliente, ctx, comprobante="boleta"):
     monto = sum(ctx["precios"][i.producto_id] * i.cantidad for i in ctx["items"])
     checkout = CheckoutPago.objects.create(cliente=cliente, direccion=ctx["direccion"], numero_oc=ctx["numero_oc"],
-                                           monto_clp=monto, external_reference=f"TMP-{uuid.uuid4().hex}")
+                                           comprobante=comprobante, monto_clp=monto, external_reference=f"TMP-{uuid.uuid4().hex}")
     checkout.external_reference = f"COF-{checkout.checkout_id:08d}"
     checkout.save(update_fields=["external_reference"])
     return checkout, monto
@@ -157,10 +157,13 @@ def _aplicar_respuesta_pago(checkout, pago, fallar_si_rechazado=True):
         if monto_mp and abs(monto_mp - checkout.monto_clp) > 1:
             logger.warning("Monto MP %s distinto al checkout %s", monto_mp, checkout.monto_clp)
         ordenes = s.generar_ordenes(checkout.cliente, checkout.direccion_id, checkout.numero_oc,
-                                    cobrar_b2c_al_crear=False, checkout_pago=checkout)
+                                    cobrar_b2c_al_crear=False, checkout_pago=checkout, comprobante=checkout.comprobante)
         ref = checkout.payment_id
         for orden in ordenes:
-            documentos.cobrar_b2c(orden, medio="mercadopago", referencia=ref)
+            if checkout.comprobante == "factura":
+                documentos.cobrar_factura_contado(orden, medio="mercadopago", referencia=ref)
+            else:
+                documentos.cobrar_b2c(orden, medio="mercadopago", referencia=ref)
         checkout.estado = "completado"
         checkout.primera_orden_id = ordenes[0].pk
         checkout.save(update_fields=["estado", "payment_id", "primera_orden_id"])
@@ -179,12 +182,13 @@ def _aplicar_respuesta_pago(checkout, pago, fallar_si_rechazado=True):
 
 
 @transaction.atomic
-def pagar_con_brick(cliente, direccion_id, form_data):
+def pagar_con_brick(cliente, direccion_id, form_data, comprobante=None, giro=""):
     """Valida el carrito, crea el pago en MP con el token del Brick y materializa la orden si queda approved."""
     if not isinstance(form_data, dict):
         raise ErrorMercadoPago("Datos de pago incompletos.")
+    comprobante = s.elegir_comprobante(cliente, comprobante, giro)
     ctx = s._contexto_desde_carrito(cliente, direccion_id, "")
-    checkout, monto = _crear_checkout(cliente, ctx)
+    checkout, monto = _crear_checkout(cliente, ctx, comprobante)
     payer = _normalizar_payer(cliente, form_data.get("payer"))
     cuerpo = {
         "transaction_amount": int(monto),

@@ -18,14 +18,6 @@
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  function duracionSlideMs() {
-    var raw = getComputedStyle(document.documentElement).getPropertyValue("--nav-slide-dur").trim();
-    if (!raw) return 380;
-    if (raw.indexOf("ms") !== -1) return parseFloat(raw) || 720;
-    if (raw.indexOf("s") !== -1) return (parseFloat(raw) || 0.38) * 1000;
-    return parseFloat(raw) || 380;
-  }
-
   function pausa(ms) {
     return new Promise(function (res) {
       window.setTimeout(res, ms);
@@ -248,12 +240,40 @@
     ]);
   }
 
-  function crearPanelEntrante(doc) {
+  function destinoDe(path) {
+    if (path.indexOf("/catalogo/") === 0) return "catalogo";
+    if (path.indexOf("/pedidos/") === 0) return "pedidos";
+    if (path.indexOf("/carrito/") === 0) return "carrito";
+    return "";
+  }
+
+  function documentoCoincide(doc, path) {
+    var titulo = doc.querySelector("title");
+    var texto = titulo ? titulo.textContent : "";
+    if (path.indexOf("/catalogo/") === 0) return texto.indexOf("Catálogo") === 0;
+    if (path === "/pedidos/") return texto.indexOf("Mis pedidos") === 0;
+    if (path.indexOf("/carrito/") === 0) return texto.indexOf("Carrito") === 0;
+    return true;
+  }
+
+  function paginaDelDestino(url, path) {
+    return obtenerPagina(url).then(function (paquete) {
+      if (documentoCoincide(paquete.doc, path)) return paquete;
+      invalidar(path);
+      return obtenerPagina(url).then(function (nuevo) {
+        if (!documentoCoincide(nuevo.doc, path)) throw new Error("nav");
+        return nuevo;
+      });
+    });
+  }
+
+  function crearPanelEntrante(doc, path) {
     var fuente = doc.getElementById("t-pagina");
     if (!fuente) return null;
     var panel = document.createElement("div");
     panel.className = "t-pagina t-pagina-siguiente t-pagina-entrante";
     panel.innerHTML = fuente.innerHTML;
+    panel.setAttribute("data-nav-destino", destinoDe(path));
     panel.setAttribute("aria-hidden", "true");
     return panel;
   }
@@ -275,6 +295,7 @@
     if (!tpl || !tpl.content) return null;
     var panel = document.createElement("div");
     panel.className = "t-pagina t-pagina-siguiente t-pagina-entrante t-pagina-skeleton";
+    panel.setAttribute("data-nav-destino", destinoDe(path));
     panel.appendChild(tpl.content.cloneNode(true));
     panel.setAttribute("aria-hidden", "true");
     panel.setAttribute("aria-busy", "true");
@@ -287,18 +308,22 @@
     if (!entranteSk) return null;
     escena.appendChild(entranteSk);
     entranteSk.style.visibility = "hidden";
-    void entranteSk.offsetHeight;
     var docRef = null;
-    var fundido = pausa(PRE_SLIDE_MS).then(function () {
-      return lanzarFundido(escena, actual, entranteSk);
-    });
+    var mostrado = false;
+    function mostrar() {
+      if (mostrado) return;
+      mostrado = true;
+      lanzarFundido(escena, actual, entranteSk);
+    }
     var contenido = fetchPromise.then(function (paquete) {
       docRef = paquete.doc;
       if (!poblarPanelDesdeDoc(entranteSk, docRef)) throw new Error("nav");
       return prepararMedios(entranteSk);
     });
-    return Promise.all([fundido, contenido])
+    var revelar = pausa(PRE_SLIDE_MS).then(mostrar);
+    return Promise.all([revelar, contenido])
       .then(function () {
+        mostrar();
         return commitPanel(escena, entranteSk, docRef, path);
       })
       .then(function () {
@@ -321,36 +346,14 @@
   }
 
   function lanzarFundido(escena, actual, entrante) {
-    entrante.style.visibility = "";
-    var alto = Math.max(actual.offsetHeight, entrante.offsetHeight, escena.offsetHeight);
-    escena.style.minHeight = alto + "px";
+    var alto = Math.max(actual.offsetHeight, entrante.scrollHeight || entrante.offsetHeight, escena.offsetHeight);
+    if (alto) escena.style.minHeight = alto + "px";
     actual.classList.add("t-pagina-saliente");
-    escena.classList.add("t-fundir", "t-pre");
+    escena.classList.add("t-fundir");
+    entrante.style.visibility = "visible";
+    entrante.removeAttribute("aria-hidden");
     void escena.offsetWidth;
-    escena.classList.remove("t-pre");
-    return esperarTransicion(entrante);
-  }
-
-  function esperarTransicion(panel) {
-    return new Promise(function (res) {
-      if (!panel || reducido()) {
-        res();
-        return;
-      }
-      var fin = false;
-      function listo(ev) {
-        if (ev && ev.target !== panel) return;
-        if (ev && ev.propertyName && ev.propertyName !== "opacity") return;
-        if (fin) return;
-        fin = true;
-        panel.removeEventListener("transitionend", listo);
-        res();
-      }
-      panel.addEventListener("transitionend", listo);
-      window.setTimeout(function () {
-        if (!fin) listo();
-      }, duracionSlideMs() + 120);
-    });
+    return Promise.resolve();
   }
 
   function limpiarEscena(escena) {
@@ -367,6 +370,7 @@
     entrante.style.transform = "";
     entrante.style.filter = "";
     entrante.style.opacity = "";
+    entrante.style.visibility = "";
     limpiarEscena(escena);
     reemplazarExtras(doc);
     reemplazarScriptsPagina(doc);
@@ -412,7 +416,7 @@
     ocupado = true;
     document.body.classList.add("t-nav-animando");
     var path = claveUrl(url);
-    var fetchPromise = obtenerPagina(url);
+    var fetchPromise = paginaDelDestino(url, path);
 
     function finalizar(ok, doc, pathCommit) {
       if (ok && opciones.push !== false) {
@@ -436,7 +440,7 @@
           return true;
         }
 
-        var entrante = crearPanelEntrante(doc);
+        var entrante = crearPanelEntrante(doc, path);
         if (!entrante) throw new Error("nav");
 
         escena.appendChild(entrante);

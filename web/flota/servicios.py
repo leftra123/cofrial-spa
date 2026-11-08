@@ -34,9 +34,9 @@ def estado_flota():
     for c in camiones:
         t = ultimas.get(c.camion_id)
         d = viajes.get(c.camion_id)
-        pedidos = ordenes.get(d.despacho_id, []) if d else []
+        pedidos = _pedidos_en_orden(ordenes.get(d.despacho_id, []) if d else [], d)
         tarjetas.append({"camion": c, "lectura": t, "viaje": d, "pedidos": pedidos,
-                         "destino": pedidos[0].direccion if pedidos else None,
+                         "destino": _proxima_direccion(pedidos),
                          "situacion": situacion_de(d), "situacion_texto": SITUACIONES[situacion_de(d)],
                          "alerta": bool(t and t.alerta_ruptura_frio),
                          "combustible_bajo": bool(t and t.combustible_pct < 25)})
@@ -48,6 +48,26 @@ def estado_flota():
                "con_viaje": len(viajes), "con_alerta": sum(1 for x in tarjetas if x["alerta"]),
                "sin_lectura": sum(1 for x in tarjetas if x["lectura"] is None)}
     return tarjetas, resumen
+
+
+_YA_VISITADAS = {"Entregada", "Cancelada", "Entrega no concretada"}
+
+
+def _pedidos_en_orden(pedidos, viaje):
+    """El mismo orden de `ruta_geojson.paradas` que ve el cliente. Cada pedido queda con `parada_n` (1 es la primera salida)."""
+    indice = {p["direccion_id"]: i for i, p in enumerate(((viaje.ruta_geojson or {}) if viaje else {}).get("paradas") or [])}
+    ordenados = sorted(pedidos, key=lambda o: (indice.get(o.direccion_id, 10_000), o.orden_id))
+    for o in ordenados:
+        o.parada_n = indice.get(o.direccion_id, 0) + 1
+    return ordenados
+
+
+def _proxima_direccion(pedidos):
+    """La próxima parada del recorrido, no la primera orden que haya devuelto la consulta."""
+    for o in pedidos:
+        if o.estado_orden.nombre not in _YA_VISITADAS:
+            return o.direccion
+    return pedidos[0].direccion if pedidos else None
 
 
 # ------------------------------------------------------------------------------------ armar despacho

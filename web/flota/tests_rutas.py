@@ -33,6 +33,8 @@ class RutasPorCallesTests(TestCase):
         self.assertEqual([p["direccion_id"] for p in ruta["paradas"]], [1, 2])      # la más cercana a la base primero
         self.assertEqual(ruta["puntos"][0], ruta["puntos"][-1])           # vuelve a la base
         self.assertEqual(RutaCache.objects.count(), 0)                    # una ruta aproximada no se guarda en la caché
+        self.assertEqual(rutas.tramo_hasta(ruta["puntos"], ruta["paradas"][0]["indice"]), ruta["puntos"][:2])
+        self.assertNotEqual(rutas.tramo_hasta(ruta["puntos"], ruta["paradas"][0]["indice"])[-1], ruta["puntos"][-1])
 
     def test_sin_paradas_ubicadas_no_hay_ruta(self):
         self.assertIsNone(rutas.armar_ruta([(1, None, None)]))

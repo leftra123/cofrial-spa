@@ -1,0 +1,25 @@
+<fieldset class="comprobante">
+  <legend>Documento de venta</legend>
+  <div class="comprobante-opciones">
+    <label class="comprobante-opcion">
+      <input type="radio" name="comprobante" value="boleta"{% if cliente.tipo_cliente.codigo != "B2B" %} checked{% endif %}>
+      <span class="comprobante-ico" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 5h14v22l-2.3-1.4L18.4 27 16 25.5 13.6 27l-2.3-1.4L9 27V5z"/><path d="M13 11h6M13 15h6M13 19h4"/></svg></span>
+      <span class="comprobante-nombre">Boleta</span>
+      <span class="comprobante-nota">Nombre y RUT</span>
+      <span class="comprobante-marca" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+    </label>
+    <label class="comprobante-opcion">
+      <input type="radio" name="comprobante" value="factura"{% if cliente.tipo_cliente.codigo == "B2B" %} checked{% endif %}>
+      <span class="comprobante-ico" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 5h10l5 5v17H9z"/><path d="M19 5v5h5"/><path d="M13 16h8M13 20h5"/></svg></span>
+      <span class="comprobante-nombre">Factura</span>
+      <span class="comprobante-nota">Con giro</span>
+      <span class="comprobante-marca" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+    </label>
+  </div>
+  <p class="ayuda comprobante-detalle">La boleta usa tu nombre y tu RUT {{ cliente.rut }}. No pedimos otro RUT.</p>
+  <div class="giro-factura">
+    <label for="giro">Giro de la factura</label>
+    <input name="giro" id="giro" maxlength="80" value="{{ cliente.giro }}" autocomplete="organization" aria-describedby="ayuda-giro">
+    <p class="ayuda" id="ayuda-giro">La factura lleva la razón social {{ cliente.nombre }}, el RUT {{ cliente.rut }} y este giro.</p>
+  </div>
+</fieldset>

@@ -340,7 +340,12 @@
           "X-CSRFToken": csrfActual(),
           "X-Requested-With": "fetch",
         },
-        body: JSON.stringify({ direccion: direccion.value, formData: formData }),
+        body: JSON.stringify({
+          direccion: direccion.value,
+          formData: formData,
+          comprobante: (document.querySelector('.checkout-mp input[name="comprobante"]:checked') || {}).value || "boleta",
+          giro: (document.querySelector('.checkout-mp input[name="giro"]') || {}).value || "",
+        }),
       })
         .then(leerJsonRespuesta)
         .then(function (par) {

@@ -21,7 +21,7 @@ class PantallaEstamosAfuera(EntregaBase):
     def test_en_la_puerta_muestra_las_dos_respuestas_con_limites_y_contador(self):
         _, orden = self.en_la_puerta()
         html = self.client.get(f"/pedidos/{orden.pk}/").content.decode()
-        for esperado in ("Estamos afuera de tu dirección", "Recibí mi pedido", "No pude recibirlo", 'id="entrega"', 'maxlength="500"', 'minlength="5"',
+        for esperado in ("Tu paquete llegó", "Recibí mi pedido", "No pude recibirlo", 'id="entrega"', 'maxlength="500"', 'minlength="5"',
                          'id="motivo-cuenta"', 'role="alert"', "js/entrega.js", "CofrialEntrega.iniciar"):
             self.assertIn(esperado, html, esperado)
 

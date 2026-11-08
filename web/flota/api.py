@@ -82,7 +82,7 @@ class SeguimientoAPI(APIView):
 
 
 class RutaAPI(APIView):
-    """Polilínea guardada del viaje de una orden propia (la misma que ve el despachador), para dibujarla una sola vez en el mapa del cliente."""
+    """Tramo activo hasta la parada de esta orden (sin el regreso a la base) y el itinerario en el mismo orden que ve el despachador."""
 
     def get(self, request, orden_id):
         cliente = pedidos.cliente_de(request.user)

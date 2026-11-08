@@ -27,17 +27,41 @@
       var tipo = document.createElement("span"); tipo.className = "campana-tipo t-" + a.tipo; tipo.textContent = ICONOS[a.tipo] || "Aviso";
       var txt = document.createElement("span"); txt.className = "campana-txt"; txt.textContent = a.texto;
       var h = document.createElement("time"); h.dateTime = a.cuando; h.textContent = hora(a.cuando);
-      enlace.appendChild(tipo); enlace.appendChild(txt); enlace.appendChild(h); li.appendChild(enlace); lista.appendChild(li);
-      /* «Estamos afuera»: mientras el camión sigue en la puerta (el servidor cambia el texto cuando ya no), el aviso trae las dos respuestas */
-      if (a.tipo === "puerta" && /^Estamos afuera/.test(a.texto) && window.CofrialEntrega) {
-        var ac = document.createElement("div"); ac.className = "campana-acciones";
-        var si = document.createElement("button"); si.type = "button"; si.className = "btn"; si.textContent = "Recibí mi pedido";
-        si.addEventListener("click", function (e) { e.stopPropagation(); CofrialEntrega.aceptar(a.orden_id, si); });
-        var no = document.createElement("button"); no.type = "button"; no.className = "btn-sec"; no.textContent = "No pude recibirlo";
-        no.addEventListener("click", function (e) { e.stopPropagation(); panel.hidden = true; btn.setAttribute("aria-expanded", "false"); CofrialEntrega.modal(a.orden_id); });
-        ac.appendChild(si); ac.appendChild(no); li.appendChild(ac);
+      enlace.appendChild(tipo); enlace.appendChild(txt); enlace.appendChild(h); li.appendChild(enlace);
+      if (a.documento && a.documento.orden_id === a.orden_id) {
+        var doc = document.createElement("a"); doc.className = "campana-doc"; doc.href = "/pedidos/" + a.orden_id + "/#documentos";
+        doc.textContent = a.documento.etiqueta + " N.º " + a.documento.folio + " de este pedido";
+        li.appendChild(doc);
       }
+      var acciones = a.acciones || (pide(a) ? [{id: "aceptar", etiqueta: "Recibí mi pedido"}, {id: "no_recibido", etiqueta: "No pude recibirlo", href: "/pedidos/" + a.orden_id + "/#entrega"}] : []);
+      if (acciones.length) {
+        var ac = document.createElement("div"); ac.className = "campana-acciones"; ac.setAttribute("aria-label", "Acciones del pedido N.º " + a.orden_id);
+        acciones.forEach(function (accion) { ac.appendChild(botonDe(a.orden_id, accion)); });
+        li.appendChild(ac);
+      }
+      lista.appendChild(li);
     });
+  }
+  function botonDe(ordenId, accion) {
+    if (accion.id === "aceptar") {
+      var f = document.createElement("form"); f.method = "post"; f.action = "/pedidos/" + ordenId + "/entrega/";
+      var tok = document.querySelector("input[name=csrfmiddlewaretoken]");
+      if (tok) f.appendChild(tok.cloneNode(true));
+      var oculto = document.createElement("input"); oculto.type = "hidden"; oculto.name = "accion"; oculto.value = "aceptar"; f.appendChild(oculto);
+      var b = document.createElement("button"); b.className = "btn"; b.textContent = accion.etiqueta;
+      b.addEventListener("click", function (e) {
+        if (!window.CofrialEntrega) return;
+        e.preventDefault(); CofrialEntrega.aceptar(ordenId, b);
+      });
+      f.appendChild(b); return f;
+    }
+    var enlace = document.createElement("a"); enlace.className = accion.id === "aceptar" ? "btn" : "btn-sec"; enlace.href = accion.href || ("/pedidos/" + ordenId + "/");
+    enlace.textContent = accion.etiqueta;
+    if (accion.id === "no_recibido") enlace.addEventListener("click", function (e) {
+      if (!window.CofrialEntrega) return;
+      e.preventDefault(); panel.hidden = true; btn.setAttribute("aria-expanded", "false"); CofrialEntrega.modal(ordenId);
+    });
+    return enlace;
   }
   function aviso(a) {
     var t = document.createElement("div"); t.className = "toast t-" + a.tipo;

@@ -63,7 +63,7 @@
     if (!raiz || !window.fetch) return;
     var ordenId = (raiz.dataset.url.match(/pedidos\/(\d+)/) || [])[1];
     var aceptar = raiz.querySelector('form[data-accion="aceptar"]'), no = raiz.querySelector('form[data-accion="no_recibido"]'), det = raiz.querySelector("details"),
-        resta = document.getElementById("entrega-resta"), barra = document.getElementById("entrega-barra"), seccion = raiz.closest(".estado-pedido");
+        resta = document.getElementById("entrega-resta"), barra = document.getElementById("entrega-barra"), seccion = raiz.closest(".llegada") || raiz.closest(".estado-pedido");
     var total = null, fin = null, anuncio = document.getElementById("entrega-anuncio");
     function ocupado(si) { if (seccion) seccion.classList.toggle("cargando", si); }
     aceptar.addEventListener("submit", function (e) {
@@ -88,7 +88,7 @@
     }
     consulta(); setInterval(consulta, 8000);
     setInterval(function () { if (restante != null) pintarResta(Math.max(0, restante - Math.round((Date.now() - ultimo) / 1000))); }, 5000);
-    if (anuncio) anuncio.textContent = "El camión llegó con tu pedido. Confirma si lo recibiste.";
+    if (anuncio) anuncio.textContent = "Tu paquete llegó. Confirma si lo recibiste. Todavía no figura como entregado.";
   }
 
   /* ---------- diálogo para la campanita ---------- */
@@ -114,7 +114,10 @@
   /* Lo que cuenta la campanita: lo que espera una respuesta, las entregas sin concretar aún abiertas (el aviso desaparece al cerrarse) y lo nuevo de las últimas 2 horas.
      Los avisos viejos y lo ya entregado no suman, aunque sigan en la lista. */
   var RECIENTE_MS = 2 * 3600 * 1000;
-  function pide(a) { return a.tipo === "puerta" && /^Estamos afuera/.test(a.texto); }
+  function pide(a) {
+    if (a.acciones) return a.acciones.some(function (x) { return x.id === "aceptar"; });
+    return a.tipo === "puerta" && /^Estamos afuera/.test(a.texto || "");
+  }
   function contarAvisos(avisos, vistos, ahora) {
     return avisos.filter(function (a) {
       if (pide(a) || a.tipo === "no_concretada") return true;

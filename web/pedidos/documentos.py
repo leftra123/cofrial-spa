@@ -117,6 +117,17 @@ def cobrar_b2c(orden, medio="webpay", referencia=None):
 
 
 @transaction.atomic
+def cobrar_factura_contado(orden, medio="webpay", referencia=None):
+    """Factura elegida por quien paga al comprar: se emite y queda pagada en el acto. No reemplaza la factura a crédito del institucional."""
+    monto = monto_con_iva(orden)
+    factura = _emitir(orden, "factura", monto)
+    if referencia is None:
+        referencia = f"AUT-{orden.orden_id:06d}"
+    Pago.objects.create(documento=factura, monto_clp=monto, medio=medio, referencia=str(referencia)[:60])
+    return factura
+
+
+@transaction.atomic
 def emitir_factura(orden):
     """RN-19: la factura se emite a una orden B2B ya entregada, una sola vez, con vencimiento según el crédito del cliente."""
     orden = Orden.objects.select_for_update(of=("self",)).select_related("estado_orden", "direccion__cliente__tipo_cliente").get(pk=orden.pk)
@@ -181,11 +192,72 @@ def anular_por_cancelacion(orden):
 # ------------------------------------------------------------------------------------ cobranza (CRM)
 def entregadas_sin_factura(clientes):
     """RN-22: órdenes B2B entregadas que aún no se facturaron: venta hecha que todavía no se puede cobrar."""
-    ordenes = list(Orden.objects.filter(direccion__cliente__in=clientes, direccion__cliente__tipo_cliente__codigo="B2B", estado_orden__nombre="Entregada")
+    ordenes = list(Orden.objects.filter(direccion__cliente__in=clientes, direccion__cliente__tipo_cliente__codigo="B2B", estado_orden__nombre="Entregada", comprobante="factura")
                    .exclude(documento__tipo="factura").select_related("direccion__cliente__tipo_cliente", "estado_orden").order_by("creada_en"))
     for o in ordenes:
         o.monto = monto_con_iva(o)
     return ordenes
+
+
+def comprobante_pdf(documento):
+    """PDF de una página con la boleta o factura ya emitida. No es un DTE del SII: es el comprobante del prototipo, para verlo y guardarlo."""
+    orden = documento.orden
+    cliente = orden.direccion.cliente
+    lineas = [f"COFRIAL SpA", f"{documento.get_tipo_display()} N.o {documento.folio}", f"Pedido N.o {orden.orden_id}",
+              f"Emitida el {timezone.localtime(documento.emitido_en).strftime('%d/%m/%Y')}",
+              f"Cliente: {cliente.nombre}", f"RUT: {cliente.rut}"]
+    if documento.tipo == "factura" and cliente.giro:
+        lineas.append(f"Giro: {cliente.giro}")
+    lineas.append(f"Direccion: {orden.direccion}")
+    lineas.append("")
+    for item in orden.ordenitem_set.select_related("producto"):
+        lineas.append(f"{item.cantidad} x {item.producto.nombre}  {_clp(item.precio_unitario_clp)}")
+    lineas.append("")
+    lineas.append(f"Total {_clp(documento.monto_clp or 0)}")
+    if documento.vence_en:
+        lineas.append(f"Vence el {documento.vence_en.strftime('%d/%m/%Y')}")
+    lineas.append("Documento simulado para la demostracion. No es un documento tributario electronico del SII.")
+    return _pdf(lineas)
+
+
+def _pdf(lineas):
+    """PDF mínimo con Helvetica y WinAnsi. Las líneas se dibujan de arriba hacia abajo."""
+    def esc(texto):
+        partes = []
+        for c in texto:
+            if c in "()\\":
+                partes.append("\\" + c)
+            elif 32 <= ord(c) < 256:
+                partes.append(c)
+            else:
+                partes.append(" ")
+        return "".join(partes).encode("latin-1", "replace")
+
+    comandos = [b"BT /F1 12 Tf 48 800 Td 16 TL"]
+    for i, linea in enumerate(lineas):
+        prefijo = b"(" if i == 0 else b"T* ("
+        comandos.append(prefijo + esc(linea) + b") Tj")
+    comandos.append(b"ET")
+    contenido = b"\n".join(comandos)
+    objetos = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length %d >>\nstream\n" % (len(contenido) + 1) + contenido + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    ]
+    salida = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for n, obj in enumerate(objetos, start=1):
+        offsets.append(len(salida))
+        salida += f"{n} 0 obj\n".encode() + obj + b"\nendobj\n"
+    xref = len(salida)
+    salida += f"xref\n0 {len(objetos) + 1}\n".encode()
+    salida += b"0000000000 65535 f \n"
+    for off in offsets[1:]:
+        salida += f"{off:010d} 00000 n \n".encode()
+    salida += f"trailer << /Size {len(objetos) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode()
+    return bytes(salida)
 
 
 def facturas_abiertas(clientes):

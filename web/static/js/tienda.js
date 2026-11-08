@@ -111,17 +111,23 @@
   contador(leerContador());
   window.CofrialTienda = {iniciarCant: iniciarCant, contador: contador};
 
+  var salirDlg = document.getElementById("salir-dialogo");
   document.querySelectorAll(".tb-salir").forEach(function (btn) {
     if (btn.dataset.listo) return;
     btn.dataset.listo = "1";
+    if (!salirDlg || typeof salirDlg.showModal !== "function") return;
     btn.addEventListener("click", function (e) {
-      var form = btn.closest("form");
-      if (!form || btn.classList.contains("tb-salir--sale")) return;
       e.preventDefault();
-      btn.classList.add("tb-salir--sale");
-      btn.setAttribute("aria-busy", "true");
-      var ms = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 420;
-      window.setTimeout(function () { form.submit(); }, ms);
+      if (!salirDlg.open) salirDlg.showModal();
     });
   });
+  if (salirDlg) {
+    var cancelarSalir = salirDlg.querySelector("[data-salir-cancelar]");
+    if (cancelarSalir) cancelarSalir.addEventListener("click", function () { salirDlg.close(); });
+    salirDlg.addEventListener("click", function (e) { if (e.target === salirDlg) salirDlg.close(); });
+    salirDlg.addEventListener("close", function () {
+      var btn = document.querySelector(".tb-salir");
+      if (btn && document.contains(btn)) btn.focus();
+    });
+  }
 })();

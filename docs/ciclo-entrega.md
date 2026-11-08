@@ -8,7 +8,7 @@ Este documento describe cómo funciona hoy el reparto, para el informe y para qu
 2. **En ruta.** El simulador mueve cada camión *a lo largo de esa polilínea*, una lectura de telemetría cada 5 s. El camión y la ruta del mapa coinciden, y la hora estimada de llegada se calcula con los km que faltan por esa ruta.
 3. **En la puerta.** Al llegar a la dirección de un pedido, el simulador pasa el pedido a **Camión en la puerta** y empieza a correr el plazo del cliente. El camión espera unas lecturas y sigue a la próxima parada.
 4. **Última parada.** El simulador registra `despacho.llegada_en` y el camión **vuelve a la base** por la ruta de regreso. Al llegar registra `despacho.regreso_en`: recién ahí el camión queda libre para otro despacho. Sin despacho, el camión está **en base**, detenido en su puesto, enviando telemetría.
-5. **El cliente responde** (campanita y pantalla del pedido): **Recibí mi pedido** (queda **Entregada**) o **No pude recibirlo** con el motivo (queda **Entrega no concretada** y se crea un requerimiento ligado al pedido que ventas ve en el CRM).
+5. **El cliente responde** (campanita y pantalla del pedido). En la puerta la pantalla muestra «Tu paquete llegó» y pide confirmación; no dice que ya se entregó. **Recibí mi pedido** deja la orden **Entregada** y la pantalla pasa a «Pedido entregado exitosamente». Si no quedan pedidos en camino ni en la puerta, el viaje queda en fase `volviendo` (el regreso a la base lo sigue registrando el simulador). **No pude recibirlo**, con motivo, deja **Entrega no concretada** y crea un requerimiento que ventas ve en el CRM.
 6. **Sin respuesta.** Pasado `CONFIRMACION_AUTO_SEG` (120 s en la demostración; en la vida real serían horas) el pedido se da por **Entregada** con la marca «confirmada automáticamente».
 
 El botón «Marcar entregado y cerrar despacho» queda solo como **corrección manual** para administrador y despachador.
@@ -51,10 +51,13 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 | `POST /pedidos/<id>/entrega/` | `accion=aceptar` o `accion=no_recibido` con `motivo` (obligatorio, al menos 5 caracteres). Con `X-Requested-With: fetch` o `Accept: application/json` responde `{ok, mensaje, entrega}` (400 si falla); sin esas cabeceras redirige al pedido con un mensaje |
 | `GET /api/pedidos/<id>/seguimiento/` | `estado`, `mapa_en_vivo`, `mensaje` («Tu pedido aún no sale.» sin despacho), `entrega` y `seguimiento` (posición, temperatura, `ruta_url`, `llegada_en`, ETA). Con el mapa apagado, `lat`, `long` y `destino` van `null` |
 | `GET /api/pedidos/<id>/ruta/` | `{puntos, parada, aproximada, km}`: la polilínea guardada. 404 si el pedido no está «Despachada» ni «Camión en la puerta» |
-| `GET /api/avisos/` | campanita; tipos nuevos `puerta`, `llego` y `no_concretada` |
+| `GET /api/avisos/` | campanita; cada aviso trae `orden_id`, `acciones` de ese pedido y, si ya existe, su boleta o factura. «Recibí mi pedido» solo va en el aviso que está en la puerta |
+| `GET /pedidos/<id>/documentos/<doc>/` | boleta o factura de ese pedido. Con `?descarga=1` entrega el PDF |
 | `GET /flota/despachar/ruta/?ordenes=1,2` | (despachador) vista previa de la ruta que quedará guardada |
 
-**Visibilidad del mapa (RN-16):** el cliente ve el mapa en vivo solo con el pedido «Despachada» o «Camión en la puerta». Antes de salir ve «Tu pedido aún no sale»; al terminar ve el resumen de temperatura sin mapa.
+**Comprobante (COF-04):** en el carrito se elige boleta o factura. El RUT es el de la cuenta. La factura pide el giro si falta. El público lo recibe pagado al comprar; la institución con factura lo recibe después de la entrega. Desde el pedido se consulta y se descarga el PDF, que declara que no es un DTE del SII.
+
+**Visibilidad del mapa (RN-16):** la pantalla del cliente dibuja el mapa en vivo solo con el pedido «Despachada». En «Camión en la puerta» muestra «Tu paquete llegó» (dirección, hora, camión y temperatura) y no el mapa. Antes de salir ve «Tu pedido aún no sale». Al confirmar, «Pedido entregado exitosamente» y el recorrido de ese pedido queda cerrado. La API de seguimiento sigue pudiendo informar la posición mientras el camión está en la puerta.
 
 ## 5. Rutas por calles: decisiones y respaldo
 
@@ -63,6 +66,7 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 - **Respaldo:** tiempo de espera de 4 s y un reintento; si OSRM no responde, la ruta son rectas entre los puntos, marcada `aproximada` (línea punteada en el mapa), y el simulador avanza con el factor de calles de siempre. Nunca un error.
 - **Diagnóstico de la ruta por el cerro Ñielol:** el camión se movía en línea recta mientras la web dibujaba la ruta por calles; la recta cruzaba el parque. Ahora ambos usan la misma polilínea.
 - **Viajes anteriores a este cambio** (sin ruta guardada): la web la calcula una vez al consultarlos y la guarda; el simulador, hasta entonces, avanza en rectas.
+- **Lo que ve el cliente (COF-01):** un solo tramo, desde la bodega hasta su parada, sin el regreso ni las paradas que vienen después. La lista nombra su entrega y dice «otro pedido» en las demás, sin la calle de otro cliente. Si hay una parada antes, el texto explica que se atiende primero porque queda antes en el recorrido desde la bodega. El conductor ve la vuelta completa y las mismas paradas en el mismo orden.
 
 ## 6. Cambios al modelo de datos (para el MER y el diccionario)
 
@@ -79,7 +83,7 @@ Todos los atributos nuevos dependen solo de la clave de su tabla (3FN); no hay a
 
 Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegada_en`). `llegada_en` cambia de significado: ahora es la llegada a la última parada, no el cierre. Los viajes ya cerrados reciben `regreso_en = llegada_en` en la migración. La **situación** de un camión («en base», «en ruta», «en la puerta», «volviendo») no se guarda: se deriva (sin despacho abierto = en base; con despacho, `fase`).
 
-**`orden`** (se agregan): `puerta_en` timestamptz nulo (llegada del camión a esa dirección; inicia el plazo), `entrega_resuelta_en` timestamptz nulo, `entrega_motivo` text (vacío por defecto) y `entrega_automatica` boolean (falso). Son hechos de una entrega de esa orden; se dejan en `orden` porque cada orden tiene a lo más una entrega vigente y se sobrescriben al reprogramar (el motivo se conserva como historial).
+**`orden`** (se agregan): `puerta_en` timestamptz nulo (llegada del camión a esa dirección; inicia el plazo), `entrega_resuelta_en` timestamptz nulo, `entrega_motivo` text (vacío por defecto), `entrega_automatica` boolean (falso) y `comprobante` (`boleta` o `factura`, por defecto `boleta`; las órdenes institucionales ya existentes quedan en `factura`). Los cuatro primeros son hechos de una entrega de esa orden; se dejan en `orden` porque cada orden tiene a lo más una entrega vigente y se sobrescriben al reprogramar (el motivo se conserva como historial). `comprobante` es la elección de la compra y no cambia con la entrega.
 
 **`estado_orden`** (datos): dos filas nuevas, «Camión en la puerta» y «Entrega no concretada», ambas con `es_final = false`; el flujo se renumera (Entregada pasa a 6 y Cancelada a 8).
 
@@ -99,4 +103,4 @@ Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegad
 
 ## 8. Pruebas
 
-`flota/tests_rutas.py`, `pedidos/tests_entrega.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.
+`flota/tests_rutas.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.

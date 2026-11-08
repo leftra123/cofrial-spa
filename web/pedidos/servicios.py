@@ -122,13 +122,33 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc=""):
 
 
 # ------------------------------------------------------------------------------------ órdenes
+def elegir_comprobante(cliente, comprobante=None, giro=""):
+    """La boleta usa el nombre y el RUT ya guardados en la cuenta. La factura, además, exige el giro.
+
+    Si no se elige nada, queda el comprobante del canal: boleta para el público y factura para la institución.
+    El RUT no se vuelve a pedir ni se reemplaza: es el que se validó al crear la cuenta."""
+    explicito = comprobante in ("boleta", "factura")
+    if not explicito:
+        if comprobante not in (None, ""):
+            raise ErrorDeNegocio("Elige boleta o factura.")
+        comprobante = "boleta" if cliente.tipo_cliente.codigo == "B2C" else "factura"
+    giro = (giro or "").strip()[:80]
+    if comprobante == "factura" and giro and giro != cliente.giro:
+        cliente.giro = giro
+        cliente.save(update_fields=["giro"])
+    if comprobante == "factura" and explicito and not cliente.giro:
+        raise ErrorDeNegocio("Para la factura indica el giro. El RUT y la razón social son los de tu cuenta.")
+    return comprobante
+
+
 @transaction.atomic
-def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None):
+def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, comprobante=None, giro=""):
     """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
 
     RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
     (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección y la misma OC. Devuelve la lista.
     """
+    comprobante = elegir_comprobante(cliente, comprobante, giro)
     ctx = _contexto_desde_carrito(cliente, direccion_id, numero_oc)
     direccion, carrito, items, productos, precios, grupos = ctx["direccion"], ctx["carrito"], ctx["items"], ctx["productos"], ctx["precios"], ctx["grupos"]
     pendiente, numero_oc = ctx["pendiente"], ctx["numero_oc"]
@@ -137,7 +157,7 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
     ordenes = []
     for rango_id in sorted(grupos):
         orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado,
-                                     checkout_pago=checkout_pago)
+                                     checkout_pago=checkout_pago, comprobante=comprobante)
         if pendiente:
             orden.numero_oc = referencia_web(orden)
             orden.save(update_fields=["numero_oc"])
@@ -145,8 +165,11 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
             OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
                                      precio_unitario_clp=precios[i.producto_id])
             Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
-        if cliente.tipo_cliente.codigo == "B2C" and cobrar_b2c_al_crear:
-            documentos.cobrar_b2c(orden)
+        if cobrar_b2c_al_crear and not (comprobante == "factura" and cliente.tipo_cliente.codigo == "B2B"):
+            if comprobante == "factura":
+                documentos.cobrar_factura_contado(orden)
+            else:
+                documentos.cobrar_b2c(orden)
         ordenes.append(orden)
     carrito.estado = "convertido"
     carrito.save(update_fields=["estado"])
@@ -282,6 +305,7 @@ def seguimiento(orden):
         "salida_en": orden.despacho.salida_en.isoformat() if orden.despacho.salida_en else None,
         "llegada_en": orden.puerta_en.isoformat() if orden.puerta_en else None,          # cuando el camión llegó a ESTA dirección
         "ruta_url": f"/api/pedidos/{orden.orden_id}/ruta/" if en_vivo else None,
+        "itinerario": itinerario_de(orden) if en_vivo else None,
         "entrega": entrega_de(orden),
         **_llegada(orden, ultima),
     }
@@ -293,7 +317,10 @@ def mapa_en_vivo(orden):
 
 
 def ruta_del_pedido(orden):
-    """Polilínea guardada del viaje y el punto de la parada de este pedido (para dibujar al cliente la misma ruta que ve el despachador)."""
+    """Tramo activo hasta la parada de este pedido y el itinerario en el orden del viaje.
+
+    El despachador guarda la vuelta completa (base, paradas y regreso). Al cliente se le dibuja solo hasta su parada:
+    el regreso, encima de la ida, parece un segundo camino. El orden de las paradas es el mismo que ve el conductor."""
     from flota import rutas
     if orden.despacho_id is None or not mapa_en_vivo(orden):
         return None
@@ -301,7 +328,94 @@ def ruta_del_pedido(orden):
     if not ruta:
         return None
     parada = next((p for p in ruta["paradas"] if p["direccion_id"] == orden.direccion_id), None)
-    return {"puntos": ruta["puntos"], "parada": parada, "aproximada": ruta["aproximada"], "km": ruta["km"]}
+    if parada is None:
+        return None
+    puntos = rutas.tramo_hasta(ruta["puntos"], parada["indice"])
+    it = itinerario_de(orden)
+    return {"puntos": puntos, "parada": parada, "aproximada": ruta["aproximada"],
+            "km": round(rutas.largo_km(puntos), 2) if len(puntos) > 1 else 0,
+            "itinerario": it}
+
+
+_CHIP_ESTADO = {
+    "Despachada": "transito", "Camión en la puerta": "transito", "Entregada": "entregado",
+    "Entrega no concretada": "alerta",
+}
+_PARADA_HECHA = {"Entregada", "Entrega no concretada", "Cancelada"}
+
+
+def _estado_de_parada(ordenes, propia):
+    """Si la parada es la del pedido que se está mirando, manda el estado de ese pedido. Si no, el que todavía no se visitó."""
+    if propia is not None:
+        return propia.estado_orden.nombre
+    nombres = [o.estado_orden.nombre for o in ordenes]
+    for nombre in ("Despachada", "Camión en la puerta"):
+        if nombre in nombres:
+            return nombre
+    return nombres[0] if nombres else "Despachada"
+
+
+def _explicar_itinerario(paradas, tu_n):
+    mia = next((p for p in paradas if p["n"] == tu_n), None)
+    if mia is None:
+        return "El camión sigue un solo recorrido. Te avisamos cuando salga hacia tu dirección."
+    if mia["estado"] == "Camión en la puerta":
+        return f"El camión está en tu dirección. Tu entrega es la parada {tu_n} de este recorrido."
+    anteriores = [p for p in paradas if p["n"] < tu_n]
+    pendientes = [p for p in anteriores if not p["hecha"]]
+    if not anteriores:
+        if len(paradas) == 1:
+            return "El camión sigue un solo recorrido y va directo a tu dirección. Tu entrega es la única parada."
+        return "El camión sigue un solo recorrido. Tu entrega es la parada 1: llega primero a tu dirección y después continúa con otros pedidos."
+    if len(pendientes) == 1:
+        p = pendientes[0]
+        que = "tu otro pedido" if p["quien"] == "tu_otro_pedido" else "otro pedido"
+        return (f"Antes de llegar a tu dirección, el camión atiende {que} (parada {p['n']}), "
+                f"porque esa parada queda primero en el recorrido desde la bodega. Tu entrega es la parada {tu_n}.")
+    if pendientes:
+        return (f"Antes de llegar a tu dirección, el camión atiende {len(pendientes)} paradas que quedan primero en el recorrido desde la bodega. "
+                f"Tu entrega es la parada {tu_n}.")
+    return f"El camión ya atendió las paradas anteriores y ahora sigue hacia tu entrega, que es la parada {tu_n}."
+
+
+def itinerario_de(orden):
+    """Paradas del viaje en el orden en que se visitan.
+
+    La parada del pedido se identifica y, si es suya, incluye la dirección. Las demás no llevan nombre ni calle de otro cliente.
+    Devuelve None si el pedido no tiene ruta."""
+    from flota import rutas
+    if orden.despacho_id is None:
+        return None
+    ruta = rutas.asegurar_ruta(orden.despacho)
+    if not ruta:
+        return None
+    hermanas = list(Orden.objects.filter(despacho_id=orden.despacho_id).select_related("direccion__cliente", "estado_orden"))
+    por_dir = {}
+    for o in hermanas:
+        por_dir.setdefault(o.direccion_id, []).append(o)
+    cliente_id = orden.direccion.cliente_id
+    paradas, tu_n = [], None
+    for i, p in enumerate(ruta["paradas"], start=1):
+        grupo = por_dir.get(p["direccion_id"], [])
+        if not grupo:
+            continue
+        tuya = p["direccion_id"] == orden.direccion_id
+        propia = next((o for o in grupo if o.pk == orden.pk), None)
+        if tuya:
+            quien, tu_n = "tu_entrega", i
+        elif any(o.direccion.cliente_id == cliente_id for o in grupo):
+            quien = "tu_otro_pedido"
+        else:
+            quien = "otro_pedido"
+        estado = _estado_de_parada(grupo, propia)
+        fila = {"n": i, "quien": quien, "estado": estado, "chip": _CHIP_ESTADO.get(estado, "cancelado"),
+                "hecha": estado in _PARADA_HECHA, "lat": p["lat"], "long": p["long"]}
+        if tuya:
+            fila["direccion"] = str(orden.direccion)
+        paradas.append(fila)
+    if tu_n is None:
+        return None
+    return {"paradas": paradas, "tu_parada": tu_n, "explicacion": _explicar_itinerario(paradas, tu_n)}
 
 
 # ---------- llegada estimada y avisos (campanita) ----------
@@ -347,9 +461,30 @@ def _llegada(orden, ultima):
                     "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}}
 
 
+def _acciones_aviso(tipo, nombre, orden_id):
+    """Botones de un aviso: solo la acción que corresponde a ese pedido en este momento. Un aviso de salida no confirma la entrega."""
+    if tipo == "puerta" and nombre == "Camión en la puerta":
+        return [{"id": "aceptar", "etiqueta": "Recibí mi pedido"},
+                {"id": "no_recibido", "etiqueta": "No pude recibirlo", "href": f"/pedidos/{orden_id}/#entrega"}]
+    if tipo == "no_concretada":
+        return [{"id": "soporte", "etiqueta": "Escribir a ventas", "href": f"/soporte/?orden={orden_id}"}]
+    return []
+
+
+def _documentos_de_venta(cliente):
+    """La boleta o la factura ya emitida de cada pedido del cliente. La guía no cuenta: no es el documento de venta."""
+    peso = {"boleta": 1, "factura": 2}
+    elegidos = {}
+    for doc in documentos.Documento.objects.filter(orden__direccion__cliente=cliente, tipo__in=peso):
+        previo = elegidos.get(doc.orden_id)
+        if previo is None or peso[doc.tipo] >= peso[previo.tipo]:
+            elegidos[doc.orden_id] = doc
+    return elegidos
+
+
 def avisos_de_llegada(cliente):
     """Avisos para la campanita del cliente, calculados desde el estado de sus órdenes (no se guardan): salió, cerca y llegó.
-    Cada aviso tiene un id estable para que el navegador sepa cuáles ya vio."""
+    Cada aviso tiene un id estable para que el navegador sepa cuáles ya vio, y sus botones nombran solo a ese pedido."""
     from datetime import timedelta
     from django.utils import timezone
     from django.utils.timezone import localtime
@@ -357,6 +492,7 @@ def avisos_de_llegada(cliente):
 
     hace_un_dia = timezone.now() - timedelta(hours=24)
     salida = []
+    ventas = _documentos_de_venta(cliente)
     hora = lambda x: localtime(x).strftime("%H:%M")
     for o in ordenes_de(cliente).select_related("despacho__camion", "direccion", "estado_orden"):
         d = o.despacho
@@ -365,34 +501,40 @@ def avisos_de_llegada(cliente):
         if (o.entrega_resuelta_en or (d.regreso_en if o.estado_orden.es_final else None) or timezone.now()) < hace_un_dia:
             continue
         nombre = o.estado_orden.nombre
-        salida.append({"id": f"{o.orden_id}-salio", "orden_id": o.orden_id, "tipo": "salio", "cuando": d.salida_en.isoformat(),
-                       "texto": f"Tu pedido N.º {o.orden_id} salió a las {hora(d.salida_en)}."})
+        doc = ventas.get(o.pk)
+        documento = None if doc is None else {"orden_id": o.orden_id, "tipo": doc.tipo, "etiqueta": doc.get_tipo_display(), "folio": doc.folio}
+
+        def aviso(clave, tipo, cuando, texto, _nombre=nombre, _doc=documento):
+            item = {"id": f"{o.orden_id}-{clave}", "orden_id": o.orden_id, "tipo": tipo, "cuando": cuando, "texto": texto,
+                    "acciones": _acciones_aviso(tipo, _nombre, o.orden_id)}
+            if _doc is not None:
+                item["documento"] = _doc
+            salida.append(item)
+
+        aviso("salio", "salio", d.salida_en.isoformat(), f"Tu pedido N.º {o.orden_id} salió a las {hora(d.salida_en)}.")
         if o.puerta_en:
-            salida.append({"id": f"{o.orden_id}-puerta", "orden_id": o.orden_id, "tipo": "puerta", "cuando": o.puerta_en.isoformat(),
-                           "texto": f"Estamos afuera de tu dirección con tu pedido N.º {o.orden_id}. Confírmanos si lo recibiste."
-                           if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}."})
+            aviso("puerta", "puerta", o.puerta_en.isoformat(),
+                  f"Estamos afuera de tu dirección con tu pedido N.º {o.orden_id}. Confírmanos si lo recibiste."
+                  if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}.")
         if nombre == "Entregada" and o.entrega_resuelta_en:
-            salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": o.entrega_resuelta_en.isoformat(),
-                           "texto": f"Tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
-                           + (" (confirmado automáticamente)." if o.entrega_automatica else ".")})
+            aviso("llego", "llego", o.entrega_resuelta_en.isoformat(),
+                  f"Tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
+                  + (" (confirmado automáticamente)." if o.entrega_automatica else "."))
         if nombre == "Entrega no concretada":
-            salida.append({"id": f"{o.orden_id}-no-concretada", "orden_id": o.orden_id, "tipo": "no_concretada",
-                           "cuando": (o.entrega_resuelta_en or o.puerta_en or d.salida_en).isoformat(),
-                           "texto": f"No pudimos entregar tu pedido N.º {o.orden_id}. Nuestro equipo te contactará para reprogramar."})
+            aviso("no-concretada", "no_concretada", (o.entrega_resuelta_en or o.puerta_en or d.salida_en).isoformat(),
+                  f"No pudimos entregar tu pedido N.º {o.orden_id}. Nuestro equipo te contactará para reprogramar.")
         if nombre != "Despachada":
             continue
         ultima = Telemetria.objects.filter(camion=d.camion, registrado_en__gte=d.salida_en).order_by("-registrado_en").first()
         if Telemetria.objects.filter(camion=d.camion, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
-            salida.append({"id": f"{o.orden_id}-frio", "orden_id": o.orden_id, "tipo": "frio", "cuando": (ultima.registrado_en if ultima else d.salida_en).isoformat(),
-                           "texto": f"Detectamos una variación de temperatura en el camión de tu pedido N.º {o.orden_id}. Ya la estamos revisando."})
+            aviso("frio", "frio", (ultima.registrado_en if ultima else d.salida_en).isoformat(),
+                  f"Detectamos una variación de temperatura en el camión de tu pedido N.º {o.orden_id}. Ya la estamos revisando.")
         info = _llegada(o, ultima)
         if info["eta"]:
             desde, hasta = (localtime(timezone.datetime.fromisoformat(info["eta"][k])).strftime("%H:%M") for k in ("desde", "hasta"))
-            salida.append({"id": f"{o.orden_id}-ventana", "orden_id": o.orden_id, "tipo": "ventana", "cuando": ultima.registrado_en.isoformat(),
-                           "texto": f"Recibirás tu pedido N.º {o.orden_id} entre las {desde} y las {hasta}."})
+            aviso("ventana", "ventana", ultima.registrado_en.isoformat(), f"Recibirás tu pedido N.º {o.orden_id} entre las {desde} y las {hasta}.")
         if info["cerca"]:
-            salida.append({"id": f"{o.orden_id}-cerca", "orden_id": o.orden_id, "tipo": "cerca", "cuando": ultima.registrado_en.isoformat(),
-                           "texto": f"El camión de tu pedido N.º {o.orden_id} está a menos de {CERCA_KM} km."})
+            aviso("cerca", "cerca", ultima.registrado_en.isoformat(), f"El camión de tu pedido N.º {o.orden_id} está a menos de {CERCA_KM} km.")
     return sorted(salida, key=lambda a: a["cuando"], reverse=True)
 
 
@@ -441,6 +583,8 @@ def resolver_entrega(cliente, orden_id, accion, motivo=""):
         if accion == "no_recibido":
             orden.entrega_motivo = motivo[:500]
         orden.save(update_fields=["estado_orden", "entrega_resuelta_en", "entrega_automatica", "entrega_motivo"])
+        if accion == "aceptar":
+            cerrar_entregas_sin_pendientes()
     if accion == "no_recibido":
         from crm import servicios as crm
         crm.crear_requerimiento(orden.direccion.cliente, f"Entrega no concretada del pedido N.º {orden.pk}", motivo, orden=orden)
@@ -456,9 +600,28 @@ def confirmar_vencidas(ahora=None):
     from django.conf import settings
     from django.utils import timezone
     ahora = ahora or timezone.now()
-    return Orden.objects.filter(estado_orden__nombre="Camión en la puerta",
-                                puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG)).update(
+    n = Orden.objects.filter(estado_orden__nombre="Camión en la puerta",
+                             puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG)).update(
         estado_orden=_estado("Entregada"), entrega_resuelta_en=ahora, entrega_automatica=True)
+    if n:
+        cerrar_entregas_sin_pendientes()
+    return n
+
+
+def cerrar_entregas_sin_pendientes():
+    """Si un viaje ya no tiene pedidos en camino ni en la puerta, su recorrido de entregas queda finalizado.
+
+    No cierra un viaje que todavía debe atender otra parada. No marca el regreso a la bodega: eso lo registra el
+    simulador cuando el camión llega. Poner `llegada_en` avisa que la última entrega ya se cerró."""
+    from django.db.models import Exists, OuterRef
+    from django.db.models.functions import Coalesce, Greatest, Now
+
+    from flota.models import Despacho
+
+    pendiente = Orden.objects.filter(despacho_id=OuterRef("pk"), estado_orden__nombre__in=("Despachada", "Camión en la puerta"))
+    return Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).exclude(fase="volviendo").annotate(
+        hay_pendiente=Exists(pendiente)).filter(hay_pendiente=False).update(
+        fase="volviendo", llegada_en=Greatest(Coalesce(F("llegada_en"), Now()), F("salida_en")))
 
 
 def llegar_a_la_puerta(ordenes, ahora=None):

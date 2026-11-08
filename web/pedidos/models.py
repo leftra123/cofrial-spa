@@ -55,6 +55,8 @@ class Orden(models.Model):
     despacho = models.ForeignKey(Despacho, null=True, blank=True, on_delete=models.SET_NULL)
     numero_oc = models.CharField(max_length=30, blank=True)
     oc_pendiente = models.BooleanField(default=False, db_default=False)       # B2B que compró sin su OC: numero_oc lleva una referencia WEB-aaaa-nnnn hasta que la agregue
+    COMPROBANTES = [("boleta", "Boleta"), ("factura", "Factura")]
+    comprobante = models.CharField(max_length=8, choices=COMPROBANTES, default="boleta", db_default="boleta")
     creada_en = models.DateTimeField(auto_now_add=True)
     puerta_en = models.DateTimeField(null=True, blank=True)                  # el camión llegó a la dirección: desde aquí corre la confirmación del cliente
     entrega_resuelta_en = models.DateTimeField(null=True, blank=True)        # cuando el cliente (o el tiempo) cerró la entrega
@@ -66,6 +68,7 @@ class Orden(models.Model):
         db_table = "orden"
         verbose_name_plural = "órdenes"
         indexes = [models.Index(fields=["creada_en"], name="idx_orden_creada")]
+        constraints = [models.CheckConstraint(condition=Q(comprobante__in=["boleta", "factura"]), name="orden_comprobante_valido")]
 
     def __str__(self):
         return f"Orden {self.orden_id}"
@@ -122,6 +125,7 @@ class CheckoutPago(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     direccion = models.ForeignKey(Direccion, on_delete=models.PROTECT)
     numero_oc = models.CharField(max_length=30, blank=True)
+    comprobante = models.CharField(max_length=8, choices=Orden.COMPROBANTES, default="boleta", db_default="boleta")
     monto_clp = models.IntegerField()
     preference_id = models.CharField(max_length=64, blank=True)
     external_reference = models.CharField(max_length=64, unique=True)

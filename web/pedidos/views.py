@@ -118,9 +118,11 @@ def _mensaje_ordenes_creadas(ordenes):
         mensaje = f"Tu compra se dividió en {len(ordenes)} pedidos, uno por rango de temperatura, porque cada uno viaja en su camión: {numeros}."
     else:
         mensaje = f"Orden {orden.orden_id} recibida."
-    boletas = list(documentos.Documento.objects.filter(orden__in=ordenes, tipo="boleta").order_by("folio").values_list("folio", flat=True))
-    if boletas:
-        mensaje += " Pago aprobado y " + ("boleta N.º " if len(boletas) == 1 else "boletas N.º ") + " y ".join(str(f) for f in boletas) + (" emitida." if len(boletas) == 1 else " emitidas.")
+    emitidos = list(documentos.Documento.objects.filter(orden__in=ordenes, tipo__in=("boleta", "factura")).order_by("folio"))
+    if emitidos:
+        nombre = emitidos[0].get_tipo_display().lower()
+        folios = " y ".join(str(d.folio) for d in emitidos)
+        mensaje += f" Pago aprobado y {nombre} N.º {folios} emitida." if len(emitidos) == 1 else f" Pago aprobado y {nombre}s N.º {folios} emitidas."
     return mensaje, orden
 
 
@@ -133,7 +135,7 @@ def confirmar(request, cliente):
         messages.info(request, "Completa el pago con Mercado Pago en el formulario del carrito.")
         return redirect("carrito")
     try:
-        ordenes = s.generar_ordenes(cliente, direccion, numero_oc)
+        ordenes = s.generar_ordenes(cliente, direccion, numero_oc, comprobante=request.POST.get("comprobante") or None, giro=request.POST.get("giro", ""))
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
         return redirect("carrito")
@@ -155,7 +157,7 @@ def mp_pagar_brick(request, cliente):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"ok": False, "mensaje": "Solicitud no válida."}, status=400)
     try:
-        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {})
+        checkout = mp.pagar_con_brick(cliente, datos.get("direccion"), datos.get("formData") or {}, datos.get("comprobante"), datos.get("giro", ""))
         return JsonResponse({"ok": True, "redirect": f"/pedidos/{checkout.primera_orden_id}/?nueva=1"},
                             json_dumps_params={"ensure_ascii": False})
     except s.ErrorDeNegocio as e:
@@ -193,10 +195,32 @@ def _orden_del_cliente(cliente, orden_id):
 @solo_clientes
 def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
+    docs = documentos.documentos_de_orden(orden)
     return render(request, "pedidos/detalle.html", {
-        "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "documentos": documentos.documentos_de_orden(orden), "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "documentos": docs,
+        "venta": next((d for d in docs if d.tipo in ("boleta", "factura")), None),
+        "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
         "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
+        "viaje_sigue": bool(orden.despacho_id) and s.Orden.objects.filter(despacho_id=orden.despacho_id, estado_orden__nombre__in=("Despachada", "Camión en la puerta")).exclude(pk=orden.pk).exists(),
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
+
+
+@solo_clientes
+def comprobante(request, cliente, orden_id, documento_id):
+    """La boleta o factura ya emitida de este pedido: se consulta en pantalla y se descarga en PDF."""
+    from django.http import HttpResponse
+    orden = _orden_del_cliente(cliente, orden_id)
+    doc = documentos.Documento.objects.filter(pk=documento_id, orden=orden, tipo__in=("boleta", "factura")).select_related("orden").first()
+    if doc is None:
+        raise Http404("Documento no encontrado")
+    if request.GET.get("descarga"):
+        pdf = documentos.comprobante_pdf(doc)
+        respuesta = HttpResponse(pdf, content_type="application/pdf")
+        respuesta["Content-Disposition"] = f'attachment; filename="{doc.tipo}-{doc.folio}.pdf"'
+        return respuesta
+    return render(request, "pedidos/comprobante.html", {
+        "orden": orden, "doc": doc, "cliente_doc": orden.direccion.cliente,
+        "items": orden.ordenitem_set.select_related("producto")})
 
 
 @require_POST
@@ -260,7 +284,7 @@ def entrega(request, cliente, orden_id):
         return JsonResponse(s.entrega_de(orden), json_dumps_params={"ensure_ascii": False})
     try:
         orden = s.resolver_entrega(cliente, orden_id, request.POST.get("accion", ""), request.POST.get("motivo", ""))
-        mensaje = ("Gracias por confirmar la recepción." if orden.estado_orden.nombre == "Entregada"
+        mensaje = ("Pedido entregado exitosamente." if orden.estado_orden.nombre == "Entregada"
                    else "Registramos que no pudiste recibir tu pedido. Nuestro equipo te contactará para reprogramar.")
         ok = True
     except s.ErrorDeNegocio as e:

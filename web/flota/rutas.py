@@ -120,6 +120,17 @@ def asegurar_ruta(despacho):
     return ruta
 
 
+def tramo_hasta(puntos, indice):
+    """Puntos desde el origen hasta el vértice `indice`, inclusive.
+
+    Es el tramo que el camión recorre para llegar a esa parada. No incluye paradas posteriores ni el regreso a la base:
+    esa vuelta, dibujada junto a la ida, se ve como un segundo camino."""
+    if not puntos:
+        return []
+    corte = max(0, min(int(indice), len(puntos) - 1))
+    return list(puntos[:corte + 1])
+
+
 def km_hasta(ruta, posicion, indice_destino):
     """Km por la ruta desde la posición actual hasta el vértice `indice_destino` (0 si ya lo pasó)."""
     puntos = ruta["puntos"]

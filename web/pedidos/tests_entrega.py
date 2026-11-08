@@ -183,7 +183,9 @@ class EndpointEntregaTests(EntregaBase):
         self.assertNotContains(self.client.get(f"/pedidos/{orden.pk}/"), "Recibí mi pedido")
         s.llegar_a_la_puerta([orden])
         r = self.client.get(f"/pedidos/{orden.pk}/")
-        self.assertContains(r, "Estamos afuera de tu dirección")
+        self.assertContains(r, "Tu paquete llegó")
+        self.assertNotContains(r, "Pedido entregado exitosamente")
+        self.assertNotContains(r, "Dónde va su pedido")
         self.assertContains(r, "Recibí mi pedido")
         self.assertContains(r, "No pude recibirlo")
 
@@ -245,7 +247,9 @@ class MapaSegunEstadoTests(EntregaBase):
         cliente, orden, despacho = self.orden_despachada()
         Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Entregada"))
         self.entrar()
-        self.assertContains(self.client.get(f"/pedidos/{orden.pk}/"), "El mapa en vivo ya no está disponible")
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertNotContains(pagina, 'id="mapa"')
+        self.assertNotContains(pagina, "Pedido entregado exitosamente")
 
 
 class ReprogramarTests(EntregaBase):
@@ -262,3 +266,187 @@ class ReprogramarTests(EntregaBase):
         self.assertIsNone(orden.puerta_en)
         self.assertEqual(orden.entrega_motivo, "No pude recibirlo hoy")                       # el historial del motivo se conserva
         self.assertNotEqual(nuevo.pk, despacho.pk)
+
+
+class ItinerarioUnicoTests(EntregaBase):
+    """COF-01: cada pedido muestra un solo tramo, hasta su parada, y el orden es el mismo que ve el conductor."""
+
+    def _dos_en_el_mismo_camion(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        ana = s.cliente_de(User.objects.get(username="ana@correo.test"))
+        hospital = s.cliente_de(User.objects.get(username="abastecimiento@hospital.test"))
+        s.agregar(ana, Producto.objects.get(sku="POL-PEC-10K").pk, 1)
+        s.agregar(hospital, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        oa = s.generar_ordenes(ana, ana.direccion_set.first().pk)[0]
+        ob = s.generar_ordenes(hospital, hospital.direccion_set.first().pk)[0]
+        rango = flota.rangos_de(oa)[0]
+        camion = next(c for c in flota.camiones_libres() if c.rango_temperatura.nombre == rango)
+        despacho = flota.despachar(camion.camion_id, [oa.pk, ob.pk])
+        oa.refresh_from_db()
+        ob.refresh_from_db()
+        return oa, ob, despacho
+
+    def test_el_mapa_del_cliente_corta_el_regreso_y_explica_si_hay_una_parada_antes(self):
+        oa, ob, despacho = self._dos_en_el_mismo_camion()
+        completo = despacho.ruta_geojson["puntos"]
+        por_direccion = {oa.direccion_id: oa, ob.direccion_id: ob}
+        calles = {oa.pk: "Alemania", ob.pk: "Manuel Montt"}
+        for parada in despacho.ruta_geojson["paradas"]:
+            orden = por_direccion[parada["direccion_id"]]
+            self.entrar("ana@correo.test" if orden.pk == oa.pk else "abastecimiento@hospital.test")
+            cuerpo = self.client.get(f"/api/pedidos/{orden.pk}/ruta/").json()
+            self.assertEqual(cuerpo["puntos"], completo[:len(cuerpo["puntos"])])
+            self.assertNotEqual(cuerpo["puntos"][-1], completo[-1])          # no dibuja la vuelta a la bodega
+            self.assertEqual(cuerpo["puntos"][-1][0], parada["lat"])
+            self.assertEqual([p["n"] for p in cuerpo["itinerario"]["paradas"]], [1, 2])
+            self.assertEqual(cuerpo["itinerario"]["tu_parada"], cuerpo["itinerario"]["paradas"][[p["quien"] for p in cuerpo["itinerario"]["paradas"]].index("tu_entrega")]["n"])
+            if cuerpo["itinerario"]["tu_parada"] > 1:
+                self.assertIn("Antes de llegar", cuerpo["itinerario"]["explicacion"])
+            else:
+                self.assertIn("parada 1", cuerpo["itinerario"]["explicacion"])
+            pagina = self.client.get(f"/pedidos/{orden.pk}/").content.decode()
+            self.assertIn("Tu entrega", pagina)
+            self.assertNotIn(calles[ob.pk if orden.pk == oa.pk else oa.pk], pagina)
+
+    def test_el_conductor_lista_las_paradas_en_el_mismo_orden(self):
+        oa, ob, despacho = self._dos_en_el_mismo_camion()
+        esperado = []
+        for parada in despacho.ruta_geojson["paradas"]:
+            esperado.append(oa.orden_id if parada["direccion_id"] == oa.direccion_id else ob.orden_id)
+        self.entrar("despacho@cofrial.cl")
+        html = self.client.get("/flota/").content.decode()
+        posiciones = [html.index(f"Orden N.º {n}") for n in esperado]
+        self.assertEqual(posiciones, sorted(posiciones))
+        self.assertIn("Un solo recorrido. Las paradas se atienden en este orden.", html)
+
+    def test_un_solo_pedido_no_anuncia_paradas_anteriores(self):
+        _, orden, _ = self.orden_despachada()
+        self.entrar()
+        cuerpo = self.client.get(f"/api/pedidos/{orden.pk}/ruta/").json()
+        self.assertEqual(len(cuerpo["itinerario"]["paradas"]), 1)
+        self.assertIn("única parada", cuerpo["itinerario"]["explicacion"])
+        self.assertNotIn("Antes de llegar", cuerpo["itinerario"]["explicacion"])
+
+
+class EntregaExitosaTests(EntregaBase):
+    """COF-02: el paquete llegado no se da por entregado hasta confirmar, y ahí se cierra el recorrido de ese viaje."""
+
+    def test_al_confirmar_la_pantalla_dice_entregado_y_el_viaje_queda_finalizado(self):
+        cliente, orden, despacho = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        self.entrar()
+        puerta = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(puerta, "Tu paquete llegó")
+        self.assertNotContains(puerta, "Pedido entregado exitosamente")
+        s.resolver_entrega(cliente, orden.pk, "aceptar")
+        despacho.refresh_from_db()
+        self.assertEqual(despacho.fase, "volviendo")
+        self.assertIsNotNone(despacho.llegada_en)
+        self.assertIsNone(despacho.regreso_en)
+        hecho = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(hecho, "Pedido entregado exitosamente")
+        self.assertContains(hecho, "Tu recorrido quedó finalizado")
+        self.assertNotContains(hecho, "Dónde va su pedido")
+        self.assertNotContains(hecho, "Tu paquete llegó")
+
+    def test_si_queda_otra_parada_el_camion_no_cierra_el_viaje(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        ana = s.cliente_de(User.objects.get(username="ana@correo.test"))
+        hospital = s.cliente_de(User.objects.get(username="abastecimiento@hospital.test"))
+        s.agregar(ana, Producto.objects.get(sku="POL-PEC-10K").pk, 1)
+        s.agregar(hospital, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        oa = s.generar_ordenes(ana, ana.direccion_set.first().pk)[0]
+        ob = s.generar_ordenes(hospital, hospital.direccion_set.first().pk)[0]
+        rango = flota.rangos_de(oa)[0]
+        camion = next(c for c in flota.camiones_libres() if c.rango_temperatura.nombre == rango)
+        despacho = flota.despachar(camion.camion_id, [oa.pk, ob.pk])
+        s.llegar_a_la_puerta([oa])
+        s.resolver_entrega(ana, oa.pk, "aceptar")
+        despacho.refresh_from_db()
+        ob.refresh_from_db()
+        self.assertEqual(despacho.fase, "en_ruta")
+        self.assertEqual(ob.estado_orden.nombre, "Despachada")
+        self.entrar()
+        self.assertContains(self.client.get(f"/pedidos/{oa.pk}/"), "El camión sigue con otros pedidos")
+
+    def test_la_confirmacion_automatica_no_se_presenta_como_exitosa(self):
+        cliente, orden, despacho = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        orden.refresh_from_db()
+        s.confirmar_vencidas(orden.puerta_en + timedelta(seconds=121))
+        self.entrar()
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, "lo dimos por entregado")
+        self.assertNotContains(pagina, "Pedido entregado exitosamente")
+        despacho.refresh_from_db()
+        self.assertEqual(despacho.fase, "volviendo")
+
+
+class AvisosDelPedidoTests(EntregaBase):
+    """COF-03: cada botón del aviso actúa sobre ese pedido y ese momento, y nombra la boleta o factura solo si ya existe."""
+
+    def avisos(self, usuario, orden):
+        self.entrar(usuario)
+        return [a for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.pk]
+
+    def test_en_la_puerta_los_botones_son_de_ese_pedido_y_nombran_su_boleta(self):
+        _, orden, _ = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        por_tipo = {a["tipo"]: a for a in self.avisos("ana@correo.test", orden)}
+        puerta, salio = por_tipo["puerta"], por_tipo["salio"]
+        self.assertEqual([x["id"] for x in puerta["acciones"]], ["aceptar", "no_recibido"])
+        self.assertIn(f"/pedidos/{orden.pk}/", puerta["acciones"][1]["href"])
+        self.assertIn(f"N.º {orden.pk}", puerta["texto"])
+        self.assertEqual(puerta["documento"]["tipo"], "boleta")
+        self.assertEqual(puerta["documento"]["orden_id"], orden.pk)
+        self.assertEqual(salio["acciones"], [])
+        self.assertEqual(salio["documento"]["orden_id"], orden.pk)
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, f"Boleta N.º {puerta['documento']['folio']}")
+        self.assertContains(pagina, 'id="documentos"')
+        self.assertContains(pagina, f"/pedidos/{orden.pk}/documentos/")
+        self.assertContains(pagina, "?descarga=1")
+
+    def test_el_pedido_institucional_no_anuncia_una_factura_que_todavia_no_existe(self):
+        _, orden, _ = self.orden_despachada("abastecimiento@hospital.test")
+        s.llegar_a_la_puerta([orden])
+        puerta = next(a for a in self.avisos("abastecimiento@hospital.test", orden) if a["tipo"] == "puerta")
+        self.assertEqual([x["id"] for x in puerta["acciones"]], ["aceptar", "no_recibido"])
+        self.assertNotIn("documento", puerta)
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, "La factura de este pedido se emite después de la entrega.")
+        self.assertNotContains(pagina, "Factura N.º")
+
+    def test_al_confirmar_el_aviso_ya_no_ofrece_recibir_el_pedido(self):
+        cliente, orden, _ = self.orden_despachada()
+        s.llegar_a_la_puerta([orden])
+        s.resolver_entrega(cliente, orden.pk, "aceptar")
+        avisos = self.avisos("ana@correo.test", orden)
+        self.assertTrue(avisos)
+        self.assertFalse(any(x["id"] == "aceptar" for a in avisos for x in a["acciones"]))
+        self.assertIn("llego", {a["tipo"] for a in avisos})
+
+    def test_dos_pedidos_en_la_puerta_no_comparten_acciones_ni_boleta(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        ana = s.cliente_de(User.objects.get(username="ana@correo.test"))
+        s.agregar(ana, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        primera = s.generar_ordenes(ana, ana.direccion_set.first().pk)[0]
+        s.agregar(ana, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        segunda = s.generar_ordenes(ana, ana.direccion_set.first().pk)[0]
+        rango = flota.rangos_de(primera)[0]
+        camion = next(c for c in flota.camiones_libres() if c.rango_temperatura.nombre == rango)
+        flota.despachar(camion.camion_id, [primera.pk, segunda.pk])
+        s.llegar_a_la_puerta([primera, segunda])
+        self.entrar()
+        puertas = [a for a in self.client.get("/api/avisos/").json()["avisos"] if a["tipo"] == "puerta" and a["acciones"]]
+        ids = {a["orden_id"] for a in puertas}
+        self.assertIn(primera.pk, ids)
+        self.assertIn(segunda.pk, ids)
+        for aviso in puertas:
+            self.assertEqual(aviso["documento"]["orden_id"], aviso["orden_id"])
+            self.assertIn(f"/pedidos/{aviso['orden_id']}/", aviso["acciones"][1]["href"])
+        self.assertNotEqual(next(a["documento"]["folio"] for a in puertas if a["orden_id"] == primera.pk),
+                            next(a["documento"]["folio"] for a in puertas if a["orden_id"] == segunda.pk))

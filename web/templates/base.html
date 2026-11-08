@@ -32,8 +32,9 @@
       {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Mis pedidos</a>{% endif %}
       {% if menu.cliente %}<a href="/soporte/" {% if "/soporte/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-6.4A8 8 0 1121 12z"/></svg>Soporte</a>{% endif %}
       {% endif %}
-      {% if menu.flota or menu.crm or menu.admin %}
+      {% if menu.torre or menu.flota or menu.crm or menu.admin %}
       <div class="nav-etiqueta">Operación</div>
+      {% if menu.torre %}<a href="/torre/" {% if "/torre/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Torre de control</a>{% endif %}
       {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% include "componentes/ico_camion.html" %}Flota</a>{% endif %}
       {% if menu.crm and not menu.comercial %}<a href="/crm/alertas/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11.5a4 4 0 11-4 0V3a2 2 0 014 0z"/></svg>Alertas de frío</a>{% endif %}
       {% if menu.comercial %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>CRM</a>{% endif %}

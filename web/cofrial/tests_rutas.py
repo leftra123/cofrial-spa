@@ -14,13 +14,13 @@ CLAVE = "demo-cofrial-2026"
 CUENTAS = {"anonimo": None, "B2B": "abastecimiento@hospital.test", "B2C": "ana@correo.test", "vendedor": "vendedora@cofrial.cl",
            "gerencia": "gerencia@cofrial.cl", "despachador": "despacho@cofrial.cl", "admin": "admin@cofrial.cl"}
 ROLES = list(CUENTAS)
-INICIO = {"B2B": "/catalogo/", "B2C": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
+INICIO = {"B2B": "/catalogo/", "B2C": "/catalogo/", "vendedor": "/crm/", "gerencia": "/torre/", "despachador": "/flota/", "admin": "/crm/"}
 
 # url (con 999999 y NO-EXISTE donde va un id) -> (GET, POST) para [anonimo, B2B, B2C, vendedor, gerencia, despachador, admin].
 # 200 = entra · L = redirige al login · 403/404/405/400 = ese código · →destino = redirige ahí (N = un número).
 # Generada recorriendo las rutas (ver docs/rutas-y-roles.md); revisada a mano. Los comentarios de abajo marcan lo que se decidió.
 ESPERADO = {
-    '/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
     '/portada/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/999999/': ('404 404 404 404 404 404 404', '404 404 404 404 404 404 404'),
@@ -59,6 +59,8 @@ ESPERADO = {
     '/flota/despacho-auto/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despacho-auto/correr/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ubicar/999999/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 404 404'),
+    '/torre/': ('L 403 403 403 200 403 200', '405 405 405 405 405 405 405'),               # gerencia y administrador; la Torre muestra clientes de toda la cartera
+    '/torre/pulso/': ('L 403 403 403 200 403 200', '405 405 405 405 405 405 405'),
     '/operacion/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),            # solo el administrador
     '/operacion/stock/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
     '/operacion/stock/999999/sumar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
@@ -96,8 +98,8 @@ ESPERADO = {
     '/carrito/mp/vuelta/fallo/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
     '/carrito/mp/vuelta/pendiente/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
     '/api/avisos/': ('403 200 200 403 403 403 403', '403 200 200 403 403 403 403'),
-    '/avisos/': ('L 200 200 →/crm/ →/crm/ →/flota/ →/crm/', 'L 200 200 →/crm/ →/crm/ →/flota/ →/crm/'),
-    '/avisos/pedir/': ('405 405 405 405 405 405 405', 'L →/avisos/ →/avisos/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/avisos/': ('L 200 200 →/crm/ →/torre/ →/flota/ →/crm/', 'L 200 200 →/crm/ →/torre/ →/flota/ →/crm/'),
+    '/avisos/pedir/': ('405 405 405 405 405 405 405', 'L →/avisos/ →/avisos/ →/crm/ →/torre/ →/flota/ →/crm/'),
     '/avisos/999999/quitar/': ('405 405 405 405 405 405 405', '→/avisos/ →/avisos/ →/avisos/ →/avisos/ →/avisos/ →/avisos/ →/avisos/'),
     '/seguimiento/': ('L →/pedidos/… →/pedidos/… →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L →/pedidos/… →/pedidos/… 403 403 403 403'),
     '/pedidos/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
@@ -106,9 +108,9 @@ ESPERADO = {
     '/pedidos/999999/oc/': ('405 405 405 405 405 405 405', 'L →/pedidos/… →/pedidos/… 403 403 403 403'),
     '/pedidos/999999/entrega/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
     '/pedidos/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 404 404 403 403 403 403'),
-    '/cuenta/entrar/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
-    '/cuenta/registro/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
-    '/cuenta/registro/empresa/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/cuenta/entrar/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
+    '/cuenta/registro/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
+    '/cuenta/registro/empresa/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
     '/cuenta/recuperar/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),          # con sesión también: no revela nada
     '/cuenta/recuperar/enviado/': ('200 200 200 200 200 200 200', '405 405 405 405 405 405 405'),
     '/cuenta/recuperar/NO-EXISTE/NO-EXISTE/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),   # «el enlace ya no sirve»

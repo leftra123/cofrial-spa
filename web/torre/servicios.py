@@ -118,3 +118,21 @@ def datos_negocio(usuario):
             "frecuentes": _frecuentes(usuario, ahora),
             "embudo": crm.embudo_por_niveles(usuario),
             "ahora": _ahora(vigentes, alertas)}
+
+
+CACHE_S = 4          # el sondeo es cada 5 s: varias pantallas abiertas comparten una sola consulta
+
+
+def pulso(usuario, rol=None):
+    """Lo que `/torre/pulso/` entrega: datos del negocio, Lectura del momento y rúbrica. Caché de 4 s por rol (solo entran admin y gerencia,
+    y ambos ven lo mismo). `front_back` y `pedido_trazado` quedan en None: la Torre los completa en el navegador."""
+    from django.core.cache import cache
+    from . import lectura, rubrica
+    clave = f"torre:pulso:{rol or crm.rol(usuario)}"        # la vista ya sabe el rol (request.rol): evita otra consulta
+    datos = cache.get(clave)
+    if datos is None:
+        datos = datos_negocio(usuario)
+        datos.update({"generado_en": timezone.now().isoformat(), "lectura": lectura.redactar(datos["ahora"]), "rubrica": rubrica.evaluar(),
+                      "front_back": None, "pedido_trazado": None})
+        cache.set(clave, datos, CACHE_S)
+    return datos

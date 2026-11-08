@@ -21,12 +21,12 @@ Este documento no contiene claves. Las claves viven solo en `aws/.estado/secreto
 
 | Cuenta | Rol | Puede | No puede (respuesta) |
 |---|---|---|---|
-| `admin@cofrial.cl`, `eric@cofrial.cl` | Administrador / despacho | Todo: CRM, flota, cerrar despachos, `/admin/`, `/operacion/` (reponer stock, crear cuentas, asignar claves) | — |
+| `admin@cofrial.cl`, `eric@cofrial.cl` | Administrador / despacho | Todo: CRM, flota, Torre de control (`/torre/`), cerrar despachos, `/admin/`, `/operacion/` (reponer stock, crear cuentas, asignar claves) | — |
 | `felipe@cofrial.cl` | Cliente institucional B2B | Catálogo con lista institucional, carrito, órdenes, orden de compra | CRM y flota (403); pedidos ajenos (404) |
 | `sergio@cofrial.cl`, `ana@correo.test` | Cliente particular B2C | Catálogo al público, carrito, seguimiento de sus pedidos | CRM y flota (403); pedidos ajenos (404) |
 | `abastecimiento@hospital.test` | Cliente institucional B2B | Igual que Felipe | CRM y flota (403) |
 | `vendedora@cofrial.cl`, `vendedor2@cofrial.cl` | Vendedor | CRM de su cartera, prospectos nuevos | Flota (403) |
-| `gerencia@cofrial.cl` | Gerencia | Lectura del CRM y los tableros | Crear prospectos (403) |
+| `gerencia@cofrial.cl` | Gerencia | Lectura del CRM y los tableros; inicia en la Torre de control (`/torre/`, datos en `/torre/pulso/`) | Crear prospectos (403) |
 | `despacho@cofrial.cl` | Despachador | Flota, armar y cerrar despachos | Embudo del CRM (403) |
 
 ## Pruebas

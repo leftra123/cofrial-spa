@@ -404,5 +404,23 @@ Pedido de Eric: que cada tipo de usuario reciba avisos sin recargar y que el sit
 - **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Se abre una vez por cuenta y navegador, explica para qué es cada permiso según el rol y se reabre con «Permisos» en el menú.
 - **La ubicación solo se pide a los clientes:** se usa en «Estoy en esta dirección: usar mi ubicación» al agregar una dirección de entrega. Al equipo no se le pide porque no tendría ningún uso. La posición se manda solo al guardar esa dirección; no se sigue a nadie.
 - **Las coordenadas del navegador no se creen sin revisar:** `agregar_direccion` acepta solo valores numéricos dentro de Chile continental; si no, busca la dirección escrita en OpenStreetMap. Con una precisión peor que 300 m no se usan, porque el camión podría ir a otra cuadra.
-- **HTTPS es requisito:** `Notification` y `geolocation` no piden permiso sin contexto seguro, y hoy la EC2 sirve por HTTP. El diálogo lo dice y los avisos dentro de la página funcionan igual. Cambiar a HTTPS se coordina aparte con la sesión de despliegue; este cambio no toca infraestructura.
+- **Sin HTTPS no hay permisos nativos:** `Notification` y `geolocation` no piden permiso sin contexto seguro, y la EC2 sirve por HTTP. El diálogo lo dice y los avisos dentro de la página funcionan igual. La pauta del Hito 2 no exige HTTPS, así que se entrega así; el plan para activarlo está más abajo, como opcional.
 - **Qué se cede:** en Android la notificación exige un service worker y en iOS una app instalada, que no se agregaron: en esos equipos quedan los avisos dentro de la página. Las notificaciones solo llegan con una pestaña abierta, porque no hay notificaciones push desde el servidor. Un viaje con frío no distingue si la carga de ese vendedor ya se entregó; eso lo detalla `/crm/alertas/`.
+
+### Opcional: HTTPS con Caddy (no aplicado)
+
+No está autorizado ni hace falta para la pauta, y agrega riesgo cerca de la defensa. Solo tiene sentido después de verificar lo esencial, y en una sesión de laboratorio sin demostración encima. Con él, los permisos nativos empiezan a funcionar sin cambiar la aplicación.
+
+1. En `aws/docker-compose.web.yml`, agregar `caddy:2-alpine` con los puertos 80 y 443 y un volumen `caddy_data`; a `web`, quitarle `ports` y dejar `expose: 8000`.
+2. Crear un Caddyfile para AWS (`docker/caddy/Caddyfile` es solo para uso local): `54-82-100-161.sslip.io { reverse_proxy web:8000 }` y `http://54.82.100.161 { redir https://54-82-100-161.sslip.io{uri} }`.
+3. En `aws/provision.sh`, abrir el 443 en `SG_WEB`. El reto de Let's Encrypt usa el 80, que ya está abierto.
+4. En el `.env` que escribe `provision.sh`: `DJANGO_HTTPS=1`, `DJANGO_CONFIAR_PROXY=1`, `DJANGO_CSRF_ORIGINS=https://54-82-100-161.sslip.io` y `MERCADOPAGO_PUBLIC_URL` con esa misma dirección, que además hay que agregar a la lista de `aws/docker-compose.web.yml`.
+
+| Riesgo | Qué hacer |
+|---|---|
+| `DJANGO_HTTPS=1` fija HSTS de un año en `settings.py`: si Caddy falla, quien ya entró no vuelve por HTTP con ese nombre | Hacer configurable `SECURE_HSTS_SECONDS` y dejarlo en 0 hasta después de la defensa |
+| Las cookies pasan a ser `Secure`: el ingreso por `http://IP` deja de funcionar | Por eso la redirección del paso 2 es obligatoria |
+| Let's Encrypt permite 5 certificados por semana para el mismo nombre, y `recrear-web` vacía el volumen | Ensayar con `acme_ca` de pruebas y no recrear la EC2 después del certificado real |
+| `aws/verificar.py` usa `http://IP` por defecto | Pasarle la URL con https como argumento; revisar `/salud/` y `/bi/` detrás del proxy |
+
+Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.io está en la Public Suffix List, que afecta otro límite de certificados por dominio.

@@ -94,7 +94,7 @@ class Embudo(TestCase):
             self.assertIn(nombre, [i["nombre"] for i in e[etapa]["items"]])
         item = next(i for i in e["Primer pedido"]["items"] if i["nombre"] == "Uno")
         self.assertEqual(item["url"], f"/crm/clientes/{primero.pk}/")
-        self.assertEqual(item["detalle"], f"1 pedido, último {(timezone.now() - timedelta(days=5)):%d/%m}")
+        self.assertEqual(item["detalle"], f"1 pedido, último {timezone.localtime(timezone.now() - timedelta(days=5)):%d/%m}")
         self.assertEqual(e["Primer pedido"]["monto_clp"] - base["Primer pedido"]["monto_clp"], 2000)
         self.assertEqual(e["Primer pedido"]["n"] - base["Primer pedido"]["n"], 1)
 

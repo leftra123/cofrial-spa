@@ -57,6 +57,7 @@ class Orden(models.Model):
     oc_pendiente = models.BooleanField(default=False, db_default=False)       # B2B que compró sin su OC: numero_oc lleva una referencia WEB-aaaa-nnnn hasta que la agregue
     COMPROBANTES = [("boleta", "Boleta"), ("factura", "Factura")]
     comprobante = models.CharField(max_length=8, choices=COMPROBANTES, default="boleta", db_default="boleta")
+    camara = models.PositiveSmallIntegerField(default=1, db_default=1)       # en qué cámara del camión viaja: un hecho del despacho, como `despacho`. Una ruptura de frío solo la afecta si ocurre en esa cámara (RN-13)
     creada_en = models.DateTimeField(auto_now_add=True)
     puerta_en = models.DateTimeField(null=True, blank=True)                  # el camión llegó a la dirección: desde aquí corre la confirmación del cliente
     entrega_resuelta_en = models.DateTimeField(null=True, blank=True)        # cuando el cliente (o el tiempo) cerró la entrega

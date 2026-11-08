@@ -371,7 +371,7 @@ def seguimiento(orden):
     from flota import rutas
     camion = orden.despacho.camion
     fin = fin_de_exposicion(orden) if orden.estado_orden.nombre in RECEPCION_CERRADA else None
-    todas = Telemetria.objects.filter(camion=camion)
+    todas = Telemetria.objects.filter(camion=camion, camara=orden.camara)      # un pedido solo mira la cámara en la que viaja
     if fin is not None:               # RN-13: quien ya recibió no ve lo que le pasó al camión después de su entrega (resumen hasta ese momento)
         todas = todas.filter(registrado_en__lte=fin)
     desde = (fin or timezone.now()) - timedelta(minutes=60)
@@ -379,8 +379,8 @@ def seguimiento(orden):
     ultima = (lecturas[-1] if lecturas else todas.order_by("-registrado_en").first())
     if fin is None:
         from flota.vigente import ultima_vigente
-        ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada (no aplica a una entrega ya cerrada)
-    rango = camion.rango_temperatura
+        ultima = ultima_vigente(camion, orden.camara) or ultima         # con el modo demostración, la temperatura forzada (no aplica a una entrega ya cerrada)
+    rango = camion.rango_de_camara(orden.camara)
     en_vivo = mapa_en_vivo(orden)                     # el mapa y la posición solo se muestran mientras el camión va o está en la puerta
     return {
         "camion_id": camion.camion_id, "patente": camion.patente, "mapa_en_vivo": en_vivo,
@@ -612,7 +612,7 @@ def avisos_de_llegada(cliente):
         if nombre != "Despachada":
             continue
         ultima = Telemetria.objects.filter(camion=d.camion, registrado_en__gte=d.salida_en).order_by("-registrado_en").first()
-        if Telemetria.objects.filter(camion=d.camion, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
+        if Telemetria.objects.filter(camion=d.camion, camara=o.camara, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
             salida.append({"id": f"{o.orden_id}-frio", "orden_id": o.orden_id, "tipo": "frio", "cuando": (ultima.registrado_en if ultima else d.salida_en).isoformat(),
                            "texto": f"Detectamos una variación de temperatura en el camión de tu pedido N.º {o.orden_id}. Ya la estamos revisando."})
         info = _llegada(o, ultima)

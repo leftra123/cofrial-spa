@@ -16,7 +16,7 @@
     <p class="frio" id="aviso-camion" aria-live="polite">Marca pedidos y proponemos el mejor camión libre.</p>
     <div class="tarjeta-ui lista-corta" id="lista-camiones">
       {% for c in camiones %}
-      <label class="opcion"><input type="radio" name="camion" data-rango="{{ c.rango_temperatura.nombre }}" value="{{ c.camion_id }}" {% if camion_sugerido %}{% if c.camion_id == camion_sugerido %}checked{% endif %}{% elif forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rango_temperatura.nombre }}</span> {% if c.camion_id in camiones_en_alerta %}<span class="chip alerta">Ruptura de frío</span> {% endif %}<span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
+      <label class="opcion"><input type="radio" name="camion" data-rangos="{{ c.rangos|join:"," }}" value="{{ c.camion_id }}" {% if camion_sugerido %}{% if c.camion_id == camion_sugerido %}checked{% endif %}{% elif forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rangos_texto }}</span> {% if c.camion_id in camiones_en_alerta %}<span class="chip alerta">Ruptura de frío</span> {% endif %}<span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
       {% empty %}{% include "componentes/vacio_estado.html" with plano=True compacto=True ico="camion" titulo="No hay camiones libres" texto="Todos están en ruta o inactivos. Cuando uno vuelva a la bodega podrás armar el viaje." url="/flota/" accion="Ver la flota" %}{% endfor %}
     </div>
 
@@ -107,14 +107,15 @@
     sel.forEach(function (c) { (d.rangos[c.dataset.orden] || []).forEach(function (r) { rangos[r] = true; }); });
     var lista = Object.keys(rangos), actual = radios.filter(function (r) { return r.checked; })[0], extra = sel.length > 6 ? " Son más de 6 paradas: el sistema sugeriría dividir el viaje." : "";
     if (!sel.length) { aviso.textContent = "Marca pedidos y proponemos el mejor camión libre."; return; }
-    if (lista.length > 1) { aviso.textContent = "Los pedidos marcados piden " + lista.join(" y ").toLowerCase() + ": un viaje lleva un solo rango de frío. Desmarca los de un rango."; return; }
     if (!lista.length) return;
-    var mejor = d.camiones.filter(function (c) { return c.rango === lista[0] && c.apto; })[0];
-    if (aMano && actual && actual.dataset.rango === lista[0]) {
+    function sirve(rangos) { return lista.every(function (r) { return rangos.indexOf(r) >= 0; }); }
+    var aptos = d.camiones.filter(function (c) { return c.apto && sirve(c.rangos); });
+    var mejor = aptos.filter(function (c) { return c.rangos.length === lista.length; })[0] || aptos[0];      // los de dos cámaras son pocos: para un solo rango, primero uno simple
+    if (aMano && actual && sirve(actual.dataset.rangos.split(","))) {
       aviso.textContent = "Elegiste a mano. " + nota(actual.value) + (mejor && mejor.id !== actual.value ? " El sistema propone " + mejor.id + "." : "") + extra;
       return;
     }
-    if (!mejor) { aviso.textContent = "No hay camión libre apto de rango " + lista[0].toLowerCase() + ". Cuando uno vuelva a la base podrás armar el viaje."; return; }
+    if (!mejor) { aviso.textContent = lista.length > 1 ? "Los pedidos marcados piden " + lista.join(" y ").toLowerCase() + ": hace falta un camión de dos cámaras y no hay uno libre apto. Desmarca los de un rango o espera a que uno vuelva a la base." : "No hay camión libre apto de rango " + lista[0].toLowerCase() + ". Cuando uno vuelva a la base podrás armar el viaje."; return; }
     var radio = radios.filter(function (r) { return r.value === mejor.id; })[0];
     if (radio) {
       radio.checked = true;

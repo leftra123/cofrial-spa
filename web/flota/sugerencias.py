@@ -1,7 +1,7 @@
 """Sugerencia de despachos: qué pedidos esperan y qué camión libre conviene usar.
 
 Los hechos (qué pedidos, qué camión, cuánto llevan esperando) los calcula el código con las mismas reglas de `despachar`:
-un solo rango de frío por viaje, camión libre y activo, pedidos ubicados en el mapa. La IA solo redacta el aviso a partir de
+cada orden en una cámara de su rango, camión libre y activo, pedidos ubicados en el mapa. La IA solo redacta el aviso a partir de
 esos hechos; si falla, no hay clave o inventa un camión, se usa el texto base. Este módulo nunca despacha: el botón lleva al
 formulario de «Armar despacho» ya marcado y alguien confirma. El modo automático (`autodespacho.py`) parte del mismo cálculo.
 Privacidad: a la IA solo le llegan números de orden, comuna, rango de frío y minutos de espera; ni nombres ni direcciones.
@@ -9,6 +9,7 @@ Privacidad: a la IA solo le llegan números de orden, comuna, rango de frío y m
 import hashlib
 import json
 import re
+from itertools import zip_longest
 
 from django.core.cache import cache
 from django.utils import timezone
@@ -30,7 +31,8 @@ def _nota(c, t, alerta, reciente):
     temp = f"{t.temp_camara:.1f}".replace(".", ",")
     if alerta:
         return f"{c.camion_id} tiene ruptura de frío: la cámara marca {temp} °C."
-    texto = f"{c.camion_id}: {t.combustible_pct} % de combustible, cámara a {temp} °C, sin alerta de frío."
+    temperaturas = " y ".join(f"{x.temp_camara:.1f}".replace(".", ",") + " °C" for x in getattr(t, "camaras", [t]))
+    texto = f"{c.camion_id}: {t.combustible_pct} % de combustible, {'cámaras a' if c.dos_camaras else 'cámara a'} {temperaturas}, sin alerta de frío."
     return texto if reciente else f"{texto[:-1]}, pero su última lectura no es reciente."
 
 
@@ -44,12 +46,53 @@ def opciones_camion():
         alerta = bool(t and t.alerta_ruptura_frio)
         bajo = bool(t and t.combustible_pct < servicios.COMBUSTIBLE_BAJO)
         reciente = bool(t and (ahora - t.registrado_en).total_seconds() <= servicios.SENAL_VIGENTE_SEG)
-        filas.append({"id": c.camion_id, "patente": c.patente, "rango": c.rango_temperatura.nombre,
+        filas.append({"id": c.camion_id, "patente": c.patente, "rango": c.rango_temperatura.nombre, "rangos": c.rangos,
                       "combustible": t.combustible_pct if t else None, "alerta": alerta, "apto": not alerta,
                       "apto_auto": reciente and not alerta and not bajo, "nota": _nota(c, t, alerta, reciente)})
     filas.sort(key=lambda f: (f["combustible"] is None, f["combustible"] is not None and f["combustible"] < servicios.COMBUSTIBLE_BAJO,
                               -(f["combustible"] or 0), f["id"]))
     return filas
+
+
+def _tomar_de_dos_camaras(camiones, rango):
+    c = next((x for x in camiones if rango in x["rangos"]), None)
+    if c:
+        camiones.remove(c)
+    return c
+
+
+def _viajes_de_una_salida(por_rango, camiones):
+    """Las direcciones que esperan pedidos de dos rangos, en un camión de dos cámaras: una sola salida en vez de dos camiones al mismo lugar.
+    Saca esos pedidos de `por_rango`. Las direcciones con más tiempo de espera van primero y un viaje no pasa de MAX_PARADAS pedidos;
+    lo que sobra sigue su curso normal."""
+    viajes = []
+    while camiones and len(por_rango) > 1:
+        c = camiones[0]
+        rangos = c["rangos"]
+        grupos = {}
+        for rango in rangos:
+            for p in por_rango.get(rango, []):
+                grupos.setdefault(p["direccion"], {}).setdefault(rango, []).append(p)
+        compartidas = [g for g in grupos.values() if len(g) == len(rangos)]
+        if not compartidas:
+            break
+        compartidas.sort(key=lambda g: -max(p["espera_min"] for lista in g.values() for p in lista))
+        grupo = []
+        for g in compartidas:
+            cupo = MAX_PARADAS - len(grupo)
+            if cupo < len(rangos):                   # lo que no cabe queda para otro viaje, sin separar los dos rangos de una dirección
+                break
+            intercalados = [p for fila in zip_longest(*g.values()) for p in fila if p]
+            grupo += intercalados[:cupo]
+        elegidos = {p["orden"] for p in grupo}
+        for rango in rangos:
+            por_rango[rango] = [p for p in por_rango.get(rango, []) if p["orden"] not in elegidos]
+            if not por_rango[rango]:
+                del por_rango[rango]
+        camiones.pop(0)
+        viajes.append({"camion": c["id"], "patente": c["patente"], "rango": " y ".join(rangos), "pedidos": grupo,
+                       "espera_max_min": max(p["espera_min"] for p in grupo), "nota_camion": c["nota"]})
+    return viajes
 
 
 def calcular(automatico=False):
@@ -69,12 +112,15 @@ def calcular(automatico=False):
             sin_ubicar.append(o.orden_id)
         else:
             por_rango.setdefault(rangos[0], []).append(
-                {"orden": o.orden_id, "comuna": o.direccion.comuna.nombre, "espera_min": int((ahora - o.creada_en).total_seconds() // 60)})
-    libres = {}
+                {"orden": o.orden_id, "comuna": o.direccion.comuna.nombre, "direccion": o.direccion_id, "espera_min": int((ahora - o.creada_en).total_seconds() // 60)})
+    libres, dos_camaras = {}, []
     for c in opciones_camion():
         if c["apto_auto" if automatico else "apto"]:
-            libres.setdefault(c["rango"], []).append(c)
-    viajes, sin_camion = [], []
+            if len(c["rangos"]) > 1:
+                dos_camaras.append(c)
+            else:
+                libres.setdefault(c["rango"], []).append(c)
+    viajes, sin_camion = _viajes_de_una_salida(por_rango, dos_camaras), []
     # el rango con el pedido más antiguo se atiende primero
     for rango, pedidos in sorted(por_rango.items(), key=lambda kv: -max(p["espera_min"] for p in kv[1])):
         # pedidos de una misma comuna juntos, partiendo por la que tiene el más antiguo: un viaje no cruza la región sin necesidad
@@ -84,8 +130,8 @@ def calcular(automatico=False):
         pedidos = sorted(pedidos, key=lambda p: (-antigua[p["comuna"]], p["comuna"]))
         for i in range(0, len(pedidos), MAX_PARADAS):
             grupo = pedidos[i:i + MAX_PARADAS]
-            if libres.get(rango):
-                c = libres[rango].pop(0)
+            c = libres[rango].pop(0) if libres.get(rango) else _tomar_de_dos_camaras(dos_camaras, rango)     # los de dos cámaras son pocos: se usan al final
+            if c:
                 viajes.append({"camion": c["id"], "patente": c["patente"], "rango": rango, "pedidos": grupo,
                                "espera_max_min": max(p["espera_min"] for p in grupo), "nota_camion": c["nota"]})
             else:
@@ -97,12 +143,17 @@ def _espera(minutos):
     return f"{minutos} min" if minutos < 120 else f"{minutos // 60} h"
 
 
+def _de_rango(rango, n):
+    """«refrigerados», o «de refrigerado y congelado» cuando el viaje lleva los dos."""
+    return f"de {rango.lower()}" if " y " in rango else rango.lower() + ("s" if n != 1 else "")
+
+
 def texto_base(viajes, resto):
     """Aviso sin IA, armado con plantillas: siempre disponible."""
     frases = []
     for v in viajes:
         n = len(v["pedidos"])
-        frases.append(f"{n} pedido{'s' if n != 1 else ''} {v['rango'].lower()}{'s' if n != 1 else ''} espera{'n' if n != 1 else ''} despacho (el más antiguo, hace {_espera(v['espera_max_min'])}). "
+        frases.append(f"{n} pedido{'s' if n != 1 else ''} {_de_rango(v['rango'], n)} espera{'n' if n != 1 else ''} despacho (el más antiguo, hace {_espera(v['espera_max_min'])}). "
                       f"{v['camion']} está libre y su rango sirve.")
     for s in resto["sin_camion"]:
         frases.append(f"Hay {s['pedidos']} pedido(s) {s['rango'].lower()}(s) sin camión libre de ese rango.")

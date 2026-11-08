@@ -15,6 +15,7 @@ from django.utils import timezone
 from catalogo.models import Categoria, ListaPrecio, PrecioProducto, Producto, RangoTemperatura
 from clientes import cuentas_demo, muestra, regionales
 from clientes.models import Cliente, Comuna, Direccion, Region, TipoCliente, Vendedor
+from crm import demo_ia
 from crm.models import CategoriaRequerimiento, EtapaPipeline, Interaccion, Prospecto, Requerimiento
 from flota.models import Camion, Despacho
 from pedidos import documentos, servicios as pedidos
@@ -265,7 +266,7 @@ class Command(BaseCommand):
                 orden.despacho = despacho
                 orden.save(update_fields=["despacho"])
                 pedidos.avanzar(orden)                                      # Despachada
-            Requerimiento.objects.create(cliente=sur, asunto="Mi pedido llegó tibio", descripcion="El camión llegó con la carga sin la temperatura adecuada y rechazamos dos cajas. Necesitamos reposición urgente.")
+            Requerimiento.objects.create(cliente=sur, asunto=demo_ia.ASUNTO, descripcion=demo_ia.DESCRIPCION)
 
         # un tercer pedido en el mismo camión que el del Hospital: así el viaje tiene dos paradas y se ve el orden de entrega sugerido
         base = Orden.objects.filter(numero_oc="OC-2026-0457", despacho__isnull=False).select_related("despacho").first()

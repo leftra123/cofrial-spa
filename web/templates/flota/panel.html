@@ -76,7 +76,7 @@
   <article class="tarjeta-ui vehiculo{% if x.alerta %} en-alerta{% endif %}{% if not x.lectura %} sin-lectura{% endif %}" data-camion="{{ x.camion.camion_id }}"{% if not x.en_operacion %} data-guardado{% endif %}>
     <div class="vehiculo-cab">
       <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
-        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rango_temperatura.nombre }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
+        <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rangos_texto }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
       <div class="vehiculo-chips"><span class="chip pendiente" data-campo="sin-senal"{% if not x.sin_senal %} hidden{% endif %}>Sin señal</span>
       {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
       {% elif x.alerta %}<span class="chip alerta">Ruptura de frío</span>
@@ -85,7 +85,8 @@
     </div>
     {% if x.lectura %}
     <div class="mini">
-      <div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>
+      {% if x.camion.dos_camaras %}{% for l in x.lectura.camaras %}<div><span>Cámara {{ l.camara }}</span><b data-campo="temp-{{ l.camara }}" class="{% if l.alerta_ruptura_frio %}mal{% endif %}">{{ l.temp_camara|floatformat:1 }} °C</b></div>{% endfor %}
+      {% else %}<div><span>Cámara</span><b data-campo="temp" class="{% if x.alerta %}mal{% endif %}">{{ x.lectura.temp_camara|floatformat:1 }} °C</b></div>{% endif %}
       <div><span>Combustible</span><b data-campo="comb" class="{% if x.combustible_bajo %}mal{% endif %}">{{ x.lectura.combustible_pct }} %</b></div>
       <div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div>
     </div>
@@ -266,7 +267,8 @@
         var chip = t.querySelector('[data-campo="situacion"]');
         pon(chip, c.situacion_texto.charAt(0).toUpperCase() + c.situacion_texto.slice(1));
         if (chip) { chip.classList.toggle("entregado", c.situacion === "en_base"); chip.classList.toggle("transito", c.situacion !== "en_base"); }
-        pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
+        if (l.camaras && l.camaras.length > 1) l.camaras.forEach(function (x) { pon(t.querySelector('[data-campo="temp-' + x.camara + '"]'), x.temp_camara.toFixed(1).replace(".", ",") + " °C", x.alerta_ruptura_frio); });
+        else pon(t.querySelector('[data-campo="temp"]'), l.temp_camara.toFixed(1).replace(".", ",") + " °C", c.alerta);
         pon(t.querySelector('[data-campo="comb"]'), l.combustible_pct + " %", c.combustible_bajo);
         var b = t.querySelector('[data-campo="barra"] i');
         if (b) { b.style.width = l.combustible_pct + "%"; b.classList.toggle("bajo", c.combustible_bajo); }

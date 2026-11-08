@@ -138,7 +138,7 @@ def _mensaje_ordenes_creadas(ordenes):
     orden = ordenes[0]
     if len(ordenes) > 1:
         numeros = " y ".join(f"N.º {o.orden_id}" for o in ordenes)
-        mensaje = f"Tu compra se dividió en {len(ordenes)} pedidos, uno por rango de temperatura, porque cada uno viaja en su camión: {numeros}."
+        mensaje = f"Tu compra se dividió en {len(ordenes)} pedidos, uno por rango de temperatura, porque cada uno viaja en su propia cámara de frío: {numeros}."
     else:
         mensaje = f"Orden {orden.orden_id} recibida."
     emitidos = list(documentos.Documento.objects.filter(orden__in=ordenes, tipo__in=("boleta", "factura")).order_by("folio"))

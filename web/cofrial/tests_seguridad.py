@@ -216,7 +216,7 @@ class PaginasNoEncontradasTests(BaseSeguridad):
                 clear_url_caches()
                 self.assertEqual(self.anonimo().get("/admin/").status_code, 404)
                 self.assertEqual(self.anonimo().get("/panel-9f3k/").status_code, 302)
-                self.assertEqual(self.entrar("admin@cofrial.cl").get("/panel-9f3k/").status_code, 200)
+                self.assertEqual(self.entrar("eric@cofrial.cl").get("/panel-9f3k/").status_code, 200)
         finally:
             reload(cofrial.urls)                  # deja las rutas como estaban para las demás pruebas
             clear_url_caches()

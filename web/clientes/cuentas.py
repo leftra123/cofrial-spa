@@ -15,7 +15,7 @@ from .models import Cliente, Comuna, Direccion, TipoCliente, Vendedor
 
 ROLES = [("cliente-b2b", "Cliente institucional (B2B)"), ("cliente-b2c", "Cliente particular (B2C)"), ("vendedor", "Vendedor"),
          ("gerencia", "Gerencia"), ("despachador", "Despachador"), ("admin", "Administrador")]
-GRUPOS = {"vendedor": "vendedores", "gerencia": "gerencia", "despachador": "despachadores"}
+GRUPOS = {"vendedor": "vendedores", "gerencia": "gerencia", "despachador": "despachadores", "admin": "administradores"}
 
 
 class ErrorCuenta(Exception):
@@ -79,12 +79,10 @@ def crear(datos, clave):
     correo = usuario if "@" in usuario else ""
     try:
         with transaction.atomic():
-            if rol == "admin":
-                u = Usuario.objects.create_superuser(usuario, correo, clave)
-            else:
-                u = Usuario.objects.create_user(usuario, email=correo, password=clave)
-                u.is_staff = not datos["cliente"]           # el personal entra a /admin/ si es superusuario; los clientes no
-                u.save(update_fields=["is_staff"])
+            # El administrador de empresa es personal con el grupo «administradores», no superusuario de Django.
+            u = Usuario.objects.create_user(usuario, email=correo, password=clave)
+            u.is_staff = not datos["cliente"]               # el personal entra a /admin/ (sin permisos de modelos); los clientes no
+            u.save(update_fields=["is_staff"])
             if nombre and not datos["cliente"]:
                 u.first_name = nombre[:150]
                 u.save(update_fields=["first_name"])

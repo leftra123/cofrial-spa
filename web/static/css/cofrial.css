@@ -849,3 +849,43 @@ button.ver-en-mapa:not(#mp-brick-container button):hover { background: var(--fon
 #leyenda-estados + .leyenda { margin-top: 8px; }
 .pin-resumen.alerta { z-index: 5; }
 #mapa-flota .pin-camion.alerta { z-index: 4; }                              /* ni la base tapa a un camión en ruptura de frío */
+
+/* ---------- seguimiento del comprador (pedidos/detalle.html) ----------
+   Un mapa tranquilo: cuánto falta manda y lo único que se mueve aquí es transform y opacity. Va con #seg porque tienda.css se carga después de este archivo. */
+#seg .seg-sub { margin: 2px 0 12px; color: var(--texto-3); }
+#seg .seg-mapa { position: relative; margin-bottom: 14px; }
+#seg .seg-mapa.sin-mapa .mapa.alto { height: 140px; }
+#seg .seg-mapa.sin-mapa + .solo-lector + .seg-datos .seg-llegada b { font-size: 1.7rem; }
+.llegada-insignia { position: absolute; top: 10px; right: 10px; z-index: 4; max-width: calc(100% - 64px); padding: 9px 14px 10px; border-radius: var(--radio-sm); background: rgba(11, 26, 51, .94); color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 6px 18px rgba(0, 0, 0, .35); pointer-events: none; animation: insignia-entra .35s ease-out; }
+.llegada-insignia b { display: block; font-size: 1.12rem; line-height: 1.25; letter-spacing: -.01em; }
+.llegada-insignia span { display: block; margin-top: 1px; color: #B4C6DF; font-size: .84rem; line-height: 1.3; }
+.llegada-insignia[data-tipo="cerca"] { background: var(--lima); color: var(--lima-fg); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.llegada-insignia[data-tipo="cerca"] span { color: var(--lima-fg); }
+.llegada-insignia[data-tipo="llego"] { background: #15803D; }
+.llegada-insignia[data-tipo="llego"] span { color: #E7F9EE; }
+.llegada-insignia[data-tipo="pausa"] span, .llegada-insignia[data-tipo="calculando"] span, .llegada-insignia[data-tipo="espera"] span { color: #B4C6DF; }
+.desactualizado .llegada-insignia { opacity: .86; }
+#seg .mapa-sin-base { top: auto; right: auto; bottom: 26px; left: 8px; max-width: calc(100% - 16px); }      /* su esquina de siempre la ocupa el distintivo */
+@keyframes insignia-entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* fila de datos: la llegada ocupa más que el resto */
+#seg .seg-datos-llegada { grid-template-columns: 2fr 1fr 1fr; align-items: stretch; }
+#seg .seg-datos-llegada:has(> :nth-child(2):last-child) { grid-template-columns: 2fr 1fr; }
+#seg .seg-llegada small { display: block; margin-top: 1px; color: var(--texto-2); font-size: .84rem; }
+/* halo del destino: nace en la punta de la gota, detrás de ella; apagado salvo que el camión esté cerca */
+.destino-halo { position: absolute; left: 50%; bottom: 0; z-index: -1; width: 76px; height: 76px; margin: 0 0 -38px -38px; border-radius: 50%; background: radial-gradient(circle, rgba(189, 230, 58, .55) 0%, rgba(189, 230, 58, .22) 55%, rgba(189, 230, 58, 0) 72%); opacity: 0; pointer-events: none; }
+.seg-mapa.cerca .destino-halo { will-change: transform, opacity; animation: destino-halo 2.6s ease-out infinite; }
+@keyframes destino-halo { 0% { transform: scale(.35); opacity: .9; } 70% { opacity: .35; } 100% { transform: scale(1.1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .llegada-insignia { animation: none; }
+  .seg-mapa.cerca .destino-halo { animation: none; will-change: auto; transform: scale(.9); opacity: .7; }
+}
+@media (max-width: 480px) {
+  #seg .mapa.alto { height: 300px; }
+  #seg .seg-mapa.sin-mapa .mapa.alto { height: 150px; }
+  #seg .seg-datos-llegada, #seg .seg-datos-llegada:has(> :nth-child(2):last-child) { grid-template-columns: 1fr 1fr; }
+  #seg .seg-datos-llegada .seg-llegada { grid-column: 1 / -1; }
+  #seg .seg-datos-llegada > div:nth-child(2) { border-left: 0; border-top: 1px solid var(--borde); }
+  #seg .seg-datos-llegada > div:nth-child(3) { grid-column: auto; border-left: 1px solid var(--borde); border-top: 1px solid var(--borde); }
+  .llegada-insignia { top: 8px; right: 8px; max-width: calc(100% - 56px); padding: 7px 12px 8px; }
+  .llegada-insignia b { font-size: 1.02rem; }
+}

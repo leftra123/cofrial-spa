@@ -207,7 +207,7 @@ def cliente_ficha(request, pk):
         saldo_total=sum(d.saldo for d in docs if d.saldo and d.saldo > 0), direcciones=c.direccion_set.select_related("comuna"),
         interacciones=c.interaccion_set.select_related("vendedor").order_by("-registrada_en"),
         productos=Producto.objects.filter(activo=True, stock_disponible__gt=0).order_by("nombre"),
-        pide_oc=c.tipo_cliente.codigo == "B2B", nivel=s.nivel_de_cliente(c) if c.tipo_cliente.codigo == "B2B" else None,
+        pide_oc=c.tipo_cliente.codigo == "B2B", nivel=s.nivel_de_cliente(c),
         ilustrativo=c.rut in muestra.RUT_ILUSTRATIVOS, comunas=Comuna.objects.order_by("nombre"), accion_direccion=f"/crm/clientes/{c.pk}/direccion/"))
 
 

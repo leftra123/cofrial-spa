@@ -482,10 +482,19 @@ def _con_pedidos(clientes, ahora):
                              ultimo_pedido=Max("direccion__orden__creada_en", filter=vigente))
 
 
+def _clientes_del_embudo(clientes):
+    """Regla de entrada al embudo: B2B con segmento, con prospecto ganado o con pedidos; fuera las solicitudes por aprobar."""
+    ganado = Prospecto.objects.filter(cliente=OuterRef("pk"), etapa__es_ganada=True)
+    con_pedidos = Orden.objects.filter(direccion__cliente=OuterRef("pk"))
+    return clientes.filter(tipo_cliente__codigo="B2B").exclude(pk__in=solicitudes_empresa().values("pk")).filter(
+        Q(segmento__isnull=False) | Exists(ganado) | Exists(con_pedidos))
+
+
 def nivel_de_cliente(cliente):
+    """Nivel del cliente en el embudo, o None si el embudo no lo incluye (B2C, solicitud por aprobar, B2B sin segmento ni pedidos)."""
     ahora = timezone.now()
-    c = _con_pedidos(Cliente.objects.filter(pk=cliente.pk), ahora).get()
-    return nivel_de(c.n_pedidos, c.n_ventana, c.ultimo_pedido, ahora)
+    c = _con_pedidos(_clientes_del_embudo(Cliente.objects.filter(pk=cliente.pk)), ahora).first()
+    return None if c is None else nivel_de(c.n_pedidos, c.n_ventana, c.ultimo_pedido, ahora)
 
 
 def _plata(monto):
@@ -510,10 +519,7 @@ def embudo_por_niveles(usuario):
         e["items"].append({"nombre": p.empresa or p.nombre_contacto, "url": f"/crm/prospectos/{p.pk}/",
                            "detalle": _plata(monto) if p.monto_estimado_clp is not None else "Sin monto"})
 
-    ganado = Prospecto.objects.filter(cliente=OuterRef("pk"), etapa__es_ganada=True)
-    con_pedidos = Orden.objects.filter(direccion__cliente=OuterRef("pk"))
-    clientes = clientes_visibles(usuario).filter(tipo_cliente__codigo="B2B").exclude(pk__in=solicitudes_empresa().values("pk")).filter(
-        Q(segmento__isnull=False) | Exists(ganado) | Exists(con_pedidos))
+    clientes = _clientes_del_embudo(clientes_visibles(usuario))
     clientes = list(_con_pedidos(clientes, ahora).order_by("nombre"))
     montos = dict(OrdenItem.objects.filter(orden__direccion__cliente__in=[c.pk for c in clientes]).exclude(orden__estado_orden__nombre="Cancelada")
                   .values_list("orden__direccion__cliente").annotate(t=Sum(F("cantidad") * F("precio_unitario_clp"))))

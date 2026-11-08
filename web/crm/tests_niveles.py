@@ -191,3 +191,14 @@ class FichaDelCliente(TestCase):
 
     def test_ficha_b2c_sin_nivel(self):
         self.assertNotContains(self.ficha(self.ana), "Nivel:")
+
+    def test_ficha_sin_nivel_si_el_embudo_no_lo_incluye(self):
+        tipo = TipoCliente.objects.get(codigo="B2B")
+        suelto = Cliente.objects.create(tipo_cliente=tipo, vendedor=self.hospital.vendedor, rut="9000001-1", nombre="Sin nada", email="sn@test.cl")
+        self.assertNotContains(self.ficha(suelto), "Nivel:")
+
+    def test_ficha_sin_nivel_en_solicitud_pendiente(self):
+        cuenta = get_user_model().objects.create_user(username="sol@test.cl", password="x", is_active=False)
+        sol = Cliente.objects.create(usuario=cuenta, tipo_cliente=TipoCliente.objects.get(codigo="B2B"), rut="9000002-1", nombre="Solicitante",
+                                     email="sol@test.cl", segmento=SegmentoCliente.objects.first())
+        self.assertNotContains(self.ficha(sol), "Nivel:")

@@ -18,7 +18,7 @@
 {% with ruta=request.path %}
 <header class="barra-movil">
   <a class="marca" href="{{ inicio_url }}"><img class="marca-icono" src="{% static 'img/marca/icono-app.png' %}" alt="" width="32" height="32">Cofrial</a>
-  <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú</button></span>
+  <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú{% if menu.flota %}<span class="nav-n-menu" id="despacho-n-menu" hidden></span>{% endif %}</button></span>
 </header>
 <div class="app">
   <aside class="lateral" id="lateral">
@@ -34,7 +34,8 @@
       {% endif %}
       {% if menu.flota or menu.crm or menu.admin %}
       <div class="nav-etiqueta">Operación</div>
-      {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "camion" %}Flota</a>{% endif %}
+      {% if menu.flota %}<div class="nav-fila"><a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "camion" %}Flota</a><button type="button" class="nav-n" id="despacho-n" aria-expanded="false" aria-controls="despacho-panel" hidden></button></div>
+      <div class="nav-despacho" id="despacho-panel" role="region" aria-label="Pedidos por despachar" hidden></div><span class="solo-lector" id="despacho-vivo" role="status"></span>{% endif %}
       {% if menu.crm and not menu.comercial %}<a href="/crm/alertas/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>{% endif %}
       {% if menu.comercial %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "crm" %}CRM</a>{% endif %}
       {% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" rel="noopener">{% icono "bi" %}Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
@@ -73,6 +74,7 @@
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
 {% block scripts %}{% endblock %}
+{% if menu.flota %}<script src="{% static 'js/por-despachar.js' %}"></script>{% endif %}
 <script src="{% static 'js/nav.js' %}"></script>
 <script src="{% static 'js/filtros.js' %}"></script>
 </body>

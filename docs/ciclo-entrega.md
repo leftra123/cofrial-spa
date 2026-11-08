@@ -71,6 +71,15 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 
 **Visibilidad del mapa (RN-16):** el cliente ve el mapa en vivo solo con el pedido «Despachada» o «Camión en la puerta». Antes de salir ve «Tu pedido aún no sale»; al terminar ve el resumen de temperatura sin mapa.
 
+**Aviso para quien despacha (antes de la salida).** El menú interno muestra junto a «Flota» cuántos pedidos esperan camión, en cualquier pantalla y sin recargar (`static/js/por-despachar.js`). Lo ven administrador, gerencia y despachador; ventas y los clientes no cargan el script y reciben 403 si piden la ruta. Cuenta lo mismo que «Armar despacho» (`pedidos_por_despachar()`), incluidas las entregas no concretadas que esperan reprogramarse. Al abrir el contador aparece el aviso de `sugerencias.py`: qué camión conviene o «sin camión libre de ese rango». El despachador y el administrador reciben además enlaces a «Armar despacho» con el camión y los pedidos marcados; gerencia solo recibe el enlace a Flota, porque consulta y no arma viajes. Nada sale hasta que una persona confirma.
+
+| Método y ruta | Quién | Qué hace |
+|---|---|---|
+| `GET /flota/por-despachar/` | admin, gerencia, despachador | JSON `{total}`. Es lo que se consulta cada 30 s: un solo `COUNT`, sin IA |
+| `GET /flota/por-despachar/?detalle=1` | los mismos | Agrega `texto` (plantilla del código, sin IA) y `acciones` (`texto`, `url`). Se pide solo al abrir el contador |
+
+**Capacidad del camión:** ni el despacho manual, ni las sugerencias, ni el modo automático limitan por kilos, porque los productos no tienen peso en la base. Qué faltaría y cómo afecta al modelo está en `docs/decisiones.md`.
+
 ## 5. Rutas por calles: decisiones y respaldo
 
 - **Servidor, no navegador:** la ruta se pide a OSRM una vez, desde la web, y se guarda. Las pantallas no vuelven a pedirle nada.
@@ -115,3 +124,5 @@ Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegad
 ## 8. Pruebas
 
 `flota/tests_rutas.py`, `pedidos/tests_entrega.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.
+
+`flota/tests_por_despachar.py` cubre el contador: sigue a los pedidos, cuenta lo mismo que «Armar despacho», una sola consulta sin IA, quién queda fuera, los enlaces por rol, «sin camión libre de ese rango» y el límite conocido de la capacidad.

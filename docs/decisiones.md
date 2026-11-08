@@ -302,3 +302,37 @@ Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
 - **Tramos:** 1 a 30, 31 a 60, 61 a 90 y más de 90 días, según la factura más atrasada del cliente.
 - **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
 - **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.
+
+## Contador de pedidos por despachar y capacidad sin implementar (8-nov-2026)
+
+**Contador en el menú interno.** Quien despacha solo veía lo pendiente si entraba a `/flota/`. Ahora el menú lo muestra junto a «Flota» y se actualiza solo. Detalle de uso y rutas en `docs/ciclo-entrega.md`.
+
+- **Una ruta con dos niveles de costo:** `GET /flota/por-despachar/` es un solo `COUNT` (`.count()` descarta el `select_related` y el `prefetch_related` de `pedidos_por_despachar()`) y lo pide cada pestaña abierta cada 30 s. Con `?detalle=1` corre `sugerencias.calcular()`, que sí lee ítems, telemetría y camiones, pero solo cuando alguien abre el contador. Por eso no se reutilizó `/flota/sugerencias/`: consultarla cada 30 s habría repetido ese cálculo y gastado la cuota gratuita de la IA.
+- **El detalle usa `texto_base`, sin IA:** el aviso sale al instante y dice lo mismo («sin camión libre de ese rango», qué camión conviene). La redacción con IA sigue en el panel de `/flota/`.
+- **Sin consulta en cada página:** el número lo trae el JavaScript y no un procesador de contexto, así que abrir una pantalla no suma consultas. A cambio, el número aparece un instante después de cargar. Con la pestaña oculta no se consulta.
+- **Sin caché:** el equipo interno es pequeño y el conteo usa llaves foráneas indexadas; una caché agregaría un número atrasado sin un ahorro que se note.
+- **Límites que no se ven afectados:** el limitador de barridos solo cuenta respuestas 404, y la consulta no renueva la sesión (`SESSION_SAVE_EVERY_REQUEST` sigue apagado), así que una pestaña abierta no mantiene viva una sesión.
+- **Quién queda fuera:** la plantilla solo entrega el contador si `menu.flota` es verdadero, y la ruta repite el permiso en el servidor con `con_rol`. Ventas y clientes reciben 403 con o sin `detalle`. Gerencia ve el aviso, pero no recibe enlaces a «Armar despacho»: ya era la regla de su menú.
+- **Qué se cede:** es un aviso visual dentro de la aplicación. No suena ni manda correos, y en móvil el número aparece en el botón «Menú». El aviso no distingue qué pedidos son nuevos desde la última vez que se miró.
+
+**Capacidad en kg: no se implementa porque no hay datos para hacerlo.** `camion.capacidad_kg` existe, pero no hay con qué comparar. Se revisó antes de decidir:
+
+- `Producto` no tiene peso, y `orden_item` solo tiene `cantidad` y precio. `unidad_medida` tampoco ayuda: los 20 productos de la demostración se venden por `caja`, que no dice cuánto pesa.
+- Los kilos del SKU y del nombre son texto, no datos. En los 20 productos cargados el SKU y el nombre coinciden (`VAC-LOM-5K`, «Lomo vetado de vacuno 5 kg»), pero el SKU es texto libre: las pruebas de `/operacion/productos/nuevo/` crean `NUE-001`, y ese formulario no exige ningún formato. El nombre se puede editar. Además, esa cifra parece ser el contenido de la caja, sin el embalaje.
+- Sacar el peso del texto sería inventar el dato. Un producto con otro SKU no pesaría nada, o el cálculo fallaría sin que nadie lo note, y en la defensa no se podría sostener de dónde sale el número.
+
+**Qué faltaría y cómo afecta al modelo:**
+
+| Aspecto | Qué haría falta | Efecto en 3FN |
+|---|---|---|
+| Campo nuevo | `producto.peso_kg numeric(7,3) NOT NULL CHECK (peso_kg > 0)`: peso bruto de una unidad de venta, entregado por Cofrial. No puede ser entero porque hay unidades de menos de 1 kg | Depende solo de `producto_id`: la tabla sigue en 3FN y no se necesita otra |
+| Peso del viaje | Se calcula: `SUM(orden_item.cantidad × producto.peso_kg)` de las órdenes del despacho | No se guarda en `orden` ni en `despacho`: sería un dato derivado que puede quedar desalineado |
+| Historia | Si un peso cambia, también cambia el cálculo de los viajes pasados. `orden_item.peso_unitario_kg` lo congelaría, igual que `precio_unitario_clp`, solo si hiciera falta auditar | Una foto de la línea depende de la clave de la línea: tampoco rompe 3FN |
+| Pedido que no cabe en ningún camión | `orden.despacho_id` admite un solo despacho por orden, así que hoy un pedido no se puede repartir entre dos camiones. Habría que dividirlo al confirmarlo, como ya ocurre por rango de frío (RN-16), o cambiar la relación | Dividir no toca el modelo. Repartir una orden en varios despachos exigiría una tabla intermedia `orden`–`despacho` |
+| Datos | Una migración con `peso_kg` para cada producto, el campo en `ProductoForm`, y actualizar `informe/modelo/modelo.py`, `informe/modelo/esquema.sql` e `informe/04b-modelo-datos.md`. Mientras Cofrial no entregue los pesos, la columna tendría que admitir nulos y habría que decidir si un producto sin peso bloquea el despacho | Una columna con nulos transitorios no afecta 3FN |
+
+**Cambios en el código cuando exista el dato:** `despachar` sumaría el peso con las órdenes bloqueadas y rechazaría el exceso; `sugerencias.calcular` armaría los grupos por peso además de `MAX_PARADAS` y elegiría un camión donde quepan; `autodespacho` lo heredaría de ese cálculo, y su texto «sin camión apto» tendría que nombrar la capacidad.
+
+**Cuánto se pierde mientras tanto:** poco en la demostración. Si las etiquetas fueran correctas, todo el stock cargado sumaría 9 400 kg y la flota va de 3 000 a 10 000 kg por camión; un viaje de 6 paradas con pedidos comunes queda muy por debajo. En una operación real sí importa, y por eso queda registrado como límite. `CapacidadSinPesoTests`, en `flota/tests_por_despachar.py`, deja constancia del comportamiento actual y falla si alguien agrega el peso sin implementar la regla.
+
+Camiones de dos temperaturas quedan fuera de este cambio.

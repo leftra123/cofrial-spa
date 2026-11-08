@@ -114,6 +114,17 @@ svg.spark { max-width: 100%; height: auto; display: block; }
 .nav a:hover { background: var(--fondo); text-decoration: none; color: var(--texto); }
 .nav a.activo { background: var(--acento-suave); color: var(--acento); font-weight: 600; }
 .nav a.activo::before { content: ""; position: absolute; left: -14px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--lima); }
+.nav-fila { display: flex; align-items: center; gap: 4px; }
+.nav-fila > a { flex: 1; min-width: 0; }
+/* El contador es un botón: necesita el :not() para ganarle al CTA genérico, incluido su display (si no, `hidden` no lo ocultaría). */
+button.nav-n:not(#mp-brick-container button) { flex: none; min-width: 32px; min-height: 32px; padding: 0 8px; border-radius: 999px; font-size: .8125rem; font-weight: 700; box-shadow: none; }
+button.nav-n:not(#mp-brick-container button)[hidden], .nav-n-menu[hidden] { display: none; }
+button.nav-n.sin-actualizar:not(#mp-brick-container button) { opacity: .55; }
+.nav-n-menu { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--acento-fg); color: var(--acento); font-size: .75rem; font-weight: 700; line-height: 20px; text-align: center; }   /* el botón Menú ya usa el color de acento: se invierte */
+.nav-despacho { margin: 2px 0 8px; padding: 10px 12px; border-radius: 10px; background: var(--fondo); font-size: .8125rem; line-height: 1.45; color: var(--texto-2); }
+.nav-despacho p { margin: 0 0 6px; }
+.nav .nav-despacho a { display: flex; min-height: 32px; padding: 4px 0; border-radius: 0; color: var(--acento); font-weight: 600; }
+.nav .nav-despacho a:hover { background: none; text-decoration: underline; }
 .nav svg, .marca-logo svg { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .usuario { margin-top: auto; border-top: 1px solid var(--borde); padding: 14px 6px 0; display: flex; align-items: center; gap: 10px; }
 .usuario-datos { min-width: 0; flex: 1; font-size: .85rem; }
@@ -424,6 +435,8 @@ td select { padding: 6px 2rem 6px 8px; max-width: 220px; }
   .lateral.abierto { display: flex; animation: entra .18s ease-out; }
   .lateral .marca { display: none; }
   .nav a { padding: 12px 14px; }
+  button.nav-n:not(#mp-brick-container button) { min-width: 44px; min-height: 44px; }
+  .nav .nav-despacho a { min-height: 44px; padding: 8px 0; align-items: center; }
   .nav a.activo::before { left: -18px; }
   .contenido { padding: 20px 16px 40px; }
   .pagina-cab h1 { font-size: 1.45rem; }

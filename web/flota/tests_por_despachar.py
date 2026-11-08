@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.core.management import call_command
 from django.db import connection
+from django.db.models import Q
 from django.test import Client, TestCase
 from django.test.utils import CaptureQueriesContext
 
@@ -122,7 +123,7 @@ class DetalleTests(Base):
 
     def test_avisa_si_no_hay_camion_libre_de_ese_rango(self):
         pedido(CONGELADO)
-        congelados = Camion.objects.filter(rango_temperatura__nombre="Congelado")
+        congelados = Camion.objects.filter(Q(rango_temperatura__nombre="Congelado") | Q(rango_secundario__nombre="Congelado"))
         ids = list(congelados.values_list("camion_id", flat=True))
         congelados.update(activo=False)
         d = self.entrar().get(DETALLE).json()

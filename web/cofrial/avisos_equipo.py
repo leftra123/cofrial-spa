@@ -9,6 +9,7 @@ from crm import servicios as crm
 from flota import servicios as flota
 from flota.models import Despacho, Telemetria
 from pedidos import documentos
+from pedidos.models import Orden
 
 DESPACHAN = ("admin", "despachador")          # gerencia consulta: su enlace lleva a Flota y no a armar viajes
 VEN_FLOTA = ("admin", "gerencia", "despachador")
@@ -16,12 +17,18 @@ COMERCIAL = ("admin", "gerencia", "vendedor")
 
 
 def _viajes_con_ruptura(usuario, rol):
-    """Viajes en curso con una lectura de ruptura de frío desde que salieron. Una alerta de un viaje anterior no cuenta."""
-    alerta = Telemetria.objects.filter(camion_id=OuterRef("camion_id"), alerta_ruptura_frio=True, registrado_en__gte=OuterRef("salida_en"))
-    viajes = Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).filter(Exists(alerta))
-    if rol != "despachador":              # el vendedor ve solo su cartera; el despachador ve todos los camiones
-        viajes = viajes.filter(orden__direccion__cliente__in=crm.clientes_visibles(usuario)).distinct()
-    return viajes.count()
+    """Viajes en curso con una lectura de ruptura de frío desde que salieron. Una alerta de un viaje anterior no cuenta, y un viaje cuenta
+    una vez aunque tenga varias lecturas, varias órdenes o las dos cámaras con alerta.
+
+    El despachador responde por el camión: le importa cualquier cámara. Los demás responden por la carga: el viaje solo les cuenta si una orden
+    de su alcance va en la cámara con alerta, porque en un camión de dos cámaras la otra sigue en su rango."""
+    if rol == "despachador":
+        alerta = Telemetria.objects.filter(camion_id=OuterRef("camion_id"), alerta_ruptura_frio=True, registrado_en__gte=OuterRef("salida_en"))
+        return Despacho.objects.filter(salida_en__isnull=False, llegada_en__isnull=True).filter(Exists(alerta)).count()
+    alerta = Telemetria.objects.filter(camion_id=OuterRef("despacho__camion_id"), camara=OuterRef("camara"), alerta_ruptura_frio=True,
+                                       registrado_en__gte=OuterRef("despacho__salida_en"))
+    return (Orden.objects.filter(despacho__salida_en__isnull=False, despacho__llegada_en__isnull=True, direccion__cliente__in=crm.clientes_visibles(usuario))
+            .filter(Exists(alerta)).values("despacho_id").distinct().count())
 
 
 def _aviso(id_, n, singular, plural, url, urgente=False):

@@ -417,7 +417,8 @@ Pedido de Eric: que cada tipo de usuario reciba avisos sin recargar y que el sit
 
 - **Consulta periódica cada 15 s y no conexiones abiertas (SSE o WebSocket):** gunicorn corre con 1 proceso y 16 hilos, y cada conexión abierta ocuparía un hilo; ASGI y Redis serían infraestructura nueva a días de la defensa. Es la misma técnica de la campanita del cliente.
 - **Costo:** cada aviso es un conteo. Con el administrador son 15 consultas y unos 5 ms en una base local (4 de ellas son del rol). No se usó `ordenes_afectadas`, que hace una consulta por orden; una prueba comprueba que el número de consultas no crece con los pedidos.
-- **El aviso de frío cuenta viajes en curso con una alerta desde su salida:** un viaje que ya llegó o una alerta anterior a la salida no cuentan.
+- **El aviso de frío cuenta viajes en curso con una alerta desde su salida:** un viaje que ya llegó o una alerta anterior a la salida no cuentan, y un viaje cuenta una vez aunque tenga varias lecturas, varias órdenes o las dos cámaras con alerta.
+- **Camiones de dos cámaras:** el despachador ve la alerta de cualquier cámara, porque responde por el camión. Ventas, gerencia y administración la ven solo si una orden de su alcance va en esa cámara (`orden.camara`), porque la otra sigue en su rango. Un carrito mixto son dos órdenes (RN-16), y por eso cuenta como dos pedidos por despachar: lo mismo que lista «Armar despacho».
 - **Los avisos no se guardan:** se calculan y desaparecen cuando se hace el trabajo. Sin tablas nuevas ni «marcar como leído»; el modelo de datos no cambia.
 - **Pestaña oculta:** sigue consultando solo si hay permiso de notificaciones, porque es justo cuando sirven. El navegador puede espaciar esas consultas, hasta una por minuto, en una pestaña que lleva rato oculta.
 - **Varias pestañas:** la última cifra conocida y las notificaciones enviadas se recuerdan en `localStorage`, y cada notificación lleva un `tag`, para no repetirla por cada pestaña.

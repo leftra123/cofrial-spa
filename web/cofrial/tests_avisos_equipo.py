@@ -16,7 +16,7 @@ from crm.models import Requerimiento
 from crm.tests import CLAVE
 from flota import servicios
 from flota.models import Telemetria
-from flota.tests_autodespacho import pedido
+from flota.tests_autodespacho import CONGELADO, REFRIGERADO, pedido
 from pedidos import documentos
 from pedidos import servicios as pedidos
 from pedidos.models import EstadoOrden, Orden
@@ -125,6 +125,55 @@ class ContenidoTests(Base):
         for usuario in (DESPACHO, VENDEDORA, GERENCIA, ADMIN):
             with self.subTest(usuario=usuario):
                 self.assertEqual(self.avisos(usuario)["frio"]["n"], 1)
+
+    def viaje_de_dos_camaras(self):
+        """Un carrito mixto en un camión de dos cámaras: dos órdenes, una por rango, en un solo viaje."""
+        refrigerado, congelado = pedido(), pedido(CONGELADO)
+        camion = next(x for x in servicios.camiones_libres() if x.dos_camaras)
+        despacho = servicios.despachar(camion.camion_id, [refrigerado.pk, congelado.pk])
+        refrigerado.refresh_from_db(); congelado.refresh_from_db()
+        self.assertEqual((refrigerado.camara, congelado.camara), (1, 2))
+        return camion, refrigerado, congelado, despacho
+
+    def lectura_con_alerta(self, camion, camara):
+        Telemetria.objects.create(camion=camion, camara=camara, temp_camara=9.0, lat=-38.7, long=-72.6, combustible_pct=70, alerta_ruptura_frio=True)
+
+    def test_dos_camaras_con_alerta_cuentan_un_viaje(self):
+        camion, *_ = self.viaje_de_dos_camaras()
+        self.lectura_con_alerta(camion, 1)
+        self.lectura_con_alerta(camion, 2)
+        for usuario in (DESPACHO, VENDEDORA, GERENCIA, ADMIN):
+            with self.subTest(usuario=usuario):
+                self.assertEqual(self.avisos(usuario)["frio"]["n"], 1)
+
+    def test_la_ruptura_se_asocia_a_la_camara_de_la_carga(self):
+        camion, refrigerado, congelado, _ = self.viaje_de_dos_camaras()
+        Orden.objects.filter(pk=refrigerado.pk).update(direccion=refrigerado.direccion)     # la carga refrigerada es de la cartera de la vendedora
+        Orden.objects.filter(pk=congelado.pk).update(direccion=Cliente.objects.filter(vendedor__isnull=True).first().direccion_set.first())
+        self.lectura_con_alerta(camion, 2)                                                   # falla la cámara de la carga que no es de su cartera
+        self.assertNotIn("frio", self.avisos(VENDEDORA))
+        self.assertEqual(self.avisos(GERENCIA)["frio"]["n"], 1)
+        self.lectura_con_alerta(camion, 1)
+        self.assertEqual(self.avisos(VENDEDORA)["frio"]["n"], 1)
+
+    def test_el_despachador_ve_una_camara_con_alerta_aunque_vaya_vacia(self):
+        orden = pedido()
+        camion = next(x for x in servicios.camiones_libres() if x.dos_camaras)
+        servicios.despachar(camion.camion_id, [orden.pk])
+        self.lectura_con_alerta(camion, 2)
+        self.assertEqual(self.avisos(DESPACHO)["frio"]["n"], 1)
+        self.assertNotIn("frio", self.avisos(ADMIN))         # nadie tiene carga en esa cámara
+
+    def test_un_carrito_mixto_cuenta_lo_mismo_que_armar_despacho(self):
+        c = self.entrar(DESPACHO)
+        antes = {a["id"]: a["n"] for a in c.get(URL).json()["avisos"]}.get("por_despachar", 0)
+        cliente = Cliente.objects.get(rut=HOSPITAL)
+        for sku in (REFRIGERADO, CONGELADO):
+            pedidos.agregar(cliente, Producto.objects.get(sku=sku).pk, 1)
+        ordenes = pedidos.generar_ordenes(cliente, cliente.direccion_set.first().pk, "OC-MIXTA")
+        self.assertEqual(len(ordenes), 2)                    # RN-16: una orden por rango, cada una con su número
+        self.assertEqual({a["id"]: a["n"] for a in c.get(URL).json()["avisos"]}["por_despachar"], antes + 2)
+        self.assertEqual(antes + 2, len(servicios.pedidos_por_despachar()))
 
     def test_el_vendedor_solo_ve_el_frio_y_los_reclamos_de_su_cartera(self):
         hospital = Cliente.objects.get(rut=HOSPITAL)

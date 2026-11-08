@@ -170,9 +170,11 @@ def multiplicador_vigente(con):
 
 
 class Camion:
-    def __init__(self, camion_id, tmin, tmax):
+    def __init__(self, camion_id, tmin, tmax, segunda=None):
         self.id = camion_id
         self.tmin, self.tmax = tmin, tmax
+        self.segunda = None if segunda is None else {"tmin": segunda[0], "tmax": segunda[1], "objetivo": (segunda[0] + segunda[1]) / 2,
+                                                     "temp": (segunda[0] + segunda[1]) / 2, "ruptura": 0}      # cámara 2 de los camiones que llevan dos rangos
         self.objetivo = (tmin + tmax) / 2
         self.temp = self.objetivo
         azar = random.Random(camion_id)                          # cada camión tiene siempre el mismo puesto en la base (a pocos metros del resto)
@@ -382,6 +384,22 @@ class Camion:
         self._despues_de_leer(alerta)
         return temp, round(lat, 6), round(lon, 6), self.combustible, alerta
 
+    def paso_segunda(self):
+        """Lectura de la cámara 2: la posición es la del camión, pero la temperatura y las fallas son suyas. Los escenarios fallan en la cámara 1."""
+        s = self.segunda
+        if s is None:
+            return None
+        if s["ruptura"] == 0 and random.random() < PROB_RUPTURA:
+            s["ruptura"] = random.randint(6, 14)
+            log.warning("Falla de frío simulada en la cámara 2 de %s durante %d lecturas", self.id, s["ruptura"])
+        if s["ruptura"] > 0:
+            s["ruptura"] -= 1
+            s["temp"] += random.uniform(0.6, 1.4)
+        else:
+            s["temp"] += (s["objetivo"] - s["temp"]) * 0.4 + random.uniform(-0.2, 0.2)
+        temp = round(s["temp"], 1)
+        return temp, temp > s["tmax"] or temp < s["tmin"]
+
 
 ESTADO_ORDEN = "(SELECT estado_orden_id FROM estado_orden WHERE nombre = '{}')"
 # Misma regla que pedidos.servicios.resolver_entrega. El texto y los ids entran siempre como parámetros, nunca dentro de la sentencia.
@@ -445,9 +463,10 @@ def confirmar_vencidas(con):
 
 def rangos_de(con, ids):
     filas = con.execute(
-        "SELECT c.camion_id, r.temp_min_c, r.temp_max_c FROM camion c JOIN rango_temperatura r USING (rango_temperatura_id) WHERE c.camion_id = ANY(%s)",
+        "SELECT c.camion_id, r.temp_min_c, r.temp_max_c, s.temp_min_c, s.temp_max_c FROM camion c JOIN rango_temperatura r USING (rango_temperatura_id) "
+        "LEFT JOIN rango_temperatura s ON s.rango_temperatura_id = c.rango_secundario_id WHERE c.camion_id = ANY(%s)",
         (ids,)).fetchall()
-    return {f[0]: (float(f[1]), float(f[2])) for f in filas}
+    return {f[0]: (float(f[1]), float(f[2]), None if f[3] is None else (float(f[3]), float(f[4]))) for f in filas}
 
 
 def main():
@@ -458,8 +477,8 @@ def main():
         inicio = time.monotonic()
         try:
             if len(flota) < len(IDS) and (not flota or lecturas_hechas % 12 == 0):      # los que aún no existen en la base se reintentan cada minuto
-                for cid, (tmin, tmax) in rangos_de(con, [i for i in IDS if i not in flota]).items():
-                    flota[cid] = Camion(cid, tmin, tmax)
+                for cid, (tmin, tmax, segunda) in rangos_de(con, [i for i in IDS if i not in flota]).items():
+                    flota[cid] = Camion(cid, tmin, tmax, segunda)
                 if len(flota) < len(IDS):
                     log.warning("Faltan %d camiones en la base (se reintenta); activos: %d", len(IDS) - len(flota), len(flota))
             viajes = viajes_en_curso(con, list(flota))
@@ -474,7 +493,10 @@ def main():
                 c.asignar(viajes.get(c.id))
                 c.aplicar_escenario(escenarios.get(c.id))
                 temp, lat, lon, comb, alerta = c.paso()
-                filas.append((c.id, temp, lat, lon, comb, alerta, c.lectura_forzada))
+                filas.append((c.id, temp, lat, lon, comb, alerta, c.lectura_forzada, 1))
+                segunda = c.paso_segunda()
+                if segunda:
+                    filas.append((c.id, segunda[0], lat, lon, comb, segunda[1], False, 2))
                 aplicar_eventos(con, c)
             confirmadas = confirmar_vencidas(con)
             if confirmadas:
@@ -482,8 +504,8 @@ def main():
             if filas:
                 with con.transaction():
                     con.cursor().executemany(
-                        'INSERT INTO telemetria (camion_id, temp_camara, lat, "long", combustible_pct, alerta_ruptura_frio, forzada, registrado_en) '
-                        "VALUES (%s, %s, %s, %s, %s, %s, %s, now())", filas)
+                        'INSERT INTO telemetria (camion_id, temp_camara, lat, "long", combustible_pct, alerta_ruptura_frio, forzada, camara, registrado_en) '
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, now())", filas)
                 lecturas_hechas += 1
                 if lecturas_hechas % 12 == 1:
                     log.info("%d lecturas insertadas; camiones en alerta: %d", len(filas), sum(1 for f in filas if f[5]))

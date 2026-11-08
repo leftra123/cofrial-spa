@@ -44,7 +44,7 @@ class Tabla:
 
 
 ETIQUETAS = {
-    "sku": "SKU", "descripcion": "Descripción", "categoria": "Categoría", "unidad_medida": "Unidad de medida", "rango_temperatura": "Rango de temperatura",
+    "sku": "SKU", "descripcion": "Descripción", "categoria": "Categoría", "unidad_medida": "Unidad de medida", "rango_temperatura": "Rango de temperatura", "rango_secundario": "Segunda cámara",
     "temp_min_c": "Temperatura mínima (°C)", "temp_max_c": "Temperatura máxima (°C)", "camion_id": "Código", "capacidad_kg": "Capacidad (kg)",
     "lista_precio": "Lista de precios", "dias_credito": "Días de crédito", "rut": "RUT", "email": "Correo", "telefono": "Teléfono", "region": "Región",
     "calle_numero": "Calle y número", "es_principal": "Dirección principal", "nombre_contacto": "Nombre del contacto", "monto_estimado_clp": "Monto estimado (CLP)",
@@ -143,6 +143,9 @@ def _validar_rango(form, rango):
 
 
 def _validar_camion(form, camion):
+    d = form.cleaned_data
+    if d.get("rango_secundario") and d.get("rango_secundario") == d.get("rango_temperatura"):
+        form.add_error("rango_secundario", "La segunda cámara debe ser de otro rango; si no, déjala vacía.")
     if form.cleaned_data.get("capacidad_kg") is not None and form.cleaned_data["capacidad_kg"] <= 0:
         form.add_error("capacidad_kg", "La capacidad debe ser mayor que cero.")
 
@@ -214,8 +217,8 @@ _LISTA = [
     Tabla("listas", "Listas de precio", "Catálogo", "cobranza", ListaPrecio, [("Nombre", "nombre")], ("nombre",), ("nombre",), orden=("nombre",),
           ayuda="Borrar una lista borra también sus precios. Los precios se editan en cada producto."),
     Tabla("camiones", "Camiones", "Flota", "camion", Camion,
-          [("Código", "camion_id"), ("Patente", "patente"), ("Capacidad kg", "capacidad_kg"), ("Rango", "rango_temperatura.nombre"), ("Activo", "activo")],
-          ("camion_id", "patente"), ("camion_id", "patente", "capacidad_kg", "rango_temperatura", "activo"),
+          [("Código", "camion_id"), ("Patente", "patente"), ("Capacidad kg", "capacidad_kg"), ("Rango", "rango_temperatura.nombre"), ("Segunda cámara", "rango_secundario.nombre"), ("Activo", "activo")],
+          ("camion_id", "patente"), ("camion_id", "patente", "capacidad_kg", "rango_temperatura", "rango_secundario", "activo"),
           solo_al_crear=("camion_id",), ajustar=_ajustar_camion, validar=_validar_camion, ayuda=AVISO_SIMULADOR, orden=("camion_id",), relacionados=("rango_temperatura",)),
     Tabla("tipos-cliente", "Tipos de cliente", "Clientes", "clientes", TipoCliente,
           [("Código", "codigo"), ("Nombre", "nombre"), ("Lista de precios", "lista_precio.nombre"), ("Días de crédito", "dias_credito")],

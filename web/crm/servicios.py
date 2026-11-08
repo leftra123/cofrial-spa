@@ -408,9 +408,9 @@ def indicadores(usuario):
 
 
 # ---------------------------------------------------------------- RN-17 a RN-22: documentos y cobranza
-def cobranza(usuario):
-    """Lo entregado que falta facturar y las facturas por cobrar, dentro de la cartera que el usuario puede ver."""
-    return documentos.resumen_cobranza(clientes_visibles(usuario))
+def cobranza(usuario, estado=""):
+    """Lo entregado que falta facturar, las facturas por cobrar (filtradas por `estado`) y los clientes morosos, dentro de la cartera que el usuario puede ver."""
+    return documentos.filtrar_facturas(documentos.resumen_cobranza(clientes_visibles(usuario)), estado)
 
 
 def _exigir_edicion(usuario):

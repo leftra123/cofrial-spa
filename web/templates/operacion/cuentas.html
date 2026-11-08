@@ -1,7 +1,7 @@
-{% extends "operacion/base.html" %}
+{% extends "operacion/base.html" %}{% load iconos %}
 {% block titulo %}Usuarios | Cofrial SpA{% endblock %}
 {% block operacion %}
-<div class="pagina-cab"><div><h1>Usuarios</h1><p class="sub">{{ total }} cuenta{{ total|pluralize }} en total. Elige un tipo para ver solo esas cuentas o para agregar una nueva; en cada fila puedes asignar una clave. La clave nunca se muestra: se guarda cifrada.</p></div></div>
+<div class="pagina-cab"><div><h1>Usuarios</h1><p class="sub">{{ total }} cuenta{{ total|pluralize }} en total. Elige un tipo para ver solo esas cuentas o para agregar una nueva; en cada fila puedes asignar una clave o activar y desactivar la cuenta. La clave nunca se muestra: se guarda cifrada.</p></div></div>
 <div class="rejilla tipos-op" role="list" aria-label="Tipos de usuario">
 {% for t in tarjetas %}<div class="tarjeta-ui tipo-op{% if t.activa %} activa{% endif %}" role="listitem">
   <a class="tipo-filtro" href="?tipo={{ t.rol }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if t.activa %} aria-current="true"{% endif %}><span class="tipo-n">{{ t.n }}</span><span class="tipo-nombre">{{ t.nombre }}</span><span class="solo-lector"> (filtrar la tabla)</span></a>
@@ -18,7 +18,7 @@
 <td>{{ c.nombre|default:"—" }}</td>
 <td>{{ c.rol }}</td>
 <td>{% if c.u.is_active %}<span class="chip entregado">Activa</span>{% else %}<span class="chip pendiente">Inactiva</span>{% endif %}</td>
-<td><a class="btn btn-sec" href="/operacion/cuentas/{{ c.u.pk }}/clave/">Asignar clave<span class="solo-lector"> a {{ c.u.username }}</span></a></td>
+<td><div class="acciones"><a class="btn btn-sec" href="/operacion/cuentas/{{ c.u.pk }}/clave/">Asignar clave<span class="solo-lector"> a {{ c.u.username }}</span></a>{% if not c.es_yo %}<form method="post" action="/operacion/cuentas/{{ c.u.pk }}/activa/" class="en-linea">{% csrf_token %}<input type="hidden" name="activa" value="{% if c.u.is_active %}0{% else %}1{% endif %}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="tipo" value="{{ tipo }}"><button class="btn btn-sec" type="submit"{% if c.u.is_active %} data-confirmar="¿Desactivar?"{% endif %}>{% if c.u.is_active %}{% icono "desactivar" %}Desactivar{% else %}{% icono "activar" %}Activar{% endif %}<span class="solo-lector"> {{ c.u.username }}</span></button></form>{% endif %}</div></td>
 </tr>
 {% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="lupa" titulo="Ninguna cuenta coincide" texto="Prueba con otra parte del correo, del nombre o del RUT, o quita el filtro de tipo." %}{% endfor %}
 </tbody></table></div>

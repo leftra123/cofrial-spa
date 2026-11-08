@@ -284,6 +284,25 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
   - La distancia restante podía medirse sobre la vuelta o sobre un tramo ya recorrido. Ahora se mide solo entre la última parada atendida y la de destino.
 - **Qué se cede:** la detención de una parada anterior no se suma a la hora de llegada, porque la web no conoce `DETENCION_LECTURAS`; a 60× son 30 s por parada, dentro de la ventana de 2 minutos solo si hay una o dos. Reiniciar el simulador en medio de un viaje largo lo hace recomenzar desde la base, como ya ocurría, y eso pesa más en un viaje de 3 horas.
 
+## Panel del administrador sin Django (7-nov-2026)
+
+Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
+
+- **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
+- **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
+- **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».
+- **Datos de demostración solo la primera vez:** `cargar_demo --solo-primera-vez`. Antes corría en cada arranque y, con el panel, una etapa renombrada impedía partir al sitio. `FORZAR_CARGA_DEMO=1` carga lo nuevo, antes de editar datos.
+- **Solicitudes de empresa:** se reconocen por ser B2B, sin vendedor y con cuenta inactiva. Activar y desactivar respeta esa cola para no aprobar ni borrar por error.
+- **Sin edición manual de telemetría, despachos, carritos, documentos ni pagos:** los genera el flujo y editarlos rompe la trazabilidad.
+- **Íconos:** el juego Lucide de `react-icons`, generado una vez a `catalogo/iconos.json` con `herramientas/iconos/generar.mjs`. La app sigue sin React y Docker no usa Node.
+- **CRM de 5 entradas:** Panel, Ventas, Clientes, Atención y Alertas de frío, con subpestañas dentro de cada grupo. Las URL no cambiaron.
+
+## Clientes morosos en Cobranza (07-nov-2026)
+- **Moroso** es el cliente con al menos una factura vencida; una factura que vence hoy todavía no cuenta. La lista va de mayor a menor monto vencido y separa `Vencido` de `Deuda total`, que suma también lo que aún no vence.
+- **Tramos:** 1 a 30, 31 a 60, 61 a 90 y más de 90 días, según la factura más atrasada del cliente.
+- **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
+- **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.
+
 ## Torre de control (8-nov-2026)
 
 Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qué trata el negocio y que cada punto de la rúbrica del Hito 2 se cumple. Diseño completo en `docs/superpowers/specs/2026-11-08-torre-de-control-design.md`. **Estado: implementada y probada en local; no está desplegada en AWS.**

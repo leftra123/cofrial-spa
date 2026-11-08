@@ -1,0 +1,11 @@
+{% extends "operacion/base.html" %}{% load iconos %}
+{% block titulo %}Datos del sistema | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Datos del sistema</h1><p class="sub">Las tablas que ordenan el negocio. Cada una avisa qué se puede cambiar y qué protege el sistema.</p></div></div>
+{% for g in grupos %}
+<div class="seccion"><h2>{{ g.nombre }}</h2></div>
+<div class="rejilla tablas-op">
+{% for x in g.tablas %}<a class="tarjeta-ui tabla-op" href="/operacion/datos/{{ x.t.slug }}/">{% icono x.t.icono %}<span class="tabla-op-nombre">{{ x.t.titulo }}</span><span class="tabla-op-n">{{ x.n }}</span></a>{% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

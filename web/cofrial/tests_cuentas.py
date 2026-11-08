@@ -98,7 +98,7 @@ class RegistroEmpresaTests(TestCase):
         r = self.client.get("/crm/solicitudes/")
         self.assertContains(r, "Hotel Villarrica SpA")
         self.assertContains(r, "Aprobar y asignármela")
-        self.assertContains(self.client.get("/crm/"), 'aria-label="1 pendiente"')
+        self.assertContains(self.client.get("/crm/"), 'aria-label="1 solicitud pendiente"')
         r = self.client.post(f"/crm/solicitudes/{c.pk}/aprobar/", follow=True)
         self.assertContains(r, "ya puede ingresar")
         self.assertContains(r, "No hay solicitudes pendientes")

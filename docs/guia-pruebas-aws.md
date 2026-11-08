@@ -24,7 +24,7 @@ Cada cuenta tiene **su propia clave**. No están en el repositorio: se calculan 
 | `vendedor2@cofrial.cl` | Vendedor (cartera: Supermercados del Sur) | Permisos entre vendedores |
 | `gerencia@cofrial.cl` | Gerencia | Lee todo, no modifica |
 | `despacho@cofrial.cl` | Despachador | Solo alertas de frío y flota |
-| `admin@cofrial.cl` | Administrador | Todo, incluida la flota y `/admin/` |
+| `admin@cofrial.cl` | Administrador | Todo, incluida la flota y `/operacion/` |
 
 ## Paso 0: encender y verificar (siempre, antes de probar a mano)
 

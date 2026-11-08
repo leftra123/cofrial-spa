@@ -27,18 +27,18 @@ Solo el administrador (menú **Operación del sistema**, o `http://IP/operacion/
 - **Claves de cuentas** (`/operacion/cuentas/`): lista con búsqueda por correo, nombre o RUT; «Asignar clave» guarda una clave nueva. La clave se valida y se guarda con hash; no se muestra ni se registra. Al cambiar la propia, la sesión del administrador sigue abierta. La pantalla no desactiva cuentas ni cambia roles.
 - **Reponer stock** (`/operacion/stock/`): suma unidades a un producto (ver `docs/decisiones.md`).
 
-### A. Desde la web de administración (`/admin/`), sin comandos
-Entrar a `http://IP/admin/` como `admin`.
+### A. Desde la aplicación, sin comandos
+Todo se hace en `http://IP/operacion/` como administrador; ninguna pantalla enlaza a `/admin/`, que queda solo como respaldo hasta después de la defensa.
 
-| Quiero crear | Pasos |
+| Quiero | Dónde |
 |---|---|
-| **Vendedor** | Usuarios, Agregar (usuario y clave; marcar **Es staff**); en Grupos elegir **vendedores**. Luego Vendedores, Agregar: elegir ese usuario y poner el nombre. |
-| **Gerencia** | Usuarios, Agregar con **Es staff**; Grupos: **gerencia**. |
-| **Despachador** | Usuarios, Agregar con **Es staff**; Grupos: **despachadores**. |
-| **Cliente (B2B o B2C)** | Usuarios, Agregar (sin Es staff). Luego Clientes, Agregar: elegir el usuario, el tipo (B2B o B2C), RUT, nombre y correo, y el vendedor si es B2B; en la parte de abajo, agregar su **dirección** (marcar «es principal»). |
-| **Administrador** | Solo por comando (sección B): un administrador tiene todos los permisos. |
-
-Para cambiar la clave de alguien: Usuarios, abrir el usuario, enlace «este formulario» junto a la clave.
+| **Crear una cuenta de cualquier tipo** | Usuarios, botón Agregar de la tarjeta del tipo |
+| **Cambiar una clave** | Usuarios, «Asignar clave» |
+| **Activar o desactivar una cuenta** | Usuarios, botón de cada fila. No se desactiva la propia cuenta, el último administrador, un B2B sin vendedor ni un vendedor con cartera |
+| **Productos y precios** | Productos |
+| **Avanzar o cancelar una orden** | Órdenes, antes de que salga el camión |
+| **Camiones, clientes, comunas, etapas y demás tablas** | Datos |
+| **Probar la IA o podar telemetría** | Sistema |
 
 ### B. Con comandos (en un computador con el proyecto, o dentro del contenedor)
 Se ejecutan desde la carpeta `web/`. En AWS exigen entrar a la EC2 (`docker compose -f aws/docker-compose.web.yml --env-file .env exec web python manage.py ...`), hoy no disponible por SSH.
@@ -75,11 +75,11 @@ Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los no
 | `abastecimiento@hospital.test` | Cliente institucional B2B (Hospital Regional de Temuco) |
 | `ana@correo.test` | Cliente particular B2C (Ana Pérez) |
 
-Cada cuenta tiene su propia clave, derivada de `DEMO_PASSWORD` (las administradoras, de `ADMIN_PASSWORD`); se fija al crear la cuenta y no se pisa al reiniciar. La hoja con todas se genera con `python3 web/clientes/cuentas_demo.py --env aws/.estado/secretos.env --url http://IP --salida aws/.estado/hoja-cuentas.md`; cada persona la cambia en `/cuenta/clave/` y el administrador desde `/admin/`. Detalle en `docs/cuentas-y-permisos.md`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
+Cada cuenta tiene su propia clave, derivada de `DEMO_PASSWORD` (las administradoras, de `ADMIN_PASSWORD`); se fija al crear la cuenta y no se pisa al reiniciar. La hoja con todas se genera con `python3 web/clientes/cuentas_demo.py --env aws/.estado/secretos.env --url http://IP --salida aws/.estado/hoja-cuentas.md`; cada persona la cambia en `/cuenta/clave/` y el administrador desde `/operacion/cuentas/`. Detalle en `docs/cuentas-y-permisos.md`. *Supermercados del Sur* es un cliente del CRM **sin cuenta de acceso**. Los clientes particulares nuevos se registran solos en `/cuenta/registro/`.
 
 **Si una clave de prueba se filtró:** las claves viven en la base (RDS), no en el contenedor, así que recrear la EC2 no las cambia.
-1. La cuenta afectada la cambia en `/cuenta/clave/`, o el administrador desde `/operacion/cuentas/` («Asignar clave») o `/admin/` (Usuarios, «Cambiar contraseña»). Avisar el cambio por mensaje directo.
-2. Para rotarlas todas a la vez hace falta ejecutar `cambiar_clave_demo` contra la base: en local, `DEMO_PASSWORD=la-nueva docker compose exec -e DEMO_PASSWORD web python manage.py cambiar_clave_demo`; en AWS no hay SSH, así que se hace cuenta por cuenta desde `/admin/`.
+1. La cuenta afectada la cambia en `/cuenta/clave/`, o el administrador desde `/operacion/cuentas/` («Asignar clave»). Avisar el cambio por mensaje directo.
+2. Para rotarlas todas a la vez hace falta ejecutar `cambiar_clave_demo` contra la base: en local, `DEMO_PASSWORD=la-nueva docker compose exec -e DEMO_PASSWORD web python manage.py cambiar_clave_demo`; en AWS no hay SSH, así que se hace cuenta por cuenta desde `/operacion/cuentas/`.
 3. Después, regenerar la hoja con el `DEMO_PASSWORD` nuevo.
 
 ### Correo (para «¿Olvidaste tu clave?»)

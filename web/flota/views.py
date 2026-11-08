@@ -95,8 +95,8 @@ def sugerencias_despacho(request):
 @require_GET
 @con_rol("admin", "gerencia", "despachador")
 def por_despachar(request):
-    """Contador del menú interno. Sin `detalle` es lo que cada pantalla pregunta cada 30 s, así que es un solo COUNT: ni sugerencias ni IA.
-    Con `detalle=1` (al abrir el contador) agrega el aviso y a dónde ir, con el texto del código: abrirlo no gasta la cuota gratuita."""
+    """Contador junto a «Flota». Sin `detalle` es un solo COUNT, sin sugerencias ni IA. El menú recibe ese número con la consulta común de
+    `/api/avisos-equipo/`; con `detalle=1` (al abrir el contador) agrega el aviso y a dónde ir, con el texto del código: abrirlo no gasta la cuota gratuita."""
     datos = {"total": servicios.pedidos_por_despachar().count()}
     if request.GET.get("detalle") == "1":
         viajes, resto = sugerencias.calcular()

@@ -76,7 +76,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                     self.assertTrue(r["Location"].startswith("/cuenta/entrar/"), f"{url} -> {r['Location']}")
 
     def test_la_api_no_responde_datos_sin_sesion(self):
-        for url in ("/api/flota/", "/api/pedidos/", "/api/pedidos/1/seguimiento/"):
+        for url in ("/api/flota/", "/api/pedidos/", "/api/pedidos/1/seguimiento/", "/api/avisos-equipo/"):
             with self.subTest(url=url):
                 r = self.anonimo().get(url)
                 self.assertEqual(r.status_code, 403)

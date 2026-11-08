@@ -75,8 +75,10 @@ Todos exigen sesión de cliente y devuelven 404 si la orden no es propia (una or
 
 | Método y ruta | Quién | Qué hace |
 |---|---|---|
-| `GET /flota/por-despachar/` | admin, gerencia, despachador | JSON `{total}`. Es lo que se consulta cada 30 s: un solo `COUNT`, sin IA |
+| `GET /flota/por-despachar/` | admin, gerencia, despachador | JSON `{total}`: un solo `COUNT`, sin IA. El menú recibe este número con `/api/avisos-equipo/` |
 | `GET /flota/por-despachar/?detalle=1` | los mismos | Agrega `texto` (plantilla del código, sin IA) y `acciones` (`texto`, `url`). Se pide solo al abrir el contador |
+
+**Avisos en tiempo real por tipo de usuario.** El equipo tiene una campana en el menú (`static/js/avisos-equipo.js`, `GET /api/avisos-equipo/`, cada 15 s) y el cliente conserva la suya (`/api/avisos/`), que ahora también trae `stock_n`. Cuando un número sube aparecen un mensaje dentro de la página, el número en el título de la pestaña y, si la persona dio permiso, una notificación del navegador. Qué ve cada rol y por qué está en `docs/decisiones.md`.
 
 **Capacidad del camión:** ni el despacho manual, ni las sugerencias, ni el modo automático limitan por kilos, porque los productos no tienen peso en la base. Qué faltaría y cómo afecta al modelo está en `docs/decisiones.md`.
 

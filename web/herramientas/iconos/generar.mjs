@@ -7,7 +7,7 @@ import * as lu from "react-icons/lu";
 
 const ICONOS = {
   inicio: "LuHouse", catalogo: "LuPackage", carrito: "LuShoppingCart", pedidos: "LuClipboardList", soporte: "LuMessageCircle",
-  camion: "LuTruck", crm: "LuUsers", "alerta-frio": "LuThermometerSnowflake", bi: "LuChartColumn", demo: "LuZap", operacion: "LuLayers",
+  campana: "LuBell", camion: "LuTruck", crm: "LuUsers", "alerta-frio": "LuThermometerSnowflake", bi: "LuChartColumn", demo: "LuZap", operacion: "LuLayers",
   panel: "LuLayoutDashboard", ventas: "LuHandshake", clientes: "LuContact", atencion: "LuHeadset", embudo: "LuFilter", demanda: "LuHourglass",
   solicitudes: "LuInbox", cobranza: "LuWallet", requerimientos: "LuMessagesSquare", ia: "LuSparkles", usuarios: "LuUserCog", productos: "LuBoxes",
   stock: "LuPackagePlus", ordenes: "LuReceipt", datos: "LuDatabase", sistema: "LuSettings", agregar: "LuPlus", editar: "LuPencil", borrar: "LuTrash2",

@@ -18,11 +18,13 @@
 {% with ruta=request.path %}
 <header class="barra-movil">
   <a class="marca" href="{{ inicio_url }}"><img class="marca-icono" src="{% static 'img/marca/icono-app.png' %}" alt="" width="32" height="32">Cofrial</a>
-  <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú{% if menu.flota %}<span class="nav-n-menu" id="despacho-n-menu" hidden></span>{% endif %}</button></span>
+  <span style="display:flex;gap:8px;align-items:center">{% include "componentes/tema_btn.html" %}<button type="button" class="menu-btn" aria-expanded="false" aria-controls="lateral" id="menu-btn">Menú{% if menu.crm %}<span class="nav-n-menu" id="avisos-equipo-n-menu" hidden></span>{% endif %}</button></span>
 </header>
 <div class="app">
   <aside class="lateral" id="lateral">
     <a class="marca" href="{{ inicio_url }}"><img class="marca-icono" src="{% static 'img/marca/icono-app.png' %}" alt="" width="32" height="32"><span>Cofrial SpA<small>Cadena de frío</small></span></a>
+    {% if menu.crm %}<div class="nav-avisos"><button type="button" class="nav-campana" id="avisos-equipo-btn" aria-expanded="false" aria-controls="avisos-equipo-panel">{% icono "campana" %}<span>Avisos</span><span class="nav-campana-n" id="avisos-equipo-n" hidden></span></button>
+      <div class="nav-despacho" id="avisos-equipo-panel" role="region" aria-label="Avisos" hidden><p>Cargando avisos…</p></div></div>{% endif %}
     <nav class="nav" aria-label="Principal">
       {% if not user.is_authenticated %}<a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}>{% icono "inicio" %}Inicio</a>{% endif %}
       {% if menu.tienda or not user.is_authenticated %}
@@ -48,6 +50,7 @@
         <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
         <div class="usuario-datos"><b>{{ user.username }}</b>{% if etiqueta_cuenta %}<small class="rol-cuenta">{{ etiqueta_cuenta }}</small>{% endif %}
           <a class="enlace" href="/cuenta/clave/">Cambiar mi clave</a>
+          {% if menu.crm or menu.cliente %}<button type="button" class="enlace" data-permisos-abrir>Permisos</button>{% endif %}
           <a class="enlace" href="/portada/">Portada pública</a>
           <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Cerrar sesión</button></form></div>
         {% include "componentes/tema_btn.html" %}
@@ -70,11 +73,15 @@
     b.addEventListener("click", function () { var a = l.classList.toggle("abierto"); b.setAttribute("aria-expanded", a); });
   })();
 </script>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+{% if menu.crm or menu.cliente %}{% include "componentes/permisos.html" %}{% endif %}
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
 {% block scripts %}{% endblock %}
+{% if menu.crm or menu.cliente %}<script src="{% static 'js/permisos.js' %}"></script>{% endif %}
 {% if menu.flota %}<script src="{% static 'js/por-despachar.js' %}"></script>{% endif %}
+{% if menu.crm %}<script src="{% static 'js/avisos-equipo.js' %}"></script>{% endif %}
 <script src="{% static 'js/nav.js' %}"></script>
 <script src="{% static 'js/filtros.js' %}"></script>
 </body>

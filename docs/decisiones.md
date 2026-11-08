@@ -305,7 +305,7 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
 
 **Contador en el menú interno.** Quien despacha solo veía lo pendiente si entraba a `/flota/`. Ahora el menú lo muestra junto a «Flota» y se actualiza solo. Detalle de uso y rutas en `docs/ciclo-entrega.md`.
 
-- **Una ruta con dos niveles de costo:** `GET /flota/por-despachar/` es un solo `COUNT` (`.count()` descarta el `select_related` y el `prefetch_related` de `pedidos_por_despachar()`) y lo pide cada pestaña abierta cada 30 s. Con `?detalle=1` corre `sugerencias.calcular()`, que sí lee ítems, telemetría y camiones, pero solo cuando alguien abre el contador. Por eso no se reutilizó `/flota/sugerencias/`: consultarla cada 30 s habría repetido ese cálculo y gastado la cuota gratuita de la IA.
+- **Una ruta con dos niveles de costo:** `GET /flota/por-despachar/` es un solo `COUNT` (`.count()` descarta el `select_related` y el `prefetch_related` de `pedidos_por_despachar()`). El número del menú llega ahora con la consulta común de `/api/avisos-equipo/`, descrita en la sección siguiente. Con `?detalle=1` corre `sugerencias.calcular()`, que sí lee ítems, telemetría y camiones, pero solo cuando alguien abre el contador. Por eso no se reutilizó `/flota/sugerencias/`: consultarla cada pocos segundos habría repetido ese cálculo y gastado la cuota gratuita de la IA.
 - **El detalle usa `texto_base`, sin IA:** el aviso sale al instante y dice lo mismo («sin camión libre de ese rango», qué camión conviene). La redacción con IA sigue en el panel de `/flota/`.
 - **Sin consulta en cada página:** el número lo trae el JavaScript y no un procesador de contexto, así que abrir una pantalla no suma consultas. A cambio, el número aparece un instante después de cargar. Con la pestaña oculta no se consulta.
 - **Sin caché:** el equipo interno es pequeño y el conteo usa llaves foráneas indexadas; una caché agregaría un número atrasado sin un ahorro que se note.
@@ -340,3 +340,31 @@ Camiones de dos temperaturas quedan fuera de este cambio.
 - **Decisión:** `admin@cofrial.cl` es personal con el grupo `administradores`. El rol admin se resuelve por el grupo (`crm.servicios.rol` y `operacion.servicios.rol_de`, con la misma regla). Solo `eric@cofrial.cl` queda como superusuario técnico, para `/admin/` y `/demo/`.
 - **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
 - **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.
+
+## Avisos en tiempo real por tipo de usuario y permisos del navegador (8-nov-2026)
+
+Pedido de Eric: que cada tipo de usuario reciba avisos sin recargar y que el sitio pida permiso para notificaciones y ubicación.
+
+| Tipo de usuario | Qué recibe | Dónde lleva |
+|---|---|---|
+| Cliente B2B y B2C | Salió, ventana de llegada, cerca, en la puerta, entregado, no concretada, variación de frío y stock que esperaba | Su pedido o `/avisos/` |
+| Despachador | Pedidos por despachar y viajes en curso con ruptura de frío | «Armar despacho», alertas |
+| Vendedor | Solo de su cartera: frío, requerimientos, entregas sin facturar y facturas vencidas; además, empresas por aprobar | CRM, cobranza, alertas |
+| Gerencia | Todo lo anterior, sin enlaces para armar viajes | Flota, CRM, cobranza, alertas |
+| Administrador | Todo lo anterior | «Armar despacho», CRM, cobranza, alertas |
+
+- **Consulta periódica cada 15 s y no conexiones abiertas (SSE o WebSocket):** gunicorn corre con 1 proceso y 16 hilos, y cada conexión abierta ocuparía un hilo; ASGI y Redis serían infraestructura nueva a días de la defensa. Es la misma técnica de la campanita del cliente.
+- **Costo:** cada aviso es un conteo. Con el administrador son 15 consultas y unos 5 ms en una base local (4 de ellas son del rol). No se usó `ordenes_afectadas`, que hace una consulta por orden; una prueba comprueba que el número de consultas no crece con los pedidos.
+- **El aviso de frío cuenta viajes en curso con una alerta desde su salida:** un viaje que ya llegó o una alerta anterior a la salida no cuentan.
+- **Los avisos no se guardan:** se calculan y desaparecen cuando se hace el trabajo. Sin tablas nuevas ni «marcar como leído»; el modelo de datos no cambia.
+- **Pestaña oculta:** sigue consultando solo si hay permiso de notificaciones, porque es justo cuando sirven. El navegador puede espaciar esas consultas, hasta una por minuto, en una pestaña que lleva rato oculta.
+- **Varias pestañas:** la última cifra conocida y las notificaciones enviadas se recuerdan en `localStorage`, y cada notificación lleva un `tag`, para no repetirla por cada pestaña.
+- **La primera vez solo se toma nota:** quien entra con 8 pedidos pendientes los ve en el contador, sin 8 avisos de golpe.
+
+**Permisos:**
+
+- **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Se abre una vez por cuenta y navegador, explica para qué es cada permiso según el rol y se reabre con «Permisos» en el menú.
+- **La ubicación solo se pide a los clientes:** se usa en «Estoy en esta dirección: usar mi ubicación» al agregar una dirección de entrega. Al equipo no se le pide porque no tendría ningún uso. La posición se manda solo al guardar esa dirección; no se sigue a nadie.
+- **Las coordenadas del navegador no se creen sin revisar:** `agregar_direccion` acepta solo valores numéricos dentro de Chile continental; si no, busca la dirección escrita en OpenStreetMap. Con una precisión peor que 300 m no se usan, porque el camión podría ir a otra cuadra.
+- **HTTPS es requisito:** `Notification` y `geolocation` no piden permiso sin contexto seguro, y hoy la EC2 sirve por HTTP. El diálogo lo dice y los avisos dentro de la página funcionan igual. Cambiar a HTTPS se coordina aparte con la sesión de despliegue; este cambio no toca infraestructura.
+- **Qué se cede:** en Android la notificación exige un service worker y en iOS una app instalada, que no se agregaron: en esos equipos quedan los avisos dentro de la página. Las notificaciones solo llegan con una pestaña abierta, porque no hay notificaciones push desde el servidor. Un viaje con frío no distingue si la carga de ese vendedor ya se entregó; eso lo detalla `/crm/alertas/`.

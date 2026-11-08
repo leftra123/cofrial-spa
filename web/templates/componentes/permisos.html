@@ -1,0 +1,19 @@
+{% load static %}{% comment %}Permisos del navegador, explicados antes del aviso nativo. La ubicación solo se pide a quien la usa: el cliente, al agregar una dirección de entrega.{% endcomment %}
+<dialog class="permisos" id="permisos" data-u="{{ user.pk }}" data-icono="{% static 'img/marca/favicon-180.png' %}" aria-labelledby="permisos-titulo">
+  <h2 id="permisos-titulo">Para avisarte a tiempo</h2>
+  <p data-permisos-intro>Cofrial te puede pedir estos permisos. Tú eliges cada uno; el navegador te preguntará cuando toques el botón.</p>
+  <p class="permisos-inseguro" data-permisos-inseguro hidden>Esta dirección no usa conexión segura (HTTPS), así que el navegador no permite pedir estos permisos. Los avisos siguen apareciendo dentro de la página mientras la tengas abierta.</p>
+  <div class="permiso" data-permiso="notificaciones">
+    <div><b>Notificaciones</b>
+      <p>{% if menu.cliente %}Para avisarte cuando tu pedido salga, esté por llegar o el camión esté en tu puerta, y cuando vuelva el stock que esperas.{% elif tipo_cuenta == "despachador" %}Para avisarte de los pedidos que esperan camión y de las rupturas de frío en viaje.{% elif tipo_cuenta == "vendedor" %}Para avisarte de empresas por aprobar, requerimientos, entregas por facturar y rupturas de frío de tu cartera.{% else %}Para avisarte de los pedidos que esperan camión, las rupturas de frío, los requerimientos y la cobranza.{% endif %} También con esta pestaña en segundo plano.</p>
+      <small data-permiso-estado role="status"></small></div>
+    <button type="button" class="permiso-pedir" data-permiso-pedir>Activar</button>
+  </div>
+  {% if menu.cliente %}<div class="permiso" data-permiso="ubicacion">
+    <div><b>Ubicación</b>
+      <p>Para marcar tu dirección de entrega con precisión cuando la agregas. Solo se usa si tocas «usar mi ubicación»; no seguimos tu posición.</p>
+      <small data-permiso-estado role="status"></small></div>
+    <button type="button" class="permiso-pedir" data-permiso-pedir>Permitir</button>
+  </div>{% endif %}
+  <div class="permisos-pie"><button type="button" data-permisos-cerrar>Ahora no</button></div>
+</dialog>

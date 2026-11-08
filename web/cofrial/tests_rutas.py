@@ -53,6 +53,7 @@ ESPERADO = {
     '/crm/alertas/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/flota/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/sugerencias/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/api/avisos-equipo/': ('403 403 403 200 200 200 200', '405 405 405 405 405 405 405'),      # avisos del menú interno; los clientes usan /api/avisos/
     '/flota/por-despachar/': ('L 403 403 403 200 200 200', '405 405 405 405 405 405 405'),      # el contador del menú: los mismos roles que ven Flota; solo lectura
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 403 →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),

@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from . import bi, vistas
+from .vistas import api_avisos_equipo
 from catalogo import views as catalogo_views
 from flota import demo as flota_demo
 
@@ -49,6 +50,7 @@ urlpatterns = [
     path("demo/limpiar/", flota_demo.limpiar, name="demo_limpiar"),
     path("demo/tiempo/", flota_demo.cambiar_tiempo, name="demo_tiempo"),
     path("api/asistente/", catalogo_views.api_asistente, name="api_asistente"),
+    path("api/avisos-equipo/", api_avisos_equipo, name="api_avisos_equipo"),
     path("api/productos/", catalogo_views.api_productos, name="api_productos"),
     path("api/productos/<str:sku>/", catalogo_views.api_productos, name="api_producto"),
     path("api/", include(flota_api)),

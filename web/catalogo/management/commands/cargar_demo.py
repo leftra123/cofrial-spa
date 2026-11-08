@@ -92,7 +92,25 @@ def flota_completa():
 class Command(BaseCommand):
     help = "Carga catálogo, clientes, flota y datos base de demostración."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--solo-primera-vez", action="store_true",
+                            help="no hacer nada si la base ya tiene productos: así arrancan los contenedores, para que un reinicio no deshaga lo que editó el administrador. FORZAR_CARGA_DEMO=1 la ignora")
+
     def handle(self, *args, **opciones):
+        if not opciones["solo_primera_vez"] or not Producto.objects.exists():
+            return self.cargar()
+        if os.environ.get("FORZAR_CARGA_DEMO") != "1":
+            self.stdout.write("Datos de demostración ya cargados: no se tocan.")
+            return
+        # Forzada sobre una base que ya tiene datos: puede chocar con lo editado en /operacion/. Esto corre al arrancar, así que ningún
+        # error debe impedir que parta el sitio, y la variable sigue activa en cada reinicio hasta que alguien la quite.
+        try:
+            with transaction.atomic():
+                self.cargar()
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"FORZAR_CARGA_DEMO: la carga no se aplicó porque choca con datos editados ({type(e).__name__}: {e}). Quita la variable."))
+
+    def cargar(self):
         clave = os.environ.get("DEMO_PASSWORD")
         if not clave:
             # Sin DEMO_PASSWORD no hay clave por defecto en el código: solo las pruebas automáticas usan una fija (base de datos de prueba);

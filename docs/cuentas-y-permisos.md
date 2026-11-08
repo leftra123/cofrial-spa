@@ -21,7 +21,7 @@ Este documento no contiene claves. Las claves viven solo en `aws/.estado/secreto
 
 | Cuenta | Rol | Puede | No puede (respuesta) |
 |---|---|---|---|
-| `admin@cofrial.cl`, `eric@cofrial.cl` | Administrador / despacho | Todo: CRM, flota, cerrar despachos, `/admin/`, `/operacion/` (reponer stock, crear cuentas, asignar claves) | — |
+| `admin@cofrial.cl`, `eric@cofrial.cl` | Administrador / despacho | Todo: CRM, flota, cerrar despachos y `/operacion/` (usuarios, productos y precios, stock, órdenes, datos y sistema) | — |
 | `felipe@cofrial.cl` | Cliente institucional B2B | Catálogo con lista institucional, carrito, órdenes, orden de compra | CRM y flota (403); pedidos ajenos (404) |
 | `sergio@cofrial.cl`, `ana@correo.test` | Cliente particular B2C | Catálogo al público, carrito, seguimiento de sus pedidos | CRM y flota (403); pedidos ajenos (404) |
 | `abastecimiento@hospital.test` | Cliente institucional B2B | Igual que Felipe | CRM y flota (403) |

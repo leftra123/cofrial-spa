@@ -1,5 +1,11 @@
+from io import StringIO
+from unittest.mock import patch
+
 from django.core.management import call_command
 from django.test import TestCase
+
+from catalogo.models import PrecioProducto, Producto
+from crm.models import EtapaPipeline
 
 
 class CatalogoTests(TestCase):
@@ -539,3 +545,41 @@ class AsistenteDeIA(TestCase):
         orden = Orden.objects.filter(direccion__cliente__usuario__username="abastecimiento@hospital.test").first()
         self.assertContains(self.client.get(f"/pedidos/{orden.orden_id}/"), f'data-orden="{orden.orden_id}"')
         self.assertContains(self.client.get("/catalogo/"), "Responde con inteligencia artificial")      # aviso visible de que es IA
+
+
+class CargaSoloPrimeraVez(TestCase):
+    """Con --solo-primera-vez (como arrancan los contenedores) un reinicio no deshace lo que editó el administrador."""
+
+    def test_no_deshace_lo_editado(self):
+        call_command("cargar_demo", verbosity=0)
+        EtapaPipeline.objects.filter(nombre="Negociación").update(nombre="Negociación final")
+        precio = PrecioProducto.objects.first()
+        pk = precio.pk
+        precio.delete()
+        call_command("cargar_demo", "--solo-primera-vez", verbosity=0)
+        self.assertTrue(EtapaPipeline.objects.filter(nombre="Negociación final").exists())
+        self.assertFalse(EtapaPipeline.objects.filter(nombre="Negociación").exists())
+        self.assertFalse(PrecioProducto.objects.filter(pk=pk).exists())
+
+    def test_carga_una_base_vacia(self):
+        self.assertEqual(Producto.objects.count(), 0)
+        call_command("cargar_demo", "--solo-primera-vez", verbosity=0)
+        self.assertEqual(Producto.objects.count(), 20)
+
+    def test_forzar_ignora_la_opcion(self):
+        call_command("cargar_demo", verbosity=0)
+        antes = PrecioProducto.objects.count()
+        PrecioProducto.objects.first().delete()
+        with patch.dict("os.environ", {"FORZAR_CARGA_DEMO": "1"}):
+            call_command("cargar_demo", "--solo-primera-vez", verbosity=0)
+        self.assertEqual(PrecioProducto.objects.count(), antes)
+
+    def test_forzar_con_datos_editados_no_impide_arrancar(self):
+        call_command("cargar_demo", verbosity=0)
+        EtapaPipeline.objects.filter(nombre="Negociación").update(nombre="Negociación final")
+        salida = StringIO()
+        with patch.dict("os.environ", {"FORZAR_CARGA_DEMO": "1"}):
+            call_command("cargar_demo", "--solo-primera-vez", verbosity=0, stdout=salida)
+        self.assertIn("no se aplicó", salida.getvalue())
+        self.assertTrue(EtapaPipeline.objects.filter(nombre="Negociación final").exists())
+        self.assertFalse(EtapaPipeline.objects.filter(nombre="Negociación").exists())

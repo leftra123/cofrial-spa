@@ -1,10 +1,13 @@
-{% extends "operacion/base.html" %}
+{% extends "operacion/base.html" %}{% load iconos %}
 {% block titulo %}Operación del sistema | Cofrial SpA{% endblock %}
 {% block operacion %}
-<div class="pagina-cab"><div><h1>Operación del sistema</h1><p class="sub">Tareas del administrador que antes solo se podían hacer en la administración de Django o por línea de comandos.</p></div></div>
-<div class="tarjeta-ui" style="border-color:var(--acento)"><h2>Usuarios</h2><p class="muted">Cuántas cuentas hay de cada tipo (clientes institucionales y particulares, vendedores, gerencia, despachadores y administradores), con un botón para agregar una de cada tipo, buscar y asignar claves. También aparecen los clientes del CRM que todavía no pueden ingresar a la tienda.</p><div class="acciones"><a class="btn btn-grande" href="/operacion/cuentas/">Ver usuarios y agregar</a></div></div>
+<div class="pagina-cab"><div><h1>Operación del sistema</h1><p class="sub">Todo lo que necesita el administrador, sin salir de la aplicación.</p></div></div>
+<div class="tarjeta-ui" style="border-color:var(--acento)"><h2>{% icono "usuarios" %} Usuarios</h2><p class="muted">Cuántas cuentas hay de cada tipo, con un botón para agregar una de cada tipo, buscar, asignar claves y activar o desactivar. También aparecen los clientes del CRM que todavía no pueden ingresar a la tienda.</p><div class="acciones"><a class="btn btn-grande" href="/operacion/cuentas/">Ver usuarios y agregar</a></div></div>
 <div class="rejilla dos" style="margin-top:20px">
-  <div class="tarjeta-ui"><h2>Reponer stock</h2><p class="muted">Suma unidades a un producto con búsqueda. Si un cliente había pedido aviso, lo ve en cuanto el stock alcanza lo que pidió.</p><div class="acciones"><a class="btn" href="/operacion/stock/">Reponer stock</a><a class="btn btn-sec" href="/crm/demanda/">Ver demanda en espera</a></div></div>
-  <div class="tarjeta-ui"><h2>Administración de Django</h2><p class="muted">Para lo que no tiene pantalla propia (precios, categorías, ediciones puntuales).</p><div class="acciones"><a class="btn btn-sec" href="{% url 'admin:index' %}">Abrir /admin/</a></div></div>
+  <div class="tarjeta-ui"><h2>{% icono "productos" %} Productos y precios</h2><p class="muted">Crea productos, ajusta sus precios por lista y desactiva los que ya no se venden.</p><div class="acciones"><a class="btn" href="/operacion/productos/">Ver productos</a></div></div>
+  <div class="tarjeta-ui"><h2>{% icono "stock" %} Reponer stock</h2><p class="muted">Suma unidades a un producto con búsqueda. Si un cliente había pedido aviso, lo ve en cuanto el stock alcanza lo que pidió.</p><div class="acciones"><a class="btn" href="/operacion/stock/">Reponer stock</a><a class="btn btn-sec" href="/crm/demanda/">Ver demanda en espera</a></div></div>
+  <div class="tarjeta-ui"><h2>{% icono "ordenes" %} Órdenes</h2><p class="muted">Busca órdenes por estado o cliente, y avánzalas o cancélalas antes de que salga el camión.</p><div class="acciones"><a class="btn" href="/operacion/ordenes/">Ver órdenes</a></div></div>
+  <div class="tarjeta-ui"><h2>{% icono "datos" %} Datos del sistema</h2><p class="muted">Categorías, camiones, clientes, comunas, etapas del embudo y las demás tablas que ordenan el negocio.</p><div class="acciones"><a class="btn" href="/operacion/datos/">Ver tablas</a></div></div>
+  <div class="tarjeta-ui"><h2>{% icono "sistema" %} Sistema</h2><p class="muted">Prueba la IA y poda la telemetría sin entrar al servidor.</p><div class="acciones"><a class="btn" href="/operacion/sistema/">Abrir Sistema</a></div></div>
 </div>
 {% endblock %}

@@ -1,0 +1,35 @@
+{% load iconos %}{% comment %}Menú del CRM: cinco entradas con ícono y, dentro de un grupo, sus subpestañas. Las URL no cambian; solo se agrupan.{% endcomment %}
+{% with ruta=request.path %}
+<nav class="subnav" aria-label="Secciones del CRM">
+{% if rol == "despachador" %}
+  <a href="/crm/demanda/"{% if "/crm/demanda" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "demanda" %}Demanda en espera</a>
+  <a href="/crm/alertas/"{% if "/crm/alertas" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>
+{% else %}
+  <a href="/crm/"{% if ruta == "/crm/" %} class="activo" aria-current="page"{% endif %}>{% icono "panel" %}Panel</a>
+  <a href="/crm/embudo/"{% if "/crm/embudo" in ruta or "/crm/prospectos" in ruta or "/crm/demanda" in ruta %} class="activo" aria-current="true"{% endif %}>{% icono "ventas" %}Ventas</a>
+  <a href="/crm/clientes/"{% if "/crm/clientes" in ruta or "/crm/solicitudes" in ruta or "/crm/cobranza" in ruta %} class="activo" aria-current="true"{% endif %}>{% icono "clientes" %}Clientes{% if solicitudes_n %} <span class="chip alerta" aria-label="{{ solicitudes_n }} solicitud{{ solicitudes_n|pluralize:"es" }} pendiente{{ solicitudes_n|pluralize }}">{{ solicitudes_n }}</span>{% endif %}</a>
+  <a href="/crm/requerimientos/"{% if "/crm/requerimientos" in ruta or "/crm/ia" in ruta %} class="activo" aria-current="true"{% endif %}>{% icono "atencion" %}Atención</a>
+  <a href="/crm/alertas/"{% if "/crm/alertas" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>
+{% endif %}
+{% if grafana_url %}  <a class="panel-bi" href="{{ grafana_url }}" target="_blank" rel="noopener">{% icono "bi" %}Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
+</nav>
+{% if rol != "despachador" %}
+{% if "/crm/embudo" in ruta or "/crm/prospectos" in ruta or "/crm/demanda" in ruta %}
+<nav class="subnav subnav-2" aria-label="Subsecciones de Ventas">
+  <a href="/crm/embudo/"{% if "/crm/embudo" in ruta or "/crm/prospectos" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "embudo" %}Embudo</a>
+  <a href="/crm/demanda/"{% if "/crm/demanda" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "demanda" %}Demanda en espera</a>
+</nav>
+{% elif "/crm/clientes" in ruta or "/crm/solicitudes" in ruta or "/crm/cobranza" in ruta %}
+<nav class="subnav subnav-2" aria-label="Subsecciones de Clientes">
+  <a href="/crm/clientes/"{% if "/crm/clientes" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "clientes" %}Clientes</a>
+  <a href="/crm/solicitudes/"{% if "/crm/solicitudes" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "solicitudes" %}Solicitudes{% if solicitudes_n %} <span class="chip alerta" aria-label="{{ solicitudes_n }} pendiente{{ solicitudes_n|pluralize }}">{{ solicitudes_n }}</span>{% endif %}</a>
+  <a href="/crm/cobranza/"{% if "/crm/cobranza" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "cobranza" %}Cobranza</a>
+</nav>
+{% elif "/crm/requerimientos" in ruta or "/crm/ia" in ruta %}
+<nav class="subnav subnav-2" aria-label="Subsecciones de Atención">
+  <a href="/crm/requerimientos/"{% if "/crm/requerimientos" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "requerimientos" %}Requerimientos</a>
+  <a href="/crm/ia/"{% if "/crm/ia" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "ia" %}IA</a>
+</nav>
+{% endif %}
+{% endif %}
+{% endwith %}

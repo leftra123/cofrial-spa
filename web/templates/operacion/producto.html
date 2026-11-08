@@ -1,0 +1,12 @@
+{% extends "operacion/base.html" %}{% load iconos %}
+{% block titulo %}{% if objeto %}Editar producto{% else %}Agregar producto{% endif %} | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>{% if objeto %}Editar: {{ objeto.nombre }}{% else %}Agregar producto{% endif %}</h1>{% if objeto %}<p class="sub">Stock actual: {{ objeto.stock_disponible }} {{ objeto.unidad_medida }}. Se cambia en <a href="/operacion/stock/?q={{ objeto.sku|urlencode }}">Reponer stock</a>.</p>{% else %}<p class="sub">Si no tiene foto propia, la tienda muestra una ilustración.</p>{% endif %}</div><div class="acciones"><a class="btn btn-sec" href="/operacion/productos/">{% icono "volver" %}Volver a Productos</a></div></div>
+<div class="tarjeta-ui" style="max-width:560px">
+<form method="post" data-carga autocomplete="off">{% csrf_token %}
+  {% if form.non_field_errors %}<div role="alert">{% for e in form.non_field_errors %}<p class="error-campo">{{ e }}</p>{% endfor %}</div>{% endif %}
+  {% for c in form.visible_fields %}{% include "operacion/_campo.html" with c=c %}{% endfor %}
+  <div class="acciones" style="margin-top:18px"><button class="btn" type="submit">Guardar</button></div>
+</form>
+</div>
+{% endblock %}

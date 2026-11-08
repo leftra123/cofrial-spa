@@ -11,11 +11,13 @@ x-bd: &bd
 services:
   web:
     build: ../web
-    # migrate y datos de demostración son idempotentes; preparar_bi crea el usuario de solo lectura de Grafana en RDS
-    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 16 --timeout 60 --access-logfile - --error-logfile -"
+    # migrate es idempotente; los datos de demostración se cargan solo la primera vez para no deshacer lo editado en /operacion/; preparar_bi crea el usuario de solo lectura de Grafana en RDS
+    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo --solo-primera-vez && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 16 --timeout 60 --access-logfile - --error-logfile -"
     environment:
       <<: *bd
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      RETENCION_TELEMETRIA_DIAS: ${RETENCION_TELEMETRIA_DIAS:-7}   # la usa Podar telemetría en /operacion/sistema/: debe ser la misma del podador
+      FORZAR_CARGA_DEMO: ${FORZAR_CARGA_DEMO:-0}                 # 1 = cargar datos de demostración nuevos en este arranque; usarlo antes de editar datos en /operacion/
       DJANGO_DEBUG: "0"
       VELOCIDAD_MEDIA_KMH: ${VELOCIDAD_MEDIA_KMH:-50}
       CONFIRMACION_AUTO_SEG: ${CONFIRMACION_AUTO_SEG:-120}

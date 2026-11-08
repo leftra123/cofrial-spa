@@ -347,8 +347,10 @@ def demanda(request):
 
 @con_rol(*COMERCIAL)
 def cobranza(request):
-    """Qué se entregó y no se facturó, qué facturas están por cobrar y cuáles vencieron (RN-22)."""
-    return render(request, "crm/cobranza.html", _contexto(request, cob=s.cobranza(request.user), medios=[m for m in Pago.MEDIOS if m[0] != "devolucion"]))
+    """Qué se entregó y no se facturó, qué facturas están por cobrar, cuáles vencieron y quién está en mora (RN-22)."""
+    cob = s.cobranza(request.user, request.GET.get("estado", ""))
+    volver = f"/crm/cobranza/?estado={cob['filtro']}" if cob["filtro"] else "/crm/cobranza/"     # tras pagar se regresa al mismo filtro
+    return render(request, "crm/cobranza.html", _contexto(request, cob=cob, volver=volver, medios=[m for m in Pago.MEDIOS if m[0] != "devolucion"]))
 
 
 def _volver(request, defecto="crm_cobranza"):

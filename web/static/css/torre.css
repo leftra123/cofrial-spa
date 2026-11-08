@@ -1,0 +1,158 @@
+/* Torre de control: solo lo que cofrial.css no cubre. Colores con sus variables, para que sigan el tema claro y oscuro.
+   La excepción es la banda de Lectura: su fondo es marino en ambos temas, así que sus textos y su barra son fijos. */
+.torre [hidden] { display: none !important; }
+.torre-cab { margin-bottom: 18px; }
+.torre > .aviso { margin: 0 0 16px; position: sticky; top: 8px; z-index: 30; }    /* la página es larga: se ve aunque se esté leyendo la rúbrica */
+.torre h3 { font-size: 1rem; font-weight: 650; }
+.torre .seccion { margin-top: 36px; }
+.torre .seccion .acciones { display: flex; align-items: center; }
+
+/* ---------- 8.1 Lectura: la frase que se lee desde el fondo de la sala ---------- */
+.torre-lectura { --tono: var(--lima); background: var(--marino); color: #fff; border-radius: var(--radio); padding: 20px 28px 20px 32px; position: relative; overflow: hidden; box-shadow: var(--sombra); }
+:root[data-tema="oscuro"] .torre-lectura { border: 1px solid var(--borde-fuerte); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .torre-lectura { border: 1px solid var(--borde-fuerte); } }
+.torre-lectura::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 8px; background: var(--tono); }
+.torre-lectura[data-tono="alerta"] { --tono: #EF4444; }
+.torre-lectura[data-tono="aviso"] { --tono: #F59E0B; }
+.torre-lectura[data-tono="sin-datos"] { --tono: var(--borde-fuerte); }
+.torre-lectura-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.torre-lectura-cab .btn { margin-left: auto; padding: 6px 14px; font-size: .88rem; }
+.torre-hora { font-size: .84rem; color: #C6D3E8; }
+.torre-frases { margin: 14px 0 16px; max-width: 62ch; font-size: 1.12rem; line-height: 1.4; }
+.torre-frases p { margin: 0 0 4px; color: #DCE5F3; }
+.torre-frases p.principal { font-size: clamp(1.5rem, 2.5vw, 2.15rem); line-height: 1.18; font-weight: 700; letter-spacing: -.02em; color: #fff; margin-bottom: 10px; }
+.torre-resumen { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #fff; font-size: .9rem; font-weight: 600; }
+.torre-resumen:hover { text-decoration: none; }
+.torre-resumen-txt { margin-right: 6px; }
+.torre-resumen:hover .torre-resumen-txt { text-decoration: underline; text-underline-offset: 3px; }
+.torre-estado svg { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.desactualizado .torre-lectura, .desactualizado .torre-rubrica, .desactualizado .torre-ahora .rejilla { opacity: .62; transition: opacity .3s; }
+
+/* ---------- 8.2 Mapa ---------- */
+.torre-mapa-grid { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; align-items: stretch; }
+.torre-mapa-grid .tarjeta-ui { margin-top: 0; }
+.torre-mapa-caja { padding: 8px; }
+#mapa-torre { height: 560px; }
+#mapa-torre.leaflet-container { background: var(--fondo-2); }     /* sin mosaicos, el fondo gris fijo de Leaflet rompía el tema oscuro */
+.torre-mapa-lado { display: flex; flex-direction: column; gap: 8px; padding: 20px; }
+.torre-mapa-lado h3 { margin: 0; }
+.torre-mapa-lado h3:not(:first-child) { margin-top: 14px; }
+.torre-mapa-lado .frio { margin: auto 0 0; padding-top: 14px; }
+.torre-camiones { margin: 0; }
+.torre-segmentos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.torre-segmentos li { display: flex; align-items: center; gap: 10px; }
+.torre-segmentos b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.torre-mapa-nota { position: absolute; left: 10px; bottom: 26px; z-index: 500; margin: 0; padding: 4px 10px; background: var(--tarjeta); border-radius: var(--radio-sm); font-size: .84rem; color: var(--texto-2); }
+
+/* Polígonos: La Araucanía se impone; las vecinas apenas se insinúan. Sigue viéndose aunque no carguen los mosaicos. */
+.geo-principal { fill: var(--acento); fill-opacity: .3; stroke: var(--acento); stroke-opacity: 1; stroke-width: 3.5; stroke-linejoin: round; }
+.geo-vecina { fill: var(--texto-3); fill-opacity: .05; stroke: var(--texto-3); stroke-opacity: .65; stroke-width: 1.2; stroke-dasharray: 4 3; }
+.leaflet-tooltip.geo-etiqueta { background: transparent; border: 0; box-shadow: none; padding: 0; color: var(--texto-2); font: 600 .84rem/1.1 "Schibsted Grotesk", "Schibsted Fallback", sans-serif; text-shadow: 0 0 3px var(--tarjeta), 0 0 3px var(--tarjeta), 0 0 6px var(--tarjeta); }
+.leaflet-tooltip.geo-etiqueta.principal { color: var(--acento); font-size: 1.3rem; font-weight: 800; letter-spacing: -.01em; }
+
+/* Segmentos: la letra distingue sin depender del color; el color sale de los tonos de estado para contrastar en ambos temas. */
+.seg-marca { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: .78rem; font-weight: 800; line-height: 1; flex: none; box-shadow: 0 0 0 2px var(--tarjeta); }
+.seg-hospital { background: var(--transito-fg); color: var(--transito-bg); }
+.seg-supermercado { background: var(--entregado-fg); color: var(--entregado-bg); }
+.seg-feria { background: var(--pendiente-fg); color: var(--pendiente-bg); }
+.seg-institucional { background: var(--asignado-fg); color: var(--asignado-bg); }
+.seg-otro { background: var(--cancelado-fg); color: var(--cancelado-bg); }
+.torre-pin.leaflet-div-icon { background: transparent; border: 0; }
+.torre-popup { min-width: 180px; font-family: "Schibsted Grotesk", "Schibsted Fallback", sans-serif; }
+.torre-popup b { display: block; }
+.torre-popup-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.torre-popup-alerta { color: var(--alerta-fg); font-weight: 600; }
+#mapa-torre .leaflet-popup-content-wrapper, #mapa-torre .leaflet-popup-tip { background: var(--tarjeta); color: var(--texto); }
+#mapa-torre .leaflet-popup-content a { color: var(--acento); font-weight: 600; }
+#mapa-torre a.leaflet-popup-close-button { color: var(--texto-2); }
+#mapa-torre .leaflet-bar a { background: var(--tarjeta); color: var(--texto); border-color: var(--borde); }
+
+/* ---------- 8.3 Clientes frecuentes ---------- */
+.torre-filtro { display: inline-flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--texto-2); margin: 0; font-weight: 500; white-space: nowrap; }
+.torre-filtro select { width: auto; margin: 0; padding-top: 6px; padding-bottom: 6px; }
+.torre-frecuentes tbody th a { color: var(--texto); }
+.torre-frecuentes tbody th a:hover { color: var(--acento); }
+.torre-seg { white-space: nowrap; }
+.torre-seg .seg-marca { width: 20px; height: 20px; font-size: .68rem; margin-right: 8px; box-shadow: none; vertical-align: middle; }
+.torre-frecuentes tbody th { min-width: 180px; }
+
+/* ---------- 8.4 Antes y ahora: lo reconstruido lleva borde punteado; lo medido, tarjetas ---------- */
+.torre-antes-ahora { align-items: start; }
+.torre-antes { border: 2px dashed var(--borde-fuerte); border-radius: var(--radio); padding: 20px 22px; background: var(--fondo-2); }
+.torre-ahora h3 { margin-bottom: 14px; }
+.torre-sello { display: inline-block; margin: 8px 0 14px; padding: 3px 11px; border-radius: 999px; background: var(--pendiente-bg); color: var(--pendiente-fg); font-size: .8rem; font-weight: 700; }
+.torre-registro { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.torre-registro li { display: grid; grid-template-columns: 3.1em 1fr; column-gap: 10px; font-size: .92rem; line-height: 1.4; }
+.torre-registro time { color: var(--texto-3); }
+.torre-registro .canal { font-weight: 650; font-size: .82rem; color: var(--texto-2); }
+.torre-registro .texto { grid-column: 2; }
+.torre-supuestos { margin: 0; display: grid; gap: 10px; border-top: 1px solid var(--borde-fuerte); padding-top: 14px; }
+.torre-supuestos dt { font-weight: 700; }
+.torre-supuestos dd { margin: 0; color: var(--texto-2); font-size: .92rem; }
+.torre-ventas { grid-column: 1 / -1; }
+.torre-ahora .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.torre-cierre { margin: 14px 0 0; font-weight: 650; }
+
+/* ---------- 8.5 Embudo: cinco fases en secuencia ---------- */
+.torre-embudo { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); overflow: hidden; }
+.torre-fase { min-width: 0; border-right: 1px solid var(--borde); display: flex; flex-direction: column; }
+.torre-fase:last-child { border-right: 0; }
+.torre-fase-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 12px 26px 12px 16px; background: var(--acento-suave); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%); }
+.torre-fase-cab h3 { font-size: .95rem; min-width: 0; overflow-wrap: anywhere; }
+.torre-fase-cab b { font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; color: var(--acento); }
+.torre-etapa { padding: 12px 16px; border-top: 1px solid var(--borde); }
+.torre-fase-cab + .torre-etapa { border-top: 0; }
+.torre-etapa-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.torre-etapa h4 { margin: 0; font-size: .88rem; font-weight: 650; }
+.torre-etapa-n { font-variant-numeric: tabular-nums; }
+.torre-items { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 7px; font-size: .84rem; line-height: 1.3; }
+.torre-items a { display: block; color: var(--texto); font-weight: 500; overflow-wrap: anywhere; }
+.torre-items a:hover { color: var(--acento); }
+.torre-items .frio { font-size: .76rem; }
+.torre-mas summary { cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--acento); margin-top: 8px; }
+.torre-aparte { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.torre-etapa.fuera { background: var(--tarjeta); border: 1px solid var(--alerta-borde); border-radius: var(--radio-sm); }
+.torre-etapa.fuera .torre-items { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+#torre-b2c { margin: 12px 0 0; color: var(--texto-3); font-size: .9rem; }
+
+/* ---------- 8.7 Rúbrica ---------- */
+.torre-rubrica { padding: 0; overflow: hidden; }
+.torre-fila { display: grid; grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1.5fr) 180px; gap: 18px; align-items: start; padding: 16px 20px; border-top: 1px solid var(--borde); position: relative; }
+.torre-fila:first-child { border-top: 0; }
+.torre-fila::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--borde-fuerte); }
+.torre-fila[data-estado="verificado"]::before { background: var(--ok); }
+.torre-fila[data-estado="sin_evidencia"]::before { background: var(--pendiente-fg); }
+.torre-dim { font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; color: var(--acento); line-height: 1.2; }
+.torre-que p { margin: 3px 0 0; }
+.torre-evidencia { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: .84rem; line-height: 1.4; color: var(--texto-2); overflow-wrap: anywhere; }
+.torre-fila-lado { display: grid; gap: 8px; justify-items: start; font-size: .88rem; font-weight: 600; }
+
+/* Rótulo fijo: mientras se recorra la Torre sigue a la vista. */
+.torre-rotulo { position: sticky; bottom: 0; z-index: 20; margin: 28px 0 0; padding: 8px 14px; background: var(--tarjeta); border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm) var(--radio-sm) 0 0; color: var(--texto-2); font-size: .82rem; font-weight: 600; text-align: center; box-shadow: var(--sombra); }
+
+@media (max-width: 1180px) {
+  .torre-embudo { grid-template-columns: 1fr; }
+  .torre-fase { border-right: 0; border-top: 1px solid var(--borde); }
+  .torre-fase:first-child { border-top: 0; }
+  .torre-fase-cab { clip-path: none; padding-right: 16px; }
+}
+@media (max-width: 1100px) {
+  .torre-mapa-grid { grid-template-columns: minmax(0, 1fr); }
+  #mapa-torre { height: 480px; }
+  .torre-fila { grid-template-columns: 44px minmax(0, 1fr); }
+  .torre-evidencia, .torre-fila-lado { grid-column: 2; }
+}
+@media (max-width: 860px) {
+  .torre > .aviso { top: 66px; }      /* bajo la barra móvil, que también queda pegada arriba */
+}
+@media (max-width: 640px) {
+  .torre-lectura { padding: 16px 16px 16px 22px; }
+  .torre-lectura-cab .btn { margin-left: 0; }
+  #mapa-torre { height: 400px; }
+  .leaflet-tooltip.geo-etiqueta.principal { font-size: 1.05rem; }
+  .torre-aparte { grid-template-columns: minmax(0, 1fr); }
+  .torre .seccion { flex-wrap: wrap; }
+  .torre-rotulo { font-size: .72rem; padding: 6px 10px; line-height: 1.3; }
+  .torre .torre-ahora .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .torre-fila { padding: 14px 14px 14px 18px; gap: 10px; }
+}

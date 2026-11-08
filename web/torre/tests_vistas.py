@@ -91,3 +91,26 @@ class Respuestas(Base):
         with self.assertNumQueries(0):
             segundo = servicios.pulso(usuario, "gerencia")
         self.assertEqual(primero["generado_en"], segundo["generado_en"])
+
+
+class Pantalla(Base):
+    def test_panel_incluye_supuestos_y_datos(self):
+        r = self.como("gerencia").get("/torre/")
+        self.assertContains(r, "Reconstrucción ilustrativa, no son datos de Cofrial")
+        self.assertContains(r, "La merma evitada se medirá con datos de Cofrial")
+        self.assertContains(r, 'id="pulso-inicial"')
+        self.assertContains(r, "js/torre.js")
+
+    def test_antes_no_inventa_tasa(self):
+        self.assertContains(self.como("gerencia").get("/torre/"), "alta tasa según el caso; nadie la registra")
+
+    def test_supuestos_del_antes_llegan_al_pulso_inicial_y_cuadran(self):
+        from torre import antes
+        self.assertEqual(len(antes.REGISTRO), 6)
+        s = antes.SUPUESTOS
+        self.assertEqual((s["merma_bajo_mm"], s["merma_base_mm"], s["merma_alto_mm"]), (13.5, 22.5, 36))
+        self.assertEqual(s["viajes_semana"] * s["min_coordinacion"] / 60, s["horas_semana"])
+        inicial = self.como("gerencia").get("/torre/").context["inicial"]
+        self.assertEqual(inicial["antes"]["supuestos"], s)
+        self.assertEqual(len(inicial["antes"]["registro"]), 6)
+        self.assertIn("rubrica", inicial)

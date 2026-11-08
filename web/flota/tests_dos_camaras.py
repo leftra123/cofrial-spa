@@ -179,3 +179,27 @@ class FallaPorCamaraTests(Base):
         self.assertLess(t.temp_camara, 0)
         self.client.post("/demo/pulso/", {"camion": "CAM-01", "camara": "2", "confirmar": "1"})
         self.assertEqual(Telemetria.objects.filter(camion_id="CAM-01", forzada=True).latest("registrado_en").camara, 1)
+
+    def test_la_torre_solo_cuenta_en_riesgo_el_pedido_de_la_camara_con_falla(self):
+        from django.db import connection
+        from torre import servicios as torre
+        d, o = self.viaje()
+        self.lectura(d.camion, 1, 2.0, False)
+        self.lectura(d.camion, 2, -5.0, True)
+        vigentes = ultimas_vigentes()
+        monto, cliente = torre._riesgo_actual(vigentes, {"CAM-05"})
+        self.assertEqual(monto, s.total_orden(o["Congelado"]))
+        self.assertEqual(cliente, self.ana.nombre)
+        with connection.cursor() as cursor:
+            cursor.execute(torre._RIESGO_HISTORICO + " AND o.orden_id = %s", [o["Refrigerado"].pk])
+            self.assertEqual(int(cursor.fetchone()[0]), 0)
+            cursor.execute(torre._RIESGO_HISTORICO + " AND o.orden_id = %s", [o["Congelado"].pk])
+            self.assertEqual(int(cursor.fetchone()[0]), s.total_orden(o["Congelado"]))
+
+    def test_el_pedido_trazado_muestra_la_temperatura_de_su_camara(self):
+        from torre import servicios as torre
+        d, o = self.viaje()
+        self.lectura(d.camion, 1, 2.0, False)
+        self.lectura(d.camion, 2, -21.0, False)
+        Orden.objects.filter(pk=o["Refrigerado"].pk).update(despacho=None)
+        self.assertEqual(torre.pedido_trazado()["temp_camara"], -21.0)

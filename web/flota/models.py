@@ -96,6 +96,7 @@ class Telemetria(models.Model):
         indexes = [
             models.Index(fields=["camion", "-registrado_en"], name="idx_telemetria_camion_fecha"),
             models.Index(fields=["registrado_en"], condition=Q(alerta_ruptura_frio=True), name="idx_telemetria_alerta"),
+            models.Index(fields=["-registrado_en"], name="idx_telemetria_fecha"),      # el sondeo de la Torre: última lectura, camiones reportando, forzadas recientes
         ]
 
 

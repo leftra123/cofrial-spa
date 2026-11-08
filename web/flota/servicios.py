@@ -56,7 +56,7 @@ def estado_flota():
     return tarjetas, resumen
 
 
-_YA_VISITADAS = {"Entregada", "Cancelada", "Entrega no concretada"}
+_YA_VISITADAS = {"Entregada", "Cancelada", "Entrega no concretada", "Rechazada en recepción"}
 
 
 def _pedidos_en_orden(pedidos, viaje):

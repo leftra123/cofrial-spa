@@ -22,7 +22,7 @@ class AvisosYAdmin(TestCase):
         self.assertEqual(r["Location"], "/catalogo/1/")
 
     def test_el_equipo_no_rebota_al_login_desde_avisos(self):
-        for usuario, destino in (("vendedora@cofrial.cl", "/crm/"), ("gerencia@cofrial.cl", "/crm/"), ("despacho@cofrial.cl", "/flota/"), ("admin@cofrial.cl", "/crm/")):
+        for usuario, destino in (("vendedora@cofrial.cl", "/crm/"), ("gerencia@cofrial.cl", "/torre/"), ("despacho@cofrial.cl", "/flota/"), ("admin@cofrial.cl", "/crm/")):
             self.client.logout()
             self.entrar(usuario)
             r = self.client.get("/avisos/")
@@ -38,7 +38,7 @@ class AvisosYAdmin(TestCase):
             self.assertEqual(r.status_code, 302, usuario)
             self.assertIn("/admin/login/", r["Location"], usuario)
         self.client.logout()
-        self.entrar("admin@cofrial.cl")
+        self.entrar("eric@cofrial.cl")                      # superusuario técnico: el único que entra a /admin/ de Django
         self.assertEqual(self.client.get("/admin/").status_code, 200)
 
     def test_el_menu_no_muestra_administracion_al_equipo(self):

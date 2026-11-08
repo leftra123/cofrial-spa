@@ -11,7 +11,7 @@
   function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(vistos.slice(-200))); } catch (e) {} }
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
   var pide = CofrialEntrega.pide, contar = CofrialEntrega.contarAvisos;      // reglas del contador en entrega.js (una función pura, con prueba)
-  var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", frio: "Temperatura"};
+  var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", rechazada: "Rechazado", frio: "Temperatura"};
 
   function datosDelPedido(a) {
     var p = a.pedido; if (!p) return "";

@@ -32,8 +32,9 @@
       {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "pedidos" %}Mis pedidos</a>{% endif %}
       {% if menu.cliente %}<a href="/soporte/" {% if "/soporte/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "soporte" %}Soporte</a>{% endif %}
       {% endif %}
-      {% if menu.flota or menu.crm or menu.admin %}
+      {% if menu.torre or menu.flota or menu.crm or menu.admin %}
       <div class="nav-etiqueta">Operación</div>
+      {% if menu.torre %}<a href="/torre/" {% if "/torre/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Torre de control</a>{% endif %}
       {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "camion" %}Flota</a>{% endif %}
       {% if menu.crm and not menu.comercial %}<a href="/crm/alertas/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>{% endif %}
       {% if menu.comercial %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "crm" %}CRM</a>{% endif %}

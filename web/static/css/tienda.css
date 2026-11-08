@@ -1293,6 +1293,27 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .revision-falla label { font-weight: 600; font-size: .9rem; }
 .revision-falla select, .revision-falla textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--fondo-campo, var(--tarjeta)); color: var(--texto); }
 .revision-falla textarea { resize: vertical; min-height: 84px; }
+.revision-lineas { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.revision-lineas legend { padding: 0; margin-bottom: 4px; font-weight: 600; }
+.revision-lineas > .frio { margin: 0; }
+.revision-linea { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 8px 12px; align-items: end; padding: 10px 12px; border-radius: var(--radio-sm); background: var(--fondo); }
+.revision-linea-nombre { margin: 0; align-self: center; overflow-wrap: anywhere; }
+.revision-linea-nombre b { font-variant-numeric: tabular-nums; }
+.revision-linea-campo { display: grid; gap: 4px; min-width: 0; }
+.revision-linea-campo[hidden] { display: none; }
+.revision-linea-campo input { width: 100%; font: inherit; min-height: 44px; padding: 8px 10px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--fondo-campo, var(--tarjeta)); color: var(--texto); font-variant-numeric: tabular-nums; }
+.revision-linea-motivo { grid-column: 1 / -1; }
+.revision-falla input[aria-invalid="true"], .revision-falla select[aria-invalid="true"] { border-color: var(--cancelado-fg); }
+.revision-resumen { margin: 0; font-weight: 600; }
+.revision-resumen:empty { display: none; }
+.revision-resumen.todo { color: var(--alerta-fg); }
+.revision-tipo { display: grid; gap: 8px; }
+.revision-tipo[hidden] { display: none; }
+.revision-opcional { font-weight: 400; }
+.rechazo-lista { margin: 10px 0 0; padding: 10px 14px; list-style: none; display: grid; gap: 4px; border-radius: var(--radio-sm); background: var(--fondo); max-width: 62ch; }
+.rechazo-lista b { font-variant-numeric: tabular-nums; }
+.rechazo-dinero { margin: 10px 0 0; max-width: 62ch; }
+@media (max-width: 480px) { .revision-linea { grid-template-columns: minmax(0, 1fr); } }
 .revision-falla textarea[aria-invalid="true"] { border-color: var(--cancelado-fg); }
 .entrega-revision .btn, .entrega-dialogo .acciones .btn { min-height: 48px; }
 .entrega-reclamo { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--borde-fuerte); background: var(--fondo); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; max-width: 62ch; overflow-wrap: anywhere; }

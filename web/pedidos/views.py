@@ -220,13 +220,17 @@ def detalle(request, cliente, orden_id):
     orden = _orden_del_cliente(cliente, orden_id)
     en_la_puerta = orden.estado_orden.nombre == "Camión en la puerta"
     docs = documentos.documentos_de_orden(orden)
+    items = list(orden.ordenitem_set.select_related("producto"))
+    for i in items:
+        i.subtotal = i.cantidad_aceptada * i.precio_unitario_clp
+    cerrada = orden.estado_orden.nombre in s.RECEPCION_CERRADA
     return render(request, "pedidos/detalle.html", {
         "es_b2b": cliente.tipo_cliente.codigo == "B2B", "orden": orden, "documentos": docs,
         "venta": next((d for d in docs if d.tipo in ("boleta", "factura")), None),
-        "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden),
+        "items": items, "total": s.total_orden(orden), "rechazo": s.rechazo_de(orden) if cerrada else None,
         "revision": s.revision_de(orden) if en_la_puerta else None,          # paso de revisión al recibir: productos y temperatura del viaje
-        "reclamo": s.reclamo_al_recibir(orden) if orden.estado_orden.nombre == "Entregada" else None,
-        "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or orden.estado_orden.nombre == "Entregada" else None,
+        "reclamo": s.reclamo_al_recibir(orden) if cerrada else None,
+        "seg": s.seguimiento(orden) if not orden.estado_orden.es_final or cerrada else None,
         "viaje_sigue": bool(orden.despacho_id) and s.Orden.objects.filter(despacho_id=orden.despacho_id, estado_orden__nombre__in=("Despachada", "Camión en la puerta")).exclude(pk=orden.pk).exists(),
         "puede_cancelar": not orden.estado_orden.es_final and orden.estado_orden.orden_flujo == 1})
 
@@ -244,9 +248,11 @@ def comprobante(request, cliente, orden_id, documento_id):
         respuesta = HttpResponse(pdf, content_type="application/pdf")
         respuesta["Content-Disposition"] = f'attachment; filename="{doc.tipo}-{doc.folio}.pdf"'
         return respuesta
+    filas, neto = documentos.lineas_de_documento(doc)
     return render(request, "pedidos/comprobante.html", {
         "orden": orden, "doc": doc, "cliente_doc": orden.direccion.cliente, "es_b2b": cliente.tipo_cliente.codigo == "B2B",
-        "items": orden.ordenitem_set.select_related("producto"), "total": s.total_orden(orden)})
+        "items": filas, "total": neto, "notas": documentos.Documento.objects.filter(referencia=doc, tipo="nota_credito").order_by("documento_id"),
+        "rechazo": s.rechazo_de(orden)})
 
 
 @require_POST
@@ -299,9 +305,31 @@ def api_avisos(request):
     return JsonResponse({"avisos": s.avisos_de_llegada(cliente)}, json_dumps_params={"ensure_ascii": False})
 
 
+def _rechazos_del_formulario(post):
+    """Los campos rechazo_<producto_id> y motivo_<producto_id> del paso de revisión: {producto_id: (cantidad, motivo)}. Valida el servicio."""
+    return {int(clave[len("rechazo_"):]): (valor, post.get("motivo_" + clave[len("rechazo_"):], ""))
+            for clave, valor in post.items() if clave.startswith("rechazo_") and entradas.es_entero(clave[len("rechazo_"):])}
+
+
+def _mensaje_de_rechazo(rechazo, es_b2b):
+    """Qué pasó con la mercadería y con el dinero, en una frase para el cliente."""
+    clp = documentos._clp
+    if rechazo["nota"]:
+        dinero = f"Emitimos la {rechazo['nota']} por {clp(rechazo['nota'].monto_clp)}" + (f" y registramos la devolución de {clp(rechazo['devuelto'])}." if rechazo["devuelto"] else ".")
+    elif rechazo["total"]:
+        dinero = "No se emitirá factura por este pedido." if es_b2b else "No se te cobra."
+    else:
+        dinero = "La factura será solo por lo que recibiste."
+    if rechazo["total"]:
+        return f"Registramos que rechazaste todo el pedido. {dinero} Ventas te contactará."
+    u = rechazo["unidades"]
+    return f"Pedido recibido con {u} unidad{'es' if u != 1 else ''} rechazada{'s' if u != 1 else ''}. {dinero} Ventas te contactará."
+
+
 @solo_clientes
 def entrega(request, cliente, orden_id):
-    """Confirmación de la entrega en la puerta. GET: estado de la entrega (JSON). POST: accion=aceptar | no_recibido (+ motivo); responde
+    """Confirmación de la entrega en la puerta. GET: estado de la entrega (JSON). POST: accion=aceptar (con resultado, tipo_problema, problema y, por producto,
+    rechazo_<id> y motivo_<id>) | no_recibido (+ motivo); responde
     JSON si lo pide la pantalla (X-Requested-With: fetch o Accept: application/json) y, si no, vuelve a la orden con un mensaje."""
     from django.http import JsonResponse
     orden = _orden_del_cliente(cliente, orden_id)
@@ -315,8 +343,12 @@ def entrega(request, cliente, orden_id):
     con_problema = accion == "aceptar" and request.POST.get("resultado") == "falla"      # sin «resultado» (clientes antiguos de la API) todo llegó bien
     try:
         orden = s.resolver_entrega(cliente, orden_id, accion, request.POST.get("problema" if con_problema else "motivo", ""),
-                                   con_problema=con_problema, tipo_problema=request.POST.get("tipo_problema", "otro"))
-        if orden.estado_orden.nombre == "Entregada":
+                                   con_problema=con_problema, tipo_problema=request.POST.get("tipo_problema", "otro"),
+                                   rechazos=_rechazos_del_formulario(request.POST) if con_problema else None)      # con «todo llegó bien» no se rechaza nada, aunque el formulario traiga números
+        rechazo = s.rechazo_de(orden)
+        if rechazo:
+            mensaje = _mensaje_de_rechazo(rechazo, cliente.tipo_cliente.codigo == "B2B")
+        elif orden.estado_orden.nombre == "Entregada":
             mensaje = ("Pedido entregado exitosamente. Registramos el problema que nos contaste y ventas te contactará."
                        if con_problema else "Pedido entregado exitosamente. Gracias por confirmar la recepción.")
         else:

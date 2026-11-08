@@ -79,6 +79,24 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 
 *Nota.* Elaboración propia. Las etapas corresponden a la tabla `etapa_pipeline`.
 
+### Niveles del embudo en la Torre de control
+
+La Torre de control (`/torre/`, solo administración y gerencia) agrupa las etapas de la Tabla 3 y el comportamiento de compra de cada cliente B2B en cinco fases, con el vocabulario de un embudo de ventas. **Los niveles se calculan cada vez que se consultan y no se guardan en ninguna tabla** (3FN: lo calculable no se guarda); la función única está en `crm/servicios.py` y sus umbrales son constantes. El embudo de `/crm/embudo/` y las reglas RN-10 y RN-11 no cambian.
+
+**Tabla 3a**
+*Fases y niveles del embudo en la Torre de control: de dónde sale cada nivel*
+
+| Fase | Nivel (etapa de Cofrial) | De dónde sale |
+|---|---|---|
+| Atracción | Prospecto | `etapa_pipeline` |
+| Interés | Contactado | `etapa_pipeline` |
+| Consideración | Propuesta enviada, Negociación | `etapa_pipeline` |
+| Acción | Ganado sin pedido, Primer pedido | Cliente B2B con 0 pedidos o con 1 pedido |
+| Fidelización | Recompra, Fidelizado | Recompra: 2 o más pedidos. Fidelizado: 4 o más en 90 días |
+| Aparte | En riesgo, Perdido | En riesgo: tiene pedidos, pero ninguno en los últimos 30 días. Perdido: `etapa_pipeline` |
+
+*Nota.* Elaboración propia. «En riesgo» tiene prioridad sobre Recompra, Fidelizado y Primer pedido. No se cuentan los pedidos cancelados. Los umbrales (30 días, 4 pedidos, ventana de 90 días) son supuestos del equipo, a validar con Cofrial. Entran los clientes B2B con segmento, con prospecto ganado o con pedidos; quedan fuera las solicitudes de empresa por aprobar y las cuentas de prueba sin actividad. Los clientes B2C compran sin vendedor y solo se cuentan aparte. Los clientes y pedidos de muestra son ilustrativos: la Torre lo declara en pantalla.
+
 ## Reglas de negocio del CRM
 
 **Tabla 4**
@@ -93,7 +111,7 @@ El permiso por rol es lo que hace que la cartera pertenezca a la empresa y no a 
 | RN-13 | **Alerta de frío.** Cuando una lectura trae `alerta_ruptura_frio` durante el viaje de un despacho, las órdenes cuya carga seguía a bordo se consideran afectadas (una orden ya recibida en una parada anterior no) y aparecen destacadas en la ficha del cliente y en el seguimiento del pedido. | El vendedor actúa antes del reclamo |
 | RN-14 | **Clasificación con IA.** Cada requerimiento se clasifica con IA y se guarda con su confianza. Si la API falla o la confianza es menor que 0,60 (umbral supuesto), queda marcado para revisión manual. El servicio nunca pierde un requerimiento. | La IA ayuda, la persona decide |
 | RN-15 | **Pedido a nombre del cliente.** Durante la transición, el vendedor puede generar el pedido desde la ficha del cliente y debe registrar la interacción (llamada o correo) que lo originó. | Los clientes que aún llaman quedan dentro del sistema |
-| RN-22 | **Cobranza.** El CRM muestra lo que se entregó y todavía no se facturó (el vendedor emite la factura desde ahí), las facturas con saldo ordenadas por vencimiento y cuáles ya vencieron. El vendedor registra los pagos y emite notas de crédito dentro de su cartera; gerencia solo consulta. | Se sabe qué falta por cobrar y a quién |
+| RN-22 | **Cobranza.** El CRM muestra lo que se entregó y todavía no se facturó (el vendedor emite la factura desde ahí), las facturas con saldo ordenadas por vencimiento y cuáles ya vencieron. El vendedor registra los pagos y emite notas de crédito dentro de su cartera; gerencia solo consulta. Lo que el cliente rechazó al recibir (RN-23, supuesto a validar con Cofrial) se ve en la ficha del cliente y en el reclamo, con cantidades, motivo y documento; solo se factura lo aceptado. | Se sabe qué falta por cobrar y a quién |
 
 *Nota.* Elaboración propia. Las reglas del portal (RN-01 a RN-08) y las de documentos y pagos (RN-17 a RN-21) están en `04c-canales-b2b-b2c.md`.
 
@@ -162,7 +180,8 @@ Todos se calculan con consultas sobre la base de datos (`informe/modelo/consulta
 | Prospectos sin actividad | abiertos sin interacción en los últimos 7 días | 8 |
 | Primera respuesta a requerimientos | promedio de (respondido_en − creado_en), en minutos | 9 |
 | Pedidos afectados por frío | órdenes cuyo despacho tuvo una lectura con alerta | 4 |
-| Ventas por canal | total de las órdenes por B2B y B2C | 1 |
+| Ventas por canal | total aceptado de las órdenes por B2B y B2C; no cuenta lo rechazado al recibir | 1 |
+| Rechazado en recepción | unidades y monto rechazados por canal y motivo, con cuántos pedidos tuvieron alerta de frío (RN-23) | 10 |
 
 *Nota.* Elaboración propia. «Pedidos fuera del sistema» no se calcula desde la base de datos: se mide con un conteo manual en la fase de adopción (ver `02-propuesta-valor.md`).
 

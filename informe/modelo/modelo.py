@@ -160,7 +160,7 @@ tabla("orden", "Comercial", "Órdenes de compra generadas en el portal. El clien
     c("numero_oc", "varchar(30)", "Número de orden de compra del cliente (B2B); si falta, referencia propia WEB-año-número.", "OC-2026-0457", nulo=True),
     c("oc_pendiente", "boolean", "Verdadero si el cliente institucional compró sin su orden de compra y aún no la agrega.", "falso", default="false"),
     c("recibe_nombre", "varchar(80)", "Persona que recibe el pedido, elegida por el comprador en el carrito (de una lista de quienes ya eligió o con un nombre nuevo); vacío significa que recibe el titular de la cuenta.", "María Soto", default="''"),
-    c("comprobante", "varchar(8)", "Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura.", "boleta", default="'boleta'"),
+    c("comprobante", "varchar(8)", "Documento de venta de la orden: el público elige boleta o factura en el carrito; la institución recibe factura.", "boleta", check="comprobante IN ('boleta', 'factura')", default="'boleta'"),
     c("camara", "smallint", "Cámara del camión en la que viaja la orden; se fija al despachar. Una ruptura de frío solo la afecta si ocurre en esa cámara.", "1", default="1", check="camara IN (1, 2)"),
     c("creada_en", "timestamptz", "Fecha y hora de la orden.", "2026-10-12 10:20:00-03", default="now()"),
 ])
@@ -169,7 +169,9 @@ tabla("orden_item", "Comercial", "Líneas de una orden, con el precio vigente al
     c("producto_id", "integer", "Producto.", "101", fk="producto"),
     c("cantidad", "integer", "Cantidad comprada.", "10", check="cantidad > 0"),
     c("precio_unitario_clp", "integer", "Precio pagado por unidad, copiado de la lista al comprar.", "38990", check="precio_unitario_clp > 0"),
-], pk_comp=["orden_id", "producto_id"])
+    c("cantidad_rechazada", "integer", "Unidades que el cliente no aceptó al recibir (RN-23, supuesto a validar con Cofrial). Lo aceptado se calcula: cantidad menos esto.", "2", default="0"),
+    c("motivo_rechazo", "varchar(12)", "Motivo principal del rechazo de esta línea; vacío si no rechazó nada.", "danado", default="''"),
+], pk_comp=["orden_id", "producto_id"], extra=["CHECK (cantidad_rechazada BETWEEN 0 AND cantidad)", "CHECK ((cantidad_rechazada = 0 AND motivo_rechazo = '') OR (cantidad_rechazada > 0 AND motivo_rechazo IN ('temperatura', 'faltante', 'danado', 'otro')))"])
 tabla("documento", "Comercial", "Documentos tributarios simulados de una orden: boleta, factura, guía de despacho y nota de crédito. El monto es una foto de lo vendido, igual que el precio de la línea. Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre orden y tipo).", [
     pk("documento_id", "Identificador del documento.", "501"),
     c("tipo", "varchar(14)", "Tipo de documento.", "factura", check="tipo IN ('boleta','factura','guia_despacho','nota_credito')"),
@@ -322,6 +324,7 @@ def generar_sql():
         "-- Índices pensados para las consultas del dashboard y de la torre de control.",
         "CREATE INDEX idx_telemetria_camion_fecha ON telemetria (camion_id, registrado_en DESC);",
         "CREATE INDEX idx_telemetria_alerta ON telemetria (registrado_en) WHERE alerta_ruptura_frio;",
+        "CREATE INDEX idx_telemetria_fecha ON telemetria (registrado_en DESC);",
         "CREATE INDEX idx_orden_direccion ON orden (direccion_id);",
         "CREATE INDEX idx_direccion_cliente ON direccion (cliente_id);",
         "CREATE INDEX idx_orden_creada ON orden (creada_en);",
@@ -341,7 +344,8 @@ def generar_sql():
         "JOIN tipo_cliente tc ON tc.tipo_cliente_id = c.tipo_cliente_id;",
         "",
         "CREATE VIEW v_orden_total AS",
-        "SELECT orden_id, sum(cantidad * precio_unitario_clp) AS total_clp, sum(cantidad) AS unidades",
+        "SELECT orden_id, sum((cantidad - cantidad_rechazada) * precio_unitario_clp) AS total_clp, sum(cantidad - cantidad_rechazada) AS unidades,",
+        "       sum(cantidad_rechazada * precio_unitario_clp) AS rechazado_clp, sum(cantidad_rechazada) AS unidades_rechazadas",
         "FROM orden_item GROUP BY orden_id;",
         "",
     ]

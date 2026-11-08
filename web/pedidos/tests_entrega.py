@@ -40,7 +40,7 @@ class EstadosTests(EntregaBase):
     def test_flujo_con_los_dos_estados_nuevos(self):
         nombres = list(EstadoOrden.objects.order_by("orden_flujo").values_list("nombre", "es_final"))
         self.assertEqual(nombres, [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False),
-                                   ("Camión en la puerta", False), ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True)])
+                                   ("Camión en la puerta", False), ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True), ("Rechazada en recepción", True)])
 
     def test_avanzar_no_salta_a_estados_de_excepcion(self):
         cliente, orden, _ = self.orden_despachada()

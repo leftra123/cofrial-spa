@@ -7,7 +7,7 @@
  ],
  "timezone": "browser",
  "schemaVersion": 39,
- "version": 3,
+ "version": 4,
  "refresh": "5s",
  "time": {
   "from": "now-6h",
@@ -59,10 +59,10 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre NOT IN ('Cancelada', 'Rechazada en recepción') AND $__timeFilter(o.creada_en)"
     }
    ],
-   "description": "Suma de todas las órdenes creadas en el período, B2B y B2C, sin las canceladas.",
+   "description": "Suma de lo aceptado en las órdenes creadas en el período, B2B y B2C. No cuenta las canceladas ni las unidades rechazadas al recibir.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -116,10 +116,10 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en)"
+     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre NOT IN ('Cancelada', 'Rechazada en recepción') AND $__timeFilter(o.creada_en)"
     }
    ],
-   "description": "Cantidad de órdenes creadas en el período, sin las canceladas.",
+   "description": "Cantidad de órdenes creadas en el período, sin las canceladas ni las rechazadas enteras al recibir.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -292,7 +292,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
+     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó una lectura fuera de rango durante el viaje.",
@@ -352,10 +352,10 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
     }
    ],
-   "description": "Monto de los pedidos afectados: lo que la ruptura de frío pone en juego.",
+   "description": "Monto aceptado de los pedidos afectados: lo que la ruptura de frío pone en juego. Lo que el cliente ya rechazó no suma aquí: está abajo, en la sección 5.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -434,7 +434,7 @@
      "format": "time_series",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT $__timeGroupAlias(o.creada_en,'10m'), o.canal AS metric, sum(t.total_clp) AS value FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY 1"
+     "rawSql": "SELECT $__timeGroupAlias(o.creada_en,'10m'), o.canal AS metric, sum(t.total_clp) AS value FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre NOT IN ('Cancelada', 'Rechazada en recepción') AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY 1"
     },
     {
      "datasource": {
@@ -534,7 +534,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.canal || ': ' || '$' || replace(to_char(sum(t.total_clp), 'FM999,999,999,999,990'), ',', '.') AS canal, sum(t.total_clp) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre <> 'Cancelada' AND $__timeFilter(o.creada_en) GROUP BY o.canal ORDER BY o.canal"
+     "rawSql": "SELECT o.canal || ': ' || '$' || replace(to_char(sum(t.total_clp), 'FM999,999,999,999,990'), ',', '.') AS canal, sum(t.total_clp) AS ventas FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE e.nombre NOT IN ('Cancelada', 'Rechazada en recepción') AND $__timeFilter(o.creada_en) GROUP BY o.canal ORDER BY o.canal"
     }
    ],
    "description": "Cuánto del total vendido vino de cada canal: B2B (instituciones con lista de precios) y B2C (público general).",
@@ -933,7 +933,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())\nWHERE d.salida_en IS NOT NULL AND e.nombre <> 'Cancelada' GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
+     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())\nWHERE d.salida_en IS NOT NULL AND e.nombre <> 'Cancelada' GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó temperatura fuera de rango mientras iba en ruta. Más lecturas con alerta = más tiempo expuesto al calor.",
@@ -984,6 +984,202 @@
           }
          ]
         }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true
+   }
+  },
+  {
+   "id": 18,
+   "type": "row",
+   "title": "5 · Recepción: lo que el cliente rechazó al recibir, por canal y motivo, cruzado con las alertas de frío",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 39,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 19,
+   "title": "Rechazado en recepción",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 40,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.rechazado_clp),0), 'FM999,999,999,999,990'), ',', '.') AS rechazado FROM v_orden o JOIN v_orden_total t USING (orden_id) WHERE $__timeFilter(o.creada_en)"
+    }
+   ],
+   "description": "Valor de las unidades rechazadas en las órdenes del período: venta que se perdió en la puerta. Es neto en B2B e IVA incluido en B2C, igual que Ventas.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       }
+      ]
+     },
+     "mappings": [
+      {
+       "type": "regex",
+       "options": {
+        "pattern": "^\\$0$",
+        "result": {
+         "color": "green",
+         "index": 0
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false,
+     "fields": "/.*/"
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 20,
+   "title": "Unidades rechazadas",
+   "type": "stat",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 44,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT coalesce(sum(t.unidades_rechazadas),0) AS unidades FROM v_orden o JOIN v_orden_total t USING (orden_id) WHERE $__timeFilter(o.creada_en)"
+    }
+   ],
+   "description": "Unidades que los clientes no aceptaron al revisar el pedido. No vuelven a la venta sin revisión de bodega.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 21,
+   "title": "Rechazos por canal y motivo",
+   "type": "table",
+   "datasource": {
+    "type": "postgres",
+    "uid": "cofrial-pg"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 40,
+    "w": 18,
+    "h": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "postgres",
+      "uid": "cofrial-pg"
+     },
+     "refId": "A",
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT o.canal AS \"Canal\", CASE i.motivo_rechazo WHEN 'temperatura' THEN 'Temperatura' WHEN 'faltante' THEN 'Faltante' WHEN 'danado' THEN 'Dañado' ELSE 'Otro' END AS \"Motivo\",\ncount(DISTINCT o.orden_id) AS \"Pedidos\", sum(i.cantidad_rechazada) AS \"Unidades\", '$' || replace(to_char(sum(i.cantidad_rechazada * i.precio_unitario_clp), 'FM999,999,999,999,990'), ',', '.') AS \"Monto\",\ncount(DISTINCT o.orden_id) FILTER (WHERE EXISTS (SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))) AS \"Pedidos con alerta de frío\"\nFROM v_orden o JOIN orden x USING (orden_id) JOIN orden_item i USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nLEFT JOIN despacho d ON d.despacho_id = o.despacho_id\nWHERE i.cantidad_rechazada > 0 AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY sum(i.cantidad_rechazada * i.precio_unitario_clp) DESC"
+    }
+   ],
+   "description": "Cruza lo rechazado con la telemetría: si el cliente rechazó por temperatura y el camión registró alerta en el viaje, el reclamo tiene respaldo. Un rechazo por temperatura sin alerta conviene revisarlo aparte.",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto"
+     },
+     "noValue": "Sin rechazos en el período"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Monto"
+      },
+      "properties": [
+       {
+        "id": "custom.align",
+        "value": "right"
        }
       ]
      }

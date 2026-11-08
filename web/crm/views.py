@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from catalogo.models import Producto
 from cofrial import entradas
+from clientes import muestra
 from clientes.models import Comuna, Vendedor
 from pedidos import documentos, servicios as pedidos
 from pedidos.models import Pago
@@ -206,7 +207,8 @@ def cliente_ficha(request, pk):
         saldo_total=sum(d.saldo for d in docs if d.saldo and d.saldo > 0), direcciones=c.direccion_set.select_related("comuna"),
         interacciones=c.interaccion_set.select_related("vendedor").order_by("-registrada_en"),
         productos=Producto.objects.filter(activo=True, stock_disponible__gt=0).order_by("nombre"),
-        pide_oc=c.tipo_cliente.codigo == "B2B", comunas=Comuna.objects.order_by("nombre"), accion_direccion=f"/crm/clientes/{c.pk}/direccion/"))
+        pide_oc=c.tipo_cliente.codigo == "B2B", nivel=s.nivel_de_cliente(c),
+        ilustrativo=c.rut in muestra.RUT_ILUSTRATIVOS, comunas=Comuna.objects.order_by("nombre"), accion_direccion=f"/crm/clientes/{c.pk}/direccion/"))
 
 
 @require_POST
@@ -266,7 +268,8 @@ def requerimiento_detalle(request, pk):
     d = r.desglose or None
     habla_de_frio = (d or {}).get("motivo_principal") == "temperatura_inadecuada" or any(p in f"{r.asunto} {r.descripcion}".lower() for p in PALABRAS_DE_FRIO)
     dato = s.telemetria_del_viaje(r.orden) if r.orden_id and habla_de_frio else None      # sin IA también: la telemetría no depende de ella
-    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
+    rechazo = pedidos.rechazo_de(r.orden) if r.orden_id else None
+    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, rechazo=rechazo, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
 
 
 @require_POST

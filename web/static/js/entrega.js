@@ -62,23 +62,50 @@
   }
 
   /* Paso de revisión al recibir: el cliente ve productos y temperatura, dice si todo llegó bien o qué falló y recién entonces confirma.
-     Con «algo falló» el pedido queda entregado y el aviso llega a ventas como reclamo (lo crea el servidor). Misma lógica para la página y el diálogo. */
+     Con «algo falló» indica por producto cuántas unidades rechaza y por qué (RN-23): lo aceptado queda entregado y el aviso llega a ventas como reclamo
+     (lo crea el servidor); si rechaza todo, el botón y el resumen lo dicen antes de enviar. Misma lógica para la página y el diálogo. */
   function ligarRevision(form, ordenId, alEmpezar, alTerminar) {
     var radios = form.querySelectorAll("input[name=resultado]"), falla = form.querySelector(".revision-falla"), area = form.querySelector("textarea"),
-        tipo = form.querySelector("select"), err = form.querySelector(".entrega-error"), boton = form.querySelector("button:not([type=button])");
+        tipo = form.querySelector("select[name=tipo_problema]"), err = form.querySelector(".entrega-error"), boton = form.querySelector("button:not([type=button])"),
+        filas = Array.prototype.slice.call(form.querySelectorAll(".revision-linea")), caja = form.querySelector(".revision-tipo"), resumen = form.querySelector(".revision-resumen"),
+        textoBoton = boton.textContent;
+    form.noValidate = true;       // con JavaScript valida este código: el navegador se trabaría en silencio con un número inválido en el bloque ya oculto
+    function pedidas(f) { return parseInt(f.dataset.cantidad, 10); }
+    function campo(f) { return f.querySelector("input"); }
+    function selector(f) { return f.querySelector("select"); }
+    function numero(f) { var v = campo(f).value.trim(); return /^[0-9]+$/.test(v) ? parseInt(v, 10) : (v === "" ? 0 : -1); }   // -1: no es un número válido; el servidor también lo revisa
+    function pintarLineas() {
+      var total = 0, rechazadas = 0;
+      filas.forEach(function (f) { var n = numero(f); total += pedidas(f); rechazadas += Math.max(n, 0); f.querySelector(".revision-linea-motivo").hidden = n < 1; });
+      caja.hidden = rechazadas > 0;
+      var todo = rechazadas > 0 && rechazadas >= total;
+      resumen.textContent = !rechazadas ? "" : todo ? "Rechazas todo el pedido: no recibes ningún producto y queda «Rechazada en recepción»." : "Recibes " + (total - rechazadas) + " de " + total + " unidades y rechazas " + rechazadas + ".";
+      resumen.classList.toggle("todo", todo);
+      if (!boton.disabled) boton.textContent = eligio() !== "falla" || !rechazadas ? textoBoton : todo ? "Rechazar todo el pedido" : "Recibir solo lo aceptado";
+    }
     function eligio() { var r = form.querySelector("input[name=resultado]:checked"); return r ? r.value : ""; }
-    function mostrar() { var f = eligio() === "falla"; falla.hidden = !f; if (f) area.focus(); }
+    function mostrar() { var f = eligio() === "falla"; falla.hidden = !f; pintarLineas(); if (f) (filas.length ? campo(filas[0]) : area).focus(); }
     function error(m, campo) { err.textContent = m; err.hidden = false; if (campo) { campo.setAttribute("aria-invalid", "true"); campo.focus(); } }
-    function limpiar() { err.hidden = true; area.removeAttribute("aria-invalid"); }
+    function limpiar() { err.hidden = true; area.removeAttribute("aria-invalid"); filas.forEach(function (f) { campo(f).removeAttribute("aria-invalid"); selector(f).removeAttribute("aria-invalid"); }); }
     for (var i = 0; i < radios.length; i++) radios[i].addEventListener("change", function () { limpiar(); mostrar(); });
     area.addEventListener("input", function () { if (!err.hidden && !validar(area.value)) limpiar(); });
+    filas.forEach(function (f) { campo(f).addEventListener("input", function () { limpiar(); pintarLineas(); }); selector(f).addEventListener("change", limpiar); });
+    pintarLineas();
     falla.hidden = eligio() !== "falla";                  // sin JavaScript el bloque queda a la vista y el servidor decide; con JavaScript aparece solo si algo falló
     form.addEventListener("submit", function (e) {
       e.preventDefault(); var r = eligio();
       if (!r) { error("Elige si todo llegó bien o si algo falló.", radios[0]); return; }
       var datos = {resultado: r};
       if (r === "falla") {
-        var m = validar(area.value); if (m) { error(m.replace("qué pasó", "qué falló"), area); return; }
+        var rechazo = 0, otro = false;
+        for (var i = 0; i < filas.length; i++) {
+          var f = filas[i], n = numero(f), nombre = f.dataset.nombre;
+          if (n < 0 || n > pedidas(f)) { error("De " + nombre + " puedes rechazar entre 0 y " + pedidas(f) + " unidades.", campo(f)); return; }
+          if (n > 0 && !selector(f).value) { error("Elige el motivo del rechazo de " + nombre + ".", selector(f)); return; }
+          rechazo += n; otro = otro || (n > 0 && selector(f).value === "otro");
+          datos[campo(f).name] = n; if (n > 0) datos[selector(f).name] = selector(f).value;
+        }
+        if (!rechazo || otro) { var m = validar(area.value); if (m) { error(m.replace("qué pasó", "qué falló"), area); return; } }
         datos.tipo_problema = tipo.value; datos.problema = area.value.trim();
       }
       limpiar(); if (alEmpezar) alEmpezar(); var fin = ocupar(boton, "Confirmando…");
@@ -162,11 +189,24 @@
       });
       form.appendChild(fs);
       var fl = el("div", {"class": "revision-falla"});
-      fl.appendChild(el("label", {"for": "rv-tipo"}, "¿Qué falló?"));
-      var sel = el("select", {id: "rv-tipo", name: "tipo_problema"}); rev.problemas.forEach(function (k) { sel.appendChild(el("option", {value: k.codigo}, k.etiqueta)); }); fl.appendChild(sel);
-      fl.appendChild(el("label", {"for": "rv-problema"}, "Cuéntanos qué pasó (obligatorio si algo falló)"));
+      var flineas = el("fieldset", {"class": "revision-lineas"}); flineas.appendChild(el("legend", {}, "¿Qué unidades no recibes?"));
+      flineas.appendChild(el("p", {"class": "frio"}, "Deja 0 en lo que sí recibes. Si un producto llegó bien, no lo cambies aunque otro haya fallado."));
+      rev.productos.forEach(function (p) {
+        var fila = el("div", {"class": "revision-linea", "data-cantidad": String(p.cantidad), "data-nombre": p.producto}), nom = el("p", {"class": "revision-linea-nombre"});
+        nom.appendChild(el("b", {}, String(p.cantidad))); nom.appendChild(document.createTextNode(" × " + p.producto)); fila.appendChild(nom);
+        var c1 = el("div", {"class": "revision-linea-campo"}); c1.appendChild(el("label", {"for": "rv-rechazo-" + p.producto_id}, "Unidades que rechazo"));
+        c1.appendChild(el("input", {id: "rv-rechazo-" + p.producto_id, name: "rechazo_" + p.producto_id, type: "number", inputmode: "numeric", min: "0", max: String(p.cantidad), step: "1", value: "0"})); fila.appendChild(c1);
+        var c2 = el("div", {"class": "revision-linea-campo revision-linea-motivo"}); c2.appendChild(el("label", {"for": "rv-motivo-" + p.producto_id}, "Motivo"));
+        var sm = el("select", {id: "rv-motivo-" + p.producto_id, name: "motivo_" + p.producto_id}); sm.appendChild(el("option", {value: ""}, "Elige un motivo"));
+        rev.problemas.forEach(function (k) { sm.appendChild(el("option", {value: k.codigo}, k.etiqueta)); }); c2.appendChild(sm); fila.appendChild(c2);
+        flineas.appendChild(fila);
+      });
+      flineas.appendChild(el("p", {"class": "revision-resumen", role: "status", "aria-live": "polite"})); fl.appendChild(flineas);
+      var ctipo = el("div", {"class": "revision-tipo"}); ctipo.appendChild(el("label", {"for": "rv-tipo"}, "Si no rechazas unidades, ¿qué falló?"));
+      var sel = el("select", {id: "rv-tipo", name: "tipo_problema"}); rev.problemas.forEach(function (k) { sel.appendChild(el("option", {value: k.codigo}, k.etiqueta)); }); ctipo.appendChild(sel); fl.appendChild(ctipo);
+      fl.appendChild(el("label", {"for": "rv-problema"}, "Cuéntanos qué pasó (obligatorio si no rechazas unidades o eliges «Otro problema»)"));
       fl.appendChild(el("textarea", {id: "rv-problema", name: "problema", rows: "3", maxlength: String(MAX), "aria-describedby": "rv-error"}));
-      fl.appendChild(el("p", {"class": "frio"}, "Ventas recibe tu aviso como reclamo y te contacta. El pedido igual queda como entregado."));
+      fl.appendChild(el("p", {"class": "frio"}, rev.efecto + " Ventas recibe tu aviso como reclamo y te contacta."));
       form.appendChild(fl);
       form.appendChild(el("p", {"class": "entrega-error", id: "rv-error", role: "alert", hidden: ""}));
       var ac = el("div", {"class": "acciones"}); ac.appendChild(el("button", {"class": "btn"}, "Recibí mi pedido"));

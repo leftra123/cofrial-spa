@@ -25,8 +25,7 @@ Pauta completa y rúbrica: `informe/00-pauta-y-rubrica.md`. El objetivo es **Log
 ## Estructura
 - `informe/` — un `.md` por sección del informe del Hito 1. Contienen los datos del caso, los criterios para Logrado y lo que vamos decidiendo. **Al cambiar código o decisiones, actualizar el `.md` correspondiente** para que el informe nunca se quede sin información.
 - `docs/decisiones.md` — registro de decisiones técnicas (stack, trade-offs). Fuente para `informe/03-arquitectura-cloud.md`.
-- `docs/referencia-waretrack.md` — inspiración visual de la torre de control (proyecto visto en Threads; es material de terceros y no se publica).
-- `app/` — material de referencia privado (ignorado por git). **No** es la carpeta de código.
+- `app/` — material privado (ignorado por git): referencias de terceros y `guion-defensa.md`. **No** es la carpeta de código.
 - El código irá en carpetas propias cuando se cierre el stack (ver `docs/decisiones.md`).
 
 ## Forma de trabajo

@@ -1,6 +1,13 @@
 /* Mapa minimalista con OpenStreetMap (teselas estándar, atenuadas con CSS para que resalten las rutas) y rutas con OSRM. Ninguno pide cuenta ni clave.
    Si OSRM no responde, el mapa sigue mostrando los puntos y se dibuja una línea recta entre ellos. */
 window.CofrialMapa = (function () {
+  /* Escapa un texto para ponerlo como contenido de un elemento dentro de un trozo de HTML. Fuera de eso (atributos, popups, listas) usar nodos y textContent. */
+  function esc(texto) {
+    var d = document.createElement("div");
+    d.textContent = texto;
+    return d.innerHTML;
+  }
+
   var OSRM = "https://router.project-osrm.org";
   /* Mosaicos: vienen de las variables de entorno MAP_TILE_* (settings.MAPA_TILES) a través de la plantilla; por defecto, OpenStreetMap.
      La atribución del proveedor se muestra siempre en el mapa (control de atribución de Leaflet). */
@@ -95,7 +102,7 @@ window.CofrialMapa = (function () {
     var cajaH = med.imgH + etqH;
     /* PNG de 512×320: <img> + reglas globales lo pintaban casi a tamaño real; fondo en caja fija = escala de mapa */
     var html = '<span class="pin-camion-graf" role="presentation" aria-hidden="true" style="width:' + med.w + "px;height:" + med.imgH + "px;background-image:url('" + url + "')\"></span>";
-    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + etq + "</b>";
+    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + esc(etq) + "</b>";
     return L.divIcon({
       className: "pin-camion" + (alerta ? " alerta" : ""),
       iconSize: [med.w, cajaH],
@@ -143,10 +150,34 @@ window.CofrialMapa = (function () {
     return (r.metros / 1000).toFixed(1).replace(".", ",") + " km · unos " + Math.max(1, Math.round(r.segundos / 60)) + " min";
   }
 
+  /* Fila de una lista de paradas: «**cliente** · dirección (detalle)». El nombre y la dirección los escribe el cliente al registrarse, así que
+     entran como texto y nunca como HTML. */
+  function filaParada(cliente, direccion, detalle) {
+    var li = document.createElement("li"), nombre = document.createElement("b"), nota = document.createElement("span");
+    nombre.textContent = cliente;
+    nota.className = "frio";
+    nota.textContent = detalle;
+    li.appendChild(nombre);
+    li.appendChild(document.createTextNode(" · " + direccion + " "));
+    li.appendChild(nota);
+    return li;
+  }
+
+  /* Contenido de un popup con datos variables. Leaflet interpreta un texto como HTML; un nodo lo deja tal cual. Una línea por cada texto. */
+  function popupTexto(lineas) {
+    var caja = document.createElement("div");
+    lineas.forEach(function (linea) {
+      var d = document.createElement("div");
+      d.textContent = linea;
+      caja.appendChild(d);
+    });
+    return caja;
+  }
+
   /* La ruta que calculó y guardó el servidor ({puntos, km, minutos, aproximada}): se dibuja tal cual, sin volver a pedirle nada a OSRM. */
   function rutaGuardada(r) {
     return {linea: r.puntos, metros: r.aproximada ? null : r.km * 1000, segundos: (r.minutos || 0) * 60, orden: null, aproximada: !!r.aproximada};
   }
 
-  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto};
+  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto, filaParada: filaParada, popupTexto: popupTexto};
 })();

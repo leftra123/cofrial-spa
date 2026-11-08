@@ -60,7 +60,7 @@
     {% endfor %}
     {% if puede_cerrar and not x.viaje.llegada_en %}
     <form method="post" action="/flota/viajes/{{ x.viaje.despacho_id }}/cerrar/" class="cerrar-viaje"
-          onsubmit="return confirm('Corrección manual: ¿dar por llegado el despacho N.º {{ x.viaje.despacho_id }}? Los pedidos pasarán a «Entregada» y el camión {{ x.camion.camion_id }} volverá a la base. Normalmente el sistema lo registra solo.')">
+          onsubmit="return confirm('Corrección manual: ¿dar por llegado el despacho N.º {{ x.viaje.despacho_id }}? Los pedidos pasarán a «Entregada» y el camión {{ x.camion.camion_id|escapejs }} volverá a la base. Normalmente el sistema lo registra solo.')">
       {% csrf_token %}<input type="hidden" name="confirmar" value="1">
       <button class="btn-sec">Marcar entregado y cerrar despacho (corrección)</button>
     </form>
@@ -141,7 +141,7 @@
     var marcaBase = L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
     marcaBase.bindTooltip("", {permanent: true, direction: "bottom", offset: [0, 16], className: "base-contador"});
     function agregarCamion(c) {
-      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id, m.getZoom()), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(c.id + " · " + c.patente);
+      marcas[c.id] = L.marker([c.lat, c.long], {icon: CofrialMapa.camion(c.alerta, c.id, m.getZoom()), title: "Camión " + c.id + (c.alerta ? ", con ruptura de frío" : ""), alt: "Camión " + c.id}).addTo(m).bindPopup(CofrialMapa.popupTexto([c.id + " · " + c.patente]));
       marcas[c.id].enAlerta = c.alerta;
     }
     d.camiones.forEach(agregarCamion);
@@ -154,7 +154,7 @@
       ids.forEach(function (id, i) {
         var r = 30 + 7 * Math.sqrt(i), angulo = i * 2.39996;
         L.circleMarker(m.unproject(centro.add([r * Math.cos(angulo), r * Math.sin(angulo)]), z), {radius: 5, weight: 1, color: "#fff", fillColor: "#0F172A", fillOpacity: .85})
-          .bindPopup(id + " · " + enBase[id].patente + " · en base").addTo(capaBase);
+          .bindPopup(CofrialMapa.popupTexto([id + " · " + enBase[id].patente + " · en base"])).addTo(capaBase);
       });
       marcaBase.setTooltipContent(ids.length + " en base");
     }
@@ -195,11 +195,16 @@
         var posicion = {}; v.ruta.paradas.forEach(function (q, k) { posicion[q.direccion_id] = k + 1; });
         v.paradas.forEach(function (p) {
           var n = posicion[p.direccion_id] || 1;                  // posición de la parada en el recorrido (la base es 0)
-          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(p.cliente + "<br>" + p.direccion);
-          lista[n - 1] = "<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")</span></li>";
+          L.marker([p.lat, p.long], {icon: CofrialMapa.pin(n, color), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(m).bindPopup(CofrialMapa.popupTexto([p.cliente, p.direccion]));
+          lista[n - 1] = CofrialMapa.filaParada(p.cliente, p.direccion, "(orden N.º " + p.orden + " · " + p.estado.toLowerCase() + ")");
         });
-        document.getElementById("rutas-sugeridas").insertAdjacentHTML("beforeend",
-          "<p class='ruta-info'><b>" + v.camion + " · " + v.patente + "</b> · " + v.situacion + ". Un solo recorrido, en este orden. " + CofrialMapa.texto(r) + "</p><ol class='ruta-lista'>" + lista.filter(Boolean).join("") + "</ol>");
+        var caja = document.getElementById("rutas-sugeridas"), info = document.createElement("p"), camion = document.createElement("b"), ol = document.createElement("ol");
+        info.className = "ruta-info"; ol.className = "ruta-lista";
+        camion.textContent = v.camion + " · " + v.patente;
+        info.appendChild(camion);
+        info.appendChild(document.createTextNode(" · " + v.situacion + ". Un solo recorrido, en este orden. " + CofrialMapa.texto(r)));
+        lista.filter(Boolean).forEach(function (fila) { ol.appendChild(fila); });
+        caja.appendChild(info); caja.appendChild(ol);
       })();
     });
     if (todos.length > 1) m.fitBounds(todos, {padding: [36, 36], maxZoom: 15});

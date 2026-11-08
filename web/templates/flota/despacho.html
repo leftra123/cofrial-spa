@@ -74,18 +74,17 @@
       .then(function (r) { return r.json(); }).then(function (j) {
       if (mio !== version) return;                         // llegó tarde: ya se cambió la selección
       var ruta = j.ruta; if (!ruta) { resumen.textContent = "No pudimos calcular la ruta."; return; }
-      var r = CofrialMapa.rutaGuardada(ruta), filas = [];     // la misma ruta por calles que se guardará al despachar
+      var r = CofrialMapa.rutaGuardada(ruta);                 // la misma ruta por calles que se guardará al despachar
       L.polyline(r.linea, {color: "#1D4ED8", weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(capa);
       ruta.paradas.forEach(function (q, k) {
         var n = k + 1;
         q.ordenes.forEach(function (oid) {
           var p = d.pedidos[oid];
           if (!p) return;
-          L.marker([q.lat, q.long], {icon: CofrialMapa.pin(n, "#1D4ED8"), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(capa).bindPopup(p.cliente + "<br>" + p.direccion);
-          filas.push("<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + oid + ")</span></li>");
+          L.marker([q.lat, q.long], {icon: CofrialMapa.pin(n, "#1D4ED8"), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(capa).bindPopup(CofrialMapa.popupTexto([p.cliente, p.direccion]));
+          lista.appendChild(CofrialMapa.filaParada(p.cliente, p.direccion, "(orden N.º " + oid + ")"));
         });
       });
-      lista.innerHTML = filas.join("");
       resumen.textContent = "Recorrido por calles (ida y vuelta a la base): " + CofrialMapa.texto(r) + (sinUbicar ? " · " + sinUbicar + " pedido(s) sin ubicar no pueden salir: ubícalos primero" : "");
       m.fitBounds(pts, {padding: [40, 40]});
     }).catch(function () { if (mio === version) resumen.textContent = "No pudimos calcular la ruta. Intenta de nuevo."; });

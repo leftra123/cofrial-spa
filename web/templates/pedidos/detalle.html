@@ -248,8 +248,8 @@
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
         if (!mapa) {
           mapa = CofrialMapa.crear("mapa", cam, 14);
-          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom()), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup("Camión " + s.camion_id);
-          if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(s.destino.direccion);
+          marcador = L.marker(cam, {icon: CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom()), title: "Camión " + s.camion_id}).addTo(mapa).bindPopup(CofrialMapa.popupTexto(["Camión " + s.camion_id]));
+          if (dest) L.marker(dest, {icon: CofrialMapa.destino(), title: "Tu dirección de entrega"}).addTo(mapa).bindPopup(CofrialMapa.popupTexto([s.destino.direccion]));
         } else { marcador.setLatLng(cam); marcador.setIcon(CofrialMapa.camion(u.alerta_ruptura_frio, s.camion_id, mapa.getZoom())); }
         if (dest && s.ruta_url && Date.now() - ultimaRuta > (s.tiempo_x > 1 ? 5000 : 15000)) {       // el servidor entrega solo el tramo que le falta al camión hasta esta dirección (sale de la ruta guardada, sin consultar a OSRM): se pide cada 15 s para que la línea parta del camión
           ultimaRuta = Date.now();

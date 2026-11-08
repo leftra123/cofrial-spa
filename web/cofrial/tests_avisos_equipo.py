@@ -255,3 +255,41 @@ class UbicacionDireccionTests(Base):
         c = self.entrar(ADMIN)
         html = c.get(f"/crm/clientes/{self.cliente.pk}/").content.decode()
         self.assertNotIn("data-usar-ubicacion", html)
+
+
+class RecepcionParcialTests(Base):
+    """RN-23: lo que el cliente rechaza al recibir cambia lo que el equipo debe atender."""
+
+    def en_la_puerta(self, cantidad=2):
+        orden = pedido()
+        Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Camión en la puerta"), puerta_en=timezone.now())
+        item = orden.ordenitem_set.get()
+        type(item).objects.filter(pk=item.pk).update(cantidad=cantidad)
+        return Orden.objects.get(pk=orden.pk), orden.direccion.cliente, item.producto_id
+
+    def test_el_rechazo_parcial_sigue_por_facturar_y_avisa_a_ventas(self):
+        orden, cliente, producto = self.en_la_puerta()
+        antes = self.avisos(VENDEDORA)
+        pedidos.resolver_entrega(cliente, orden.pk, "aceptar", motivo="La bolsa venía abierta", con_problema=True, tipo_problema="danado", rechazos={producto: (1, "danado")})
+        ahora = self.avisos(VENDEDORA)
+        self.assertEqual(ahora["por_facturar"]["n"], antes.get("por_facturar", {"n": 0})["n"] + 1)
+        self.assertEqual(ahora["reclamos"]["n"], antes.get("reclamos", {"n": 0})["n"] + 1)
+
+    def test_el_rechazo_total_no_queda_por_facturar_ni_por_despachar(self):
+        orden, cliente, producto = self.en_la_puerta()
+        antes = self.avisos(ADMIN)
+        pedidos.resolver_entrega(cliente, orden.pk, "aceptar", motivo="Toda la carga venía abierta", con_problema=True, tipo_problema="danado", rechazos={producto: (2, "danado")})
+        self.assertEqual(Orden.objects.get(pk=orden.pk).estado_orden.nombre, pedidos.RECHAZADA)
+        ahora = self.avisos(ADMIN)
+        self.assertEqual(ahora.get("por_facturar", {"n": 0})["n"], antes.get("por_facturar", {"n": 0})["n"])
+        self.assertEqual(ahora.get("por_despachar", {"n": 0})["n"], antes.get("por_despachar", {"n": 0})["n"])
+        self.assertEqual(ahora["reclamos"]["n"], antes.get("reclamos", {"n": 0})["n"] + 1)
+
+    def test_una_factura_rebajada_por_completo_no_figura_vencida(self):
+        orden, cliente, producto = self.en_la_puerta()
+        Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Entregada"))
+        factura = documentos.emitir_factura(Orden.objects.get(pk=orden.pk))
+        type(factura).objects.filter(pk=factura.pk).update(vence_en=timezone.localdate() - timedelta(days=3))
+        antes = self.avisos(ADMIN)["vencidas"]["n"]
+        documentos.emitir_nota_credito(factura.pk, factura.monto_clp, "Rechazada en recepción")
+        self.assertEqual(self.avisos(ADMIN).get("vencidas", {"n": 0})["n"], antes - 1)

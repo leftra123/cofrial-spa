@@ -55,7 +55,7 @@ def panel(request):
     mapa = {"base": settings.BASE_LOGISTICA,
             "camiones": [{"id": x["camion"].camion_id, "patente": x["camion"].patente, "lat": x["lectura"].lat, "long": x["lectura"].long,
                           "alerta": x["alerta"], "situacion": x["situacion"], "situacion_texto": x["situacion_texto"], "sin_senal": x["sin_senal"],
-                          "temp": x["lectura"].temp_camara, "comb": x["lectura"].combustible_pct, "comb_bajo": x["combustible_bajo"]}
+                          "temp": x["lectura"].temp_camara, "temps": [t.temp_camara for t in getattr(x["lectura"], "camaras", [x["lectura"]])], "comb": x["lectura"].combustible_pct, "comb_bajo": x["combustible_bajo"]}
                          for x in tarjetas if x["lectura"] and x["en_operacion"]],
             "en_base": [{"id": x["camion"].camion_id, "patente": x["camion"].patente} for x in tarjetas if not x["en_operacion"]],
             "viajes": [{"camion": x["camion"].camion_id, "patente": x["camion"].patente, "despacho": x["viaje"].despacho_id,
@@ -139,7 +139,7 @@ def despachar(request):
     opciones = sugerencias.opciones_camion()         # del mejor al peor: el navegador toma el primero compatible con lo que se marque
     camion_sugerido = request.GET.get("camion", "")
     mapa = {"base": settings.BASE_LOGISTICA, "camion_fijado": bool(camion_sugerido),
-            "camiones": [{k: c[k] for k in ("id", "rango", "apto", "nota")} for c in opciones],
+            "camiones": [{k: c[k] for k in ("id", "rango", "rangos", "apto", "nota")} for c in opciones],
             "rangos": {p["o"].orden_id: p["rangos"] for p in pedidos},
             "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
                                           "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}

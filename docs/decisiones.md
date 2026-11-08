@@ -390,3 +390,13 @@ Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qu�
 - **Por llegar se dice la distancia:** con `cerca`, el distintivo muestra «El camión está a menos de N km» en vez de la ventana. La ventana del servidor puede cerrar unos 15 minutos después de la estimación, y junto a «en cerca de un minuto» parecía un error.
 - **Sin cambios de servidor ni de privacidad:** `ruta_del_pedido` sigue igual; quien no es la próxima parada ve una línea recta punteada, sin paradas ajenas.
 - **Qué se cede:** en móvil, un dedo sobre el mapa lo mueve en vez de bajar la página (lo normal en MapLibre; los gestos cooperativos salen en inglés y `mapa.js` no los traduce). La línea entre lecturas puede quedar unos metros detrás del camión, porque el tramo se pide cada 15 s.
+
+## Camiones de dos cámaras (8-nov-2026)
+- **Por qué:** un carrito con refrigerados y congelados obligaba a mandar dos camiones a la misma dirección. Decisión de Eric: parte de la flota lleva ambos rangos. Una empresa no renueva 50 camiones de golpe, así que son 5 (10 %), uno por contenedor del simulador.
+- **Qué no cambia:** una orden por rango (RN-16), porque el documento, el seguimiento y el reclamo son por orden. Tampoco cambian los campos de telemetría que exige la pauta.
+- **Lecturas:** una fila por cámara (`telemetria.camara`) en vez de una sola temperatura por camión. Así, una falla del congelado no le avisa al cliente del pedido refrigerado.
+- **`orden.camara`:** se guarda como hecho del despacho, igual que `despacho_id`, en vez de deducirlo de los productos en cada lectura. Simplifica el cruce de ventas con alertas (RN-13) en el CRM y en Grafana.
+- **`camion.rango_secundario_id` y no una tabla de cámaras:** ningún camión de la flota tiene más de dos, y casi todo el sistema sigue leyendo `rango_temperatura`. Con tres cámaras o más, convendría una tabla propia.
+- **Uso de la flota:** para un solo rango se prefiere un camión simple, porque los de dos cámaras son escasos; si no hay uno simple libre, sirve uno de dos cámaras.
+- **Despliegue:** primero la web, que migra la base, y después reiniciar el simulador, que lee la segunda cámara al arrancar y ya inserta la columna `camara`. `flota/0008_camion_dos_camaras` reconstruye la restricción única de `telemetria` sin `CONCURRENTLY`, así que puede bloquear las inserciones mientras dure; conviene hacerlo fuera de una demostración.
+- **Qué no se hizo:** repartir la capacidad por cámara; `capacidad_kg` es del camión completo. Los escenarios por viaje fallan solo en la cámara 1; para mostrar una falla en la cámara 2 se usa `/demo/`.

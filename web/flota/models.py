@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 
 from catalogo.models import RangoTemperatura
 
@@ -10,16 +10,38 @@ class Camion(models.Model):
     camion_id = models.CharField(max_length=20, primary_key=True)
     patente = models.CharField(max_length=8, unique=True)
     capacidad_kg = models.IntegerField()
-    rango_temperatura = models.ForeignKey(RangoTemperatura, on_delete=models.PROTECT)
+    rango_temperatura = models.ForeignKey(RangoTemperatura, on_delete=models.PROTECT)           # cámara 1, la única en la mayoría de la flota
+    rango_secundario = models.ForeignKey(RangoTemperatura, null=True, blank=True, on_delete=models.PROTECT, related_name="+")   # cámara 2: lleva dos rangos en un viaje
     activo = models.BooleanField(default=True)
 
     class Meta:
         db_table = "camion"
         verbose_name_plural = "camiones"
-        constraints = [models.CheckConstraint(condition=Q(capacidad_kg__gt=0), name="capacidad_positiva")]
+        constraints = [models.CheckConstraint(condition=Q(capacidad_kg__gt=0), name="capacidad_positiva"),
+                       models.CheckConstraint(condition=~Q(rango_secundario=F("rango_temperatura")), name="camaras_de_rango_distinto")]
 
     def __str__(self):
         return self.camion_id
+
+    @property
+    def dos_camaras(self):
+        return self.rango_secundario_id is not None
+
+    @property
+    def rangos(self):
+        """Nombres de los rangos que puede llevar este camión."""
+        return [self.rango_temperatura.nombre] + ([self.rango_secundario.nombre] if self.dos_camaras else [])
+
+    @property
+    def rangos_texto(self):
+        return " y ".join(self.rangos)
+
+    def camara_de(self, rango):
+        """Número de la cámara que lleva ese rango: 2 si es el secundario; en cualquier otro caso, 1."""
+        return 2 if self.dos_camaras and rango == self.rango_secundario.nombre else 1
+
+    def rango_de_camara(self, camara):
+        return self.rango_secundario if camara == 2 and self.dos_camaras else self.rango_temperatura
 
 
 class Despacho(models.Model):
@@ -57,6 +79,7 @@ class Telemetria(models.Model):
     long = models.FloatField()
     combustible_pct = models.IntegerField()
     alerta_ruptura_frio = models.BooleanField()
+    camara = models.PositiveSmallIntegerField(default=1, db_default=1)    # 1 en todo camión; 2 solo en los de dos cámaras, que envían una lectura por cada una
     registrado_en = models.DateTimeField(auto_now_add=True)
     forzada = models.BooleanField(default=False, db_default=False)    # lectura de demostración: la crea /demo/ o la envía el simulador durante una falla de un escenario; se puede borrar sin tocar la telemetría normal
 
@@ -64,7 +87,8 @@ class Telemetria(models.Model):
         db_table = "telemetria"
         verbose_name_plural = "telemetría"
         constraints = [
-            models.UniqueConstraint(fields=["camion", "registrado_en"], name="uq_telemetria_camion_instante"),
+            models.UniqueConstraint(fields=["camion", "camara", "registrado_en"], name="uq_telemetria_camion_camara_instante"),
+            models.CheckConstraint(condition=Q(camara__in=[1, 2]), name="telemetria_camara_valida"),
             models.CheckConstraint(condition=Q(lat__gte=-90, lat__lte=90), name="lat_valida"),
             models.CheckConstraint(condition=Q(long__gte=-180, long__lte=180), name="long_valida"),
             models.CheckConstraint(condition=Q(combustible_pct__gte=0, combustible_pct__lte=100), name="combustible_valido"),

@@ -3,7 +3,7 @@ que confirma entregas vencidas, ni `crm.servicios.indicadores`, que consulta cli
 from datetime import timedelta
 
 from django.db import connection
-from django.db.models import Max, Sum
+from django.db.models import Max, Q, Sum
 from django.utils import timezone
 
 from clientes import muestra
@@ -21,7 +21,7 @@ VENTANA_FRECUENTES_DIAS = 90
 
 # Pedidos afectados por una ruptura de frío: copia de AFECTADAS y A_BORDO en grafana/generar_dashboard.py. Si se cambia allá, cambiarla aquí
 # para que la cifra de la Torre y la de Grafana sigan coincidiendo.
-_A_BORDO = """m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
+_A_BORDO = """m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
   AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
 _RIESGO_HISTORICO = f"""SELECT coalesce(sum(t.total_clp), 0) FROM v_orden o JOIN v_orden_total t USING (orden_id)
 JOIN orden x USING (orden_id)
@@ -31,12 +31,15 @@ WHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (
   SELECT 1 FROM telemetria m WHERE {_A_BORDO})"""
 
 
-def _riesgo_actual(camiones_en_alerta):
-    """(monto, cliente más expuesto) de los pedidos a bordo, sin entregar, de camiones cuya última lectura trae alerta."""
+def _riesgo_actual(vigentes, camiones_en_alerta):
+    """(monto, cliente más expuesto) de los pedidos a bordo, sin entregar, que viajan en una cámara cuya última lectura trae alerta."""
     if not camiones_en_alerta:
         return 0, None
-    ordenes = Orden.objects.filter(despacho__salida_en__isnull=False, despacho__regreso_en__isnull=True,
-                                   despacho__camion_id__in=camiones_en_alerta).exclude(estado_orden__nombre__in=[*RECEPCION_CERRADA, "Cancelada"])
+    en_alerta = Q()
+    for cid in camiones_en_alerta:
+        lectura = vigentes[cid]
+        en_alerta |= Q(despacho__camion_id=cid, camara__in=[t.camara for t in getattr(lectura, "camaras", [lectura]) if t.alerta_ruptura_frio])
+    ordenes = Orden.objects.filter(en_alerta, despacho__salida_en__isnull=False, despacho__regreso_en__isnull=True).exclude(estado_orden__nombre__in=[*RECEPCION_CERRADA, "Cancelada"])
     por_cliente = list(OrdenItem.objects.filter(orden__in=ordenes.values("pk")).values("orden__direccion__cliente__nombre")
                        .annotate(total=Sum(MONTO_ACEPTADO)).order_by("-total", "orden__direccion__cliente__nombre"))
     if not por_cliente:
@@ -47,7 +50,7 @@ def _riesgo_actual(camiones_en_alerta):
 def _ahora(vigentes, alertas):
     ahora = timezone.now()
     ultima = Telemetria.objects.filter(forzada=False).aggregate(m=Max("registrado_en"))["m"]      # las forzadas de /demo/ no prueban que el simulador esté vivo
-    riesgo, expuesto = _riesgo_actual(alertas)
+    riesgo, expuesto = _riesgo_actual(vigentes, alertas)
     with connection.cursor() as cursor:
         cursor.execute(_RIESGO_HISTORICO)
         historico = int(cursor.fetchone()[0])
@@ -164,6 +167,7 @@ def pedido_trazado(vigentes=None):
         return None
     cliente, camion_id = orden.direccion.cliente, orden.despacho.camion_id
     lectura = (vigente.ultimas_vigentes() if vigentes is None else vigentes).get(camion_id)
+    lectura = next((t for t in getattr(lectura, "camaras", []) if t.camara == orden.camara), lectura)      # en un camión de dos cámaras, la de este pedido
     return {"orden_id": orden.pk, "cliente": cliente.nombre, "camion_id": camion_id, "salida_en": orden.despacho.salida_en.isoformat(),
             "temp_camara": None if lectura is None else lectura.temp_camara,
             "alerta": None if lectura is None else bool(lectura.alerta_ruptura_frio),      # None: nadie midió, no es lo mismo que «no»

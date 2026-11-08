@@ -12,7 +12,9 @@
     <h2 id="d-t1">1. Forzar una ruptura de frío</h2>
     <p class="muted">Mientras esta página esté abierta y la ruptura activa, se registra una lectura con la temperatura fuera de rango cada 4 segundos. Dura como máximo {{ duracion }} segundos y se detiene sola si cierras la página. No modifica las lecturas reales del simulador.</p>
     <label for="camion">Camión</label>
-    <select id="camion">{% for c in camiones %}<option value="{{ c.camion_id }}">{{ c.camion_id }} · {{ c.patente }} ({{ c.rango_temperatura.nombre }}, hasta {{ c.rango_temperatura.temp_max_c|floatformat:"-1" }} °C)</option>{% endfor %}</select>
+    <select id="camion">{% for c in camiones %}<option value="{{ c.camion_id }}"{% if c.dos_camaras %} data-camara2="{{ c.rango_secundario.nombre }}"{% endif %}>{{ c.camion_id }} · {{ c.patente }} ({{ c.rango_temperatura.nombre }}, hasta {{ c.rango_temperatura.temp_max_c|floatformat:"-1" }} °C)</option>{% endfor %}</select>
+    <div id="camara-campo" hidden><label for="camara">Cámara</label><select id="camara"><option value="1" id="camara-1">Cámara 1</option><option value="2" id="camara-2">Cámara 2</option></select>
+      <p class="muted">La falla afecta solo a los pedidos que viajan en esa cámara.</p></div>
     <div class="acciones" style="margin-top:16px">
       <button type="button" class="btn-peligro" id="iniciar">Forzar ruptura de frío</button>
       <button type="button" class="btn-sec" id="apagar" disabled>Apagar</button>
@@ -82,9 +84,16 @@
   function post(url, datos) {
     var f = new URLSearchParams(datos); return fetch(url, {method: "POST", credentials: "same-origin", headers: {"X-CSRFToken": csrf}, body: f}).then(function (r) { return r.json().then(function (j) { j._ok = r.ok; return j; }); });
   }
-  function pantalla(activa, msg) { bi.disabled = activa; ba.disabled = !activa; sel.disabled = activa; estado.textContent = msg; estado.classList.toggle("activa", activa); }
+  function pantalla(activa, msg) { bi.disabled = activa; ba.disabled = !activa; sel.disabled = activa; document.getElementById("camara").disabled = activa; estado.textContent = msg; estado.classList.toggle("activa", activa); }
+  var camara = document.getElementById("camara"), camaraCampo = document.getElementById("camara-campo");
+  function verCamara() {
+    var o = sel.options[sel.selectedIndex], segunda = o && o.dataset.camara2;
+    camaraCampo.hidden = !segunda;
+    if (!segunda) camara.value = "1"; else document.getElementById("camara-2").textContent = "Cámara 2 · " + segunda;
+  }
+  sel.addEventListener("change", verCamara); verCamara();
   function pulsar(confirmar) {
-    return post("/demo/pulso/", {camion: sel.value, confirmar: confirmar ? "1" : "0"}).then(function (r) {
+    return post("/demo/pulso/", {camion: sel.value, camara: camara.value, confirmar: confirmar ? "1" : "0"}).then(function (r) {
       if (!r._ok) { detener(); pantalla(false, r.detail || "No se pudo forzar."); return; }
       document.getElementById("n-forzadas").textContent = r.forzadas;
       if (!r.activa) { detener(); pantalla(false, r.detail || "Terminó el tiempo máximo. La ruptura se apagó."); return; }
@@ -101,7 +110,7 @@
     pulsar(true).then(function () { if (!timer && ba.disabled === false) timer = setInterval(function () { pulsar(false); }, 4000); });
   });
   ba.addEventListener("click", function () {
-    detener(); post("/demo/apagar/", {camion: sel.value}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Apagado. El camión vuelve a mostrar una temperatura normal."); });
+    detener(); post("/demo/apagar/", {camion: sel.value, camara: camara.value}).then(function (r) { document.getElementById("n-forzadas").textContent = r.forzadas; pantalla(false, "Apagado. El camión vuelve a mostrar una temperatura normal."); });
   });
   document.getElementById("limpiar").addEventListener("click", function () {
     if (!confirm("¿Borrar los escenarios y las lecturas de demostración y volver el tiempo a 1×? La telemetría real no se toca.")) return;

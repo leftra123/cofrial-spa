@@ -103,8 +103,12 @@ class Datos(Base):
         nombres = [c["nombre"] for c in servicios.datos_negocio(self.gerencia)["clientes_mapa"]]
         self.assertIn("Con segmento", nombres)
         self.assertNotIn("Sin segmento", nombres)
-        self.assertNotIn("ana@correo.test", nombres)
-        self.assertNotIn("felipe@cofrial.cl", nombres)
+        cuentas = ["ana@correo.test", "felipe@cofrial.cl"]
+        de_prueba = list(Cliente.objects.filter(usuario__username__in=cuentas))
+        self.assertEqual(len(de_prueba), 2)                     # existen y no tienen segmento
+        for c in de_prueba:
+            self.assertIsNone(c.segmento_id)
+            self.assertNotIn(c.nombre, nombres)
         fila = next(c for c in servicios.datos_negocio(self.gerencia)["clientes_mapa"] if c["nombre"] == "Con segmento")
         self.assertEqual(set(fila), {"nombre", "segmento", "comuna", "lat", "long", "nivel", "url"})
         self.assertEqual(fila["nivel"], "Ganado sin pedido")

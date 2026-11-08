@@ -3,6 +3,7 @@ erDiagram
   comuna ||--o{ direccion : "ubica"
   rango_temperatura ||--o{ categoria : "exige"
   rango_temperatura ||--o{ camion : "opera en"
+  rango_temperatura |o--o{ camion : "segunda cámara"
   categoria ||--o{ producto : "agrupa"
   lista_precio ||--o{ precio_producto : "fija"
   producto ||--o{ precio_producto : "tiene"
@@ -95,6 +96,7 @@ erDiagram
   camion {
     varchar camion_id PK
     integer rango_temperatura_id FK
+    integer rango_secundario_id FK
   }
   despacho {
     integer despacho_id PK
@@ -127,6 +129,7 @@ erDiagram
     double_precision long
     integer combustible_pct
     boolean alerta_ruptura_frio
+    smallint camara
     timestamptz registrado_en
   }
   etapa_pipeline {

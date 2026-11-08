@@ -21,10 +21,16 @@ class PuedeVerFlota(BasePermission):
 
 class LecturaSerializer(serializers.Serializer):
     temp_camara = serializers.FloatField()
+    camaras = serializers.SerializerMethodField()
     lat = serializers.FloatField()
     long = serializers.FloatField()
     combustible_pct = serializers.IntegerField()
     alerta_ruptura_frio = serializers.BooleanField()
+
+    def get_camaras(self, lectura):
+        """Una fila por cámara: en un camión de dos cámaras, el panel muestra ambas temperaturas."""
+        return [{"camara": t.camara, "temp_camara": t.temp_camara, "alerta_ruptura_frio": t.alerta_ruptura_frio} for t in getattr(lectura, "camaras", [lectura])]
+
     registrado_en = serializers.DateTimeField()
 
 
@@ -33,6 +39,7 @@ class CamionSerializer(serializers.Serializer):
     patente = serializers.CharField(source="camion.patente")
     capacidad_kg = serializers.IntegerField(source="camion.capacidad_kg")
     rango_temperatura = serializers.CharField(source="camion.rango_temperatura.nombre")
+    rangos = serializers.ListField(source="camion.rangos", child=serializers.CharField())
     activo = serializers.BooleanField(source="camion.activo")
     en_ruta = serializers.SerializerMethodField()
     situacion = serializers.CharField()

@@ -196,7 +196,15 @@ class ReglasAutomaticasTests(ConDemo):
         self.assertEqual([len(v["pedidos"]) for v in salen], [6])
         self.assertEqual([len(v["pedidos"]) for v in agrupando], [1])
 
+    def test_una_direccion_con_dos_rangos_sale_en_un_camion_de_dos_camaras(self):
+        a, b = pedido(REFRIGERADO, minutos=9), pedido(CONGELADO, minutos=9)
+        salen = self._salen()
+        self.assertEqual(len(salen), 1)
+        self.assertEqual({p["orden"] for p in salen[0]["pedidos"]}, {a.pk, b.pk})
+        self.assertTrue(Camion.objects.get(pk=salen[0]["camion"]).dos_camaras)
+
     def test_un_viaje_lleva_un_solo_rango_y_un_camion_de_ese_rango(self):
+        Camion.objects.filter(rango_secundario__isnull=False).update(activo=False)          # sin camiones de dos cámaras libres, cada rango va en el suyo
         pedido(REFRIGERADO, minutos=9)
         pedido(CONGELADO, minutos=9)
         salen = self._salen()
@@ -234,7 +242,7 @@ class ReglasAutomaticasTests(ConDemo):
 
     def test_agrupa_por_comuna_sin_sumar_camiones(self):
         comunas = ["Angol", "Temuco", "Angol", "Temuco", "Angol", "Temuco", "Angol", "Temuco"]
-        filas = [type("O", (), {"orden_id": i, "creada_en": timezone.now() - timedelta(minutes=20 - i), "estado_orden": type("E", (), {"nombre": "Recibida"}),
+        filas = [type("O", (), {"orden_id": i, "direccion_id": i, "creada_en": timezone.now() - timedelta(minutes=20 - i), "estado_orden": type("E", (), {"nombre": "Recibida"}),
                                 "direccion": type("D", (), {"lat": 1.0, "comuna": type("C", (), {"nombre": c})})}) for i, c in enumerate(comunas)]
         with patch("flota.sugerencias.servicios.pedidos_por_despachar", return_value=filas), patch("flota.sugerencias.servicios.rangos_de", return_value=["Refrigerado"]):
             viajes, _ = sugerencias.calcular()
@@ -299,6 +307,7 @@ class EjecutarTests(ConDemo):
         self.assertEqual(falso.call_count, autodespacho.MAX_IA_POR_PASADA)
 
     def test_un_viaje_que_ya_no_se_puede_no_detiene_a_los_demas(self):
+        Camion.objects.filter(rango_secundario__isnull=False).update(activo=False)
         pedido(REFRIGERADO, minutos=9)
         pedido(CONGELADO, minutos=9)
         real = servicios.despachar

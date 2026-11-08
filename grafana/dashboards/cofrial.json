@@ -292,7 +292,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
+     "rawSql": "SELECT count(*) AS pedidos FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó una lectura fuera de rango durante el viaje.",
@@ -352,7 +352,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
+     "rawSql": "SELECT '$' || replace(to_char(coalesce(sum(t.total_clp),0), 'FM999,999,999,999,990'), ',', '.') AS en_riesgo FROM v_orden o JOIN v_orden_total t USING (orden_id)\nJOIN orden x USING (orden_id)\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nWHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (\n  SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))"
     }
    ],
    "description": "Monto aceptado de los pedidos afectados: lo que la ruptura de frío pone en juego. Lo que el cliente ya rechazó no suma aquí: está abajo, en la sección 5.",
@@ -684,7 +684,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC"
+     "rawSql": "SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC, alerta_ruptura_frio DESC"
     }
    ],
    "description": "Última posición de cada camión que reportó en los últimos 2 minutos. Verde = temperatura normal, rojo = ruptura de frío. Los camiones cercanos al centro hacen reparto urbano en Temuco; los lejanos van o vuelven de ciudades de La Araucanía. Pasa el mouse sobre un camión para ver su temperatura.",
@@ -807,7 +807,7 @@
      "format": "time_series",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1"
+     "rawSql": "SELECT registrado_en AS time, CASE WHEN camara = 2 THEN camion_id || ' cámara 2' ELSE camion_id END AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1"
     }
    ],
    "description": "Una línea por camión elegido en el selector «Camión» de la parte superior (por defecto CAM-01 a CAM-03). Una subida brusca fuera del rango del camión es una ruptura de frío.",
@@ -933,7 +933,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())\nWHERE d.salida_en IS NOT NULL AND e.nombre <> 'Cancelada' GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
+     "rawSql": "SELECT o.orden_id AS \"Orden\", c.nombre AS \"Cliente\", o.canal AS \"Canal\", d.camion_id AS \"Camión\", count(m.*) AS \"Lecturas con alerta\", '$' || replace(to_char(t.total_clp, 'FM999,999,999,999,990'), ',', '.') AS \"Monto\"\nFROM v_orden o JOIN v_orden_total t USING (orden_id) JOIN orden x USING (orden_id) JOIN cliente c ON c.cliente_id = o.cliente_id\nJOIN despacho d ON d.despacho_id = o.despacho_id\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nJOIN telemetria m ON m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())\nWHERE d.salida_en IS NOT NULL AND e.nombre <> 'Cancelada' GROUP BY 1,2,3,4,6 ORDER BY 5 DESC"
     }
    ],
    "description": "Órdenes despachadas cuyo camión reportó temperatura fuera de rango mientras iba en ruta. Más lecturas con alerta = más tiempo expuesto al calor.",
@@ -1159,7 +1159,7 @@
      "format": "table",
      "rawQuery": true,
      "editorMode": "code",
-     "rawSql": "SELECT o.canal AS \"Canal\", CASE i.motivo_rechazo WHEN 'temperatura' THEN 'Temperatura' WHEN 'faltante' THEN 'Faltante' WHEN 'danado' THEN 'Dañado' ELSE 'Otro' END AS \"Motivo\",\ncount(DISTINCT o.orden_id) AS \"Pedidos\", sum(i.cantidad_rechazada) AS \"Unidades\", '$' || replace(to_char(sum(i.cantidad_rechazada * i.precio_unitario_clp), 'FM999,999,999,999,990'), ',', '.') AS \"Monto\",\ncount(DISTINCT o.orden_id) FILTER (WHERE EXISTS (SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))) AS \"Pedidos con alerta de frío\"\nFROM v_orden o JOIN orden x USING (orden_id) JOIN orden_item i USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nLEFT JOIN despacho d ON d.despacho_id = o.despacho_id\nWHERE i.cantidad_rechazada > 0 AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY sum(i.cantidad_rechazada * i.precio_unitario_clp) DESC"
+     "rawSql": "SELECT o.canal AS \"Canal\", CASE i.motivo_rechazo WHEN 'temperatura' THEN 'Temperatura' WHEN 'faltante' THEN 'Faltante' WHEN 'danado' THEN 'Dañado' ELSE 'Otro' END AS \"Motivo\",\ncount(DISTINCT o.orden_id) AS \"Pedidos\", sum(i.cantidad_rechazada) AS \"Unidades\", '$' || replace(to_char(sum(i.cantidad_rechazada * i.precio_unitario_clp), 'FM999,999,999,999,990'), ',', '.') AS \"Monto\",\ncount(DISTINCT o.orden_id) FILTER (WHERE EXISTS (SELECT 1 FROM telemetria m WHERE m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en\n  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now()))) AS \"Pedidos con alerta de frío\"\nFROM v_orden o JOIN orden x USING (orden_id) JOIN orden_item i USING (orden_id)\nJOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id\nLEFT JOIN despacho d ON d.despacho_id = o.despacho_id\nWHERE i.cantidad_rechazada > 0 AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY sum(i.cantidad_rechazada * i.precio_unitario_clp) DESC"
     }
    ],
    "description": "Cruza lo rechazado con la telemetría: si el cliente rechazó por temperatura y el camión registró alerta en el viaje, el reclamo tiene respaldo. Un rechazo por temperatura sin alerta conviene revisarlo aparte.",

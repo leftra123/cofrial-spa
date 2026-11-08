@@ -369,6 +369,16 @@ Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qu�
 - **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
 - **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.
 
+## Camiones de dos cámaras (8-nov-2026)
+- **Por qué:** un carrito con refrigerados y congelados obligaba a mandar dos camiones a la misma dirección. Decisión de Eric: parte de la flota lleva ambos rangos. Una empresa no renueva 50 camiones de golpe, así que son 5 (10 %), uno por contenedor del simulador.
+- **Qué no cambia:** una orden por rango (RN-16), porque el documento, el seguimiento y el reclamo son por orden. Tampoco cambian los campos de telemetría que exige la pauta.
+- **Lecturas:** una fila por cámara (`telemetria.camara`) en vez de una sola temperatura por camión. Así, una falla del congelado no le avisa al cliente del pedido refrigerado.
+- **`orden.camara`:** se guarda como hecho del despacho, igual que `despacho_id`, en vez de deducirlo de los productos en cada lectura. Simplifica el cruce de ventas con alertas (RN-13) en el CRM y en Grafana.
+- **`camion.rango_secundario_id` y no una tabla de cámaras:** ningún camión de la flota tiene más de dos, y casi todo el sistema sigue leyendo `rango_temperatura`. Con tres cámaras o más, convendría una tabla propia.
+- **Uso de la flota:** para un solo rango se prefiere un camión simple, porque los de dos cámaras son escasos; si no hay uno simple libre, sirve uno de dos cámaras.
+- **Despliegue:** primero la web, que migra la base, y después reiniciar el simulador, que lee la segunda cámara al arrancar y ya inserta la columna `camara`. `flota/0008_camion_dos_camaras` reconstruye la restricción única de `telemetria` sin `CONCURRENTLY`, así que puede bloquear las inserciones mientras dure; conviene hacerlo fuera de una demostración.
+- **Qué no se hizo:** repartir la capacidad por cámara; `capacidad_kg` es del camión completo. Los escenarios por viaje fallan solo en la cámara 1; para mostrar una falla en la cámara 2 se usa `/demo/`.
+
 ## El barrido de rutas no bloquea el ingreso (8-nov-2026)
 - **Problema (revisión de usuarios del 8-nov):** el contador de «no encontrado» es por IP y, pasado el umbral, cortaba todo el sitio con 429, también `/cuenta/entrar/`. En la defensa y en el laboratorio toda la sala sale por una IP: un visitante que probara unas 60 direcciones dejaba a los demás sin poder ingresar.
 - **Decisión:** el ingreso de la tienda (`/cuenta/entrar/`) y el del panel (`/admin/login/`) quedan fuera de ese bloqueo. El resto del sitio sigue cortado mientras dura la ventana. El ingreso conserva su propia protección: 10 claves malas seguidas bloquean esa cuenta 15 minutos, y el límite por IP sigue apagado (`ACCESO_MAX_FALLOS_IP=0`).

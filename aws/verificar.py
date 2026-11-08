@@ -257,7 +257,22 @@ def main():
         except (OSError, KeyError, ValueError) as e:
             marca("aviso", "No pude revisar las consultas del tablero", str(e)[:80])
 
-    titulo("6. CRM e IA")
+    titulo("6. Torre de control (gerencia; solo lectura)")
+    if sesiones["gerente"]:
+        st, html, _ = sesiones["gerente"].pedir("/torre/")
+        chk(st == 200 and "Torre de control" in html, "La Torre de control abre para gerencia (/torre/)", f"HTTP {st}")
+        st, d = sesiones["gerente"].json("/torre/pulso/")
+        filas = d.get("rubrica") if d else None
+        if chk(st == 200 and isinstance(filas, list) and len(filas) == 5, "El pulso trae las 5 filas de la rúbrica", f"HTTP {st}"):
+            etiqueta = {"verificado": "ok", "sin_evidencia": "aviso", "no_comprobado": "aviso"}
+            for f in filas:       # un estado sin evidencia no es falla: antes de la demo todavía no hay ventas ni lecturas reales
+                marca(etiqueta.get(f.get("estado"), "aviso"), f"Rúbrica {f.get('dim')} {f.get('titulo')}: {f.get('estado')}")
+            marca("info", "Un aviso de la rúbrica no hace fallar este verificador: en el punto de decisión, leer también estas cinco filas")
+    if sesiones["vendedora"]:
+        st, _, _ = sesiones["vendedora"].pedir("/torre/")
+        chk(st == 403, "La Torre responde 403 a una vendedora (verían clientes fuera de su cartera)", f"HTTP {st}")
+
+    titulo("7. CRM e IA")
     if sesiones["vendedora"]:
         st, html, _ = sesiones["vendedora"].pedir("/crm/requerimientos/")
         sin = html.count("sin clasificar")

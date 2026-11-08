@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Torre de control | Cofrial SpA{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<link rel="stylesheet" href="{% static 'css/torre.css' %}">{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab torre-cab">
+  <div><h1>Torre de control</h1><p class="sub">El negocio, la flota y la rúbrica en una pantalla, con datos en vivo de la base.</p></div>
+</div>
+{% endblock %}
+{% block contenido %}
+<div class="torre" id="torre">
+  <p class="aviso error" id="torre-aviso" role="alert" hidden></p>
+
+  {# 8.1 Lectura del momento #}
+  <section class="torre-lectura" id="torre-lectura" aria-label="Lectura del momento">
+    <div class="torre-lectura-cab">
+      <span id="en-vivo">Conectando…</span>
+      <span class="torre-hora" id="torre-hora"></span>
+      <a class="btn btn-sec" href="/bi/" target="_blank" rel="noopener">Abrir Grafana<span class="solo-lector"> (se abre en otra pestaña)</span></a>
+    </div>
+    <div class="torre-frases" id="torre-frases"></div>
+    <a class="torre-resumen" href="#rubrica" id="torre-resumen"></a>
+  </section>
+
+  {# 8.2 Mapa de la macrozona sur #}
+  <div class="seccion"><h2>Macrozona sur</h2></div>
+  <div class="torre-mapa-grid">
+    <div class="tarjeta-ui torre-mapa-caja">
+      <div id="mapa-torre" class="mapa" role="region" aria-label="Mapa de la macrozona sur con clientes, camiones y el frigorífico central" data-geo="{% static 'geo/macrozona_sur.geojson' %}"></div>
+    </div>
+    <aside class="tarjeta-ui torre-mapa-lado" aria-label="Leyenda del mapa">
+      <h3>Clientes en el mapa</h3>
+      <ul class="torre-segmentos" id="torre-segmentos"></ul>
+      <h3>Camiones visibles</h3>
+      <p class="torre-camiones" id="torre-camiones"></p>
+      <p class="frio">La zona marcada es La Araucanía, donde opera Cofrial. Biobío, Los Ríos y Los Lagos completan la macrozona: es un supuesto del equipo, porque el caso no la define. Contornos: © OpenStreetMap (ODbL).</p>
+    </aside>
+  </div>
+
+  {# 8.3 Clientes frecuentes #}
+  <div class="seccion"><h2>Clientes frecuentes, últimos 90 días</h2>
+    <div class="acciones"><label class="torre-filtro">Segmento <select id="filtro-segmento"><option value="">Todos</option></select></label></div></div>
+  <div class="tabla-caja" tabindex="0" role="region" aria-label="Clientes frecuentes">
+    <table class="torre-frecuentes">
+      <thead><tr><th scope="col">Cliente</th><th scope="col">Segmento</th><th scope="col">Comuna</th><th scope="col" class="num">Pedidos</th><th scope="col">Último pedido</th><th scope="col">Nivel</th></tr></thead>
+      <tbody id="torre-frecuentes"></tbody>
+    </table>
+  </div>
+
+  {# 8.4 Antes y ahora #}
+  <div class="seccion"><h2>Antes y ahora</h2></div>
+  <div class="rejilla dos torre-antes-ahora">
+    <section class="torre-antes" aria-labelledby="titulo-antes">
+      <h3 id="titulo-antes">Antes: un día coordinado por llamadas y WhatsApp</h3>
+      <p class="torre-sello">Reconstrucción ilustrativa, no son datos de Cofrial</p>
+      <ol class="torre-registro" id="torre-registro"></ol>
+      <dl class="torre-supuestos">
+        <div><dt>Mermas</dt><dd id="antes-mermas"></dd></div>
+        <div><dt>Tiempo</dt><dd id="antes-tiempo"></dd></div>
+        <div><dt>Entregas fallidas</dt><dd>alta tasa según el caso; nadie la registra</dd></div>
+      </dl>
+    </section>
+    <section class="torre-ahora" aria-labelledby="titulo-ahora">
+      <h3 id="titulo-ahora">Ahora: lo que dice la base en este momento</h3>
+      <div class="rejilla">
+        <div class="kpi-card acento torre-ventas"><div class="etiqueta">Ventas de 24 h</div><div class="valor" data-ahora="ventas"></div><div class="detalle" data-ahora="ventas-canal"></div></div>
+        <div class="kpi-card" data-tarjeta="lectura"><div class="etiqueta">Última lectura</div><div class="valor" data-ahora="lectura"></div><div class="detalle">de un camión del simulador</div></div>
+        <div class="kpi-card" data-tarjeta="alertas"><div class="etiqueta">Alertas de 24 h</div><div class="valor" data-ahora="alertas"></div><div class="detalle">lecturas con ruptura de frío</div></div>
+        <div class="kpi-card" data-tarjeta="riesgo"><div class="etiqueta">Pedidos en riesgo ahora</div><div class="valor" data-ahora="riesgo"></div><div class="detalle" data-ahora="riesgo-det"></div></div>
+        <div class="kpi-card"><div class="etiqueta">Ventas en riesgo (histórico)</div><div class="valor" data-ahora="historico"></div><div class="detalle">misma cifra que Grafana</div></div>
+        <div class="kpi-card"><div class="etiqueta">Entregas no concretadas</div><div class="valor" data-ahora="no-concretadas"></div><div class="detalle">con motivo registrado</div></div>
+        <div class="kpi-card"><div class="etiqueta">Interacciones</div><div class="valor" data-ahora="interacciones"></div><div class="detalle">registradas en el CRM</div></div>
+      </div>
+      <p class="torre-cierre">La merma evitada se medirá con datos de Cofrial.</p>
+    </section>
+  </div>
+
+  {# 8.5 Embudo por niveles #}
+  <div class="seccion"><h2>Embudo por niveles</h2></div>
+  <div class="torre-embudo" id="torre-embudo"></div>
+  <div class="torre-aparte" id="torre-aparte"></div>
+  <p class="sub" id="torre-b2c"></p>
+
+  {# 8.6 Front-Office y Back-Office: dos columnas iguales unidas por la base, y un pedido trazado de punta a punta #}
+  <div id="torre-front-back" hidden>
+    <div class="seccion"><h2>Front-Office y Back-Office</h2></div>
+    <div class="torre-fb">
+      <section class="torre-lado" aria-labelledby="fb-front"><h3 id="fb-front">Front-Office</h3><ul id="fb-front-lista"></ul></section>
+      <div class="torre-union" aria-hidden="true"><span>Una sola base de datos</span></div>
+      <section class="torre-lado" aria-labelledby="fb-back"><h3 id="fb-back">Back-Office</h3><ul id="fb-back-lista"></ul></section>
+    </div>
+    <section class="tarjeta-ui torre-traza" aria-labelledby="fb-traza"><h3 id="fb-traza">Un pedido, de punta a punta</h3><div id="torre-traza"></div></section>
+  </div>
+
+  {# 8.7 Cumplimiento de la rúbrica #}
+  <div class="seccion" id="rubrica"><h2>Cumplimiento de la rúbrica, Hito 2</h2></div>
+  <div class="tarjeta-ui torre-rubrica" id="torre-rubrica"></div>
+
+  <p class="torre-rotulo">{{ rotulo }}</p>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ inicial|json_script:"pulso-inicial" }}
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'js/mapa.js' %}"></script>
+<script src="{% static 'js/torre.js' %}"></script>
+{% endblock %}

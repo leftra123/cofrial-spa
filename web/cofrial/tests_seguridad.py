@@ -51,7 +51,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
-                    "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/"]
+                    "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/", "/torre/", "/torre/pulso/"]
     PRIVADAS_POST = ["/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
                      "/operacion/datos/x/1/borrar/",
                      "/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",

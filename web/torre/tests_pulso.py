@@ -13,6 +13,7 @@ from clientes.models import Cliente, Comuna, Direccion, SegmentoCliente, TipoCli
 from flota.models import Camion, Despacho, EscenarioSimulador, Telemetria
 from pedidos.models import Documento, EstadoOrden, Orden, OrdenItem, Pago
 from torre import lectura, servicios
+from torre.rubrica import LECTURA_VIGENTE_S
 
 
 def _vaciar():
@@ -207,6 +208,25 @@ class Lectura(TestCase):
         self.assertNotIn("Sin novedades", t)
         self.assertIn("1 camión con ruptura de frío", self.texto(camiones_en_alerta=1, riesgo_actual_clp=450_000))
         self.assertIn("$450.000", self.texto(camiones_en_alerta=1, riesgo_actual_clp=450_000))
+
+    def test_alerta_sin_pedidos_a_bordo_no_dice_cero_pesos(self):
+        t = self.texto(camiones_en_alerta=1, riesgo_actual_clp=0)
+        self.assertIn("1 camión con ruptura de frío, sin pedidos a bordo.", t)
+        self.assertNotIn("$0", t)
+        self.assertIn("3 camiones con ruptura de frío, sin pedidos a bordo.", self.texto(camiones_en_alerta=3, riesgo_actual_clp=0))
+
+    def test_vigencia_igual_a_la_de_la_rubrica(self):
+        self.assertIn("Sin novedades", self.texto(ultima_lectura_seg=LECTURA_VIGENTE_S - 1))
+        t = self.texto(ultima_lectura_seg=LECTURA_VIGENTE_S)         # exactamente 120 s: ya no es vigente (D3 usa `<`)
+        self.assertNotIn("Sin novedades", t)
+        self.assertIn("simulador parece detenido", t)
+
+    def test_nunca_mas_de_tres_frases(self):
+        peor = _ahora(ultima_lectura_seg=300, camiones_en_alerta=2, riesgo_actual_clp=1000, mas_expuesto="X", simulacion=True)
+        frases = lectura.redactar(peor)
+        self.assertEqual(len(frases), 3)
+        self.assertNotIn("ventas", " ".join(frases))
+        self.assertIn("simulación en curso", " ".join(frases))
 
     def test_lectura_sin_ventas(self):
         self.assertIn("Sin ventas en 24 h", self.texto(ventas_24h={"B2B": 0, "B2C": 0}))

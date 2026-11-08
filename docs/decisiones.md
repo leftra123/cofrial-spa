@@ -286,8 +286,6 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
 
 ## Panel del administrador sin Django (7-nov-2026)
 
-Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
-
 - **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
 - **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
 - **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».
@@ -305,7 +303,7 @@ Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
 
 ## Torre de control (8-nov-2026)
 
-Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qué trata el negocio y que cada punto de la rúbrica del Hito 2 se cumple. Diseño completo en `docs/superpowers/specs/2026-11-08-torre-de-control-design.md`. **Estado: implementada y probada en local; no está desplegada en AWS.**
+Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qué trata el negocio y que cada punto de la rúbrica del Hito 2 se cumple. Diseño completo en `app/torre-de-control/` (material privado del equipo). **Estado: implementada y probada en local; no está desplegada en AWS.**
 
 - **Pantalla interna con cuenta de gerencia, solo lectura.** `/torre/` y `/torre/pulso/` con `con_rol("admin", "gerencia")`; los vendedores no entran porque verían clientes fuera de su cartera (RN-09). Se descartó la página pública (expondría clientes y ventas), una presentación aparte (sin conexión a la base, y la rúbrica penaliza lo estático) y repartir en las pantallas existentes (obliga a saltar entre menús). Gerencia inicia en `/torre/`; admin sigue en `/crm/`. App `torre` sin modelos.
 - **No reemplaza a Grafana**, que sigue siendo el BI de la rúbrica (D4) y se enlaza desde la Torre. Sin IA en el ciclo de actualización: gastaría la cuota gratuita y podría fallar en plena defensa; la Lectura la redactan reglas en código.

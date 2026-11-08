@@ -46,7 +46,7 @@
       {% if user.is_authenticated %}
         {% if menu.crm or menu.flota or menu.admin %}<a class="tb-ingresar" href="/portada/" title="La portada que ven los visitantes">Portada pública</a>{% endif %}
         <a class="tb-clave" href="/cuenta/clave/">Mi clave</a>
-        <form method="post" action="/cuenta/salir/" class="tb-salir-form">{% csrf_token %}<button type="submit" class="tema-btn tb-salir" aria-label="Salir de la cuenta" title="Salir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></form>
+        <form method="post" action="/cuenta/salir/" class="tb-salir-form">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/"><button type="submit" class="tema-btn tb-salir" aria-label="Salir de la cuenta" title="Salir" aria-haspopup="dialog" aria-controls="salir-dialogo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></form>
       {% else %}
         <a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>
       {% endif %}
@@ -79,8 +79,15 @@
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}"></script>
-<script src="{% static 'js/tienda.js' %}?v=sesion-v1"></script>
-{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-v3"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
+{% if user.is_authenticated %}<dialog id="salir-dialogo" class="dialogo salir-dialogo" aria-labelledby="salir-t" aria-describedby="salir-txt">
+  <form method="post" action="/cuenta/salir/">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/">
+    <h2 id="salir-t">¿Salir de la cuenta?</h2>
+    <p id="salir-txt">Se cierra la sesión y vuelves a la pantalla para ingresar.</p>
+    <div class="acciones"><button type="button" class="btn-sec" data-salir-cancelar>Cancelar</button><button type="submit" class="btn">Confirmar</button></div>
+  </form>
+</dialog>{% endif %}
+<script src="{% static 'js/tienda.js' %}?v=sesion-salir-v2"></script>
+{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-cof07"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

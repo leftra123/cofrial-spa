@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import connection
-from django.db.models import Count, Max, Sum, F
+from django.db.models import Count, Max, Sum
 from django.utils import timezone
 
 from catalogo.models import Producto
@@ -19,6 +19,7 @@ from clientes.muestra import REFERENCIAS_SEMBRADAS
 from crm.models import Prospecto, Requerimiento
 from flota.models import Telemetria
 from pedidos.models import Orden, OrdenItem
+from pedidos.servicios import MONTO_ACEPTADO, SIN_VENTA
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,6 @@ NO_COMPROBADO = "no_comprobado"
 LECTURA_VIGENTE_S = 120
 VENTANA_BI_DIAS = 7
 CAMPOS_IOT = ("camion_id", "temp_camara", "lat", "long", "combustible_pct", "alerta_ruptura_frio")
-_MONTO = F("cantidad") * F("precio_unitario_clp")
 
 _IMDS = "http://169.254.169.254/latest"
 _cache_ec2 = {"hecho": False, "valor": None}          # caché de proceso: la instancia no cambia mientras corre el contenedor
@@ -112,8 +112,8 @@ def _d1():
 
 
 def _ultimo_por_canal(codigo):
-    """Último pedido real del canal: ni cancelado, ni del historial, ni sembrado por la carga de demostración."""
-    return (Orden.objects.filter(direccion__cliente__tipo_cliente__codigo=codigo).exclude(estado_orden__nombre="Cancelada").exclude(numero_oc__startswith="HIS-")
+    """Último pedido real del canal: ni cancelado, ni rechazado entero al recibir, ni del historial, ni sembrado por la carga de demostración."""
+    return (Orden.objects.filter(direccion__cliente__tipo_cliente__codigo=codigo).exclude(estado_orden__nombre__in=SIN_VENTA).exclude(numero_oc__startswith="HIS-")
             .exclude(numero_oc__in=REFERENCIAS_SEMBRADAS).aggregate(m=Max("creada_en"))["m"])
 
 
@@ -146,10 +146,10 @@ def _d3():
 
 def _d4():
     desde = timezone.now() - timedelta(days=VENTANA_BI_DIAS)
-    ventas = Orden.objects.filter(creada_en__gte=desde).exclude(estado_orden__nombre="Cancelada").exclude(numero_oc__in=REFERENCIAS_SEMBRADAS)
+    ventas = Orden.objects.filter(creada_en__gte=desde).exclude(estado_orden__nombre__in=SIN_VENTA).exclude(numero_oc__in=REFERENCIAS_SEMBRADAS)
     evidencia = [f"Ventana: últimos {VENTANA_BI_DIAS} días (desde {_hora(desde)})"]
     for canal, n, total in (OrdenItem.objects.filter(orden__in=ventas.values("pk")).values_list("orden__direccion__cliente__tipo_cliente__codigo")
-                            .annotate(n=Count("orden", distinct=True), t=Sum(_MONTO)).order_by("orden__direccion__cliente__tipo_cliente__codigo")):
+                            .annotate(n=Count("orden", distinct=True), t=Sum(MONTO_ACEPTADO)).order_by("orden__direccion__cliente__tipo_cliente__codigo")):
         evidencia.append(f"Ventas {canal}: {n} pedidos, ${int(total):,} CLP".replace(",", "."))
     cantidad = ventas.count()
     historial = ventas.filter(numero_oc__startswith="HIS-").count()

@@ -20,6 +20,19 @@
   {% if d %}{% include "crm/_desglose.html" %}{% else %}
   <section class="tarjeta-ui"><h2>Desglose de la IA</h2><p class="muted">{% if r.orden_id %}La IA no pudo desglosar este mensaje (o aún no lo intentó). El texto original está intacto.{% else %}Este requerimiento no está ligado a un pedido, así que no se desglosa.{% endif %}</p></section>{% endif %}
 </div>
+{% if rechazo %}
+<section class="tarjeta-ui" aria-labelledby="rechazo-t">
+  <h2 id="rechazo-t">{% if rechazo.total %}Rechazo total del pedido{% else %}Recepción parcial del pedido{% endif %}</h2>
+  <div class="tabla-caja"><table>
+    <thead><tr><th>Producto</th><th class="num">Pedidas</th><th class="num">Rechazadas</th><th class="num">Aceptadas</th><th>Motivo</th></tr></thead>
+    <tbody>{% for l in rechazo.lineas %}<tr><td>{{ l.producto }}</td><td class="num">{{ l.cantidad }}</td><td class="num">{{ l.rechazada }}</td><td class="num">{{ l.aceptada }}</td><td>{{ l.motivo }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <dl class="datos">
+    <div><dt>Monto rechazado</dt><dd>{{ rechazo.monto|clp }}{% if r.orden.direccion.cliente.tipo_cliente.codigo == "B2B" %} con IVA{% endif %}</dd></div>
+    <div><dt>Documento</dt><dd>{% if rechazo.nota %}{{ rechazo.nota }} por {{ rechazo.nota.monto_clp|clp }}{% if rechazo.devuelto %}; devolución de {{ rechazo.devuelto|clp }}{% endif %}{% elif rechazo.total %}Sin factura: este pedido no se cobra{% else %}La factura se emite por lo aceptado{% endif %}</dd></div>
+    <div><dt>Stock</dt><dd>Lo rechazado no volvió a la venta: bodega debe revisarlo antes de reponerlo.</dd></div>
+  </dl>
+</section>{% endif %}
 {% if dato %}
 <section class="tarjeta-ui dato-base" aria-labelledby="dato-t">
   <h2 id="dato-t">Dato real de la base: temperatura del viaje</h2>

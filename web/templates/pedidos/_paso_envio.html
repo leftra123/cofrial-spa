@@ -1,5 +1,5 @@
 {# Etapa del seguimiento. Variables: f (orden_flujo), n (número de etapa), etiqueta, fecha (opcional). #}
-<li class="paso{% if n <= 4 and f >= n or n == 5 and f >= 5 and f != 7 or n == 6 and f == 6 or n == 6 and f == 7 %} hecho{% endif %}{% if f == n or n == 6 and f == 7 %} actual{% endif %}"{% if f == n or n == 6 and f == 7 %} aria-current="step"{% endif %}>
+<li class="paso{% if n <= 4 and f >= n or n == 5 and f >= 5 and f != 7 or n == 6 and f == 6 or n == 6 and f == 7 or n == 6 and f == 9 %} hecho{% endif %}{% if f == n or n == 6 and f == 7 or n == 6 and f == 9 %} actual{% endif %}"{% if f == n or n == 6 and f == 7 or n == 6 and f == 9 %} aria-current="step"{% endif %}>
   <div class="paso-hito" aria-hidden="true">
     <span class="paso-tramo paso-tramo-izq"></span>
     <span class="paso-marca"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span></span>

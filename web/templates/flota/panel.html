@@ -52,9 +52,10 @@
       <span class="linea"></span><span></span>
       <span class="punto fin"></span><div>{% if x.destino %}<b>{{ x.destino.calle_numero }}</b><div class="frio">{{ x.destino.comuna.nombre }}</div>{% else %}<b>Sin destino asignado</b>{% endif %}</div>
     </div>
+    {% if x.pedidos|length > 1 %}<p class="ruta-info">Un solo recorrido. Las paradas se atienden en este orden.</p>{% endif %}
     {% for o in x.pedidos %}
-    <div class="conductor"><span class="avatar">{{ o.direccion.cliente.nombre|slice:":1"|upper }}</span>
-      <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Orden N.º {{ o.orden_id }}</div></div>
+    <div class="conductor"><span class="avatar">{{ o.parada_n }}</span>
+      <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Parada {{ o.parada_n }} · Orden N.º {{ o.orden_id }}</div></div>
       <span style="margin-left:auto">{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</span></div>
     {% endfor %}
     {% if puede_cerrar and not x.viaje.llegada_en %}
@@ -201,7 +202,7 @@
         info.className = "ruta-info"; ol.className = "ruta-lista";
         camion.textContent = v.camion + " · " + v.patente;
         info.appendChild(camion);
-        info.appendChild(document.createTextNode(" · " + v.situacion + ", ruta por calles: " + CofrialMapa.texto(r)));
+        info.appendChild(document.createTextNode(" · " + v.situacion + ". Un solo recorrido, en este orden. " + CofrialMapa.texto(r)));
         lista.filter(Boolean).forEach(function (fila) { ol.appendChild(fila); });
         caja.appendChild(info); caja.appendChild(ol);
       })();

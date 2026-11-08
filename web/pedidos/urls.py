@@ -24,6 +24,7 @@ urlpatterns = [
     path("pedidos/", views.mis_pedidos, name="pedidos"),
     path("soporte/", views.soporte, name="soporte"),
     path("pedidos/<int:orden_id>/", views.detalle, name="orden"),
+    path("pedidos/<int:orden_id>/documentos/<int:documento_id>/", views.comprobante, name="comprobante"),
     path("pedidos/<int:orden_id>/oc/", views.registrar_oc, name="orden_oc"),
     path("pedidos/<int:orden_id>/entrega/", views.entrega, name="orden_entrega"),
     path("pedidos/<int:orden_id>/cancelar/", views.cancelar, name="orden_cancelar"),

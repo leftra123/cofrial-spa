@@ -139,6 +139,22 @@ class Datos(Base):
         self.pedido(p, "Recibida", hace_dias=0.5, precio=500)
         self.assertEqual(servicios.datos_negocio(self.gerencia)["ahora"]["ventas_24h"], {"B2B": 2000, "B2C": 1000})
 
+    def test_ventas_24h_no_cuentan_lo_rechazado(self):
+        parcial = self.pedido(self.cliente("Hospital parcial"), hace_dias=0, cantidad=3, precio=1000)
+        OrdenItem.objects.filter(orden=parcial).update(cantidad_rechazada=1, motivo_rechazo="temperatura")
+        total = self.pedido(self.cliente("Hospital total"), "Rechazada en recepción", hace_dias=0, cantidad=2, precio=5000)
+        OrdenItem.objects.filter(orden=total).update(cantidad_rechazada=2, motivo_rechazo="danado")
+        self.assertEqual(servicios.datos_negocio(self.gerencia)["ahora"]["ventas_24h"], {"B2B": 2000, "B2C": 0})
+
+    def test_riesgo_actual_excluye_rechazadas(self):
+        v = self.viaje()
+        o = self.pedido(self.cliente("Hospital rechazo"), "Rechazada en recepción", despacho=v, precio=5000)
+        OrdenItem.objects.filter(orden=o).update(cantidad_rechazada=2, motivo_rechazo="temperatura")
+        self.lectura(v.camion, True)
+        a = servicios.datos_negocio(self.gerencia)["ahora"]
+        self.assertEqual(a["riesgo_actual_clp"], 0)
+        self.assertIsNone(a["mas_expuesto"])
+
     def test_ventas_24h_excluye_sembrados_e_historial(self):
         c = self.cliente("Institución")
         for oc, precio in (("OC-REG-001", 9000), ("OC-2026-0457", 9000), ("HIS-1", 9000), ("OC-REAL-1", 1000)):

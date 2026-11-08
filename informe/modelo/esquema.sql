@@ -163,6 +163,7 @@ CREATE TABLE orden (
   numero_oc varchar(30),
   oc_pendiente boolean NOT NULL DEFAULT false,
   recibe_nombre varchar(80) NOT NULL DEFAULT '',
+  comprobante varchar(8) NOT NULL DEFAULT 'boleta' CHECK (comprobante IN ('boleta', 'factura')),
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -172,7 +173,11 @@ CREATE TABLE orden_item (
   producto_id integer NOT NULL REFERENCES producto (producto_id),
   cantidad integer NOT NULL CHECK (cantidad > 0),
   precio_unitario_clp integer NOT NULL CHECK (precio_unitario_clp > 0),
-  PRIMARY KEY (orden_id, producto_id)
+  cantidad_rechazada integer NOT NULL DEFAULT 0,
+  motivo_rechazo varchar(12) NOT NULL DEFAULT '',
+  PRIMARY KEY (orden_id, producto_id),
+  CHECK (cantidad_rechazada BETWEEN 0 AND cantidad),
+  CHECK ((cantidad_rechazada = 0 AND motivo_rechazo = '') OR (cantidad_rechazada > 0 AND motivo_rechazo IN ('temperatura', 'faltante', 'danado', 'otro')))
 );
 
 -- Documentos tributarios simulados de una orden: boleta, factura, guía de despacho y nota de crédito. El monto es una foto de lo vendido, igual que el precio de la línea. Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre orden y tipo).
@@ -299,5 +304,6 @@ JOIN cliente c ON c.cliente_id = d.cliente_id
 JOIN tipo_cliente tc ON tc.tipo_cliente_id = c.tipo_cliente_id;
 
 CREATE VIEW v_orden_total AS
-SELECT orden_id, sum(cantidad * precio_unitario_clp) AS total_clp, sum(cantidad) AS unidades
+SELECT orden_id, sum((cantidad - cantidad_rechazada) * precio_unitario_clp) AS total_clp, sum(cantidad - cantidad_rechazada) AS unidades,
+       sum(cantidad_rechazada * precio_unitario_clp) AS rechazado_clp, sum(cantidad_rechazada) AS unidades_rechazadas
 FROM orden_item GROUP BY orden_id;

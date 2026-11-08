@@ -1,4 +1,4 @@
-"""COF-01 itinerario explicado, COF-02 «Pedido entregado exitosamente» en todos los caminos y COF-03 botones de los avisos con datos del pedido."""
+"""COF-01 itinerario explicado, COF-02 «Pedido entregado exitosamente» cuando el cliente confirma y COF-03 botones de los avisos con datos del pedido."""
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -114,9 +114,13 @@ class EntregadoExitosamenteTests(EntregaBase):
         cliente, orden = self.en_la_puerta()
         Orden.objects.filter(pk=orden.pk).update(puerta_en=timezone.now() - timedelta(hours=1))
         s.confirmar_vencidas()
-        pagina, llego = self.comprobar_cerrado(orden)
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, "Recorrido cerrado")
         self.assertContains(pagina, "lo dimos por entregado")
+        self.assertNotContains(pagina, EXITO)                                   # nadie confirmó: no se presenta como exitosa
+        llego = next(a for a in self.client.get("/api/avisos/").json()["avisos"] if a["orden_id"] == orden.pk and a["tipo"] == "llego")
         self.assertIn("confirmado automáticamente", llego["texto"])
+        self.assertNotIn(EXITO, llego["texto"])
 
     def test_no_pude_recibirlo_no_es_una_entrega_exitosa(self):
         cliente, orden = self.en_la_puerta()

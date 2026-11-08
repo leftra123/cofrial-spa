@@ -302,3 +302,9 @@ Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
 - **Tramos:** 1 a 30, 31 a 60, 61 a 90 y más de 90 días, según la factura más atrasada del cliente.
 - **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
 - **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.
+
+## Administrador de empresa, no superusuario (8-nov-2026)
+- **Problema:** el rol «Administrador» del CRM y de `/operacion/` dependía de ser superusuario de Django, así que la cuenta de administración daba acceso a `/admin/` de Django.
+- **Decisión:** `admin@cofrial.cl` es personal con el grupo `administradores`. El rol admin se resuelve por el grupo (`crm.servicios.rol` y `operacion.servicios.rol_de`, con la misma regla). Solo `eric@cofrial.cl` queda como superusuario técnico, para `/admin/` y `/demo/`.
+- **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
+- **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.

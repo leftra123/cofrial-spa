@@ -537,7 +537,7 @@ class PanelIA(TestCase):
         from unittest.mock import patch
         from crm.models import Requerimiento
         r = Requerimiento.objects.create(asunto="Pedido tibio", descripcion="La carga llegó tibia")
-        self.entrar("admin@cofrial.cl")
+        self.entrar("eric@cofrial.cl")                       # la acción de admin de Django solo la usa el superusuario
         with patch("crm.ia._llamar", return_value='{"categoria": "Reclamo por temperatura", "confianza": 0.95}'):
             resp = self.client.post("/admin/crm/requerimiento/", {"action": "clasificar_con_ia", "_selected_action": [r.pk]}, follow=True)
         self.assertContains(resp, "1 clasificado")

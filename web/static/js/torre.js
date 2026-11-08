@@ -60,8 +60,16 @@ window.CofrialTorre = (function () {
   function siCambio(clave, datos, pintar) {
     var json = JSON.stringify(datos);
     if (vistos[clave] === json) return;
-    vistos[clave] = json;
+    delete vistos[clave];        // si pintar falla, aunque sea a medias, la sección se vuelve a pintar en el próximo sondeo
     pintar(datos);
+    vistos[clave] = json;
+  }
+  /* Una sección que falla no detiene a las demás ni se confunde con una caída de la red: se registra y las otras siguen. */
+  function seccion(nombre, pintar, siFalla) {
+    try { pintar(); } catch (e) {
+      console.error("Torre: no se pudo pintar «" + nombre + "»", e);
+      if (siFalla) siFalla();
+    }
   }
 
   /* ---------- 8.1 Lectura ---------- */
@@ -338,6 +346,16 @@ window.CofrialTorre = (function () {
     resumen.replaceChildren.apply(resumen, piezas);
   }
 
+  /* Una rúbrica que no se pudo pintar no puede quedar en verde con los datos anteriores. */
+  function rubricaSinConfirmar() {
+    Object.keys(filasRubrica).forEach(function (dim) {
+      var f = filasRubrica[dim];
+      f.fila.dataset.estado = "no_comprobado";
+      f.estado.replaceChildren(chipEstado("no_comprobado"));
+    });
+    $("torre-resumen").replaceChildren(el("span", "torre-resumen-txt", "Rúbrica: no se pudo mostrar; nada se da por verificado"));
+  }
+
   /* ---------- conexión ---------- */
   var conexion = "vivo", ultimo = null, sinConexionDesde = null, detenido = false, temporizador = null;
   function pintarConexion() {
@@ -356,7 +374,10 @@ window.CofrialTorre = (function () {
       aviso.replaceChildren(el("span", "", "Tu sesión terminó. Lo que ves es el último dato recibido y nada se da por verificado. "), enlace(ENTRAR, "Ingresar de nuevo"));
       aviso.hidden = false;
     }
-    if (ultimo) { pintarLectura(ultimo); pintarRubrica(ultimo.rubrica); }
+    if (!ultimo) return;
+    var p = ultimo;
+    seccion("lectura", function () { pintarLectura(p); }, function () { $("torre-lectura").dataset.tono = "sin-datos"; });
+    seccion("rúbrica", function () { pintarRubrica(p.rubrica); }, rubricaSinConfirmar);
   }
   function cambiarConexion(nueva) {
     if (nueva === conexion) return;
@@ -375,30 +396,34 @@ window.CofrialTorre = (function () {
       if (r.type === "opaqueredirect" || r.status === 401 || r.status === 403) { sesionTerminada(); return null; }
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function (p) {
+    }).then(function (p) {                   // con dos funciones: un error al pintar no llega a la de red
       if (!p) return;
       cambiarConexion("vivo");
       render(p);
-    }).catch(function () { cambiarConexion("caido"); }).then(function () { clearTimeout(plazo); agendar(); });
+    }, function () {
+      cambiarConexion("caido");
+    }).catch(function (e) {
+      console.error("Torre: no se pudo pintar el pulso", e);
+    }).then(function () { clearTimeout(plazo); agendar(); });
   }
 
   /* ---------- pintado ---------- */
   function render(p) {
     ultimo = p;
-    if (p.antes) pintarAntes(p.antes);
-    siCambio("clientes", p.clientes_mapa, pintarClientes);
-    pintarCamiones(p.camiones);
-    pintarLeyenda(p);
-    siCambio("frecuentes", p.frecuentes, function (f) { frecuentes = f; opcionesFiltro(); pintarFrecuentes(); });
-    pintarAhora(p.ahora);
-    siCambio("embudo", p.embudo, pintarEmbudo);
+    if (p.antes) seccion("antes", function () { pintarAntes(p.antes); });
+    seccion("clientes del mapa", function () { siCambio("clientes", p.clientes_mapa, pintarClientes); });
+    seccion("camiones", function () { pintarCamiones(p.camiones); });
+    seccion("leyenda", function () { pintarLeyenda(p); });
+    seccion("clientes frecuentes", function () { siCambio("frecuentes", p.frecuentes, function (f) { frecuentes = f; opcionesFiltro(); pintarFrecuentes(); }); });
+    seccion("ahora", function () { pintarAhora(p.ahora); });
+    seccion("embudo", function () { siCambio("embudo", p.embudo, pintarEmbudo); });
     pintarConexion();
   }
 
   function iniciar() {
     var inicial = JSON.parse($("pulso-inicial").textContent);
     $("filtro-segmento").addEventListener("change", pintarFrecuentes);
-    iniciarMapa(inicial.base);
+    seccion("mapa", function () { iniciarMapa(inicial.base); });
     render(inicial);
     document.addEventListener("visibilitychange", function () {
       if (detenido) return;

@@ -16,7 +16,7 @@ Criterios: **fácil de aprender para dos personas**, gratis, que funcione en AWS
 | D-07 | Despliegue | EC2 Ubuntu + Docker Compose; EC2 IoT aparte; RDS en subred privada | Elastic Beanstalk | Adoptada en la práctica (`aws/provision.sh`) |
 | D-08 | Extra visual | Torre de control con mapa **Leaflet** (2D, simple) inspirada en WareTrack | Vista isométrica 3D con Three.js (más vistosa, más riesgo) | Cubierta por `/flota/` y `/demo/`; el 8-nov se agregó la Torre de control (`/torre/`) con mapa Leaflet de la macrozona sur (ver «Torre de control» más abajo; sin desplegar en AWS) |
 
-> El modelo de datos (27 tablas en 3FN) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
+> El modelo de datos (27 tablas en 3FN en el diseño de referencia; la implementación suma extensiones, entre ellas `segmento_cliente`, la tabla 28 con la Torre de control) y su script SQL están en `informe/modelo/` (ver `informe/04b-modelo-datos.md`). Con Django, las tablas se generan desde modelos y migraciones con la misma estructura; el script SQL sirve para revisar el diseño y probar consultas.
 
 ## Por qué esta combinación
 - **Un solo lenguaje (Python)** para web, API, cálculos e IoT: lo que aprende uno le sirve al otro y el simulador comparte herramientas con la aplicación.

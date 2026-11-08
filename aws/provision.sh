@@ -201,9 +201,11 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get install -y docker.io docker-compose-v2 git
 systemctl enable --now docker
 git clone --branch ${RAMA} ${REPO_URL} /opt/cofrial && cd /opt/cofrial
-# ID de esta instancia (IMDSv2) para la fila D1 de la Torre de control; si el metadato no responde, queda vacío y la Torre lo dice
-TOKEN_IMDS=\$(curl -s -m 3 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)
-INSTANCIA_EC2=\$(curl -s -m 3 -H "X-aws-ec2-metadata-token: \$TOKEN_IMDS" http://169.254.169.254/latest/meta-data/instance-id || true)
+# ID de esta instancia (IMDSv2) para la fila D1 de la Torre de control. curl -f falla ante cualquier error HTTP y solo se acepta un ID con su forma
+# (i- y hexadecimales): una página de error o un fallo dejan el valor vacío y el arranque sigue, nunca queda basura en .env
+TOKEN_IMDS=\$(curl -sf -m 3 --connect-timeout 2 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)
+INSTANCIA_EC2=\$(curl -sf -m 3 --connect-timeout 2 -H "X-aws-ec2-metadata-token: \$TOKEN_IMDS" http://169.254.169.254/latest/meta-data/instance-id || true)
+[[ "\$INSTANCIA_EC2" =~ ^i-[0-9a-f]+\$ ]] || INSTANCIA_EC2=
 cat > .env <<E
 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
 DJANGO_DEBUG=0

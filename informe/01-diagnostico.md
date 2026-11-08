@@ -171,6 +171,8 @@ El resultado no pretende ser una predicción: sirve para mostrar que una variaci
 | Frecuencia de caídas del servidor y fecha del último respaldo | Cuantificar el riesgo del dolor 1 |
 | Cantidad de vendedores y tamaño de su cartera | Dimensionar el riesgo de fuga de cartera |
 | Exigencias de temperatura de los clientes institucionales | Definir los rangos críticos de la alerta |
+| Tiempo de coordinación por viaje (llamadas y mensajes entre bodega, chofer y cliente) | Reemplazar el supuesto de 15 minutos y de 75 horas semanales de la Tabla 5 |
+| Zona de cobertura real de la operación | Reemplazar la definición supuesta de macrozona sur |
 
 *Nota.* Elaboración propia.
 

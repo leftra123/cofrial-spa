@@ -3,6 +3,7 @@
 import http.client
 import logging
 import os
+import re
 import time
 import urllib.request
 from datetime import timedelta
@@ -39,6 +40,15 @@ def limpiar_cache():
     _cache_grafana.update(hasta=0.0, valor=False)
 
 
+_ID_EC2 = re.compile(r"i-[0-9a-f]{8,17}")
+
+
+def _id_valido(texto):
+    """Solo un ID de instancia con su forma (i- y hexadecimales); cualquier otra respuesta (una página de error, basura) no cuenta."""
+    texto = (texto or "").strip()
+    return texto if _ID_EC2.fullmatch(texto) else None
+
+
 def instancia_ec2():
     """ID de la instancia EC2 (IMDSv2, 200 ms); si el contenedor no lo alcanza, la variable INSTANCIA_EC2 que escribe provision.sh; si no, None."""
     if not _cache_ec2["hecho"]:
@@ -47,10 +57,10 @@ def instancia_ec2():
             pedido = urllib.request.Request(f"{_IMDS}/api/token", method="PUT", headers={"X-aws-ec2-metadata-token-ttl-seconds": "60"})
             token = urllib.request.urlopen(pedido, timeout=0.2).read().decode()
             pedido = urllib.request.Request(f"{_IMDS}/meta-data/instance-id", headers={"X-aws-ec2-metadata-token": token})
-            valor = urllib.request.urlopen(pedido, timeout=0.2).read().decode().strip() or None
+            valor = _id_valido(urllib.request.urlopen(pedido, timeout=0.2).read().decode())
         except Exception:
             valor = None
-        _cache_ec2.update(hecho=True, valor=valor or os.environ.get("INSTANCIA_EC2") or None)
+        _cache_ec2.update(hecho=True, valor=valor or _id_valido(os.environ.get("INSTANCIA_EC2")))
     return _cache_ec2["valor"]
 
 

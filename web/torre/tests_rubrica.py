@@ -56,8 +56,17 @@ class Rubrica(Base):
         self.assertIn(".rds.amazonaws.com", " ".join(f["evidencia"]))
 
     def test_instancia_ec2_usa_variable_si_no_hay_imds(self):
-        with mock.patch("urllib.request.urlopen", side_effect=OSError), mock.patch.dict(os.environ, {"INSTANCIA_EC2": "i-0var"}):
-            self.assertEqual(rubrica.instancia_ec2(), "i-0var")
+        with mock.patch("urllib.request.urlopen", side_effect=OSError), mock.patch.dict(os.environ, {"INSTANCIA_EC2": "i-0a1b2c3d4e"}):
+            self.assertEqual(rubrica.instancia_ec2(), "i-0a1b2c3d4e")
+
+    def test_d1_instancia_invalida_no_es_verde(self):
+        basura = "<html>\n<head><title>401 - Unauthorized</title></head>\n</html>"
+        with mock.patch("urllib.request.urlopen", side_effect=OSError), mock.patch.dict(os.environ, {"INSTANCIA_EC2": basura}):
+            self.assertIsNone(rubrica.instancia_ec2())
+        self.assertIsNone(rubrica._id_valido("401 Unauthorized"))
+        self.assertIsNone(rubrica._id_valido(""))
+        f = self.d1(HOST_RDS, rubrica._id_valido(basura))
+        self.assertNotEqual(f["estado"], rubrica.VERIFICADO)
 
     # D2
     def test_d2_solo_historial_no_es_verde(self):

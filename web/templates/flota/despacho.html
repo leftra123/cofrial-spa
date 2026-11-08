@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block titulo %}Armar despacho | Cofrial SpA{% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">{% endblock %}
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
   <div><h1>Armar despacho</h1><p class="sub">Marca los pedidos del viaje: el sistema propone el camión y el mejor orden de entrega, y tú puedes cambiarlo.</p></div>
@@ -44,7 +44,9 @@
   <div>
     <div class="seccion"><h2>Ruta sugerida</h2></div>
     <div class="tarjeta-ui">
+      <div class="filtros-tramo" id="filtros-despacho" role="group" aria-label="Qué mostrar en el mapa"></div>
       <div id="mapa-despacho" class="mapa" role="region" aria-label="Vista previa de la ruta del despacho"></div>
+      <ul class="leyenda" id="leyenda-despacho" aria-label="Leyenda del mapa"></ul>
       <p class="ruta-info" id="resumen-ruta">Marca pedidos para ver la ruta.</p>
       <ol class="ruta-lista" id="lista-ruta"></ol>
     </div>
@@ -54,19 +56,23 @@
 {% endblock %}
 {% block scripts %}
 {{ mapa|json_script:"datos-mapa" }}
-<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
+<script src="{% static 'js/leyenda.js' %}"></script>
 <script>
 (function () {
   var d = JSON.parse(document.getElementById("datos-mapa").textContent), base = [d.base.lat, d.base.long];
-  var m = CofrialMapa.crear("mapa-despacho", base, 13), capa = L.layerGroup().addTo(m), version = 0;
-  L.marker(base, {icon: CofrialMapa.base(), title: d.base.nombre, alt: d.base.nombre}).addTo(m).bindPopup(d.base.nombre);
+  var m = CofrialMapa.crear("mapa-despacho", base, 12), version = 0;
+  var rec = m.recorridos({base: base}), puntosParadas = m.puntos([]);
+  m.base(base, {titulo: d.base.nombre, popup: d.base.nombre});
+  CofrialLeyenda("leyenda-despacho", ["base", "salida", "parada", "ultima", "regreso"]);
+  CofrialLeyenda.filtros("filtros-despacho", rec);
   var resumen = document.getElementById("resumen-ruta"), lista = document.getElementById("lista-ruta");
   function marcados() { return Array.prototype.filter.call(document.querySelectorAll("input[name=ordenes]"), function (c) { return c.checked; }); }
   function recalcular() {
     var mio = ++version, sel = marcados(), paradas = [], sinUbicar = 0;
     sel.forEach(function (c) { var p = d.pedidos[c.dataset.orden]; if (p) paradas.push({id: c.dataset.orden, p: p}); else sinUbicar++; });
-    capa.clearLayers(); lista.innerHTML = "";
+    rec.poner([]); puntosParadas.actualizar([]); lista.innerHTML = "";
     if (!paradas.length) { resumen.textContent = sel.length ? "Los pedidos marcados no tienen ubicación; usa «Ubicar»." : "Marca pedidos para ver la ruta."; return; }
     var pts = [base].concat(paradas.map(function (x) { return [x.p.lat, x.p.long]; }));
     resumen.textContent = "Calculando la mejor ruta…";
@@ -74,20 +80,21 @@
       .then(function (r) { return r.json(); }).then(function (j) {
       if (mio !== version) return;                         // llegó tarde: ya se cambió la selección
       var ruta = j.ruta; if (!ruta) { resumen.textContent = "No pudimos calcular la ruta."; return; }
-      var r = CofrialMapa.rutaGuardada(ruta), filas = [];     // la misma ruta por calles que se guardará al despachar
-      L.polyline(r.linea, {color: "#1D4ED8", weight: 4, opacity: .85, dashArray: r.aproximada ? "6 8" : null}).addTo(capa);
+      var r = CofrialMapa.rutaGuardada(ruta), partes = CofrialMapa.partirRuta(ruta), marcasParada = [];     // la misma ruta por calles que se guardará al despachar
+      rec.poner([{id: "vista-previa", ruta: ruta}]);
       ruta.paradas.forEach(function (q, k) {
-        var n = k + 1;
+        var n = k + 1, lineas = ["Parada " + n + " de " + ruta.paradas.length];
         q.ordenes.forEach(function (oid) {
           var p = d.pedidos[oid];
           if (!p) return;
-          L.marker([q.lat, q.long], {icon: CofrialMapa.pin(n, "#1D4ED8"), title: "Parada " + n + ": " + p.cliente, alt: "Parada " + n}).addTo(capa).bindPopup(p.cliente + "<br>" + p.direccion);
-          filas.push("<li><b>" + p.cliente + "</b> · " + p.direccion + " <span class='frio'>(orden N.º " + oid + ")</span></li>");
+          lineas.push(p.cliente, p.direccion);
+          lista.appendChild(CofrialMapa.filaParada(p.cliente, p.direccion, "(orden N.º " + oid + ")"));
         });
+        marcasParada.push({pos: [q.lat, q.long], numero: n, color: CofrialMapa.COLOR_IDA, borde: n === ruta.paradas.length ? CofrialMapa.COLOR_VUELTA : null, popup: lineas});
       });
-      lista.innerHTML = filas.join("");
-      resumen.textContent = "Recorrido por calles (ida y vuelta a la base): " + CofrialMapa.texto(r) + (sinUbicar ? " · " + sinUbicar + " pedido(s) sin ubicar no pueden salir: ubícalos primero" : "");
-      m.fitBounds(pts, {padding: [40, 40]});
+      puntosParadas.actualizar(marcasParada);
+      resumen.textContent = "Recorrido por calles: " + CofrialMapa.texto(r) + (r.metros != null ? " (ida " + CofrialMapa.largoKm(partes.ida).toFixed(1).replace(".", ",") + " km, vuelta " + CofrialMapa.largoKm(partes.vuelta).toFixed(1).replace(".", ",") + " km)" : "") + (sinUbicar ? " · " + sinUbicar + " pedido(s) sin ubicar no pueden salir: ubícalos primero" : "");
+      m.encuadrar(pts, {padding: 40});
     }).catch(function () { if (mio === version) resumen.textContent = "No pudimos calcular la ruta. Intenta de nuevo."; });
   }
   /* Camión propuesto: el primero compatible de la lista que ordenó el servidor (mismas reglas que la sugerencia). Si la persona elige otro

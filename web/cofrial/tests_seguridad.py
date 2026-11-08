@@ -3,6 +3,8 @@
 Regla común: ante una entrada hostil o inexistente la respuesta es siempre controlada (302 al acceso, 400/403/404/405/429),
 nunca un 500, nunca una traza y nunca un dato de otra cuenta.
 """
+import html
+import re
 from unittest import mock
 
 from django.conf import settings
@@ -15,7 +17,8 @@ from django.urls import get_resolver
 from catalogo.models import Producto
 from clientes.models import Cliente
 from crm.models import Prospecto, Requerimiento
-from flota.models import Telemetria
+from flota import servicios as flota_servicios
+from flota.models import Camion, Telemetria
 from pedidos import servicios as s
 
 CLAVE = "demo-cofrial-2026"
@@ -385,6 +388,95 @@ class EntradasHostilesTests(BaseSeguridad):
 
 
 # ---------------------------------------------------------------- 6. Configuración de producción
+class ListasDeParadasTests(BaseSeguridad):
+    """El nombre y la dirección los escribe el cliente al registrarse y los lee el despachador: un texto hostil no debe volverse HTML.
+
+    `json_script` protege solo el paso del dato a la página. El riesgo está después, cuando el JavaScript arma la lista. La imagen de la
+    suite no trae navegador, así que la ejecución real se comprobó con Chromium; aquí se vigila el código que evita el problema."""
+    NOMBRE = '<img src=x onerror="alert(1)">'
+    DIRECCION = '<i id="hostil">Calle</i> 123'
+
+    def _pedido_hostil(self):
+        cliente = Cliente.objects.get(usuario__username="ana@correo.test")
+        Cliente.objects.filter(pk=cliente.pk).update(nombre=self.NOMBRE)
+        direccion = cliente.direccion_set.first()
+        type(direccion).objects.filter(pk=direccion.pk).update(calle_numero=self.DIRECCION, lat=-38.7359, long=-72.5904)
+        s.agregar(cliente, Producto.objects.get(sku="POL-PEC-10K").pk, 2)
+        return s.generar_orden(cliente, direccion.pk, "")
+
+    def _sin_html_crudo(self, respuesta):
+        html = respuesta.content.decode()
+        self.assertNotIn("<img src=x", html)
+        self.assertNotIn('<i id="hostil"', html)
+
+    def test_el_despacho_entrega_el_nombre_escapado(self):
+        orden = self._pedido_hostil()
+        self.client.login(username="despacho@cofrial.cl", password=CLAVE)
+        r = self.client.get("/flota/despachar/")
+        self.assertContains(r, f"Orden N.º {orden.orden_id}")
+        self.assertContains(r, "\\u003Cimg src=x")
+        self._sin_html_crudo(r)
+
+    def test_el_panel_entrega_el_nombre_escapado(self):
+        orden = self._pedido_hostil()
+        self.client.login(username="despacho@cofrial.cl", password=CLAVE)
+        self.client.post("/flota/despachar/", {"camion": "CAM-03", "ordenes": [orden.orden_id]})
+        r = self.client.get("/flota/")
+        self.assertContains(r, "\\u003Cimg src=x")
+        self._sin_html_crudo(r)
+
+    def test_las_listas_se_arman_con_nodos_y_no_con_html(self):
+        for plantilla in ("panel", "despacho"):
+            codigo = (settings.BASE_DIR / "templates" / "flota" / f"{plantilla}.html").read_text(encoding="utf-8")
+            self.assertIn("CofrialMapa.filaParada(p.cliente, p.direccion,", codigo, plantilla)
+            self.assertNotIn("insertAdjacentHTML", codigo, plantilla)
+            # Solo se admite vaciar un contenedor o poner el fragmento que el servidor ya escapó (la caja del despacho automático).
+            self.assertLessEqual(set(re.findall(r"innerHTML\s*=\s*([^;]+);", codigo)), {'""', "html"}, plantilla)
+
+    def test_los_popups_con_datos_variables_son_texto(self):
+        # Leaflet interpreta como HTML el texto de un popup. Solo se admite el nombre de la base, que es una constante de settings.
+        for plantilla in (settings.BASE_DIR / "templates").rglob("*.html"):
+            for contenido in re.findall(r"bindPopup\(([^;]*)\)", plantilla.read_text(encoding="utf-8")):
+                if contenido != "d.base.nombre":
+                    self.assertTrue(contenido.startswith("CofrialMapa.popupTexto("), f"{plantilla.name}: {contenido}")
+
+    def test_la_etiqueta_del_camion_se_escapa_en_el_mapa(self):
+        codigo = (settings.BASE_DIR / "static" / "js" / "mapa.js").read_text(encoding="utf-8")
+        self.assertRegex(codigo, r"function esc\(")
+        self.assertIn("""'<b class="pin-etq">' + esc(etq) + "</b>\"""", codigo)
+
+    def test_un_id_de_camion_no_rompe_la_confirmacion_de_cerrar_viaje(self):
+        # Dentro de onsubmit el navegador decodifica &#x27; antes de leer el JavaScript: el autoescape de HTML no alcanza.
+        hostil = "'+(window.b=1)+'"
+        camion = Camion.objects.get(pk="CAM-03")
+        camion.pk = camion.camion_id = hostil
+        camion.patente = "XS-1"
+        camion.save(force_insert=True)
+        orden = self._pedido_hostil()
+        flota_servicios.despachar(hostil, [orden.orden_id])
+        self.client.login(username="despacho@cofrial.cl", password=CLAVE)
+        contenido = self.client.get("/flota/").content.decode()
+        confirmaciones = [html.unescape(x) for x in re.findall(r'onsubmit="([^"]*)"', contenido)]
+        self.assertTrue(any("\\u0027" in x for x in confirmaciones), "falta la confirmación del viaje hostil")
+        self.assertFalse(any(hostil in x for x in confirmaciones))
+
+    def test_las_variables_en_manejadores_de_eventos_van_con_escapejs(self):
+        # Valores que siempre son números: el resto debe pasar por escapejs.
+        numeros = {"x.viaje.despacho_id", "auto.max_viajes_a_mano"}
+        for plantilla in (settings.BASE_DIR / "templates").rglob("*.html"):
+            for atributo in re.findall(r"""\son[a-z]+="([^"]*\{\{[^"]*)\"""", plantilla.read_text(encoding="utf-8")):
+                for variable in re.findall(r"\{\{\s*(.*?)\s*\}\}", atributo):
+                    if variable not in numeros:
+                        self.assertIn("|escapejs", variable, f"{plantilla.name}: {variable}")
+
+    def test_la_fila_de_una_parada_usa_solo_texto(self):
+        codigo = (settings.BASE_DIR / "static" / "js" / "mapa.js").read_text(encoding="utf-8")
+        cuerpo = re.search(r"function filaParada\(.*?\n  }\n", codigo, re.S)
+        self.assertIsNotNone(cuerpo, "falta filaParada en mapa.js")
+        self.assertIn("textContent", cuerpo.group())
+        self.assertNotIn("innerHTML", cuerpo.group())
+
+
 class ConfiguracionSeguraTests(TestCase):
     def test_la_depuracion_esta_apagada_por_defecto(self):
         self.assertFalse(settings.DEBUG)

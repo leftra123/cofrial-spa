@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block titulo %}Torre de control | Cofrial SpA{% endblock %}
-{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+{% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">
 <link rel="stylesheet" href="{% static 'css/torre.css' %}">{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab torre-cab">
@@ -102,7 +102,7 @@
 {% endblock %}
 {% block scripts %}
 {{ inicial|json_script:"pulso-inicial" }}
-<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/torre.js' %}"></script>
 {% endblock %}

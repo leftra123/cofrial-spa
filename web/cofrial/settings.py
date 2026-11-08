@@ -137,8 +137,8 @@ LOGIN_URL = "/cuenta/entrar/"
 LOGIN_REDIRECT_URL = "/"                        # lo decide cofrial.acceso.inicio_de(); «/» envía a cada cuenta a su inicio
 LOGOUT_REDIRECT_URL = "/"
 
-# Los mosaicos de OpenStreetMap exigen que el navegador envíe el Referer (su política de uso). Django envía por defecto «same-origin»,
-# que lo quita en las peticiones a otro sitio y OSM responde «403 Access blocked». Con esta política se envía solo el origen (sin ruta ni datos).
+# Django envía por defecto «same-origin», que quita el Referer en las peticiones a otro sitio. Los servicios de mapas gratuitos lo piden para
+# su política de uso (OpenStreetMap responde «403 Access blocked» sin él). Con esta política se envía solo el origen (sin ruta ni datos).
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Asistente de IA de la tienda (ASISTENTE_ACTIVO=0 lo apaga sin tocar el resto).
@@ -146,13 +146,12 @@ ASISTENTE_ACTIVO = os.environ.get("ASISTENTE_ACTIVO", "1") == "1"
 # Botón «Precargar datos de ejemplo» en el registro (persona ficticia para mostrar el formulario sin escribirlo). REGISTRO_PRECARGA=0 lo oculta.
 REGISTRO_PRECARGA = os.environ.get("REGISTRO_PRECARGA", "1") == "1"
 
-# Mosaicos del mapa. Por defecto, OpenStreetMap (uso liviano, con Referer y atribución). Para otro proveedor, definir las variables
-# MAP_TILE_URL y MAP_TILE_ATTRIBUTION (y MAP_TILE_SUBDOMAINS / MAP_TILE_MAX_ZOOM si hace falta); las claves del proveedor, si las pide, van en la propia URL.
+# Mapa base: una URL de estilo de MapLibre. Por defecto, OpenFreeMap (teselas vectoriales, sin cuenta ni clave); mapa.js lo recolorea a la noche de la marca.
+# MAP_STYLE_URL=local no pide nada a la red y deja el fondo azul noche con rutas y puntos. La atribución se muestra siempre en el mapa.
 MAPA_TILES = {
-    "url": os.environ.get("MAP_TILE_URL") or "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    "attribution": os.environ.get("MAP_TILE_ATTRIBUTION") or "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
-    "maxZoom": int(os.environ.get("MAP_TILE_MAX_ZOOM") or 19),
-    "subdomains": os.environ.get("MAP_TILE_SUBDOMAINS") or "abc",
+    "estilo": os.environ.get("MAP_STYLE_URL") or "https://tiles.openfreemap.org/styles/dark",
+    "attribution": os.environ.get("MAP_ATTRIBUTION") or '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+    "maxZoom": int(os.environ.get("MAP_MAX_ZOOM") or 19),
 }
 
 # Mapa y rutas (OpenStreetMap, sin clave). La base es el punto de salida de los camiones, el mismo donde parte el simulador IoT.

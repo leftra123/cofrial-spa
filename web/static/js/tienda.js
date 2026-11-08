@@ -112,20 +112,32 @@
     if (f.matches('form[action="/carrito/agregar/"]')) { e.preventDefault(); if (!b || !b.disabled) agregar(f, f.querySelector(".agregar") || b); }
     else if (f.matches('.linea-form[action="/carrito/actualizar/"]')) { e.preventDefault(); if (!b || !b.disabled) actualizarCarrito(f, f.querySelector(".btn-sec")); }
   });
+  /* Factura sin giro: que lo avise el navegador antes de enviar. Si lo rechazara el servidor, la página vuelve con «Boleta» marcada y se pierde la elección. */
+  document.addEventListener("change", function (e) {
+    if (e.target.name !== "comprobante") return;
+    var giro = e.target.closest(".comprobante").querySelector('input[name="giro"]');
+    if (giro) giro.required = e.target.value === "factura";
+  });
   contador(leerContador());
   window.CofrialTienda = {iniciarCant: iniciarCant, contador: contador};
 
+  var salirDlg = document.getElementById("salir-dialogo");
   document.querySelectorAll(".tb-salir").forEach(function (btn) {
     if (btn.dataset.listo) return;
     btn.dataset.listo = "1";
+    if (!salirDlg || typeof salirDlg.showModal !== "function") return;
     btn.addEventListener("click", function (e) {
-      var form = btn.closest("form");
-      if (!form || btn.classList.contains("tb-salir--sale")) return;
       e.preventDefault();
-      btn.classList.add("tb-salir--sale");
-      btn.setAttribute("aria-busy", "true");
-      var ms = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 420;
-      window.setTimeout(function () { form.submit(); }, ms);
+      if (!salirDlg.open) salirDlg.showModal();
     });
   });
+  if (salirDlg) {
+    var cancelarSalir = salirDlg.querySelector("[data-salir-cancelar]");
+    if (cancelarSalir) cancelarSalir.addEventListener("click", function () { salirDlg.close(); });
+    salirDlg.addEventListener("click", function (e) { if (e.target === salirDlg) salirDlg.close(); });
+    salirDlg.addEventListener("close", function () {
+      var btn = document.querySelector(".tb-salir");
+      if (btn && document.contains(btn)) btn.focus();
+    });
+  }
 })();

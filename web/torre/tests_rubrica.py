@@ -113,6 +113,12 @@ class Rubrica(Base):
         type(o).objects.filter(pk=o.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Cancelada"))
         self.assertEqual(self.fila("D2")["estado"], rubrica.SIN_EVIDENCIA)
 
+    def test_d2_rechazadas_no_cuentan(self):
+        o = self.pedido_canal("A", self.b2b, "OC-1")
+        self.pedido_canal("B", self.b2c)
+        type(o).objects.filter(pk=o.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Rechazada en recepción"))
+        self.assertEqual(self.fila("D2")["estado"], rubrica.SIN_EVIDENCIA)
+
     # D4
     def test_d4_pedidos_sembrados_no_son_ventas(self):
         self.pedido_canal("A", self.b2b, "OC-SUR-118")
@@ -122,6 +128,22 @@ class Rubrica(Base):
         self.assertEqual(f["estado"], rubrica.SIN_EVIDENCIA)
         self.assertNotIn("Ventas B2B", " ".join(f["evidencia"]))
         self.assertIn("Pedidos en la ventana: 0", " ".join(f["evidencia"]))
+
+    def test_d4_rechazada_no_es_venta(self):
+        o = self.pedido_canal("A", self.b2b, "OC-1")
+        type(o).objects.filter(pk=o.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Rechazada en recepción"))
+        with self.grafana(True):
+            f = self.fila("D4")
+        self.assertEqual(f["estado"], rubrica.SIN_EVIDENCIA)
+        self.assertIn("Pedidos en la ventana: 0", " ".join(f["evidencia"]))
+
+    def test_d4_monto_solo_lo_aceptado(self):
+        o = self.pedido_canal("A", self.b2b, "OC-1")
+        linea = o.ordenitem_set.first()
+        type(linea).objects.filter(pk=linea.pk).update(cantidad=3, precio_unitario_clp=1000, cantidad_rechazada=1, motivo_rechazo="faltante")
+        with self.grafana(True):
+            f = self.fila("D4")
+        self.assertIn("$2.000 CLP", " ".join(f["evidencia"]))
 
     def test_d4_grafana_caido(self):
         self.pedido_canal("A", self.b2b, "OC-1")

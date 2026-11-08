@@ -189,7 +189,7 @@ def fin_de_exposicion(orden, ahora=None):
     """Hasta cuándo la carga de esta orden estuvo en el camión. Dos clientes pueden ir en el mismo viaje: el primero ya recibió cuando el
     camión sigue, y una falla posterior no lo afecta. Quien aún no recibe (en la puerta o sin concretar) sigue a bordo hasta el regreso."""
     d = orden.despacho
-    if orden.estado_orden.nombre == "Entregada":
+    if orden.estado_orden.nombre in pedidos.RECEPCION_CERRADA:
         return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
     return d.regreso_en or ahora or timezone.now()
 
@@ -214,6 +214,7 @@ def ordenes_de_cliente(cliente):
     ordenes = list(ordenes)
     for o in ordenes:
         o.total = pedidos.total_orden(o)
+        o.rechazo = pedidos.rechazo_de(o)
         o.cancelable = (not o.estado_orden.es_final and o.estado_orden.orden_flujo <= 3) or o.estado_orden.nombre == "Entrega no concretada"
     return ordenes_con_alerta(ordenes)
 
@@ -459,7 +460,7 @@ ETAPAS_APARTE = ["En riesgo", "Perdido"]
 
 
 def nivel_de(total, en_ventana, ultimo, ahora):
-    """Nivel de un cliente B2B según sus pedidos no cancelados: cuántos tiene, cuántos en la ventana de fidelización y cuándo fue el último."""
+    """Nivel de un cliente B2B según sus pedidos que fueron venta (ni cancelados ni rechazados enteros): cuántos tiene, cuántos en la ventana de fidelización y cuándo fue el último."""
     if total == 0:
         return "Ganado sin pedido"
     if ultimo < ahora - timedelta(days=DIAS_EN_RIESGO):
@@ -470,12 +471,12 @@ def nivel_de(total, en_ventana, ultimo, ahora):
 
 
 def _pedidos_vigentes():
-    return Orden.objects.exclude(estado_orden__nombre="Cancelada")
+    return Orden.objects.exclude(estado_orden__nombre__in=pedidos.SIN_VENTA)
 
 
 def _con_pedidos(clientes, ahora):
-    """Agrega a cada cliente `n_pedidos`, `n_ventana` y `ultimo_pedido` en una sola consulta (sin contar cancelados)."""
-    vigente = ~Q(direccion__orden__estado_orden__nombre="Cancelada")
+    """Agrega a cada cliente `n_pedidos`, `n_ventana` y `ultimo_pedido` en una sola consulta (sin contar cancelados ni rechazados enteros al recibir)."""
+    vigente = ~Q(direccion__orden__estado_orden__nombre__in=pedidos.SIN_VENTA)
     ventana = vigente & Q(direccion__orden__creada_en__gte=ahora - timedelta(days=VENTANA_FIDELIZADO_DIAS))
     return clientes.annotate(n_pedidos=Count("direccion__orden", filter=vigente, distinct=True),
                              n_ventana=Count("direccion__orden", filter=ventana, distinct=True),
@@ -521,8 +522,8 @@ def embudo_por_niveles(usuario):
 
     clientes = _clientes_del_embudo(clientes_visibles(usuario))
     clientes = list(_con_pedidos(clientes, ahora).order_by("nombre"))
-    montos = dict(OrdenItem.objects.filter(orden__direccion__cliente__in=[c.pk for c in clientes]).exclude(orden__estado_orden__nombre="Cancelada")
-                  .values_list("orden__direccion__cliente").annotate(t=Sum(F("cantidad") * F("precio_unitario_clp"))))
+    montos = dict(OrdenItem.objects.filter(orden__direccion__cliente__in=[c.pk for c in clientes]).exclude(orden__estado_orden__nombre__in=pedidos.SIN_VENTA)
+                  .values_list("orden__direccion__cliente").annotate(t=Sum(pedidos.MONTO_ACEPTADO)))
     for c in clientes:
         e = etapas[nivel_de(c.n_pedidos, c.n_ventana, c.ultimo_pedido, ahora)]
         monto = montos.get(c.pk, 0)

@@ -3,7 +3,7 @@ que confirma entregas vencidas, ni `crm.servicios.indicadores`, que consulta cli
 from datetime import timedelta
 
 from django.db import connection
-from django.db.models import F, Max, Sum
+from django.db.models import Max, Sum
 from django.utils import timezone
 
 from clientes import muestra
@@ -14,6 +14,7 @@ from crm.models import Interaccion, Prospecto, Requerimiento
 from flota import vigente
 from flota.models import Despacho, Telemetria
 from pedidos.models import Orden, OrdenItem
+from pedidos.servicios import MONTO_ACEPTADO, RECEPCION_CERRADA, SIN_VENTA
 
 FRECUENTES = 8
 VENTANA_FRECUENTES_DIAS = 90
@@ -21,7 +22,7 @@ VENTANA_FRECUENTES_DIAS = 90
 # Pedidos afectados por una ruptura de frío: copia de AFECTADAS y A_BORDO en grafana/generar_dashboard.py. Si se cambia allá, cambiarla aquí
 # para que la cifra de la Torre y la de Grafana sigan coincidiendo.
 _A_BORDO = """m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
-  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
+  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
 _RIESGO_HISTORICO = f"""SELECT coalesce(sum(t.total_clp), 0) FROM v_orden o JOIN v_orden_total t USING (orden_id)
 JOIN orden x USING (orden_id)
 JOIN despacho d ON d.despacho_id = o.despacho_id
@@ -29,17 +30,15 @@ JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id
 WHERE e.nombre <> 'Cancelada' AND d.salida_en IS NOT NULL AND EXISTS (
   SELECT 1 FROM telemetria m WHERE {_A_BORDO})"""
 
-_MONTO = F("cantidad") * F("precio_unitario_clp")
-
 
 def _riesgo_actual(camiones_en_alerta):
     """(monto, cliente más expuesto) de los pedidos a bordo, sin entregar, de camiones cuya última lectura trae alerta."""
     if not camiones_en_alerta:
         return 0, None
     ordenes = Orden.objects.filter(despacho__salida_en__isnull=False, despacho__regreso_en__isnull=True,
-                                   despacho__camion_id__in=camiones_en_alerta).exclude(estado_orden__nombre__in=["Entregada", "Cancelada"])
+                                   despacho__camion_id__in=camiones_en_alerta).exclude(estado_orden__nombre__in=[*RECEPCION_CERRADA, "Cancelada"])
     por_cliente = list(OrdenItem.objects.filter(orden__in=ordenes.values("pk")).values("orden__direccion__cliente__nombre")
-                       .annotate(total=Sum(_MONTO)).order_by("-total", "orden__direccion__cliente__nombre"))
+                       .annotate(total=Sum(MONTO_ACEPTADO)).order_by("-total", "orden__direccion__cliente__nombre"))
     if not por_cliente:
         return 0, None
     return sum(f["total"] for f in por_cliente), por_cliente[0]["orden__direccion__cliente__nombre"]
@@ -53,9 +52,9 @@ def _ahora(vigentes, alertas):
         cursor.execute(_RIESGO_HISTORICO)
         historico = int(cursor.fetchone()[0])
     ventas = {"B2B": 0, "B2C": 0}
-    for canal, total in (OrdenItem.objects.filter(orden__creada_en__gte=ahora - timedelta(hours=24)).exclude(orden__estado_orden__nombre="Cancelada")
+    for canal, total in (OrdenItem.objects.filter(orden__creada_en__gte=ahora - timedelta(hours=24)).exclude(orden__estado_orden__nombre__in=SIN_VENTA)
                          .exclude(orden__numero_oc__startswith="HIS-").exclude(orden__numero_oc__in=muestra.REFERENCIAS_SEMBRADAS)      # la carga de demostración no es una venta
-                         .values_list("orden__direccion__cliente__tipo_cliente__codigo").annotate(t=Sum(_MONTO))):
+                         .values_list("orden__direccion__cliente__tipo_cliente__codigo").annotate(t=Sum(MONTO_ACEPTADO))):
         ventas[canal] = int(total)
     return {
         "ultima_lectura_seg": None if ultima is None else max(0, int((ahora - ultima).total_seconds())),

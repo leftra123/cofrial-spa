@@ -143,13 +143,14 @@ def _productos_mencionados(norm, producto_id):
 
 ESTADO_DE_UN_PEDIDO = {"Recibida": "recibido", "Confirmada": "confirmado", "En preparación": "en preparación", "Despachada": "despachado",
                        "Entregada": "entregado", "Cancelada": "cancelado",
-                       "Camión en la puerta": "con el camión en la puerta", "Entrega no concretada": "con la entrega sin concretar"}        # «pedido» es masculino; el estado del sistema es femenino (de «orden»)
+                       "Camión en la puerta": "con el camión en la puerta", "Entrega no concretada": "con la entrega sin concretar", "Rechazada en recepción": "rechazado en la recepción"}        # «pedido» es masculino; el estado del sistema es femenino (de «orden»)
 
 
 SITUACION_DE_UN_PEDIDO = {       # lo que la persona puede hacer o esperar en estos dos estados; el modelo solo lo redacta
     "Camión en la puerta": "Al responder, di que el camión está afuera de su dirección y que ahora puede tocar «Recibí mi pedido» o «No pude recibirlo» "
                            "(botones en la pantalla del pedido y en la campanita); si no responde, se da por entregado a los pocos minutos.",
     "Entrega no concretada": "Al responder, di que ya registramos su aviso de que no pudo recibirlo y que ventas lo contactará para reprogramar la entrega o cancelarlo; háblale de tú.",
+    "Rechazada en recepción": "Al responder, di que registramos que rechazó todo el pedido al recibirlo, que no se le cobra lo rechazado y que ventas lo contactará; háblale de tú.",
 }
 
 
@@ -165,8 +166,12 @@ def _pedido(o, perfil):
     """Un pedido para el contexto. PRIVACIDAD: los datos salen a un proveedor de IA de plan gratuito; aquí no entra nada que identifique a la persona
     (ni nombre, RUT, correo, teléfono ni dirección): solo número, estado, fechas, productos, montos y la temperatura del camión."""
     total = pedidos.total_orden(o)
+    lineas = list(o.ordenitem_set.select_related("producto"))
     d = {"numero": o.orden_id, "estado": estado_de_pedido(o.estado_orden.nombre), "creado": localtime(o.creada_en).strftime("%d/%m/%Y"),
-         "productos": [f"{i.cantidad} x {i.producto.nombre}" for i in o.ordenitem_set.select_related("producto")]}
+         "productos": [f"{i.cantidad} x {i.producto.nombre}" for i in lineas]}
+    rechazados = [f"{i.cantidad_rechazada} x {i.producto.nombre}" for i in lineas if i.cantidad_rechazada]
+    if rechazados:          # el total de abajo ya es solo lo aceptado (RN-23)
+        d["rechazados_al_recibir"] = rechazados
     if perfil is not None and perfil.codigo == "B2B":
         d["total_neto"], d["total_con_iva"] = clp(total), con_iva(total)
     else:

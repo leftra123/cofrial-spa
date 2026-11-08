@@ -276,7 +276,8 @@ def requerimiento_detalle(request, pk):
     d = r.desglose or None
     habla_de_frio = (d or {}).get("motivo_principal") == "temperatura_inadecuada" or any(p in f"{r.asunto} {r.descripcion}".lower() for p in PALABRAS_DE_FRIO)
     dato = s.telemetria_del_viaje(r.orden) if r.orden_id and habla_de_frio else None      # sin IA también: la telemetría no depende de ella
-    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
+    rechazo = pedidos.rechazo_de(r.orden) if r.orden_id else None
+    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, rechazo=rechazo, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
 
 
 @require_POST

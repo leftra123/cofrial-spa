@@ -286,8 +286,6 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
 
 ## Panel del administrador sin Django (7-nov-2026)
 
-Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
-
 - **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
 - **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
 - **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».
@@ -336,3 +334,9 @@ Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
 **Cuánto se pierde mientras tanto:** poco en la demostración. Si las etiquetas fueran correctas, todo el stock cargado sumaría 9 400 kg y la flota va de 3 000 a 10 000 kg por camión; un viaje de 6 paradas con pedidos comunes queda muy por debajo. En una operación real sí importa, y por eso queda registrado como límite. `CapacidadSinPesoTests`, en `flota/tests_por_despachar.py`, deja constancia del comportamiento actual y falla si alguien agrega el peso sin implementar la regla.
 
 Camiones de dos temperaturas quedan fuera de este cambio.
+
+## Administrador de empresa, no superusuario (8-nov-2026)
+- **Problema:** el rol «Administrador» del CRM y de `/operacion/` dependía de ser superusuario de Django, así que la cuenta de administración daba acceso a `/admin/` de Django.
+- **Decisión:** `admin@cofrial.cl` es personal con el grupo `administradores`. El rol admin se resuelve por el grupo (`crm.servicios.rol` y `operacion.servicios.rol_de`, con la misma regla). Solo `eric@cofrial.cl` queda como superusuario técnico, para `/admin/` y `/demo/`.
+- **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
+- **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.

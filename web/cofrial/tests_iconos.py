@@ -46,5 +46,5 @@ class SinDjangoALaVista(TestCase):
             self.assertNotContains(self.client.get(url), 'href="/admin/', msg_prefix=url)
 
     def test_la_ruta_sigue_de_respaldo(self):
-        self.client.login(username="admin@cofrial.cl", password=CLAVE)
+        self.client.login(username="eric@cofrial.cl", password=CLAVE)
         self.assertEqual(self.client.get("/admin/").status_code, 200)

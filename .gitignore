@@ -54,3 +54,11 @@ cuentas-demo.txt
 
 # Hoja de cuentas de prueba con sus claves (web/clientes/cuentas_demo.py): nunca se sube
 hoja-cuentas*.md
+
+# Material de trabajo del equipo: no se publica (8-nov-2026)
+docs/guion-defensa.md
+docs/sesiones-previas.md
+docs/trello-pendientes.md
+docs/referencia-*.md
+docs/superpowers/
+.claude/skills/

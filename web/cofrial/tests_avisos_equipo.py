@@ -115,6 +115,17 @@ class ContenidoTests(Base):
         servicios.despachar(camion.camion_id, [orden.pk])
         self.assertNotIn("frio", self.avisos(DESPACHO))
 
+    def test_un_viaje_con_varias_ordenes_y_lecturas_de_alerta_cuenta_una_vez(self):
+        """Dos órdenes en el mismo viaje y varias lecturas de alerta, como un camión de dos cámaras: sigue siendo un viaje."""
+        primera, segunda = pedido(), pedido()
+        camion = next(x for x in servicios.camiones_libres() if x.rango_temperatura.nombre == "Refrigerado")
+        servicios.despachar(camion.camion_id, [primera.pk, segunda.pk])
+        for temperatura in (9.0, 10.0):
+            Telemetria.objects.create(camion=camion, temp_camara=temperatura, lat=-38.7, long=-72.6, combustible_pct=70, alerta_ruptura_frio=True)
+        for usuario in (DESPACHO, VENDEDORA, GERENCIA, ADMIN):
+            with self.subTest(usuario=usuario):
+                self.assertEqual(self.avisos(usuario)["frio"]["n"], 1)
+
     def test_el_vendedor_solo_ve_el_frio_y_los_reclamos_de_su_cartera(self):
         hospital = Cliente.objects.get(rut=HOSPITAL)
         self.assertEqual(hospital.vendedor.usuario.username, VENDEDORA)

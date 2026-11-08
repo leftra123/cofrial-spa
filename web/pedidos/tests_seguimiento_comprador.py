@@ -101,9 +101,14 @@ class ReglasDelMapaDelCompradorTests(SimpleTestCase):
 
     def test_solo_se_anuncia_el_cambio_de_franja_o_de_estado(self):
         """La región en vivo es una sola; escribir en ella en cada lectura de 5 s saturaría a quien usa un lector de pantalla."""
-        self.assertEqual(PLANTILLA.count('aria-live="polite"'), 2)         # el anuncio del seguimiento y el de la entrega en la puerta, que ya existía
+        self.assertEqual(PLANTILLA.count('aria-live="polite"'), 3)         # el anuncio del seguimiento, el de la entrega en la puerta y el resumen de la recepción parcial
         self.assertIn('id="llegada-anuncio"', PLANTILLA)
         self.assertNotIn('id="ruta-info" aria-live', PLANTILLA)
+
+    def test_por_llegar_se_dice_la_distancia_y_no_la_ventana(self):
+        rama = PLANTILLA[PLANTILLA.index("if (s.cerca) return {tipo: \"cerca\""):].split("\n")[0]
+        self.assertIn("El camión está a menos de", rama)
+        self.assertNotIn("franja(s.eta)", rama)
 
     def test_el_halo_vive_en_css_y_respeta_el_movimiento_reducido(self):
         inicio = CSS.index("seguimiento del comprador")

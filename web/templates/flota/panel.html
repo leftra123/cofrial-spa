@@ -238,7 +238,11 @@
     /* ---------- nivel de detalle ---------- */
     var marcaNivel = document.createElement("div");
     marcaNivel.className = "nivel-mapa"; marcaNivel.setAttribute("aria-hidden", "true");
-    marcaNivel.innerHTML = '<span data-nivel="region">Región</span><span data-nivel="ciudad">Ciudad</span><span data-nivel="calle">Calle</span>';
+    [["region", "Región"], ["ciudad", "Ciudad"], ["calle", "Calle"]].forEach(function (n) {
+      var s = document.createElement("span");
+      s.dataset.nivel = n[0]; s.textContent = n[1];
+      marcaNivel.appendChild(s);
+    });
     m.contenedor.appendChild(marcaNivel);
     function pintarNivel(n) { marcaNivel.querySelectorAll("span").forEach(function (s) { s.classList.toggle("activo", s.dataset.nivel === n); }); }
 

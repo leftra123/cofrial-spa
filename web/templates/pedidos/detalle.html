@@ -255,7 +255,9 @@
     if (sinRed) return {tipo: "pausa", titulo: "Sin conexión por ahora", franja: s.eta ? "Último estimado: " + franja(s.eta) : "Reintentando…", corto: "Sin conexión"};
     if (s.eta) {
       var txt = plazo(s.minutos);
-      return {tipo: s.cerca ? "cerca" : "ruta", titulo: "Llega " + txt, franja: franja(s.eta), corto: txt.charAt(0).toUpperCase() + txt.slice(1), unido: true};
+      /* Por llegar, la ventana del servidor ya no aporta: «en cerca de un minuto, antes de las 19:00» a las 18:46 confunde. Se dice la distancia. */
+      if (s.cerca) return {tipo: "cerca", titulo: "Llega " + txt, franja: "El camión está a menos de " + s.cerca_km + " km", corto: txt.charAt(0).toUpperCase() + txt.slice(1)};
+      return {tipo: "ruta", titulo: "Llega " + txt, franja: franja(s.eta), corto: txt.charAt(0).toUpperCase() + txt.slice(1), unido: true};
     }
     if (s.ultima && s.ultima.hace_seg > 600) return {tipo: "pausa", titulo: "Sin estimado por ahora", franja: "El camión no da señal " + haceTxt(s.ultima.hace_seg), corto: "Sin estimado"};
     if (s.ultima && !s.destino) return {tipo: "pausa", titulo: "Sin estimado por ahora", franja: "Tu dirección aún no está ubicada en el mapa", corto: "Sin estimado"};

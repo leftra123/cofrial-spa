@@ -1,13 +1,16 @@
 """Camiones de dos cámaras: un carrito con frío y congelado sale en un solo viaje, y una falla en una cámara afecta solo a los pedidos de esa cámara."""
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.utils import timezone
 
 from catalogo.models import Producto, RangoTemperatura
 from crm import servicios as crm
 from flota import rutas, servicios as flota, sugerencias
-from flota.models import Camion, Telemetria
+from flota.models import Camion, Despacho, Telemetria
 from flota.vigente import ultima_vigente, ultimas_vigentes
 from pedidos import servicios as s
 from pedidos.models import Orden
@@ -161,8 +164,6 @@ class FallaPorCamaraTests(Base):
             Telemetria.objects.filter(pk=self.lectura(c, 1, 2.0, False).pk).update(registrado_en=a.registrado_en)
 
     def test_podar_conserva_la_ultima_de_cada_camara(self):
-        from datetime import timedelta
-        from django.utils import timezone
         c = Camion.objects.get(pk="CAM-05")
         viejas = [self.lectura(c, 1, 2.0, False), self.lectura(c, 2, -20.0, False)]
         hace_un_mes = timezone.now() - timedelta(days=30)
@@ -190,6 +191,9 @@ class FallaPorCamaraTests(Base):
         monto, cliente = torre._riesgo_actual(vigentes, {"CAM-05"})
         self.assertEqual(monto, s.total_orden(o["Congelado"]))
         self.assertEqual(cliente, self.ana.nombre)
+        # Dentro de la transacción de la prueba, now() de PostgreSQL queda fijo antes de la lectura: el cierre del viaje la deja dentro de la ventana.
+        cierre = timezone.now() + timedelta(hours=1)
+        Despacho.objects.filter(pk=d.pk).update(llegada_en=cierre, regreso_en=cierre)
         with connection.cursor() as cursor:
             cursor.execute(torre._RIESGO_HISTORICO + " AND o.orden_id = %s", [o["Refrigerado"].pk])
             self.assertEqual(int(cursor.fetchone()[0]), 0)

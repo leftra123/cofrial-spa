@@ -274,7 +274,7 @@ class PortadaYCategoriasTests(TestCase):
 
 class GuiaYMapaTests(TestCase):
     def test_la_guia_de_flujos_no_se_publica(self):
-        """El recorrido de la demo es material del equipo (docs/guion-defensa.md), no una página del sitio."""
+        """El recorrido de la demo es material privado del equipo, no una página del sitio."""
         self.assertEqual(self.client.get("/guia/").status_code, 404)
         self.assertNotContains(self.client.get("/catalogo/"), 'href="/guia/"')
 

@@ -286,8 +286,6 @@ Eric pidió repartir por toda la región con entregas «reales» y poder simular
 
 ## Panel del administrador sin Django (7-nov-2026)
 
-Diseño: `docs/superpowers/specs/2026-11-07-panel-admin-e-iconos-design.md`.
-
 - **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
 - **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
 - **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».

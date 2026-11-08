@@ -3,7 +3,9 @@
 Normalmente es la última fila de telemetría. Con el modo demostración activo (lecturas forzadas recientes con alerta), el camión se
 considera en ruptura de frío: la posición, el combustible y la hora siguen siendo los de la última lectura real, pero la temperatura y la
 alerta son las de la lectura forzada. Así la flota, la API y el seguimiento no parpadean entre «alerta» y «normal» aunque el simulador
-siga insertando lecturas normales cada pocos segundos. Nada de esto se guarda: es solo cómo se lee."""
+siga insertando lecturas normales cada pocos segundos. Nada de esto se guarda: es solo cómo se lee.
+
+Un camión de dos cámaras envía una lectura por cámara. La flota lo ve en alerta si cualquiera lo está; a un pedido solo le importa la suya."""
 from datetime import timedelta
 
 from django.utils import timezone
@@ -21,15 +23,31 @@ def _aplicar(real, forzada):
     return real
 
 
-def ultimas_vigentes():
-    """{camion_id: Telemetria} con la última lectura vigente de cada camión (una consulta más cuando hay forzadas)."""
-    reales = {t.camion_id: t for t in Telemetria.objects.order_by("camion_id", "-registrado_en").distinct("camion_id")}
+def _por_camara():
+    """{(camion_id, camara): Telemetria} con la última lectura vigente de cada cámara (una consulta más cuando hay forzadas)."""
+    reales = {(t.camion_id, t.camara): t for t in Telemetria.objects.order_by("camion_id", "camara", "-registrado_en").distinct("camion_id", "camara")}
     desde = timezone.now() - timedelta(seconds=VIGENCIA_FORZADA_S)
-    for f in Telemetria.objects.filter(forzada=True).order_by("camion_id", "-registrado_en").distinct("camion_id"):
+    for f in Telemetria.objects.filter(forzada=True).order_by("camion_id", "camara", "-registrado_en").distinct("camion_id", "camara"):
         if f.alerta_ruptura_frio and f.registrado_en >= desde:      # la más nueva de las forzadas debe ser de alerta (si es de «apagar», no cuenta)
-            reales[f.camion_id] = _aplicar(reales.get(f.camion_id), f)
+            reales[(f.camion_id, f.camara)] = _aplicar(reales.get((f.camion_id, f.camara)), f)
     return reales
 
 
-def ultima_vigente(camion):
-    return ultimas_vigentes().get(camion.pk if hasattr(camion, "pk") else camion)
+def ultimas_vigentes():
+    """{camion_id: Telemetria}: la cámara en alerta si hay una; si no, la cámara 1. La lectura trae en `camaras` todas las de ese camión."""
+    camaras, resultado = {}, {}
+    for (camion_id, camara), t in sorted(_por_camara().items()):
+        camaras.setdefault(camion_id, []).append(t)
+    for camion_id, lecturas in camaras.items():
+        elegida = next((t for t in lecturas if t.alerta_ruptura_frio), lecturas[0])
+        elegida.camaras = lecturas
+        resultado[camion_id] = elegida
+    return resultado
+
+
+def ultima_vigente(camion, camara=None):
+    """La última lectura vigente del camión o, si se indica, de esa cámara."""
+    pk = camion.pk if hasattr(camion, "pk") else camion
+    if camara is None:
+        return ultimas_vigentes().get(pk)
+    return _por_camara().get((pk, camara))

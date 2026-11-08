@@ -6,6 +6,7 @@ from django.db import connection
 from django.db.models import F, Max, Sum
 from django.utils import timezone
 
+from clientes import muestra
 from clientes.models import Cliente, Direccion
 from crm import servicios as crm
 from catalogo.models import Producto
@@ -53,6 +54,7 @@ def _ahora(vigentes, alertas):
         historico = int(cursor.fetchone()[0])
     ventas = {"B2B": 0, "B2C": 0}
     for canal, total in (OrdenItem.objects.filter(orden__creada_en__gte=ahora - timedelta(hours=24)).exclude(orden__estado_orden__nombre="Cancelada")
+                         .exclude(orden__numero_oc__startswith="HIS-").exclude(orden__numero_oc__in=muestra.REFERENCIAS_SEMBRADAS)      # la carga de demostración no es una venta
                          .values_list("orden__direccion__cliente__tipo_cliente__codigo").annotate(t=Sum(_MONTO))):
         ventas[canal] = int(total)
     return {
@@ -109,10 +111,10 @@ def _frecuentes(usuario, ahora):
             for c in top]
 
 
-def datos_negocio(usuario):
+def datos_negocio(usuario, vigentes=None):
     """Todo lo que la Torre muestra del negocio, listo para JSON (fechas como texto ISO)."""
     ahora = timezone.now()
-    vigentes = vigente.ultimas_vigentes()
+    vigentes = vigente.ultimas_vigentes() if vigentes is None else vigentes
     alertas = {cid for cid, t in vigentes.items() if t.alerta_ruptura_frio}
     return {"camiones": _camiones(vigentes, alertas),
             "clientes_mapa": _clientes_mapa(usuario, ahora),
@@ -153,35 +155,37 @@ def front_back():
     }
 
 
-def pedido_trazado():
-    """8.6: el último pedido real con despacho en viaje o ya salido (nunca `HIS-`), con el cliente, el camión y la última lectura vigente de éste.
-    Tres consultas, sin importar cuántos pedidos haya. None si no hay ninguno."""
-    orden = (Orden.objects.filter(despacho__salida_en__isnull=False).exclude(numero_oc__startswith="HIS-")
-             .select_related("direccion__cliente").order_by("-despacho__salida_en", "-orden_id").first())
+def pedido_trazado(vigentes=None):
+    """8.6: el último pedido no cancelado con despacho que ya salió (nunca `HIS-`; las órdenes sembradas `OC-REG-…` sí, porque su viaje y su telemetría
+    son reales), con el cliente, el camión, la hora de salida y la última lectura vigente de éste, que puede ser posterior a la entrega si el viaje ya
+    terminó. Una compra aparece aquí solo cuando se despacha. Una consulta más las vigentes, si no las recibe. None si no hay ninguno."""
+    orden = (Orden.objects.filter(despacho__salida_en__isnull=False).exclude(numero_oc__startswith="HIS-").exclude(estado_orden__nombre="Cancelada")
+             .select_related("direccion__cliente", "despacho").order_by("-despacho__salida_en", "-orden_id").first())
     if orden is None:
         return None
     cliente, camion_id = orden.direccion.cliente, orden.despacho.camion_id
-    lectura = vigente.ultimas_vigentes().get(camion_id)
-    return {"orden_id": orden.pk, "cliente": cliente.nombre, "camion_id": camion_id,
+    lectura = (vigente.ultimas_vigentes() if vigentes is None else vigentes).get(camion_id)
+    return {"orden_id": orden.pk, "cliente": cliente.nombre, "camion_id": camion_id, "salida_en": orden.despacho.salida_en.isoformat(),
             "temp_camara": None if lectura is None else lectura.temp_camara,
             "alerta": None if lectura is None else bool(lectura.alerta_ruptura_frio),      # None: nadie midió, no es lo mismo que «no»
             "orden_url": f"/crm/clientes/{cliente.pk}/#orden-{orden.pk}",      # la ficha del cliente lista sus pedidos; gerencia no puede abrir /pedidos/<id>/
             "cliente_url": f"/crm/clientes/{cliente.pk}/"}
 
 
-CACHE_S = 4          # el sondeo es cada 5 s: varias pantallas abiertas comparten una sola consulta
+CACHE_S = 5          # el sondeo es cada 5 s: varias pantallas abiertas comparten un solo cálculo
 
 
 def pulso(usuario, rol=None):
-    """Lo que `/torre/pulso/` entrega: datos del negocio, Lectura del momento y rúbrica. Caché de 4 s por rol (solo entran admin y gerencia,
+    """Lo que `/torre/pulso/` entrega: datos del negocio, Lectura del momento y rúbrica. Caché de 5 s por rol (solo entran admin y gerencia,
     y ambos ven lo mismo)."""
     from django.core.cache import cache
     from . import lectura, rubrica
     clave = f"torre:pulso:{rol or crm.rol(usuario)}"        # la vista ya sabe el rol (request.rol): evita otra consulta
     datos = cache.get(clave)
     if datos is None:
-        datos = datos_negocio(usuario)
+        vigentes = vigente.ultimas_vigentes()
+        datos = datos_negocio(usuario, vigentes)
         datos.update({"generado_en": timezone.now().isoformat(), "lectura": lectura.redactar(datos["ahora"]), "rubrica": rubrica.evaluar(),
-                      "front_back": front_back(), "pedido_trazado": pedido_trazado()})
+                      "front_back": front_back(), "pedido_trazado": pedido_trazado(vigentes)})
         cache.set(clave, datos, CACHE_S)
     return datos

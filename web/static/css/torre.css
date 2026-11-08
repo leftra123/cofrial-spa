@@ -130,7 +130,7 @@
 .torre-union span { position: relative; background: var(--acento-suave); color: var(--acento); border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); padding: 8px 10px; font-size: .8rem; font-weight: 700; text-align: center; line-height: 1.25; max-width: 7.5em; }
 .torre-traza { margin-top: 16px; }
 .torre-traza h3 { margin: 0 0 12px; font-size: 1rem; }
-.torre-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.torre-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .torre-pasos .tpaso { display: grid; gap: 2px; align-content: start; padding: 10px 12px; border: 1px solid var(--borde); border-radius: var(--radio-sm); position: relative; min-width: 0; overflow-wrap: anywhere; }
 .torre-pasos .tpaso:not(:last-child)::after { content: "\2192"; position: absolute; right: -10px; top: 50%; transform: translate(50%, -50%); color: var(--texto-3); background: var(--tarjeta); z-index: 1; line-height: 1; }
 .torre-pasos .tpaso .frio { font-size: .76rem; }

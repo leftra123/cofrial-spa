@@ -279,6 +279,10 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f"Pedido regional sin crear: {omitido}"))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f"No se sembraron los clientes regionales: {e}"))
+        # Antes de la muestra: sus facturas HIS- harían creer que la cobranza de demostración ya está
+        if not Documento.objects.filter(tipo="factura").exists():
+            self.historial_de_cobranza(Cliente.objects.get(rut="61.973.200-4"), sur)
+
         if sys.argv[1:2] != ["test"]:                # las pruebas no la necesitan y alargarían 800 pruebas; las suyas llaman a muestra.sembrar
             try:                                    # clientes de muestra, historial y prospectos para la Torre de control; tampoco debe impedir el arranque
                 with transaction.atomic():
@@ -286,9 +290,6 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.WARNING(f"Muestra: {aviso}"))
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"No se sembraron los clientes de muestra: {e}"))
-
-        if not Documento.objects.filter(tipo="factura").exists():
-            self.historial_de_cobranza(Cliente.objects.get(rut="61.973.200-4"), sur)
 
         if not Usuario.objects.filter(username="admin@cofrial.cl").exists():
             Usuario.objects.create_superuser("admin@cofrial.cl", "admin@cofrial.cl", clave_para("admin@cofrial.cl"))

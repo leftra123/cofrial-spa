@@ -21,6 +21,8 @@ def redactar(ahora):
     n = ahora["camiones_en_alerta"]
     if n:
         camiones = "1 camión con ruptura de frío" if n == 1 else f"{n} camiones con ruptura de frío"
+        if seg is not None and not al_dia:        # sin lecturas nuevas la alerta puede estar vieja: se dice de dónde sale
+            camiones += " según su última lectura"
         if ahora["riesgo_actual_clp"]:
             frase = f"{camiones} y {_pesos(ahora['riesgo_actual_clp'])} en pedidos en riesgo."
         else:

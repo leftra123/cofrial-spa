@@ -1,5 +1,9 @@
 """Clientes de muestra e historial de pedidos para la Torre de control: idempotentes, sin tocar stock ni cobranza y reversibles."""
+import os
+import sys
 from datetime import timedelta
+from io import StringIO
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -129,3 +133,25 @@ class ClientesDeMuestra(TestCase):
         self.assertEqual(self.historial().count(), 0)
         self.assertTrue(Orden.objects.filter(numero_oc="OC-REG-001").exists())
         self.assertTrue(Orden.objects.filter(numero_oc="OC-SUR-102").exists())
+
+    def test_siembra_aunque_falten_los_segmentos(self):
+        """Un flush de TransactionTestCase con --keepdb vacía las filas que crea la migración: sembrar debe poder reponerlas."""
+        Cliente.objects.update(segmento=None)
+        SegmentoCliente.objects.all().delete()
+        muestra.sembrar(self.b2b)
+        self.assertEqual(set(SegmentoCliente.objects.values_list("nombre", flat=True)), {"Hospital", "Supermercado", "Feria", "Institucional"})
+        self.assertTrue(Cliente.objects.filter(rut="70.400.101-0", segmento__nombre="Supermercado").exists())
+
+
+class CargaDeDemostracion(TestCase):
+    def test_base_nueva_conserva_la_cobranza_y_siembra_la_muestra(self):
+        """Tal como corre en un arranque real: las facturas HIS- no pueden hacer creer que la cobranza de demostración ya está."""
+        with mock.patch.object(sys, "argv", ["manage.py", "cargar_demo"]), mock.patch.dict(os.environ, {"DEMO_PASSWORD": "", "ADMIN_PASSWORD": ""}):
+            call_command("cargar_demo", verbosity=0, stdout=StringIO())
+        for oc in ("OC-2026-0301", "OC-2026-0388", "OC-SUR-102", "OC-SUR-117"):
+            self.assertTrue(Orden.objects.filter(numero_oc=oc).exists(), oc)
+        self.assertTrue(Orden.objects.filter(numero_oc__startswith="HIS-").exists())
+
+    def test_referencias_sembradas_son_exactamente_las_de_la_carga(self):
+        call_command("cargar_demo", verbosity=0)
+        self.assertEqual(set(Orden.objects.values_list("numero_oc", flat=True)), set(muestra.REFERENCIAS_SEMBRADAS))

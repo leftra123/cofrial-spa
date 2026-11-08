@@ -338,7 +338,8 @@ window.CofrialTorre = (function () {
     ol.append(pasoTraza("Orden web", "N.º " + t.orden_id, t.orden_url),
               pasoTraza("Cliente en el CRM", t.cliente, t.cliente_url),
               pasoTraza("Camión", t.camion_id),
-              pasoTraza("Última temperatura", temp),
+              pasoTraza("Salida del viaje", fechaCorta(t.salida_en) + ", " + hora(new Date(t.salida_en))),
+              pasoTraza("Última lectura del camión", temp),
               t.alerta === null ? pasoTraza("Alerta de frío", "Sin lectura") : pasoTraza("Alerta de frío", t.alerta ? "Sí" : "No", null, t.alerta ? "alerta" : "ok"));
     caja.replaceChildren(ol);
   }

@@ -15,6 +15,7 @@ from django.db.models import Count, Max, Sum, F
 from django.utils import timezone
 
 from catalogo.models import Producto
+from clientes.muestra import REFERENCIAS_SEMBRADAS
 from crm.models import Prospecto, Requerimiento
 from flota.models import Telemetria
 from pedidos.models import Orden, OrdenItem
@@ -111,7 +112,9 @@ def _d1():
 
 
 def _ultimo_por_canal(codigo):
-    return (Orden.objects.filter(direccion__cliente__tipo_cliente__codigo=codigo).exclude(numero_oc__startswith="HIS-").aggregate(m=Max("creada_en"))["m"])
+    """Último pedido real del canal: ni cancelado, ni del historial, ni sembrado por la carga de demostración."""
+    return (Orden.objects.filter(direccion__cliente__tipo_cliente__codigo=codigo).exclude(estado_orden__nombre="Cancelada").exclude(numero_oc__startswith="HIS-")
+            .exclude(numero_oc__in=REFERENCIAS_SEMBRADAS).aggregate(m=Max("creada_en"))["m"])
 
 
 def _d2():
@@ -121,7 +124,7 @@ def _d2():
     canales = {}
     for codigo in ("B2B", "B2C"):
         canales[codigo] = _ultimo_por_canal(codigo)
-        evidencia.append(f"Último pedido {codigo}: " + (_hora(canales[codigo]) if canales[codigo] else "ninguno (sin contar el historial HIS-)"))
+        evidencia.append(f"Último pedido {codigo}: " + (_hora(canales[codigo]) if canales[codigo] else "ninguno (sin contar el historial HIS- ni los pedidos sembrados)"))
     return evidencia, VERIFICADO if productos and all(canales.values()) else SIN_EVIDENCIA
 
 
@@ -143,7 +146,7 @@ def _d3():
 
 def _d4():
     desde = timezone.now() - timedelta(days=VENTANA_BI_DIAS)
-    ventas = Orden.objects.filter(creada_en__gte=desde).exclude(estado_orden__nombre="Cancelada")
+    ventas = Orden.objects.filter(creada_en__gte=desde).exclude(estado_orden__nombre="Cancelada").exclude(numero_oc__in=REFERENCIAS_SEMBRADAS)
     evidencia = [f"Ventana: últimos {VENTANA_BI_DIAS} días (desde {_hora(desde)})"]
     for canal, n, total in (OrdenItem.objects.filter(orden__in=ventas.values("pk")).values_list("orden__direccion__cliente__tipo_cliente__codigo")
                             .annotate(n=Count("orden", distinct=True), t=Sum(_MONTO)).order_by("orden__direccion__cliente__tipo_cliente__codigo")):
@@ -151,7 +154,7 @@ def _d4():
     cantidad = ventas.count()
     historial = ventas.filter(numero_oc__startswith="HIS-").count()
     alertas = Telemetria.objects.filter(alerta_ruptura_frio=True, registrado_en__gte=desde).count()
-    evidencia += [f"Pedidos en la ventana: {cantidad} ({historial} del historial ilustrativo HIS-)", f"Alertas de ruptura de frío en la ventana: {alertas}"]
+    evidencia += [f"Pedidos en la ventana: {cantidad} ({historial} del historial ilustrativo HIS-; no cuenta los sembrados por la carga de demostración)", f"Alertas de ruptura de frío en la ventana: {alertas}"]
     if not grafana_responde():
         evidencia.append("Grafana no responde desde el servidor")
         return evidencia, NO_COMPROBADO
@@ -171,7 +174,7 @@ def _d5():
         categoria = ultimo.categoria_ia or ultimo.categoria_requerimiento
         evidencia.append(f"Última clasificación: {categoria.nombre if categoria else 'sin categoría'}, confianza {ultimo.confianza_ia}, {_hora(ultimo.creado_en)}")
     evidencia.append("La defensa en vivo la hace el equipo")
-    return evidencia, VERIFICADO if ultimo is not None and not de_pago else SIN_EVIDENCIA
+    return evidencia, VERIFICADO if ultimo is not None and proveedores and not de_pago else SIN_EVIDENCIA
 
 
 _FILAS = [

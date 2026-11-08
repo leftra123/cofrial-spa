@@ -1,5 +1,6 @@
 """Pulso de negocio y Lectura del momento de la Torre de control."""
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -138,6 +139,13 @@ class Datos(Base):
         self.pedido(p, "Recibida", hace_dias=0.5, precio=500)
         self.assertEqual(servicios.datos_negocio(self.gerencia)["ahora"]["ventas_24h"], {"B2B": 2000, "B2C": 1000})
 
+    def test_ventas_24h_excluye_sembrados_e_historial(self):
+        c = self.cliente("Institución")
+        for oc, precio in (("OC-REG-001", 9000), ("OC-2026-0457", 9000), ("HIS-1", 9000), ("OC-REAL-1", 1000)):
+            o = self.pedido(c, "Recibida", hace_dias=0.5, precio=precio)
+            Orden.objects.filter(pk=o.pk).update(numero_oc=oc)
+        self.assertEqual(servicios.datos_negocio(self.gerencia)["ahora"]["ventas_24h"], {"B2B": 2000, "B2C": 0})
+
     def test_camiones_solo_con_viaje_o_alerta(self):
         v = self.viaje()
         libre = Camion.objects.exclude(pk=v.camion_id).first()
@@ -227,6 +235,14 @@ class Lectura(TestCase):
         self.assertEqual(len(frases), 3)
         self.assertNotIn("ventas", " ".join(frases))
         self.assertIn("simulación en curso", " ".join(frases))
+
+    def test_lecturas_vencidas_avisan_que_la_alerta_es_de_la_ultima_lectura(self):
+        vencida = lectura.redactar(_ahora(ultima_lectura_seg=600, camiones_en_alerta=1, riesgo_actual_clp=50000))
+        self.assertIn("según su última lectura", " ".join(vencida))
+        self.assertLessEqual(len(vencida), 3)
+        self.assertIn("según su última lectura", " ".join(lectura.redactar(_ahora(ultima_lectura_seg=600, camiones_en_alerta=2))))
+        al_dia = lectura.redactar(_ahora(ultima_lectura_seg=5, camiones_en_alerta=1, riesgo_actual_clp=50000))
+        self.assertNotIn("según su última lectura", " ".join(al_dia))
 
     def test_lectura_sin_ventas(self):
         self.assertIn("Sin ventas en 24 h", self.texto(ventas_24h={"B2B": 0, "B2C": 0}))
@@ -320,6 +336,45 @@ class PedidoTrazado(Base):
         nuevo = self.viaje(activo=True)
         o2 = self.pedido(c, "Despachada", despacho=nuevo)
         self.assertEqual(servicios.pedido_trazado()["orden_id"], o2.pk)
+
+    def test_excluye_canceladas(self):
+        c = self.cliente("Hospital I")
+        v1, v2 = self.viaje(), self.viaje()
+        Despacho.objects.filter(pk=v1.pk).update(salida_en=timezone.now() - timedelta(days=1))
+        vivo = self.pedido(c, "Despachada", despacho=v1)
+        self.pedido(c, "Cancelada", despacho=v2)
+        self.assertEqual(servicios.pedido_trazado()["orden_id"], vivo.pk)
+
+    def test_trae_la_hora_de_salida(self):
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital J"), "Despachada", despacho=v)
+        self.assertEqual(servicios.pedido_trazado()["salida_en"], v.salida_en.isoformat())
+
+    def test_puede_usar_pedido_regional(self):
+        v = self.viaje()
+        o = self.pedido(self.cliente("Hospital K"), "Despachada", despacho=v)
+        Orden.objects.filter(pk=o.pk).update(numero_oc="OC-REG-001")
+        self.assertEqual(servicios.pedido_trazado()["orden_id"], o.pk)
+
+    def test_usa_las_vigentes_que_recibe(self):
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital L"), "Despachada", despacho=v)
+        lectura_real = self.lectura(v.camion, False)
+        with mock.patch.object(servicios.vigente, "ultimas_vigentes") as calcular:
+            p = servicios.pedido_trazado({v.camion_id: lectura_real})
+        calcular.assert_not_called()
+        self.assertEqual(p["temp_camara"], 3.0)
+
+    def test_pulso_calcula_las_vigentes_una_sola_vez(self):
+        from django.core.cache import cache
+        cache.clear()
+        v = self.viaje()
+        self.pedido(self.cliente("Hospital M"), "Despachada", despacho=v)
+        self.lectura(v.camion, False)
+        with mock.patch.object(servicios.vigente, "ultimas_vigentes", wraps=servicios.vigente.ultimas_vigentes) as calcular:
+            servicios.pulso(self.gerencia, "gerencia")
+        self.assertEqual(calcular.call_count, 1)
+        self.assertEqual(servicios.CACHE_S, 5)
 
     def test_consultas_constantes(self):
         def consultas():

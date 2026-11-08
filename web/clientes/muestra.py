@@ -45,6 +45,10 @@ MUESTRA = [
 HOSPITAL_REGIONAL = "61.973.200-4"
 SUPERMERCADOS_DEL_SUR = "76.543.210-K"
 RUT_ILUSTRATIVOS = frozenset({m[4] for m in MUESTRA} | {h[2] for h in regionales.HOSPITALES} | {HOSPITAL_REGIONAL, SUPERMERCADOS_DEL_SUR})
+# Pedidos que crea la carga de demostración (`cargar_demo` y `regionales`): valores exactos de numero_oc, no un prefijo, porque un cliente real podría
+# escribir «OC-…». No prueban una venta real, así que la Torre no los cuenta en D2, D4 ni en las ventas de 24 h (el historial se reconoce por «HIS-»).
+REFERENCIAS_SEMBRADAS = frozenset({"OC-2026-0457", "OC-SUR-118", "OC-SUR-119", "OC-2026-0301", "OC-2026-0388", "OC-SUR-102", "OC-SUR-117"}
+                                  | {p[0] for p in regionales.PEDIDOS})
 SEGMENTO_DE_LOS_YA_SEMBRADOS = {**{h[2]: "Hospital" for h in regionales.HOSPITALES}, HOSPITAL_REGIONAL: "Hospital", SUPERMERCADOS_DEL_SUR: "Supermercado"}
 
 # Historial: RUT, perfil y cantidad de pedidos. Reciben historial los clientes nuevos y estos seis hospitales sin cuenta ni vendedor; quedan fuera
@@ -73,7 +77,8 @@ MOTIVO_PERDIDA = "Compra directo a un mayorista de la zona"
 def sembrar(tipo_b2b):
     """Crea lo que falte y devuelve los avisos (lo que no se pudo crear). `tipo_b2b` es el TipoCliente institucional."""
     avisos = []
-    segmentos = {s.nombre: s for s in SegmentoCliente.objects.all()}
+    # los crea la migración, pero un flush de pruebas con --keepdb los vacía (docs/decisiones.md)
+    segmentos = {n: SegmentoCliente.objects.get_or_create(nombre=n)[0] for n in sorted({m[2] for m in MUESTRA} | set(SEGMENTO_DE_LOS_YA_SEMBRADOS.values()))}
     for rut, segmento in SEGMENTO_DE_LOS_YA_SEMBRADOS.items():
         Cliente.objects.filter(rut=rut, segmento__isnull=True).update(segmento=segmentos[segmento])
     for region_nombre, comuna_nombre, segmento, nombre, rut, calle, lat, lon in MUESTRA:

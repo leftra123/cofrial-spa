@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from crm.models import CategoriaRequerimiento, Requerimiento
 from flota.models import Camion, Telemetria
+from pedidos.models import EstadoOrden
 from torre import rubrica
 from torre.tests_pulso import Base
 
@@ -99,7 +100,29 @@ class Rubrica(Base):
         self.lectura(Camion.objects.first(), True, forzada=True)
         self.assertEqual(self.fila("D3")["estado"], rubrica.SIN_EVIDENCIA)
 
+    def test_d2_pedidos_sembrados_no_son_ventas(self):
+        self.pedido_canal("A", self.b2b, "OC-REG-001")
+        self.pedido_canal("B", self.b2c, "OC-2026-0457")
+        f = self.fila("D2")
+        self.assertEqual(f["estado"], rubrica.SIN_EVIDENCIA)
+        self.assertIn("Último pedido B2B: ninguno", " ".join(f["evidencia"]))
+
+    def test_d2_canceladas_no_cuentan(self):
+        o = self.pedido_canal("A", self.b2b, "OC-1")
+        self.pedido_canal("B", self.b2c)
+        type(o).objects.filter(pk=o.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Cancelada"))
+        self.assertEqual(self.fila("D2")["estado"], rubrica.SIN_EVIDENCIA)
+
     # D4
+    def test_d4_pedidos_sembrados_no_son_ventas(self):
+        self.pedido_canal("A", self.b2b, "OC-SUR-118")
+        self.pedido_canal("B", self.b2b, "OC-REG-003")
+        with self.grafana(True):
+            f = self.fila("D4")
+        self.assertEqual(f["estado"], rubrica.SIN_EVIDENCIA)
+        self.assertNotIn("Ventas B2B", " ".join(f["evidencia"]))
+        self.assertIn("Pedidos en la ventana: 0", " ".join(f["evidencia"]))
+
     def test_d4_grafana_caido(self):
         self.pedido_canal("A", self.b2b, "OC-1")
         with self.grafana(False):
@@ -162,6 +185,13 @@ class Rubrica(Base):
         self.assertEqual(f["estado"], rubrica.VERIFICADO)
         self.assertIn("Gemini", " ".join(f["evidencia"]))
         self.assertIn("La defensa en vivo la hace el equipo", f["evidencia"])
+
+    def test_d5_sin_proveedor_gratuito_no_es_verde(self):
+        self.clasificar()
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "", "GEMINI_API_KEY": "", "GROQ_API_KEY": ""}):
+            f = self.fila("D5")
+        self.assertEqual(f["estado"], rubrica.SIN_EVIDENCIA)
+        self.assertIn("Proveedores gratuitos configurados: ninguno", f["evidencia"])
 
     def test_d5_no_muestra_claves(self):
         self.clasificar()

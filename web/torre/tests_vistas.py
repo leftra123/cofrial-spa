@@ -1,5 +1,6 @@
 """Rutas, permisos, menú e inicio de la Torre de control."""
 from django.contrib.auth import get_user_model
+from django.contrib.staticfiles import finders
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import Client, TestCase
@@ -114,3 +115,12 @@ class Pantalla(Base):
         self.assertEqual(inicial["antes"]["supuestos"], s)
         self.assertEqual(len(inicial["antes"]["registro"]), 6)
         self.assertIn("rubrica", inicial)
+
+
+class TrazaEnPantalla(TestCase):
+    def test_rotula_la_lectura_y_muestra_la_salida(self):
+        with open(finders.find("js/torre.js"), encoding="utf-8") as js:
+            texto = js.read()
+        self.assertIn("Última lectura del camión", texto)
+        self.assertIn("t.salida_en", texto)
+        self.assertNotIn("Última temperatura", texto)

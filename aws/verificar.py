@@ -267,6 +267,7 @@ def main():
             etiqueta = {"verificado": "ok", "sin_evidencia": "aviso", "no_comprobado": "aviso"}
             for f in filas:       # un estado sin evidencia no es falla: antes de la demo todavía no hay ventas ni lecturas reales
                 marca(etiqueta.get(f.get("estado"), "aviso"), f"Rúbrica {f.get('dim')} {f.get('titulo')}: {f.get('estado')}")
+            marca("info", "Un aviso de la rúbrica no hace fallar este verificador: en el punto de decisión, leer también estas cinco filas")
     if sesiones["vendedora"]:
         st, _, _ = sesiones["vendedora"].pedir("/torre/")
         chk(st == 403, "La Torre responde 403 a una vendedora (verían clientes fuera de su cartera)", f"HTTP {st}")

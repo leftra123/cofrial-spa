@@ -46,12 +46,16 @@ class BaseSeguridad(TestCase):
 
 # ---------------------------------------------------------------- 1. Quien no inició sesión no ve nada privado
 class AccesoAnonimoTests(BaseSeguridad):
-    PRIVADAS_GET = ["/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
+    PRIVADAS_GET = ["/operacion/productos/", "/operacion/productos/nuevo/", "/operacion/productos/1/", "/operacion/ordenes/", "/operacion/sistema/", "/operacion/datos/",
+                    "/operacion/datos/x/", "/operacion/datos/x/nuevo/", "/operacion/datos/x/1/",
+                    "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
                     "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/"]
-    PRIVADAS_POST = ["/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
+    PRIVADAS_POST = ["/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
+                     "/operacion/datos/x/1/borrar/",
+                     "/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/clientes/1/direccion/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/crm/requerimientos/1/resolver/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
                      "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/tiempo/", "/demo/limpiar/",
@@ -94,7 +98,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                 ruta = (str(p.pattern) + str(q.pattern)) if sub is not None else str(p.pattern)
                 if ruta.startswith(("admin", "static", "api/")) or ruta in publicas:
                     continue
-                generica = ruta.replace("<int:pk>", "1").replace("<int:orden_id>", "1").replace("<int:direccion_id>", "1").replace("<int:despacho_id>", "1").replace("<int:documento_id>", "1").replace("<path:ruta>", "x").strip("/")
+                generica = ruta.replace("<int:pk>", "1").replace("<int:orden_id>", "1").replace("<int:direccion_id>", "1").replace("<int:despacho_id>", "1").replace("<int:documento_id>", "1").replace("<path:ruta>", "x").replace("<slug:slug>", "x").replace("<str:pk>", "1").strip("/")
                 if generica not in cubiertas:
                     pendientes.append(ruta)
         self.assertEqual(pendientes, [], "Rutas sin prueba de acceso anónimo")
@@ -202,7 +206,7 @@ class PaginasNoEncontradasTests(BaseSeguridad):
                     self.assertIn("/admin/login/", r["Location"])
 
     def test_el_admin_cambia_de_direccion_con_la_variable_de_entorno(self):
-        """`DJANGO_ADMIN_URL` mueve el panel: la ruta conocida deja de existir y el menú apunta a la nueva."""
+        """`DJANGO_ADMIN_URL` mueve el panel: la ruta conocida deja de existir y responde la nueva."""
         from importlib import reload
         from django.test import override_settings
         from django.urls import clear_url_caches
@@ -213,7 +217,7 @@ class PaginasNoEncontradasTests(BaseSeguridad):
                 clear_url_caches()
                 self.assertEqual(self.anonimo().get("/admin/").status_code, 404)
                 self.assertEqual(self.anonimo().get("/panel-9f3k/").status_code, 302)
-                self.assertContains(self.entrar("admin@cofrial.cl").get("/crm/"), 'href="/panel-9f3k/"')
+                self.assertEqual(self.entrar("eric@cofrial.cl").get("/panel-9f3k/").status_code, 200)
         finally:
             reload(cofrial.urls)                  # deja las rutas como estaban para las demás pruebas
             clear_url_caches()

@@ -17,12 +17,19 @@
 {% empty %}<tr><td colspan="6" class="vacio">Todo lo entregado ya está facturado.</td></tr>{% endfor %}
 </tbody></table></div>
 
-<div class="seccion"><h2>Facturas por cobrar</h2></div>
+<div class="seccion"><h2>Clientes morosos</h2></div>
+<div class="tabla-caja"><table><thead><tr><th>Cliente</th><th>Vencidas</th><th>Más atrasada</th><th>Tramo</th><th class="num">Vencido</th><th class="num">Deuda total</th></tr></thead><tbody>
+{% for m in cob.morosos %}<tr><td><a href="/crm/clientes/{{ m.cliente.pk }}/">{{ m.cliente.nombre }}</a></td><td>{{ m.n_vencidas }}</td><td>N.º {{ m.folio }} <span class="frio">({{ m.dias_atraso }} día{{ m.dias_atraso|pluralize }})</span></td><td>{{ m.tramo }}</td><td class="num">{{ m.vencido|clp }}</td><td class="num">{{ m.deuda|clp }}</td></tr>
+{% empty %}<tr><td colspan="6" class="vacio">Ningún cliente tiene facturas vencidas.</td></tr>{% endfor %}
+</tbody></table></div>
+
+<div class="seccion" id="facturas"><h2>Facturas por cobrar</h2></div>
+<nav class="tabs" aria-label="Filtrar facturas por estado">{% for o in cob.filtros %}<a class="tab{% if o.activo %} activo{% endif %}" href="/crm/cobranza/{% if o.valor %}?estado={{ o.valor }}{% endif %}#facturas"{% if o.activo %} aria-current="true"{% endif %}>{{ o.nombre }} <span class="n">{{ o.n }}</span></a>{% endfor %}</nav>
 <div class="tabla-caja"><table><thead><tr><th>Factura</th><th>Cliente</th><th>Orden</th><th>Vence</th><th>Estado</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
-{% for f in cob.facturas %}<tr><td class="id-orden">N.º {{ f.folio }}</td><td><a href="/crm/clientes/{{ f.orden.direccion.cliente_id }}/">{{ f.orden.direccion.cliente.nombre }}</a></td><td>N.º {{ f.orden_id }}</td>
+{% for f in cob.vistas %}<tr><td class="id-orden">N.º {{ f.folio }}</td><td><a href="/crm/clientes/{{ f.orden.direccion.cliente_id }}/">{{ f.orden.direccion.cliente.nombre }}</a></td><td>N.º {{ f.orden_id }}</td>
   <td>{{ f.vence_en|date:"d/m/Y" }}{% if f.dias_atraso %} <span class="frio">({{ f.dias_atraso }} día{{ f.dias_atraso|pluralize }} de atraso)</span>{% endif %}</td>
   <td>{% include "componentes/chip_pago.html" with estado=f.estado_pago %}</td><td class="num">{{ f.saldo|clp }}</td>
-  <td>{% if puede_editar %}{% include "crm/_acciones_documento.html" with d=f volver="/crm/cobranza/" %}{% endif %}</td></tr>
-{% empty %}<tr><td colspan="7" class="vacio">No hay facturas con saldo pendiente.</td></tr>{% endfor %}
+  <td>{% if puede_editar %}{% include "crm/_acciones_documento.html" with d=f volver=volver %}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="7" class="vacio">{% if cob.filtro %}Ninguna factura con este estado.{% else %}No hay facturas con saldo pendiente.{% endif %}</td></tr>{% endfor %}
 </tbody></table></div>
 {% endblock %}

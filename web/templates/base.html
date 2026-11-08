@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static iconos %}<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
@@ -24,23 +24,22 @@
   <aside class="lateral" id="lateral">
     <a class="marca" href="{{ inicio_url }}"><img class="marca-icono" src="{% static 'img/marca/icono-app.png' %}" alt="" width="32" height="32"><span>Cofrial SpA<small>Cadena de frío</small></span></a>
     <nav class="nav" aria-label="Principal">
-      {% if not user.is_authenticated %}<a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio</a>{% endif %}
+      {% if not user.is_authenticated %}<a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}>{% icono "inicio" %}Inicio</a>{% endif %}
       {% if menu.tienda or not user.is_authenticated %}
       <div class="nav-etiqueta">Tienda</div>
-      <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Catálogo</a>
-      {% if menu.cliente %}<a href="/carrito/" {% if "/carrito/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/></svg>Carrito</a>{% endif %}
-      {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Mis pedidos</a>{% endif %}
-      {% if menu.cliente %}<a href="/soporte/" {% if "/soporte/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-6.4A8 8 0 1121 12z"/></svg>Soporte</a>{% endif %}
+      <a href="/catalogo/" {% if "/catalogo/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "catalogo" %}Catálogo</a>
+      {% if menu.cliente %}<a href="/carrito/" {% if "/carrito/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "carrito" %}Carrito</a>{% endif %}
+      {% if menu.cliente %}<a href="/pedidos/" {% if "/pedidos/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "pedidos" %}Mis pedidos</a>{% endif %}
+      {% if menu.cliente %}<a href="/soporte/" {% if "/soporte/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "soporte" %}Soporte</a>{% endif %}
       {% endif %}
       {% if menu.flota or menu.crm or menu.admin %}
       <div class="nav-etiqueta">Operación</div>
-      {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% include "componentes/ico_camion.html" %}Flota</a>{% endif %}
-      {% if menu.crm and not menu.comercial %}<a href="/crm/alertas/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11.5a4 4 0 11-4 0V3a2 2 0 014 0z"/></svg>Alertas de frío</a>{% endif %}
-      {% if menu.comercial %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.8c2 .7 3.2 2.4 3.5 5.2"/></svg>CRM</a>{% endif %}
-      {% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
-      {% if menu.demo %}<a href="/demo/" {% if "/demo/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Modo demostración</a>{% endif %}
-      {% if menu.admin %}<a href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Administración</a>{% endif %}
-      {% if menu.operacion %}<a href="/operacion/" {% if "/operacion/" in ruta %}class="activo" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg>Operación del sistema</a>{% endif %}
+      {% if menu.flota %}<a href="/flota/" {% if "/flota/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "camion" %}Flota</a>{% endif %}
+      {% if menu.crm and not menu.comercial %}<a href="/crm/alertas/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>{% endif %}
+      {% if menu.comercial %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "crm" %}CRM</a>{% endif %}
+      {% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" rel="noopener">{% icono "bi" %}Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
+      {% if menu.demo %}<a href="/demo/" {% if "/demo/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "demo" %}Modo demostración</a>{% endif %}
+      {% if menu.operacion %}<a href="/operacion/" {% if "/operacion/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "operacion" %}Operación del sistema</a>{% endif %}
       {% endif %}
     </nav>
     <div class="usuario">

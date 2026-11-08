@@ -7,10 +7,11 @@ Para quien reciba el traspaso (Sergio) y para ensayar la defensa. Cada paso dice
 | Qué | Dirección |
 |---|---|
 | Aplicación | http://54.82.100.161 |
+| Aplicación por nombre (recomendada) | http://54-82-100-161.sslip.io (mismo servidor: sslip.io devuelve la IP escrita en el nombre; sirve igual el ingreso, el carrito y el resto de la aplicación) |
 | Estado de salud | http://54.82.100.161/salud/ (debe responder `{"estado": "ok"}`) |
 | Tablero de BI (Grafana) | http://54.82.100.161/bi/ (con sesión de `gerencia@cofrial.cl` para mirar o `admin@cofrial.cl` para editar; el puerto 3000 ya no está abierto) |
 
-La IP es elástica: no cambia al reiniciar el laboratorio, **pero sí cambia si se destruyen y se vuelven a crear los recursos** (así pasó el 24-oct-2026: era 34.204.121.79 y ahora es 54.82.100.161). La dirección vigente siempre está en `aws/.estado/ip.txt` y la muestra `bash aws/provision.sh estado`; `aws/verificar.py` la lee de ahí solo. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
+La IP es elástica: no cambia al reiniciar el laboratorio, **pero sí cambia si se destruyen y se vuelven a crear los recursos** (así pasó el 24-oct-2026: era 34.204.121.79 y ahora es 54.82.100.161). El nombre sslip.io se arma con la IP cambiando los puntos por guiones (`A.B.C.D` → `A-B-C-D.sslip.io`), así que si la IP cambia hay que actualizarlo también. La dirección vigente siempre está en `aws/.estado/ip.txt` y la muestra `bash aws/provision.sh estado`; `aws/verificar.py` la lee de ahí solo. **Las instancias están en la cuenta del laboratorio de Eric**: desde otra cuenta solo se prueban estas direcciones web. Si el laboratorio de Eric está apagado (se apaga a las 4 horas), nada responde hasta que Eric siga el Paso 0 (Start Lab y `bash aws/provision.sh encender`).
 
 ## Usuarios de prueba
 
@@ -24,7 +25,7 @@ Cada cuenta tiene **su propia clave**. No están en el repositorio: se calculan 
 | `vendedor2@cofrial.cl` | Vendedor (cartera: Supermercados del Sur) | Permisos entre vendedores |
 | `gerencia@cofrial.cl` | Gerencia | Lee todo, no modifica |
 | `despacho@cofrial.cl` | Despachador | Solo alertas de frío y flota |
-| `admin@cofrial.cl` | Administrador | Todo, incluida la flota y `/admin/` |
+| `admin@cofrial.cl` | Administrador | Todo, incluida la flota y `/operacion/` |
 
 ## Paso 0: encender y verificar (siempre, antes de probar a mano)
 

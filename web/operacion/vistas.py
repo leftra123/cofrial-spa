@@ -13,9 +13,11 @@ from catalogo.models import Producto
 from clientes import cuentas
 from clientes.models import Cliente
 from crm import servicios as crm
+from pedidos import servicios as pedidos
+from pedidos.models import EstadoOrden, Orden
 
 from . import servicios as s
-from .forms import ClaveNuevaForm, ClienteCuentaForm, CuentaNuevaForm
+from .forms import ClaveNuevaForm, ClienteCuentaForm, CuentaNuevaForm, ProductoForm
 
 log = logging.getLogger("cofrial.operacion")
 
@@ -65,6 +67,115 @@ def stock_sumar(request, pk):
     return redirect("/operacion/stock/" + ("?" + urlencode({"q": q}) if q else ""))
 
 
+# ───────────────────────────── productos ─────────────────────────────
+
+@solo_admin
+def productos(request):
+    q = request.GET.get("q", "").strip()[:80]
+    filas = list(s.productos(q, orden=("nombre",)).prefetch_related("precioproducto_set__lista_precio")[:s.FILAS_MAXIMAS + 1])
+    return render(request, "operacion/productos.html", {"q": q, "filas": filas[:s.FILAS_MAXIMAS], "hay_mas": len(filas) > s.FILAS_MAXIMAS})
+
+
+def _producto_form(request, objeto=None):
+    form = ProductoForm(request.POST or None, instance=objeto)
+    if request.method == "POST" and form.is_valid():
+        p = s.guardar_producto(form)
+        log.info("Producto %s por %s: %s", "editado" if objeto else "creado", request.user.username, p.sku)
+        messages.success(request, f"Producto guardado: {p.nombre}.")
+        return redirect("/operacion/productos/")
+    return render(request, "operacion/producto.html", {"form": form, "objeto": objeto})
+
+
+@solo_admin
+def producto_nuevo(request):
+    return _producto_form(request)
+
+
+@solo_admin
+def producto_editar(request, pk):
+    return _producto_form(request, get_object_or_404(Producto, pk=pk))
+
+
+# ───────────────────────────── órdenes ─────────────────────────────
+
+@solo_admin
+def ordenes(request):
+    q = request.GET.get("q", "").strip()[:80]
+    estados = list(EstadoOrden.objects.order_by("orden_flujo").values_list("nombre", flat=True))
+    estado = request.GET.get("estado", "")
+    estado = estado if estado in estados else ""             # el parámetro viene de la URL: lo que no es un estado se ignora
+    filas = list(s.ordenes(q, estado)[:s.FILAS_MAXIMAS + 1])
+    return render(request, "operacion/ordenes.html", {
+        "q": q, "estado": estado, "estados": estados, "hay_mas": len(filas) > s.FILAS_MAXIMAS,
+        "filas": [{"o": o, "avanzar": s.puede_avanzar(o), "cancelar": s.puede_cancelar(o)} for o in filas[:s.FILAS_MAXIMAS]]})
+
+
+def _volver_a_ordenes(request):
+    return redirect("/operacion/ordenes/" + ("?" + urlencode({"estado": request.POST["estado"]}) if request.POST.get("estado") else ""))
+
+
+@require_POST
+@solo_admin
+def orden_avanzar(request, pk):
+    orden = get_object_or_404(Orden.objects.select_related("estado_orden"), pk=pk)
+    if not s.puede_avanzar(orden):
+        messages.error(request, f"La orden N.º {pk} está «{orden.estado_orden.nombre}» y no avanza desde aquí.")
+        return _volver_a_ordenes(request)
+    try:
+        orden = pedidos.avanzar(orden)
+    except pedidos.ErrorDeNegocio as e:
+        messages.error(request, f"Orden N.º {pk}: {e}")
+    else:
+        log.info("Orden %s avanzada por %s a %s", pk, request.user.username, orden.estado_orden.nombre)
+        messages.success(request, f"La orden N.º {pk} pasó a «{orden.estado_orden.nombre}».")
+    return _volver_a_ordenes(request)
+
+
+@require_POST
+@solo_admin
+def orden_cancelar(request, pk):
+    orden = get_object_or_404(Orden, pk=pk)
+    try:
+        pedidos.cancelar(orden, como="vendedor")
+    except pedidos.ErrorDeNegocio as e:
+        messages.error(request, f"Orden N.º {pk}: {e}")
+    else:
+        log.info("Orden %s cancelada por %s", pk, request.user.username)
+        messages.success(request, f"La orden N.º {pk} quedó cancelada y su stock volvió al inventario.")
+    return _volver_a_ordenes(request)
+
+
+# ───────────────────────────── sistema ─────────────────────────────
+
+@solo_admin
+def sistema(request):
+    dias = s.dias_de_retencion()
+    por_borrar = s.lecturas_a_podar(dias).count() if request.GET.get("contar") else None     # recorre la telemetría: solo si se pide
+    return render(request, "operacion/sistema.html", {"dias": dias, "por_borrar": por_borrar})
+
+
+@require_POST
+@solo_admin
+def sistema_ia(request):
+    r = s.probar_ia()
+    if r["ok"]:
+        messages.success(request, f"IA operativa: «{r['categoria']}» con confianza {r['confianza']:.2f} (modelo: {r['modelo']}).")
+    else:
+        messages.error(request, f"La IA no respondió: {r['error']}")
+    return redirect("/operacion/sistema/")
+
+
+@require_POST
+@solo_admin
+def sistema_podar(request):
+    dias = s.dias_de_retencion()
+    borradas, faltan = s.podar(dias)
+    log.info("Telemetría podada por %s: %s lecturas", request.user.username, borradas)
+    texto = f"Telemetría podada: {borradas} lectura{'s' if borradas != 1 else ''} de más de {dias} días."
+    messages.success(request, texto + (f" Faltan {faltan}: vuelve a presionar o deja que corra el podador diario." if faltan else ""))
+    return redirect("/operacion/sistema/")
+
+
 # ───────────────────────────── cuentas ─────────────────────────────
 
 TIPOS = [r for r, _ in cuentas.ROLES]
@@ -88,6 +199,23 @@ def cuentas_lista(request):
         "total": sum(conteos.values()) + otros,
         "cuentas": [{"u": u, "rol": s.ROTULOS.get(rol, rol), "nombre": s.nombre_de(u), "es_yo": u.pk == request.user.pk} for u, rol in filas],
         "sin_cuenta": list(sin_cuenta[:20]), "sin_cuenta_n": sin_cuenta.count()})
+
+
+@require_POST
+@solo_admin
+def cuenta_activa(request, pk):
+    objetivo = get_object_or_404(get_user_model().objects.select_related("vendedor", "cliente__tipo_cliente"), pk=pk)
+    valor = request.POST.get("activa")
+    if valor in ("0", "1"):
+        try:
+            s.cambiar_activa(objetivo, valor == "1", request.user)
+        except s.ErrorOperacion as e:
+            messages.error(request, str(e))
+        else:
+            log.info("Cuenta %s %s por %s", objetivo.username, "activada" if valor == "1" else "desactivada", request.user.username)
+            messages.success(request, f"Cuenta {objetivo.username} {'activada' if valor == '1' else 'desactivada'}.")
+    filtros = {k: request.POST[k] for k in ("q", "tipo") if request.POST.get(k)}
+    return redirect("/operacion/cuentas/" + ("?" + urlencode(filtros) if filtros else ""))
 
 
 @sensitive_post_parameters("clave", "clave2")

@@ -293,3 +293,26 @@ Reproducido en un stack local: un cliente registrado con `<img src=x onerror=…
 - **Decisión:** `CofrialMapa.filaParada` y `CofrialMapa.popupTexto` arman filas y popups con `textContent` y nodos del DOM. Se corrige al mostrar el dato y no al registrarlo: un nombre con `<` o `&` es válido y se guarda tal como lo escribió el cliente.
 - **Regla:** todo texto que venga de un usuario entra al DOM con `textContent`, nunca concatenado en HTML. `innerHTML` queda para texto fijo y para fragmentos que Django ya escapó.
 - **Pruebas:** `ListasDeParadasTests` (`web/cofrial/tests_seguridad.py`) revisa el escape y vigila el código. La imagen de la suite no trae navegador, así que la ejecución se comprobó aparte con Chromium, antes y después del cambio.
+
+## Panel del administrador sin Django (7-nov-2026)
+
+- **Todo desde `/operacion/`:** Usuarios, Productos, Reponer stock, Órdenes, Datos y Sistema. `/admin/` queda sin enlaces y con la ruta activa, como respaldo hasta después de la defensa.
+- **Panel común:** `operacion/tablas.py` describe cada tabla y `operacion/datos.py` tiene una sola lista y un solo formulario. Se descartó una pantalla por tabla: más código y pruebas, sin funciones nuevas.
+- **Lo que el código usa por nombre no se edita:** estados de orden, código B2B/B2C, «Contactado», «Propuesta enviada», «Reclamo por temperatura» y «Problema en la entrega».
+- **Datos de demostración solo la primera vez:** `cargar_demo --solo-primera-vez`. Antes corría en cada arranque y, con el panel, una etapa renombrada impedía partir al sitio. `FORZAR_CARGA_DEMO=1` carga lo nuevo, antes de editar datos.
+- **Solicitudes de empresa:** se reconocen por ser B2B, sin vendedor y con cuenta inactiva. Activar y desactivar respeta esa cola para no aprobar ni borrar por error.
+- **Sin edición manual de telemetría, despachos, carritos, documentos ni pagos:** los genera el flujo y editarlos rompe la trazabilidad.
+- **Íconos:** el juego Lucide de `react-icons`, generado una vez a `catalogo/iconos.json` con `herramientas/iconos/generar.mjs`. La app sigue sin React y Docker no usa Node.
+- **CRM de 5 entradas:** Panel, Ventas, Clientes, Atención y Alertas de frío, con subpestañas dentro de cada grupo. Las URL no cambiaron.
+
+## Clientes morosos en Cobranza (07-nov-2026)
+- **Moroso** es el cliente con al menos una factura vencida; una factura que vence hoy todavía no cuenta. La lista va de mayor a menor monto vencido y separa `Vencido` de `Deuda total`, que suma también lo que aún no vence.
+- **Tramos:** 1 a 30, 31 a 60, 61 a 90 y más de 90 días, según la factura más atrasada del cliente.
+- **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
+- **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.
+
+## Administrador de empresa, no superusuario (8-nov-2026)
+- **Problema:** el rol «Administrador» del CRM y de `/operacion/` dependía de ser superusuario de Django, así que la cuenta de administración daba acceso a `/admin/` de Django.
+- **Decisión:** `admin@cofrial.cl` es personal con el grupo `administradores`. El rol admin se resuelve por el grupo (`crm.servicios.rol` y `operacion.servicios.rol_de`, con la misma regla). Solo `eric@cofrial.cl` queda como superusuario técnico, para `/admin/` y `/demo/`.
+- **Menú:** «Operación» se muestra al rol admin; «Administración de Django» y «Demo» siguen solo para superusuarios.
+- **Sin migración:** el cambio aplica al crear la base de cero con `cargar_demo`. En una base existente, `admin@` sigue siendo superusuario hasta cambiarlo a mano.

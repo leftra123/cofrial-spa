@@ -38,7 +38,7 @@ class AvisosYAdmin(TestCase):
             self.assertEqual(r.status_code, 302, usuario)
             self.assertIn("/admin/login/", r["Location"], usuario)
         self.client.logout()
-        self.entrar("admin@cofrial.cl")
+        self.entrar("eric@cofrial.cl")                      # superusuario técnico: el único que entra a /admin/ de Django
         self.assertEqual(self.client.get("/admin/").status_code, 200)
 
     def test_el_menu_no_muestra_administracion_al_equipo(self):
@@ -46,4 +46,4 @@ class AvisosYAdmin(TestCase):
         self.assertNotIn('href="/admin/"', self.client.get("/crm/").content.decode())
         self.client.logout()
         self.entrar("admin@cofrial.cl")
-        self.assertIn('href="/admin/"', self.client.get("/crm/").content.decode())
+        self.assertNotIn('href="/admin/', self.client.get("/crm/").content.decode())      # todo se hace en /operacion/; la ruta queda de respaldo

@@ -13,6 +13,8 @@ from .models import Documento, Orden, Pago
 
 IVA = 0.19
 COBRABLES = ("boleta", "factura")        # los documentos contra los que se registran pagos y notas de crédito
+TRAMOS_DE_ATRASO = ((30, "1 a 30 días"), (60, "31 a 60 días"), (90, "61 a 90 días"))
+FILTROS_FACTURA = (("", "Todas"), ("por_cobrar", "Por vencer"), ("vencido", "Vencidas"))
 
 
 class ErrorDeNegocio(Exception):
@@ -199,10 +201,47 @@ def facturas_abiertas(clientes):
     return abiertas
 
 
+def tramo_de_atraso(dias):
+    """El tramo de antigüedad de una deuda vencida, como en un informe de cartera."""
+    for tope, tramo in TRAMOS_DE_ATRASO:
+        if dias <= tope:
+            return tramo
+    return "Más de 90 días"
+
+
+def morosos(facturas):
+    """Clientes con alguna factura vencida, primero quien debe más vencido. `deuda` suma también lo que aún no vence; la factura
+    más atrasada da el folio, los días y el tramo. Recibe lo que entrega facturas_abiertas."""
+    por_cliente = {}
+    for f in facturas:
+        cliente = f.orden.direccion.cliente
+        m = por_cliente.setdefault(cliente.pk, {"cliente": cliente, "deuda": 0, "vencido": 0, "n_vencidas": 0, "dias_atraso": 0, "folio": None})
+        m["deuda"] += f.saldo
+        if f.estado_pago == "vencido":
+            m["vencido"] += f.saldo
+            m["n_vencidas"] += 1
+            if f.dias_atraso > m["dias_atraso"]:
+                m["dias_atraso"], m["folio"] = f.dias_atraso, f.folio
+    lista = [m for m in por_cliente.values() if m["n_vencidas"]]
+    for m in lista:
+        m["tramo"] = tramo_de_atraso(m["dias_atraso"])
+    return sorted(lista, key=lambda m: (-m["vencido"], -m["dias_atraso"], m["cliente"].nombre))
+
+
+def filtrar_facturas(cobro, estado):
+    """Agrega al resumen las facturas de ese estado (`vistas`) y las opciones del filtro. Un estado desconocido equivale a todas;
+    los totales del resumen no cambian."""
+    facturas = cobro["facturas"]
+    estado = estado if estado in dict(FILTROS_FACTURA) else ""
+    return {**cobro, "filtro": estado, "vistas": [f for f in facturas if not estado or f.estado_pago == estado],
+            "filtros": [{"valor": valor, "nombre": nombre, "activo": valor == estado,
+                         "n": sum(1 for f in facturas if not valor or f.estado_pago == valor)} for valor, nombre in FILTROS_FACTURA]}
+
+
 def resumen_cobranza(clientes):
     sin_facturar = entregadas_sin_factura(clientes)
     abiertas = facturas_abiertas(clientes)
     vencidas = [f for f in abiertas if f.estado_pago == "vencido"]
     return {"sin_facturar": sin_facturar, "monto_sin_facturar": sum(o.monto for o in sin_facturar),
             "facturas": abiertas, "por_cobrar": sum(f.saldo for f in abiertas),
-            "vencido": sum(f.saldo for f in vencidas), "n_vencidas": len(vencidas)}
+            "vencido": sum(f.saldo for f in vencidas), "n_vencidas": len(vencidas), "morosos": morosos(abiertas)}

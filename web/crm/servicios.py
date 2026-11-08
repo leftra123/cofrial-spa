@@ -27,9 +27,9 @@ def rol(usuario):
     """Rol principal de una cuenta del CRM. Los clientes del portal no tienen rol: no entran al CRM."""
     if not usuario.is_authenticated:
         return None
-    if usuario.is_superuser:
-        return "admin"
     grupos = set(usuario.groups.values_list("name", flat=True))
+    if usuario.is_superuser or "administradores" in grupos:     # administrador de empresa (grupo) o superusuario técnico
+        return "admin"
     if "gerencia" in grupos:
         return "gerencia"
     if Vendedor.objects.filter(usuario=usuario, activo=True).exists():
@@ -406,9 +406,9 @@ def indicadores(usuario):
 
 
 # ---------------------------------------------------------------- RN-17 a RN-22: documentos y cobranza
-def cobranza(usuario):
-    """Lo entregado que falta facturar y las facturas por cobrar, dentro de la cartera que el usuario puede ver."""
-    return documentos.resumen_cobranza(clientes_visibles(usuario))
+def cobranza(usuario, estado=""):
+    """Lo entregado que falta facturar, las facturas por cobrar (filtradas por `estado`) y los clientes morosos, dentro de la cartera que el usuario puede ver."""
+    return documentos.filtrar_facturas(documentos.resumen_cobranza(clientes_visibles(usuario)), estado)
 
 
 def _exigir_edicion(usuario):

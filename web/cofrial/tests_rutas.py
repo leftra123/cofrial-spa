@@ -66,6 +66,21 @@ ESPERADO = {
     '/operacion/cuentas/nueva/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
     '/operacion/clientes/999999/cuenta/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
     '/operacion/cuentas/999999/clave/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/productos/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/productos/nuevo/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/productos/999999/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/ordenes/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/ordenes/999999/avanzar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
+    '/operacion/ordenes/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
+    '/operacion/cuentas/999999/activa/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
+    '/operacion/sistema/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/sistema/ia/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 →/operacion/sistema/'),
+    '/operacion/sistema/podar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 →/operacion/sistema/'),
+    '/operacion/datos/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
+    '/operacion/datos/no-existe/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/datos/no-existe/nuevo/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/datos/no-existe/NO-EXISTE/': ('L 403 403 403 403 403 404', 'L 403 403 403 403 403 404'),
+    '/operacion/datos/no-existe/NO-EXISTE/borrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
     '/bi/': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),            # solo gerencia y admin; 502 porque en las pruebas no hay Grafana (ver test_bi)
     '/bi/x': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),
     '/flota/escenarios/estado/': ('L 403 403 403 403 403 200', '405 405 405 405 405 405 405'),
@@ -117,7 +132,7 @@ ESPERADO = {
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/salud/bd/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
-    '/admin/': ('L L L L L L 200', 'L L L L L L 200'),
+    '/admin/': ('L L L L L L L', 'L L L L L L L'),       # el administrador de empresa no entra a /admin/ de Django
 }
 
 
@@ -132,6 +147,7 @@ def _rutas(resolver=None, prefijo=""):
 def _concreta(r):
     r = re.sub(r"<int:\w+>", "999999", r)
     r = re.sub(r"<str:\w+>", "NO-EXISTE", r)
+    r = re.sub(r"<slug:\w+>", "no-existe", r)
     r = re.sub(r"<path:\w+>", "x", r)
     return "/" + r.lstrip("^").replace("$", "")
 
@@ -248,9 +264,9 @@ class MenuPorRol(Base):
                 self.assertNotIn(e, html, f"{rol} ve {e}")
 
     def test_cada_rol_si_ve_lo_suyo(self):
-        esperado = {"B2B": ('href="/pedidos/"', 'href="/carrito/"', 'href="/soporte/"', 'href="/avisos/"'), "vendedor": ('href="/crm/embudo/"', 'href="/crm/ia/"'),
+        esperado = {"B2B": ('href="/pedidos/"', 'href="/carrito/"', 'href="/soporte/"', 'href="/avisos/"'), "vendedor": ('href="/crm/embudo/"', 'href="/crm/requerimientos/"'),
                     "gerencia": ('href="/crm/embudo/"', 'href="/flota/"'), "despachador": ('href="/flota/"', 'href="/crm/alertas/"'),
-                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
+                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
         paginas = {"B2B": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
         for rol, enlaces in esperado.items():
             html = self.cliente(rol).get(paginas[rol]).content.decode()
@@ -273,7 +289,7 @@ class MenuPorRol(Base):
     def test_el_administrador_tiene_accesos_directos(self):
         html = self.cliente("admin").get("/crm/").content.decode()
         self.assertIn('aria-label="Accesos directos del administrador"', html)
-        for e in ('href="/flota/"', 'href="/demo/"', 'href="/admin/"', 'href="/catalogo/"'):
+        for e in ('href="/flota/"', 'href="/demo/"', 'href="/operacion/"', 'href="/catalogo/"'):
             self.assertIn(e, html)
         self.assertNotIn("Accesos directos del administrador", self.cliente("vendedor").get("/crm/").content.decode())
 
@@ -288,4 +304,4 @@ class MenuPorRol(Base):
     def test_el_admin_de_django_es_solo_del_superusuario(self):
         for rol in ("vendedor", "gerencia", "despachador", "B2C"):
             self.assertEqual(_resultado(self.cliente(rol).get("/admin/")), "L", rol)
-        self.assertEqual(self.cliente("admin").get("/admin/").status_code, 200)
+        self.assertEqual(_resultado(self.cliente("admin").get("/admin/")), "L")     # admin@ es de empresa, no superusuario

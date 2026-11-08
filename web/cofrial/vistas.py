@@ -49,6 +49,12 @@ class FormularioEntrar(AuthenticationForm):
     error_messages = {**AuthenticationForm.error_messages,
                       "invalid_login": "El usuario o la clave no coinciden. Revisa que no tengas las mayúsculas activadas e inténtalo de nuevo."}
 
+    def __init__(self, *args, **kwargs):
+        """El teclado del celular rotula la tecla de acción: «Siguiente» en el usuario y «Ir» en la clave (y el navegador no capitaliza el correo)."""
+        super().__init__(*args, **kwargs)
+        self.fields["username"].widget.attrs.update({"enterkeyhint": "next", "autocapitalize": "none", "autocorrect": "off", "spellcheck": "false"})
+        self.fields["password"].widget.attrs.update({"enterkeyhint": "go"})
+
     def clean(self):
         """Con la clave correcta pero la cuenta inactiva (una empresa que espera aprobación) se explica eso, no «la clave no coincide»."""
         try:

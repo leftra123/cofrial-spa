@@ -459,3 +459,10 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Uso de la flota:** para un solo rango se prefiere un camión simple, porque los de dos cámaras son escasos; si no hay uno simple libre, sirve uno de dos cámaras.
 - **Despliegue:** primero la web, que migra la base, y después reiniciar el simulador, que lee la segunda cámara al arrancar y ya inserta la columna `camara`. `flota/0008_camion_dos_camaras` reconstruye la restricción única de `telemetria` sin `CONCURRENTLY`, así que puede bloquear las inserciones mientras dure; conviene hacerlo fuera de una demostración.
 - **Qué no se hizo:** repartir la capacidad por cámara; `capacidad_kg` es del camión completo. Los escenarios por viaje fallan solo en la cámara 1; para mostrar una falla en la cámara 2 se usa `/demo/`.
+
+## El barrido de rutas no bloquea el ingreso (8-nov-2026)
+- **Problema (revisión de usuarios del 8-nov):** el contador de «no encontrado» es por IP y, pasado el umbral, cortaba todo el sitio con 429, también `/cuenta/entrar/`. En la defensa y en el laboratorio toda la sala sale por una IP: un visitante que probara unas 60 direcciones dejaba a los demás sin poder ingresar.
+- **Decisión:** el ingreso de la tienda (`/cuenta/entrar/`) y el del panel (`/admin/login/`) quedan fuera de ese bloqueo. El resto del sitio sigue cortado mientras dura la ventana. El ingreso conserva su propia protección: 10 claves malas seguidas bloquean esa cuenta 15 minutos, y el límite por IP sigue apagado (`ACCESO_MAX_FALLOS_IP=0`).
+- **Umbral documentado:** 60 «no encontrado» en 10 minutos por IP (`ESCANEO_MAX_404`, `ESCANEO_VENTANA_SEG`; los íconos que el navegador pide solo no cuentan). Se cambia por variable de entorno.
+- **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
+- **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).

@@ -205,7 +205,7 @@ def mis_pedidos(request, cliente):
     ordenes = list(s.ordenes_de(cliente))
     for o in ordenes:
         o.total = s.total_orden(o)
-    return render(request, "pedidos/lista.html", {"ordenes": ordenes})
+    return render(request, "pedidos/lista.html", {"ordenes": ordenes, "es_b2b": cliente.tipo_cliente.codigo == "B2B"})
 
 
 def _orden_del_cliente(cliente, orden_id):

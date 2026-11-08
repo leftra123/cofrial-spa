@@ -136,7 +136,7 @@ Una fila por cada dimensión de `informe/00-pauta-y-rubrica.md`: exigencia, evid
 | D1 AWS | Motor y versión de la base, host terminado en `.rds.amazonaws.com` (sin mostrarlo completo), tiempo encendida, instancia EC2 | Consulta correcta y host de RDS |
 | D2 E-commerce y CRM | Productos activos, último pedido por canal, prospectos abiertos | Hay productos y pedidos de ambos canales |
 | D3 IoT | Última fila con los nombres exactos (`camion_id`, `temp_camara`, `lat`, `long`, `combustible_pct`, `alerta_ruptura_frio`), su antigüedad, camiones reportando en 2 min | Lectura de menos de 2 min, no forzada desde `/demo/` |
-| D4 BI | Ventas por canal cruzadas con alertas de 7 días, con la ventana a la vista; Grafana responde desde el servidor | Grafana responde y hay ventas en la ventana (sin exigir alertas: que no haya rupturas también es un resultado válido) |
+| D4 BI | Ventas por canal cruzadas con alertas de 7 días, con la ventana a la vista; Grafana responde desde el servidor | Grafana responde y hay al menos una venta real (no `HIS-`) en la ventana; sin exigir alertas: que no haya rupturas también es un resultado válido |
 | D5 IA | Última clasificación de IA (categoría, confianza, hora), proveedores configurados sin mostrar claves, `ANTHROPIC_API_KEY` vacía | Hay clasificación y no hay IA de pago activa |
 
 Tres estados: **Verificado**, **Sin evidencia ahora** y **No se pudo comprobar**. Se distinguen con texto e ícono. Nada genera pedidos por sí solo, así que la Lectura dirá «sin ventas en 24 h» hasta que alguien compre; el guion mantiene la compra en vivo para ver el cambio. La defensa en vivo de D5 se anota como responsabilidad del equipo: la pantalla no la puede comprobar.

@@ -113,8 +113,18 @@ class Rubrica(Base):
         self.pedido_canal("C", self.b2c)
         self.pedido_canal("Vieja", self.b2c, hace_dias=30)
         with self.grafana(True):
-            texto = " ".join(self.fila("D4")["evidencia"])
+            f = self.fila("D4")
+        texto = " ".join(f["evidencia"])
         self.assertIn("3 (2 del historial", texto)
+        self.assertEqual(f["estado"], rubrica.VERIFICADO)
+
+    def test_d4_solo_ilustrativas_no_es_verde(self):
+        self.pedido_canal("A", self.b2b, "HIS-1")
+        self.pedido_canal("B", self.b2c, "HIS-2")
+        with self.grafana(True):
+            f = self.fila("D4")
+        self.assertEqual(f["estado"], rubrica.SIN_EVIDENCIA)
+        self.assertIn("2 del historial", " ".join(f["evidencia"]))
 
     def test_d4_grafana_se_consulta_una_vez_en_30_s(self):
         with self.grafana(True) as consulta:

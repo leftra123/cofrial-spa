@@ -146,7 +146,7 @@ def _d4():
         evidencia.append("Grafana no responde desde el servidor")
         return evidencia, NO_COMPROBADO
     evidencia.append("Grafana responde desde el servidor")
-    return evidencia, VERIFICADO if cantidad else SIN_EVIDENCIA
+    return evidencia, VERIFICADO if cantidad > historial else SIN_EVIDENCIA      # el historial ilustrativo no prueba una venta real
 
 
 def _d5():

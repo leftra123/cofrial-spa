@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from catalogo.models import Producto
 from clientes.models import Cliente, Comuna, Direccion, SegmentoCliente, TipoCliente, Vendedor
+from clientes import muestra
 from crm import servicios as s
 from crm.models import EtapaPipeline, Prospecto
 from pedidos.models import EstadoOrden, Orden, OrdenItem
@@ -165,3 +166,28 @@ class Embudo(TestCase):
 
     def captureQueries(self):
         return CaptureQueriesContext(connection)
+
+
+class FichaDelCliente(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+        cls.hospital = Cliente.objects.get(rut=muestra.HOSPITAL_REGIONAL)
+        cls.ana = Cliente.objects.get(email="ana@correo.test")
+
+    def ficha(self, cliente):
+        self.client.login(username="gerencia@cofrial.cl", password="demo-cofrial-2026")
+        return self.client.get(f"/crm/clientes/{cliente.pk}/")
+
+    def test_ficha_muestra_nivel(self):
+        r = self.ficha(self.hospital)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, f"Nivel: {s.nivel_de_cliente(self.hospital)}")
+
+    def test_ficha_rotula_ilustrativo(self):
+        self.assertIn(self.hospital.rut, muestra.RUT_ILUSTRATIVOS)
+        self.assertContains(self.ficha(self.hospital), "Cliente ilustrativo: nombre público usado como ejemplo")
+        self.assertNotContains(self.ficha(self.ana), "Cliente ilustrativo")
+
+    def test_ficha_b2c_sin_nivel(self):
+        self.assertNotContains(self.ficha(self.ana), "Nivel:")

@@ -341,6 +341,26 @@ class MapaConMapLibre(TestCase):
         for archivo in ("maplibre-gl.js", "maplibre-gl.css"):
             self.assertNotIn("sourceMappingURL", (self.WEB / "static" / "vendor" / "maplibre" / archivo).read_text())
 
+    def test_ida_y_vuelta_se_distinguen_por_color_y_por_trazo(self):
+        """Un par apto para daltonismo, línea continua y a trazos, flechas, y botones que filtran cada tramo."""
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        for pieza in ('COLOR_IDA = "#56B4E9"', 'COLOR_VUELTA = "#FFB000"', '"line-dasharray"] = [2, 1.6]', '"symbol-placement": "line"', "function partirRuta(", '"line-offset"'):
+            self.assertIn(pieza, js)
+        for plantilla, filtro in (("flota/panel.html", "filtros-flota"), ("flota/despacho.html", "filtros-despacho")):
+            self.assertIn(f'id="{filtro}"', (self.WEB / "templates" / plantilla).read_text())
+        self.assertIn("aria-pressed", (self.WEB / "static" / "js" / "leyenda.js").read_text())
+
+    def test_las_listas_y_popups_de_paradas_llevan_el_cliente_como_texto(self):
+        for plantilla in ("flota/panel.html", "flota/despacho.html"):
+            texto = (self.WEB / "templates" / plantilla).read_text()
+            self.assertIn("CofrialMapa.filaParada(", texto)
+            self.assertNotIn('"<li><b>" + p.cliente', texto)
+            self.assertNotIn("insertAdjacentHTML", texto)
+
+    def test_el_comprador_no_recibe_la_vuelta_del_viaje(self):
+        """La vuelta pasaría por otras entregas: el seguimiento solo dibuja el tramo que entrega ruta_del_pedido."""
+        self.assertNotIn("partirRuta", (self.WEB / "templates" / "pedidos" / "detalle.html").read_text())
+
     def test_el_mapa_tiene_respaldo_sin_red_y_sin_webgl(self):
         js = (self.WEB / "static" / "js" / "mapa.js").read_text()
         for pieza in ("function estiloLocal(", "function hayWebGL(", "mapa-vacio", "prefers-reduced-motion"):

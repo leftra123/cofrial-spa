@@ -59,11 +59,24 @@ class Vendedor(models.Model):
         return self.nombre
 
 
+class SegmentoCliente(models.Model):
+    """Tipo de comprador (hospital, supermercado, feria, institucional); alimenta la Torre de control."""
+    segmento_id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=40, unique=True)
+
+    class Meta:
+        db_table = "segmento_cliente"
+
+    def __str__(self):
+        return self.nombre
+
+
 class Cliente(models.Model):
     cliente_id = models.AutoField(primary_key=True)
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT)
     tipo_cliente = models.ForeignKey(TipoCliente, on_delete=models.PROTECT)
     vendedor = models.ForeignKey(Vendedor, null=True, blank=True, on_delete=models.SET_NULL)
+    segmento = models.ForeignKey(SegmentoCliente, null=True, blank=True, on_delete=models.SET_NULL)
     rut = models.CharField(max_length=12, unique=True)
     nombre = models.CharField(max_length=120)
     email = models.EmailField(max_length=120)

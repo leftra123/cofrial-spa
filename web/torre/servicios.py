@@ -164,7 +164,7 @@ def pedido_trazado():
     lectura = vigente.ultimas_vigentes().get(camion_id)
     return {"orden_id": orden.pk, "cliente": cliente.nombre, "camion_id": camion_id,
             "temp_camara": None if lectura is None else lectura.temp_camara,
-            "alerta": bool(lectura and lectura.alerta_ruptura_frio),
+            "alerta": None if lectura is None else bool(lectura.alerta_ruptura_frio),      # None: nadie midió, no es lo mismo que «no»
             "orden_url": f"/crm/clientes/{cliente.pk}/#orden-{orden.pk}",      # la ficha del cliente lista sus pedidos; gerencia no puede abrir /pedidos/<id>/
             "cliente_url": f"/crm/clientes/{cliente.pk}/"}
 

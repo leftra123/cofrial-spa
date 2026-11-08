@@ -339,7 +339,7 @@ window.CofrialTorre = (function () {
               pasoTraza("Cliente en el CRM", t.cliente, t.cliente_url),
               pasoTraza("Camión", t.camion_id),
               pasoTraza("Última temperatura", temp),
-              pasoTraza("Alerta de frío", t.alerta ? "Sí" : "No", null, t.alerta ? "alerta" : "ok"));
+              t.alerta === null ? pasoTraza("Alerta de frío", "Sin lectura") : pasoTraza("Alerta de frío", t.alerta ? "Sí" : "No", null, t.alerta ? "alerta" : "ok"));
     caja.replaceChildren(ol);
   }
   function pintarFrontBack(p) {

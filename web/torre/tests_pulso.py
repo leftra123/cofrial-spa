@@ -310,7 +310,7 @@ class PedidoTrazado(Base):
         self.pedido(self.cliente("Hospital E"), "Despachada", despacho=v)
         p = servicios.pedido_trazado()
         self.assertIsNone(p["temp_camara"])
-        self.assertFalse(p["alerta"])
+        self.assertIsNone(p["alerta"])      # sin lectura no se afirma «no hay alerta»
 
     def test_toma_el_ultimo_viaje(self):
         c = self.cliente("Hospital F")

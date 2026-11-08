@@ -318,6 +318,7 @@ def generar_sql():
         "-- Índices pensados para las consultas del dashboard y de la torre de control.",
         "CREATE INDEX idx_telemetria_camion_fecha ON telemetria (camion_id, registrado_en DESC);",
         "CREATE INDEX idx_telemetria_alerta ON telemetria (registrado_en) WHERE alerta_ruptura_frio;",
+        "CREATE INDEX idx_telemetria_fecha ON telemetria (registrado_en DESC);",
         "CREATE INDEX idx_orden_direccion ON orden (direccion_id);",
         "CREATE INDEX idx_direccion_cliente ON direccion (cliente_id);",
         "CREATE INDEX idx_orden_creada ON orden (creada_en);",

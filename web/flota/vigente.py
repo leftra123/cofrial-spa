@@ -11,6 +11,8 @@ from django.utils import timezone
 from .models import Telemetria
 
 VIGENCIA_FORZADA_S = 20      # una lectura forzada cuenta mientras tenga menos segundos que esto y no haya una forzada más nueva que la apague
+_ULTIMA_POR_CAMION = """SELECT t.* FROM camion c CROSS JOIN LATERAL
+  (SELECT * FROM telemetria m WHERE m.camion_id = c.camion_id ORDER BY m.registrado_en DESC LIMIT 1) t ORDER BY c.camion_id"""
 
 
 def _aplicar(real, forzada):
@@ -22,11 +24,12 @@ def _aplicar(real, forzada):
 
 
 def ultimas_vigentes():
-    """{camion_id: Telemetria} con la última lectura vigente de cada camión (una consulta más cuando hay forzadas)."""
-    reales = {t.camion_id: t for t in Telemetria.objects.order_by("camion_id", "-registrado_en").distinct("camion_id")}
+    """{camion_id: Telemetria} con la última lectura vigente de cada camión, en dos consultas que no recorren la tabla: una por camión con
+    idx_telemetria_camion_fecha (un DISTINCT ON leería el millón de filas) y las forzadas solo dentro de su ventana de vigencia con idx_telemetria_fecha."""
+    reales = {t.camion_id: t for t in Telemetria.objects.raw(_ULTIMA_POR_CAMION)}
     desde = timezone.now() - timedelta(seconds=VIGENCIA_FORZADA_S)
-    for f in Telemetria.objects.filter(forzada=True).order_by("camion_id", "-registrado_en").distinct("camion_id"):
-        if f.alerta_ruptura_frio and f.registrado_en >= desde:      # la más nueva de las forzadas debe ser de alerta (si es de «apagar», no cuenta)
+    for f in Telemetria.objects.filter(forzada=True, registrado_en__gte=desde).order_by("camion_id", "-registrado_en").distinct("camion_id"):
+        if f.alerta_ruptura_frio:      # la más nueva de las forzadas debe ser de alerta (si es de «apagar», no cuenta)
             reales[f.camion_id] = _aplicar(reales.get(f.camion_id), f)
     return reales
 

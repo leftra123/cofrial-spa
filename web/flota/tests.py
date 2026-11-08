@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import patch
 
 from decimal import Decimal
@@ -485,3 +486,56 @@ class CerrarDespachoTests(TestCase):
         self.client.logout()
         self._entrar("gerencia@cofrial.cl")
         self.assertNotContains(self.client.get("/flota/"), "Marcar entregado y cerrar despacho")
+
+
+class VistaDelAdministradorEnElMapaTests(TestCase):
+    """Detalle por zoom, estados y atención primero en /flota/: mismos datos y mismos roles; el nombre del cliente nunca entra como HTML."""
+    WEB = Path(__file__).resolve().parent.parent
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def _panel(self, usuario="despacho@cofrial.cl"):
+        self.client.login(username=usuario, password="demo-cofrial-2026")
+        return self.client.get("/flota/")
+
+    def test_cada_camion_en_operacion_lleva_estado_y_lectura(self):
+        Telemetria.objects.create(camion_id="CAM-01", temp_camara=9.5, lat=-38.7, long=-72.6, combustible_pct=20, alerta_ruptura_frio=True)
+        camion = next(c for c in self._panel().context["mapa"]["camiones"] if c["id"] == "CAM-01")
+        self.assertTrue(camion["alerta"])
+        self.assertEqual((camion["temp"], camion["comb"], camion["comb_bajo"], camion["sin_senal"]), (9.5, 20, True, False))
+        for clave in ("situacion", "situacion_texto"):
+            self.assertIn(clave, camion)
+
+    def test_la_tarjeta_de_un_camion_con_lectura_lleva_al_mapa(self):
+        Telemetria.objects.create(camion_id="CAM-01", temp_camara=9.5, lat=-38.7, long=-72.6, combustible_pct=60, alerta_ruptura_frio=True)
+        r = self._panel()
+        self.assertContains(r, 'data-foco="CAM-01"')
+        self.assertContains(r, 'class="ver-en-mapa"')
+        self.assertContains(r, 'id="alertas-mapa"')
+
+    def test_los_roles_siguen_siendo_los_mismos(self):
+        self.assertEqual(self._panel("gerencia@cofrial.cl").status_code, 200)
+        self.client.logout()
+        self.assertEqual(self.client.get("/flota/").status_code, 302)
+
+    def test_el_nombre_del_cliente_en_el_mapa_es_texto(self):
+        """Las etiquetas se dibujan en un canvas y el resumen del camión se llena con textContent: nada de esto pasa por innerHTML."""
+        js = (self.WEB / "static" / "js" / "mapa.js").read_text()
+        self.assertIn("c.fillText(texto,", js)
+        panel = (self.WEB / "templates" / "flota" / "panel.html").read_text()
+        self.assertIn("m.etiquetas(", panel)
+        for linea in panel.splitlines():
+            if "innerHTML" in linea:
+                self.assertNotIn("cliente", linea)
+
+    def test_el_detalle_se_arma_con_grupos_de_zoom_y_capas(self):
+        panel = (self.WEB / "templates" / "flota" / "panel.html").read_text()
+        for pieza in ("m.grupo({zoomMin: Z_CIUDAD})", "m.grupo({zoomMin: Z_CALLE})", "m.grupo({zoomMax: Z_CIUDAD})", "MAX_CAMIONES_HTML", "ruedaConPagina: true"):
+            self.assertIn(pieza, panel)
+        self.assertIn("CofrialMapa.puntoParada(", (self.WEB / "templates" / "flota" / "despacho.html").read_text())
+
+    def test_el_anillo_de_alerta_respeta_movimiento_reducido(self):
+        css = (self.WEB / "static" / "css" / "cofrial.css").read_text()
+        self.assertIn("@media (prefers-reduced-motion: reduce) { .pulso-frio span { animation: none;", css)

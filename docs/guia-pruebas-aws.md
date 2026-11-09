@@ -27,6 +27,8 @@ Cada cuenta tiene **su propia clave**. No están en el repositorio: se calculan 
 | `despacho@cofrial.cl` | Despachador | Solo alertas de frío y flota |
 | `admin@cofrial.cl` | Administrador | Todo, incluida la flota y `/operacion/` |
 
+> **Desde la revisión técnica del 8-nov-2026** la entrada es un balanceador de carga (ALB) con dos web y RDS Multi-AZ: la dirección vigente es el DNS del ALB (`aws/.estado/ip.txt`, `bash aws/provision.sh estado`), no la IP elástica de arriba, que solo sigue abriendo hasta `provision.sh cerrar-acceso-directo`. Pasos de migración y demostración de la caída: `aws/README.md` («Alta disponibilidad»).
+
 ## Paso 0: encender y verificar (siempre, antes de probar a mano)
 
 1. **Iniciar el laboratorio.** AWS Academy, Learner Lab, **Start Lab**; esperar el círculo verde. Al terminar cada sesión (4 horas) AWS detiene las instancias y la base de datos. **El 22-oct, al iniciar una sesión nueva, la base y las dos EC2 se encontraron encendidas y la aplicación respondía sin hacer nada más**; aun así, si algo quedó apagado, el paso 3 lo enciende.

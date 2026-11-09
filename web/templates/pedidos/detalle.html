@@ -23,20 +23,34 @@
 </section>
 {% endif %}
 {% if not request.GET.nueva %}{% with n=orden.estado_orden.nombre %}
-<section class="estado-pedido{% if n == "Cancelada" %} cancelada{% elif n == "Entregada" %} entregada{% elif n == "Despachada" or n == "Camión en la puerta" %} transito{% endif %}" aria-labelledby="ep-t">
-  <span class="ep-ico" aria-hidden="true"><svg viewBox="0 0 24 24">{% if n == "Cancelada" %}<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>{% elif n == "Entregada" %}<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.5"/>{% elif n == "Despachada" %}<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>{% elif n == "En preparación" %}<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>{% else %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>{% endif %}</svg></span>
+<section class="estado-pedido{% if n == "Cancelada" or n == "Rechazada en recepción" %} cancelada{% elif n == "Entregada" %} entregada{% elif n == "Despachada" or n == "Camión en la puerta" %} transito{% endif %}" aria-labelledby="ep-t">
+  <span class="ep-ico" aria-hidden="true"><svg viewBox="0 0 24 24">{% if n == "Cancelada" or n == "Rechazada en recepción" %}<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>{% elif n == "Entregada" %}<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.5"/>{% elif n == "Despachada" %}<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>{% elif n == "En preparación" %}<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>{% else %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>{% endif %}</svg></span>
   <div>
     {% if n == "Cancelada" %}<h2 id="ep-t">Esta orden fue cancelada</h2><p>El stock de los productos quedó repuesto. Si fue un error, arma el pedido de nuevo desde el catálogo.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Ir al catálogo</a><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Consultar por esta orden</a></div>
-    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado exitosamente</h2>
-      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> El pedido llegó a su destino{% if orden.quien_recibe %} y lo recibió {{ orden.quien_recibe }}{% endif %}.</p>
-      {% if orden.entrega_automatica %}<p>No recibimos tu respuesta a tiempo y lo dimos por entregado{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Si no lo recibiste, cuéntanoslo y lo revisamos.</p>
-      <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">No lo recibí</a><a class="btn" href="/catalogo/">Seguir comprando</a></div>
-      {% else %}<p>Confirmaste la recepción{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura.</p>
+    {% elif n == "Rechazada en recepción" %}<h2 id="ep-t">Rechazaste este pedido al recibirlo</h2>
+      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>El camión llegó, pero no recibiste ningún producto.</b>{% if orden.entrega_resuelta_en %} Lo registramos a las {{ orden.entrega_resuelta_en|date:"H:i" }}.{% endif %} Esto es distinto de una entrega no concretada: no se reprograma; si aún necesitas los productos, haz un pedido nuevo.</p>
+      {% include "pedidos/_rechazo.html" %}
+      {% if reclamo %}<p class="entrega-reclamo"><b>Ventas ya tiene tu aviso</b> y te contactará. <a href="/soporte/?orden={{ orden.orden_id }}">Ver mis consultas</a></p>{% endif %}
+      <div class="acciones"><a class="btn" href="/catalogo/">Ir al catálogo</a><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Escribir a ventas</a></div>
+    {% elif n == "Entregada" and rechazo %}<h2 id="ep-t">Recibiste parte de tu pedido</h2>
+      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> Recibió {{ orden.quien_recibe }}{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}.{% if viaje_sigue %} El camión sigue con otros pedidos de este viaje.{% endif %}</p>
+      {% include "pedidos/_rechazo.html" %}
+      {% if reclamo %}<p class="entrega-reclamo"><b>Ventas ya tiene tu aviso</b> y te contactará. <a href="/soporte/?orden={{ orden.orden_id }}">Ver mis consultas</a></p>{% endif %}
+      <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+    {% elif n == "Entregada" and not orden.entrega_automatica and orden.entrega_resuelta_en %}<h2 id="ep-t">Pedido entregado exitosamente</h2>
+      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> El pedido llegó a su destino{% if orden.quien_recibe %} y lo recibió {{ orden.quien_recibe }}{% endif %}.{% if viaje_sigue %} El camión sigue con otros pedidos de este viaje.{% else %} No quedan entregas pendientes: el camión vuelve a la bodega.{% endif %}</p>
+      <p>Confirmaste la recepción a las {{ orden.entrega_resuelta_en|date:"H:i" }}. Gracias por comprar en Cofrial. Abajo queda el registro del viaje y de la temperatura.</p>
       {% if reclamo %}<p class="entrega-reclamo"><b>Ventas ya tiene tu aviso:</b> {{ reclamo.descripcion }} <a href="/soporte/?orden={{ orden.orden_id }}">Ver mis consultas</a></p>{% endif %}
+      <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+    {% elif n == "Entregada" %}<h2 id="ep-t">Pedido entregado</h2>
+      <p class="recorrido-cerrado" id="recorrido-cerrado"><b>Recorrido cerrado.</b> El pedido llegó a su destino{% if orden.quien_recibe %} y lo recibió {{ orden.quien_recibe }}{% endif %}.</p>
+      {% if orden.entrega_automatica %}<p>No recibimos tu respuesta a tiempo y lo dimos por entregado{% if orden.entrega_resuelta_en %} a las {{ orden.entrega_resuelta_en|date:"H:i" }}{% endif %}. No es una confirmación tuya. Si no lo recibiste, cuéntanoslo y lo revisamos.</p>
+      <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">No lo recibí</a><a class="btn" href="/catalogo/">Seguir comprando</a></div>
+      {% else %}<p>Este pedido figura como entregado. Abajo queda el registro del viaje y de la temperatura.</p>
       <div class="acciones"><a class="btn" href="/catalogo/">Seguir comprando</a></div>{% endif %}
-    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Estamos afuera de tu dirección</h2>
-      <p>El camión llegó con tu pedido N.º {{ orden.orden_id }} a {{ orden.direccion }}. ¿Lo pudiste recibir?</p>
+    {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Tu paquete llegó</h2>
+      <p>El camión está en {{ orden.direccion }} con tu pedido N.º {{ orden.orden_id }}. Hasta que confirmes, no queda como entregado.</p>
       <div class="entrega" id="entrega" data-url="/pedidos/{{ orden.orden_id }}/entrega/">
         <form class="entrega-revision" method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar" aria-labelledby="rev-t">{% csrf_token %}<input type="hidden" name="accion" value="aceptar">
           <h3 id="rev-t">Revisa tu pedido antes de confirmar</h3>
@@ -49,11 +63,20 @@
             <label><input type="radio" name="resultado" value="falla"> No, algo falló</label>
           </fieldset>
           <div class="revision-falla" id="revision-falla">
-            <label for="revision-tipo">¿Qué falló?</label>
-            <select id="revision-tipo" name="tipo_problema">{% for k in revision.problemas %}<option value="{{ k.codigo }}">{{ k.etiqueta }}</option>{% endfor %}</select>
-            <label for="revision-problema">Cuéntanos qué pasó (obligatorio si algo falló)</label>
-            <textarea id="revision-problema" name="problema" rows="3" maxlength="500" aria-describedby="revision-error" placeholder="Por ejemplo: llegaron 3 cajas en vez de 4, o una caja venía abierta…"></textarea>
-            <p class="frio">Ventas recibe tu aviso como reclamo y te contacta. El pedido igual queda como entregado.</p>
+            <fieldset class="revision-lineas"><legend>¿Qué unidades no recibes?</legend>
+              <p class="frio">Deja 0 en lo que sí recibes. Si un producto llegó bien, no lo cambies aunque otro haya fallado.</p>
+              {% for p in revision.productos %}<div class="revision-linea" data-cantidad="{{ p.cantidad }}" data-nombre="{{ p.producto }}">
+                <p class="revision-linea-nombre"><b>{{ p.cantidad }}</b> × {{ p.producto }}</p>
+                <div class="revision-linea-campo"><label for="rechazo-{{ p.producto_id }}">Unidades que rechazo</label><input id="rechazo-{{ p.producto_id }}" name="rechazo_{{ p.producto_id }}" type="number" inputmode="numeric" min="0" max="{{ p.cantidad }}" step="1" value="0"></div>
+                <div class="revision-linea-campo revision-linea-motivo"><label for="motivo-{{ p.producto_id }}">Motivo</label><select id="motivo-{{ p.producto_id }}" name="motivo_{{ p.producto_id }}"><option value="">Elige un motivo</option>{% for k in revision.problemas %}<option value="{{ k.codigo }}">{{ k.etiqueta }}</option>{% endfor %}</select></div>
+              </div>{% endfor %}
+              <p class="revision-resumen" role="status" aria-live="polite"></p>
+            </fieldset>
+            <div class="revision-tipo"><label for="revision-tipo">Si no rechazas unidades, ¿qué falló?</label>
+            <select id="revision-tipo" name="tipo_problema">{% for k in revision.problemas %}<option value="{{ k.codigo }}">{{ k.etiqueta }}</option>{% endfor %}</select></div>
+            <label for="revision-problema">Cuéntanos qué pasó <span class="revision-opcional">(obligatorio si no rechazas unidades o eliges «Otro problema»)</span></label>
+            <textarea id="revision-problema" name="problema" rows="3" maxlength="500" aria-describedby="revision-error" placeholder="Por ejemplo: llegaron 3 cajas en vez de 4, o una bolsa venía abierta…"></textarea>
+            <p class="frio">{{ revision.efecto }} Ventas recibe tu aviso como reclamo y te contacta.</p>
           </div>
           <p class="entrega-error" id="revision-error" role="alert" hidden></p>
           <button class="btn" data-cargando="Confirmando…">Recibí mi pedido</button>
@@ -94,13 +117,13 @@
     {% include "pedidos/_paso_envio.html" with n=3 etiqueta="En preparación" %}
     {% include "pedidos/_paso_envio.html" with n=4 etiqueta="Despachada" %}
     {% include "pedidos/_paso_envio.html" with n=5 etiqueta="Camión en la puerta" %}
-    {% if f == 7 %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Entrega no concretada" %}{% else %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Entregada" %}{% endif %}
+    {% if f == 7 %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Entrega no concretada" %}{% elif f == 9 %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Rechazada en recepción" %}{% else %}{% include "pedidos/_paso_envio.html" with n=6 etiqueta="Entregada" %}{% endif %}
   </ol>
   {% endwith %}
 </div>
 {% endif %}
 {% if seg %}
-<div class="seg-grid" id="seg" data-estado="{{ orden.estado_orden.nombre }}"{% if orden.estado_orden.nombre == "Entregada" %} data-final{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
+<div class="seg-grid" id="seg" data-estado="{{ orden.estado_orden.nombre }}"{% if orden.estado_orden.es_final %} data-final{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     {% if seg.mapa_en_vivo %}
     <h2>Dónde va su pedido</h2>
@@ -125,12 +148,12 @@
     <p class="itinerario" id="itinerario"{% if not seg.itinerario %} hidden{% endif %}>{{ seg.itinerario.texto }}</p>
     <ul class="leyenda" id="leyenda-pedido" aria-label="Leyenda del mapa"></ul>
     {% else %}
-    <p class="ruta-info">{% if orden.estado_orden.nombre == "Entregada" %}El mapa en vivo ya no está disponible. Aquí queda el registro de temperatura del viaje.{% elif orden.estado_orden.nombre == "Entrega no concretada" %}El mapa en vivo se apaga cuando el camión deja tu dirección. Si reprogramamos la entrega, volverá a aparecer aquí.{% else %}El mapa en vivo aparece cuando el camión parta.{% endif %}</p>
+    <p class="ruta-info">{% if orden.estado_orden.nombre == "Entregada" or orden.estado_orden.nombre == "Rechazada en recepción" %}El mapa en vivo ya no está disponible. Aquí queda el registro de temperatura del viaje.{% elif orden.estado_orden.nombre == "Entrega no concretada" %}El mapa en vivo se apaga cuando el camión deja tu dirección. Si reprogramamos la entrega, volverá a aparecer aquí.{% else %}El mapa en vivo aparece cuando el camión parta.{% endif %}</p>
     {% endif %}
   </div>
   <div class="tarjeta-ui">
     <h2>Temperatura de la cámara</h2>
-    <div class="temp-grande"><b id="seg-temp" class="{% if not seg.ultima %}skeleton{% endif %}">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}00,0{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}alerta{% elif seg.ultima %}entregado{% else %}cancelado{% endif %}" id="seg-estado" role="status">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% elif seg.ultima %}Dentro de rango{% else %}Sin lecturas{% endif %}</span></div>
+    <div class="temp-grande"><b id="seg-temp">{% if seg.ultima %}{{ seg.ultima.temp_camara|floatformat:1 }}{% else %}–{% endif %}</b> °C <span class="chip {% if seg.ultima.alerta_ruptura_frio %}alerta{% elif seg.ultima %}entregado{% else %}cancelado{% endif %}" id="seg-estado" role="status">{% if seg.ultima.alerta_ruptura_frio %}Fuera de rango{% elif seg.ultima %}Dentro de rango{% else %}Sin lecturas{% endif %}</span></div>
     <p class="sub" style="color:var(--texto-3)">Rango de conservación: {{ seg.banda.min|floatformat:"-1" }} a {{ seg.banda.max|floatformat:"-1" }} °C ({{ seg.banda.nombre }})</p>
     <div class="grafico"><svg id="spark" class="spark" viewBox="0 0 300 100" preserveAspectRatio="none" role="img" aria-label="Temperatura de la última hora" hidden></svg><span class="gy" id="spark-ymax" hidden></span><span class="gy" id="spark-ymin" hidden></span></div>
     <div class="grafico-x" id="spark-x" hidden><span id="spark-t0"></span><span id="spark-t1"></span></div>
@@ -153,20 +176,22 @@
   </dl>
 </div>
 {% if documentos %}
-<div class="seccion" id="documentos"><h2>Documentos y pago</h2></div>
+<div class="seccion" id="documentos"><h2>Documentos y pago</h2>
+{% if venta %}<p>Este pedido tiene {{ venta }}. <a href="/pedidos/{{ orden.orden_id }}/documentos/{{ venta.documento_id }}/">Ver</a> · <a href="/pedidos/{{ orden.orden_id }}/documentos/{{ venta.documento_id }}/?descarga=1">Descargar</a></p>{% elif orden.comprobante == "factura" and not orden.estado_orden.es_final %}<p class="frio">La factura de este pedido se emite después de la entrega.{% if cliente_tienda %} Usa el RUT {{ cliente_tienda.rut }}{% if cliente_tienda.giro %} y el giro {{ cliente_tienda.giro }}{% endif %}.{% endif %}</p>{% elif orden.comprobante == "factura" and orden.estado_orden.nombre == "Entregada" %}<p class="frio">La factura de este pedido se emite después de la entrega{% if rechazo %}, solo por lo que recibiste{% endif %}.</p>{% endif %}
+</div>
 <div class="tabla-caja tabla-cards"><table>
   <thead><tr><th>Documento</th><th>Emitido</th><th>Vence</th><th class="num">Monto</th><th>Estado</th></tr></thead>
-  <tbody>{% for d in documentos %}<tr><td data-label="Documento">{{ d }}{% if d.referencia %} <span class="frio">({{ d.motivo }})</span>{% endif %}</td><td data-label="Emitido">{{ d.emitido_en|date:"d/m/Y" }}</td><td data-label="Vence">{{ d.vence_en|date:"d/m/Y"|default:"–" }}</td><td class="num" data-label="Monto">{% if d.monto_clp %}{{ d.monto_clp|clp }}{% else %}–{% endif %}</td><td data-label="Estado">{% if d.estado_pago %}{% include "componentes/chip_pago.html" with estado=d.estado_pago %}{% else %}<span class="frio">{% if d.tipo == "guia_despacho" %}Acompaña la entrega{% else %}Rebaja de documento{% endif %}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+  <tbody>{% for d in documentos %}<tr><td data-label="Documento">{{ d }}{% if d.referencia %} <span class="frio">({{ d.motivo }})</span>{% endif %}{% if d.tipo == "boleta" or d.tipo == "factura" %} <a href="/pedidos/{{ orden.orden_id }}/documentos/{{ d.documento_id }}/">Ver</a>{% endif %}</td><td data-label="Emitido">{{ d.emitido_en|date:"d/m/Y" }}</td><td data-label="Vence">{{ d.vence_en|date:"d/m/Y"|default:"–" }}</td><td class="num" data-label="Monto">{% if d.monto_clp %}{{ d.monto_clp|clp }}{% else %}–{% endif %}</td><td data-label="Estado">{% if d.estado_pago %}{% include "componentes/chip_pago.html" with estado=d.estado_pago %}{% else %}<span class="frio">{% if d.tipo == "guia_despacho" %}Acompaña la entrega{% else %}Rebaja de documento{% endif %}</span>{% endif %}</td></tr>{% endfor %}</tbody>
 </table></div>
-{% elif es_b2b and not orden.estado_orden.es_final %}
-<p class="frio">La guía de despacho sale con el camión y la factura se emite después de la entrega, con pago a {{ orden.direccion.cliente.tipo_cliente.dias_credito }} días.</p>
+{% elif orden.comprobante == "factura" and not orden.estado_orden.es_final %}
+<p class="frio">La guía de despacho sale con el camión. La factura de este pedido se emite después de la entrega.{% if es_b2b %} El pago es a {{ orden.direccion.cliente.tipo_cliente.dias_credito }} días.{% endif %}{% if cliente_tienda %} Usa el RUT {{ cliente_tienda.rut }}{% if cliente_tienda.giro %} y el giro {{ cliente_tienda.giro }}{% endif %}.{% endif %}</p>
 {% endif %}
 <div class="seccion"><h2>Productos</h2></div>
 <div class="tabla-caja tabla-cards">
 <table>
   <thead><tr><th>Producto</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Subtotal</th></tr></thead>
   <tbody>
-  {% for i in items %}<tr><td data-label="Producto">{{ i.producto.nombre }}</td><td class="num" data-label="Cantidad">{{ i.cantidad }}</td><td class="num" data-label="Precio">{{ i.precio_unitario_clp|clp }}</td><td class="num" data-label="Subtotal">{% widthratio i.cantidad 1 i.precio_unitario_clp as sub %}{{ sub|clp }}</td></tr>{% endfor %}
+  {% for i in items %}<tr><td data-label="Producto">{{ i.producto.nombre }}{% if i.cantidad_rechazada %} <span class="chip alerta sin-punto">Rechazaste {{ i.cantidad_rechazada }} de {{ i.cantidad }}</span>{% endif %}</td><td class="num" data-label="Cantidad">{{ i.cantidad_aceptada }}</td><td class="num" data-label="Precio">{{ i.precio_unitario_clp|clp }}</td><td class="num" data-label="Subtotal">{{ i.subtotal|clp }}</td></tr>{% endfor %}
   {% if es_b2b %}<tr><td colspan="3" class="num">Neto</td><td class="num">{{ total|clp }}</td></tr>
   <tr><td colspan="3" class="num">IVA 19 %</td><td class="num">{{ total|iva }}</td></tr>
   <tr class="fila-total"><th colspan="3" class="num">Total con IVA</th><th class="num">{{ total|con_iva }}</th></tr>
@@ -224,6 +249,7 @@
   function llegada(s, estado) {
     var llegoA = s.llegada_en ? "a las " + hora(s.llegada_en) : "";
     if (estado === "Entregada") return {tipo: "llego", titulo: "Tu pedido llegó", franja: llegoA, corto: "Ya llegó"};
+    if (estado === "Rechazada en recepción") return {tipo: "llego", titulo: "El camión llegó", franja: llegoA, corto: "Ya llegó"};
     if (estado === "Camión en la puerta") return {tipo: "llego", titulo: "El camión llegó", franja: llegoA || "Está en tu dirección", corto: "Ya llegó"};
     if (estado === "Entrega no concretada") return {tipo: "pausa", titulo: "Entrega por reprogramar", franja: "Ventas te contacta para coordinarla", corto: "Por reprogramar"};
     if (!s.salida_en) return {tipo: "espera", titulo: "Esperando la salida", franja: "Te avisamos cuando parta el camión", corto: "Cuando salga"};

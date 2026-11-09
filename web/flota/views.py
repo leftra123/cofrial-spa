@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from clientes import geo
 from cofrial import entradas
@@ -92,6 +92,18 @@ def sugerencias_despacho(request):
                         json_dumps_params={"ensure_ascii": False})
 
 
+@require_GET
+@con_rol("admin", "gerencia", "despachador")
+def por_despachar(request):
+    """Contador junto a «Flota». Sin `detalle` es un solo COUNT, sin sugerencias ni IA. El menú recibe ese número con la consulta común de
+    `/api/avisos-equipo/`; con `detalle=1` (al abrir el contador) agrega el aviso y a dónde ir, con el texto del código: abrirlo no gasta la cuota gratuita."""
+    datos = {"total": servicios.pedidos_por_despachar().count()}
+    if request.GET.get("detalle") == "1":
+        viajes, resto = sugerencias.calcular()
+        datos.update(texto=sugerencias.texto_base(viajes, resto), acciones=sugerencias.acciones_del_menu(viajes, request.rol in DESPACHAN))
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
+
+
 @con_rol("admin", "gerencia", "despachador")
 def despacho_auto(request):
     """El recuadro del despacho automático; el panel lo vuelve a pedir mientras el modo está encendido."""
@@ -137,7 +149,7 @@ def despachar(request):
     opciones = sugerencias.opciones_camion()         # del mejor al peor: el navegador toma el primero compatible con lo que se marque
     camion_sugerido = request.GET.get("camion", "")
     mapa = {"base": settings.BASE_LOGISTICA, "camion_fijado": bool(camion_sugerido),
-            "camiones": [{k: c[k] for k in ("id", "rango", "apto", "nota")} for c in opciones],
+            "camiones": [{k: c[k] for k in ("id", "rango", "rangos", "apto", "nota")} for c in opciones],
             "rangos": {p["o"].orden_id: p["rangos"] for p in pedidos},
             "pedidos": {p["o"].orden_id: {"lat": p["o"].direccion.lat, "long": p["o"].direccion.long, "cliente": p["o"].direccion.cliente.nombre,
                                           "direccion": str(p["o"].direccion)} for p in pedidos if p["ubicada"]}}

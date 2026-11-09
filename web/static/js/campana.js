@@ -11,7 +11,7 @@
   function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(vistos.slice(-200))); } catch (e) {} }
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
   var pide = CofrialEntrega.pide, contar = CofrialEntrega.contarAvisos;      // reglas del contador en entrega.js (una función pura, con prueba)
-  var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", frio: "Temperatura"};
+  var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", rechazada: "Rechazado", frio: "Temperatura"};
 
   function datosDelPedido(a) {
     var p = a.pedido; if (!p) return "";
@@ -94,6 +94,23 @@
     var t = document.createElement("div"); t.className = "toast t-" + a.tipo;
     var b = document.createElement("a"); b.href = "/pedidos/" + a.orden_id + "/"; b.textContent = a.texto; t.appendChild(b);
     toasts.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 400); }, a.destacado ? 15000 : 8000);
+    if (window.CofrialPermisos) CofrialPermisos.notificar({id: a.id, texto: a.texto, url: a.accion ? a.accion.url : "/pedidos/" + a.orden_id + "/"});
+  }
+  /* Stock que el cliente esperaba: el número del pie de la campanita y un aviso cuando sube. La primera vez en este navegador solo se toma nota. */
+  var CLAVE_STOCK = "cofrial-stock-n", pie = document.querySelector(".campana-pie");
+  function stock(n) {
+    if (n == null || !pie) return;
+    var chip = pie.querySelector(".tb-n");
+    if (n && !chip) { chip = document.createElement("span"); chip.className = "tb-n"; chip.title = "Productos que esperabas y ya tienen stock"; pie.appendChild(document.createTextNode(" ")); pie.appendChild(chip); }
+    if (chip) { chip.textContent = n; chip.hidden = !n; }
+    var antes = null;
+    try { antes = JSON.parse(localStorage.getItem(CLAVE_STOCK)); localStorage.setItem(CLAVE_STOCK, JSON.stringify(n)); } catch (e) {}
+    if (antes === null || n <= antes) return;
+    var texto = n === 1 ? "Ya hay stock de un producto que esperabas." : "Ya hay stock de " + n + " productos que esperabas.";
+    var t = document.createElement("div"); t.className = "toast";
+    var b = document.createElement("a"); b.href = "/avisos/"; b.textContent = texto; t.appendChild(b);
+    toasts.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 400); }, 8000);
+    if (window.CofrialPermisos) CofrialPermisos.notificar({id: "stock:" + n, texto: texto, url: "/avisos/"});
   }
   /* Un fallo no se disfraza de «sin avisos»: si nunca se cargó, el panel lo dice y ofrece reintentar; si ya había avisos, se quedan con una nota de que no están al día. */
   function fallo() {
@@ -113,7 +130,7 @@
         var nuevos = d.avisos.filter(function (a) { return vistos.indexOf(a.id) < 0 && !actuales.some(function (x) { return x.id === a.id; }); });
         actuales = d.avisos;
         if (!primera) nuevos.forEach(aviso);          // avisa emergente solo lo que aparece mientras navegas
-        primera = false; pintar(); pintarBanner(); programar();
+        primera = false; pintar(); pintarBanner(); stock(d.stock_n); programar();
       }).catch(function (e) { fallo(e); programar(); });
   }
   btn.addEventListener("click", function () {

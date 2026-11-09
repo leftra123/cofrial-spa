@@ -1,0 +1,5 @@
+{% comment %}Lo que el cliente rechazó al recibir (RN-23) y qué pasó con el dinero. Recibe `rechazo` (pedidos.servicios.rechazo_de) y `es_b2b`.{% endcomment %}
+<ul class="rechazo-lista" aria-label="Productos rechazados">{% for l in rechazo.lineas %}<li><b>{{ l.rechazada }} de {{ l.cantidad }}</b> {{ l.producto }}: <span class="frio">{{ l.motivo }}</span></li>{% endfor %}</ul>
+{% if rechazo.nota %}<p class="rechazo-dinero">Emitimos la {{ rechazo.nota }} por {{ rechazo.nota.monto_clp|clp }}{% if rechazo.devuelto %} y registramos la devolución de {{ rechazo.devuelto|clp }}{% endif %}.</p>
+{% elif rechazo.total %}<p class="rechazo-dinero">{% if es_b2b %}No se emitirá factura por este pedido.{% else %}No se te cobra.{% endif %}</p>
+{% else %}<p class="rechazo-dinero">La factura se emite solo por lo que recibiste. Lo rechazado no se cobra.</p>{% endif %}

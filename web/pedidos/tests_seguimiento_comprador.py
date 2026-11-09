@@ -1,4 +1,6 @@
 """Lo que ve quien compra mientras espera: cuánto falta como dato principal, también sin mapa, y un mapa tranquilo que no carga de más."""
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
@@ -45,6 +47,8 @@ class PantallaDelCompradorTests(EntregaBase):
             self.assertIn(campo, seg)
         self.assertGreaterEqual(seg["minutos"], 1)
         self.assertEqual(set(seg["eta"]), {"desde", "hasta"})
+        salida = datetime.fromisoformat(seg["salida_en"]).replace(second=0, microsecond=0)
+        self.assertGreaterEqual(datetime.fromisoformat(seg["eta"]["desde"]), salida)       # el rango no empieza antes de la salida
 
     def test_entregado_no_carga_el_mapa_ni_deja_una_caja_vacia(self):
         cliente, orden, despacho = self.orden_despachada()
@@ -83,6 +87,26 @@ class PantallaDelCompradorTests(EntregaBase):
         pagina = self.pagina(orden)
         self.assertNotIn("combustible", pagina.lower())
         self.assertNotIn("etiqueta: s.camion_id", PLANTILLA)               # el código del camión no va sobre el mapa
+
+
+class VentanaDeLlegadaTests(SimpleTestCase):
+    """La ventana nunca parte antes de ahora: con el camión recién salido decía «Salió 16:57» y «entre 16:50 y 17:10»."""
+
+    def test_cerca_de_llegar_no_parte_en_el_pasado(self):
+        ahora = datetime(2026, 11, 8, 16, 57, 30, tzinfo=dt_timezone.utc)
+        v = s._ventana(ahora + timedelta(minutes=2), 1, ahora)
+        self.assertEqual(datetime.fromisoformat(v["desde"]), ahora.replace(second=0))
+        self.assertEqual(datetime.fromisoformat(v["hasta"]).minute, 15)
+
+    def test_lejos_sigue_la_ventana_de_siempre(self):
+        ahora = datetime(2026, 11, 8, 14, 0, tzinfo=dt_timezone.utc)
+        v = s._ventana(ahora + timedelta(minutes=30), 1, ahora)
+        self.assertEqual((datetime.fromisoformat(v["desde"]).minute, datetime.fromisoformat(v["hasta"]).minute), (25, 45))
+
+    def test_con_tiempo_acelerado_tampoco(self):
+        ahora = datetime(2026, 11, 8, 14, 0, 40, tzinfo=dt_timezone.utc)
+        v = s._ventana(ahora + timedelta(seconds=5), 20, ahora)
+        self.assertGreaterEqual(datetime.fromisoformat(v["desde"]), ahora.replace(second=0))
 
 
 class ReglasDelMapaDelCompradorTests(SimpleTestCase):

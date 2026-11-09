@@ -17,6 +17,12 @@ from .documentos import ErrorDeNegocio     # una regla de negocio impide la oper
 from .models import Carrito, CarritoItem, EstadoOrden, Orden, OrdenItem
 
 
+RECHAZADA = "Rechazada en recepción"                # el cliente rechazó todas las líneas: el camión llegó, no se vendió nada (RN-23)
+RECEPCION_CERRADA = ("Entregada", RECHAZADA)         # el cliente ya resolvió la recepción: una falla posterior del camión no lo afecta (RN-13)
+SIN_VENTA = ("Cancelada", RECHAZADA)                 # órdenes que no son venta; misma regla que SIN_VENTA en grafana/generar_dashboard.py
+MONTO_ACEPTADO = (F("cantidad") - F("cantidad_rechazada")) * F("precio_unitario_clp")      # de una línea (RN-23); igual que v_orden_total.total_clp
+
+
 def cliente_de(usuario):
     if not usuario.is_authenticated:
         return None
@@ -161,8 +167,18 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc="", recibe=""):
 MAX_DIRECCIONES = 20
 
 
-def agregar_direccion(cliente, calle_numero, comuna_id):
-    """Dirección nueva de un cliente; la primera queda como principal. La ubicación en el mapa es de mejor esfuerzo."""
+def _coordenadas_en_chile(lat, long):
+    """Las coordenadas que mandó el navegador, o None si no sirven: vienen del cliente, así que no se les cree sin revisar."""
+    try:
+        lat, long = float(lat), float(long)
+    except (TypeError, ValueError):
+        return None
+    return (lat, long) if -56.0 <= lat <= -17.0 and -76.0 <= long <= -66.0 else None    # NaN e infinito no pasan estas comparaciones
+
+
+def agregar_direccion(cliente, calle_numero, comuna_id, lat=None, long=None):
+    """Dirección nueva de un cliente; la primera queda como principal. La ubicación en el mapa es de mejor esfuerzo. `lat` y `long` son la
+    posición que el cliente pidió usar desde su navegador; si no vienen o no sirven, se busca la dirección en OpenStreetMap."""
     calle_numero = (calle_numero or "").strip()
     if not calle_numero or len(calle_numero) > 150:
         raise ErrorDeNegocio("Escribe la calle y el número (hasta 150 caracteres).")
@@ -172,20 +188,44 @@ def agregar_direccion(cliente, calle_numero, comuna_id):
     existentes = cliente.direccion_set.count()
     if existentes >= MAX_DIRECCIONES:
         raise ErrorDeNegocio(f"Se admiten hasta {MAX_DIRECCIONES} direcciones por cliente.")
-    direccion = Direccion.objects.create(cliente=cliente, calle_numero=calle_numero, comuna=comuna, es_principal=existentes == 0)
+    punto = _coordenadas_en_chile(lat, long) or (None, None)
+    direccion = Direccion.objects.create(cliente=cliente, calle_numero=calle_numero, comuna=comuna, es_principal=existentes == 0, lat=punto[0], long=punto[1])
     geo.ubicar(direccion)
     return direccion
 
 
 # ------------------------------------------------------------------------------------ órdenes
+def elegir_comprobante(cliente, comprobante=None, giro=""):
+    """La boleta usa el nombre y el RUT ya guardados en la cuenta. La factura, además, exige el giro.
+
+    Elige solo el público. La institución compra a crédito y recibe factura después de la entrega: una boleta suya
+    quedaría sin cobro, porque no pasa por un pago al comprar. Si no se elige nada, queda el comprobante del canal.
+    El RUT no se vuelve a pedir ni se reemplaza: es el que se validó al crear la cuenta."""
+    if comprobante not in (None, "", "boleta", "factura"):
+        raise ErrorDeNegocio("Elige boleta o factura.")
+    explicito = bool(comprobante)
+    b2b = cliente.tipo_cliente.codigo == "B2B"
+    if b2b and comprobante == "boleta":
+        raise ErrorDeNegocio("Las instituciones reciben factura después de la entrega.")
+    comprobante = comprobante or ("factura" if b2b else "boleta")
+    giro = str(giro or "").strip()[:80]
+    if comprobante == "factura" and giro and giro != cliente.giro:
+        cliente.giro = giro
+        cliente.save(update_fields=["giro"])
+    if comprobante == "factura" and explicito and not cliente.giro:
+        raise ErrorDeNegocio("Para la factura indica el giro. El RUT y la razón social son los de tu cuenta.")
+    return comprobante
+
+
 @transaction.atomic
-def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe=""):
+def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe="", comprobante=None, giro=""):
     """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
 
     RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
     (p. ej. congelados y refrigerados) se divide en una orden por rango, con la misma dirección, la misma OC y la misma persona que recibe.
     Devuelve la lista.
     """
+    comprobante = elegir_comprobante(cliente, comprobante, giro)
     ctx = _contexto_desde_carrito(cliente, direccion_id, numero_oc, recibe)
     direccion, carrito, items, productos, precios, grupos = ctx["direccion"], ctx["carrito"], ctx["items"], ctx["productos"], ctx["precios"], ctx["grupos"]
     pendiente, numero_oc = ctx["pendiente"], ctx["numero_oc"]
@@ -194,7 +234,7 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
     ordenes = []
     for rango_id in sorted(grupos):
         orden = Orden.objects.create(direccion=direccion, numero_oc=numero_oc, oc_pendiente=pendiente, estado_orden=estado,
-                                     checkout_pago=checkout_pago, recibe_nombre=ctx["recibe"])
+                                     checkout_pago=checkout_pago, recibe_nombre=ctx["recibe"], comprobante=comprobante)
         if pendiente:
             orden.numero_oc = referencia_web(orden)
             orden.save(update_fields=["numero_oc"])
@@ -203,7 +243,10 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
                                      precio_unitario_clp=precios[i.producto_id])
             Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
         if cliente.tipo_cliente.codigo == "B2C" and cobrar_b2c_al_crear:
-            documentos.cobrar_b2c(orden)
+            if comprobante == "factura":
+                documentos.cobrar_factura_contado(orden)
+            else:
+                documentos.cobrar_b2c(orden)
         ordenes.append(orden)
     carrito.estado = "convertido"
     carrito.save(update_fields=["estado"])
@@ -246,7 +289,8 @@ def ordenes_de(cliente):
 
 
 def total_orden(orden):
-    return sum(i.cantidad * i.precio_unitario_clp for i in orden.ordenitem_set.all())
+    """Total de lo aceptado: lo que de verdad se vendió (RN-23). Sin rechazos es el pedido completo."""
+    return sum(i.cantidad_aceptada * i.precio_unitario_clp for i in orden.ordenitem_set.all())
 
 
 @transaction.atomic
@@ -326,8 +370,8 @@ def seguimiento(orden):
         return None
     from flota import rutas
     camion = orden.despacho.camion
-    fin = fin_de_exposicion(orden) if orden.estado_orden.nombre == "Entregada" else None
-    todas = Telemetria.objects.filter(camion=camion)
+    fin = fin_de_exposicion(orden) if orden.estado_orden.nombre in RECEPCION_CERRADA else None
+    todas = Telemetria.objects.filter(camion=camion, camara=orden.camara)      # un pedido solo mira la cámara en la que viaja
     if fin is not None:               # RN-13: quien ya recibió no ve lo que le pasó al camión después de su entrega (resumen hasta ese momento)
         todas = todas.filter(registrado_en__lte=fin)
     desde = (fin or timezone.now()) - timedelta(minutes=60)
@@ -335,8 +379,8 @@ def seguimiento(orden):
     ultima = (lecturas[-1] if lecturas else todas.order_by("-registrado_en").first())
     if fin is None:
         from flota.vigente import ultima_vigente
-        ultima = ultima_vigente(camion) or ultima         # con el modo demostración, la temperatura forzada (no aplica a una entrega ya cerrada)
-    rango = camion.rango_temperatura
+        ultima = ultima_vigente(camion, orden.camara) or ultima         # con el modo demostración, la temperatura forzada (no aplica a una entrega ya cerrada)
+    rango = camion.rango_de_camara(orden.camara)
     en_vivo = mapa_en_vivo(orden)                     # el mapa y la posición solo se muestran mientras el camión va o está en la puerta
     return {
         "camion_id": camion.camion_id, "patente": camion.patente, "mapa_en_vivo": en_vivo,
@@ -364,7 +408,7 @@ def fin_de_exposicion(orden, ahora=None):
     cuando ambos estén en `main`, el CRM puede importar esta función y dejar una sola."""
     from django.utils import timezone
     d = orden.despacho
-    if orden.estado_orden.nombre == "Entregada":
+    if orden.estado_orden.nombre in RECEPCION_CERRADA:
         return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
     return d.regreso_en or ahora or timezone.now()
 
@@ -458,13 +502,14 @@ def _ultima_parada_atendida(orden, ruta, parada):
     return max((indice for direccion_id, indice in anteriores.items() if direccion_id not in pendientes), default=0)
 
 
-def _ventana(centro, multiplicador):
-    """Ventana de llegada alrededor de la hora estimada. Con tiempo acelerado el viaje entero dura minutos: la ventana de siempre (unos 20 min) no diría nada."""
+def _ventana(centro, multiplicador, ahora):
+    """Ventana de llegada alrededor de la hora estimada. Con tiempo acelerado el viaje entero dura minutos: la ventana de siempre (unos 20 min) no diría nada.
+    Nunca parte antes de ahora: con el camión recién salido, redondear hacia atrás daba «Salió 16:57» y «entre 16:50 y 17:10»."""
     from datetime import timedelta
     if multiplicador > 1:
         minuto = centro.replace(second=0, microsecond=0)
         return {"desde": minuto.isoformat(), "hasta": (minuto + timedelta(minutes=2)).isoformat()}
-    return {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),
+    return {"desde": max(_redondear5(centro - timedelta(minutes=5)), ahora.replace(second=0, microsecond=0)).isoformat(),
             "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}
 
 
@@ -492,7 +537,7 @@ def _llegada(orden, ultima):
         km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
     minutos = tiempo.minutos_de_viaje(km, multiplicador)
     return {**vacio, "km_restantes": round(km, 1), "cerca": km <= cerca_km, "minutos": max(1, round(minutos)),
-            "eta": _ventana(timezone.now() + timedelta(minutes=minutos), multiplicador)}
+            "eta": _ventana(timezone.now() + timedelta(minutes=minutos), multiplicador, timezone.now())}
 
 
 def en_minutos(minutos):
@@ -553,17 +598,22 @@ def avisos_de_llegada(cliente):
                            "texto": f"Estamos afuera de tu dirección con tu pedido N.º {o.orden_id}. Revísalo y confírmanos si lo recibiste."
                            if nombre == "Camión en la puerta" else f"El camión llegó a tu dirección con el pedido N.º {o.orden_id} a las {hora(o.puerta_en)}."})
         if nombre == "Entregada" and o.entrega_resuelta_en:
+            rechazadas = unidades_rechazadas(o)
             salida.append({"id": f"{o.orden_id}-llego", "orden_id": o.orden_id, "tipo": "llego", "cuando": o.entrega_resuelta_en.isoformat(),
-                           "texto": f"Pedido entregado exitosamente: tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}"
-                           + (" (confirmado automáticamente)." if o.entrega_automatica else ".")})
+                           "texto": f"Recibiste parte de tu pedido N.º {o.orden_id} a las {hora(o.entrega_resuelta_en)}: rechazaste {rechazadas} unidad{'es' if rechazadas != 1 else ''}."
+                           if rechazadas else f"Tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)} (confirmado automáticamente)."
+                           if o.entrega_automatica else f"Pedido entregado exitosamente: tu pedido N.º {o.orden_id} quedó entregado a las {hora(o.entrega_resuelta_en)}."})
         if nombre == "Entrega no concretada":
             salida.append({"id": f"{o.orden_id}-no-concretada", "orden_id": o.orden_id, "tipo": "no_concretada",
                            "cuando": (o.entrega_resuelta_en or o.puerta_en or d.salida_en).isoformat(),
                            "texto": f"No pudimos entregar tu pedido N.º {o.orden_id}. Nuestro equipo te contactará para reprogramar."})
+        if nombre == RECHAZADA:
+            salida.append({"id": f"{o.orden_id}-rechazada", "orden_id": o.orden_id, "tipo": "rechazada", "cuando": (o.entrega_resuelta_en or o.puerta_en or d.salida_en).isoformat(),
+                           "texto": f"Registramos que rechazaste tu pedido N.º {o.orden_id} al recibirlo. No se te cobra y ventas te contactará."})
         if nombre != "Despachada":
             continue
         ultima = Telemetria.objects.filter(camion=d.camion, registrado_en__gte=d.salida_en).order_by("-registrado_en").first()
-        if Telemetria.objects.filter(camion=d.camion, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
+        if Telemetria.objects.filter(camion=d.camion, camara=o.camara, registrado_en__gte=max(d.salida_en, timezone.now() - timedelta(hours=1)), alerta_ruptura_frio=True).exists():
             salida.append({"id": f"{o.orden_id}-frio", "orden_id": o.orden_id, "tipo": "frio", "cuando": (ultima.registrado_en if ultima else d.salida_en).isoformat(),
                            "texto": f"Detectamos una variación de temperatura en el camión de tu pedido N.º {o.orden_id}. Ya la estamos revisando."})
         info = _llegada(o, ultima)
@@ -607,24 +657,20 @@ def entrega_de(orden):
             "puerta_en": orden.puerta_en.isoformat() if orden.puerta_en else None,
             "se_confirma_sola_en_seg": max(0, int((limite - timezone.now()).total_seconds())) if limite and nombre == "Camión en la puerta" else None,
             "resuelta_en": orden.entrega_resuelta_en.isoformat() if orden.entrega_resuelta_en else None,
-            "motivo": orden.entrega_motivo or None, "automatica": orden.entrega_automatica}
+            "motivo": orden.entrega_motivo or None, "automatica": orden.entrega_automatica, "unidades_rechazadas": unidades_rechazadas(orden)}
 
 
 # Qué puede haber fallado al recibir. La etiqueta es lo que ve el cliente; la categoría es la del CRM a la que va el reclamo (None = la
-# clasifica la IA, como cualquier consulta). Son categorías que ya existen: no hay tablas ni campos nuevos para esto.
-PROBLEMAS_AL_RECIBIR = {
-    "temperatura": ("Los productos llegaron tibios o descongelados", "Reclamo por temperatura"),
-    "faltante": ("Faltan o sobran productos", "Problema en la entrega"),
-    "danado": ("Producto dañado o en mal estado", "Problema en la entrega"),
-    "otro": ("Otro problema", None),
-}
+# clasifica la IA, como cualquier consulta). Las etiquetas viven en el modelo porque también son el motivo de rechazo de cada línea.
+_CATEGORIA_DEL_PROBLEMA = {"temperatura": "Reclamo por temperatura", "faltante": "Problema en la entrega", "danado": "Problema en la entrega", "otro": None}
+PROBLEMAS_AL_RECIBIR = {codigo: (etiqueta, _CATEGORIA_DEL_PROBLEMA[codigo]) for codigo, etiqueta in OrdenItem.MOTIVOS_RECHAZO}
 ASUNTO_RECLAMO_AL_RECIBIR = "Problema al recibir el pedido"
 
 
 def revision_de(orden):
     """Lo que el cliente revisa antes de confirmar que recibió: los productos con sus cantidades y la temperatura del viaje
     (el mismo dato de `seguimiento`, la última hora del camión). `temperatura` es None si el camión no tiene lecturas."""
-    productos = [{"producto": i.producto.nombre, "cantidad": i.cantidad} for i in orden.ordenitem_set.select_related("producto").order_by("producto__nombre")]
+    productos = [{"producto_id": i.producto_id, "producto": i.producto.nombre, "cantidad": i.cantidad} for i in orden.ordenitem_set.select_related("producto").order_by("producto__nombre")]
     seg = seguimiento(orden)
     temperatura = None
     if seg and seg["ultima"]:
@@ -633,16 +679,86 @@ def revision_de(orden):
         temperatura = {"ultima": seg["ultima"]["temp_camara"], "minima": min(temps), "maxima": max(temps), "banda": banda,
                        "hubo_ruptura": seg["hubo_ruptura"] or seg["ultima"]["alerta_ruptura_frio"],
                        "en_rango": not (seg["hubo_ruptura"] or seg["ultima"]["alerta_ruptura_frio"]) and banda["min"] <= seg["ultima"]["temp_camara"] <= banda["max"]}
+    ya_tiene_documento = documentos.Documento.objects.filter(orden=orden, tipo__in=documentos.COBRABLES).exists()
     return {"orden_id": orden.orden_id, "recibe": orden.quien_recibe, "productos": productos, "temperatura": temperatura,
-            "problemas": [{"codigo": k, "etiqueta": v[0]} for k, v in PROBLEMAS_AL_RECIBIR.items()]}
+            "problemas": [{"codigo": k, "etiqueta": v[0]} for k, v in PROBLEMAS_AL_RECIBIR.items()],
+            "efecto": ("Lo que aceptas queda entregado. Lo rechazado se rebaja con una nota de crédito y lo que ya pagaste por eso se te devuelve."
+                       if ya_tiene_documento else "Lo que aceptas queda entregado y la factura se emite solo por eso. Lo rechazado no se cobra.")}
 
 
-def resolver_entrega(cliente, orden_id, accion, motivo="", con_problema=False, tipo_problema="otro"):
-    """El cliente responde al aviso «estamos afuera». Tres desenlaces, siempre solo mientras la orden está «Camión en la puerta»:
+def unidades_rechazadas(orden):
+    return sum(i.cantidad_rechazada for i in orden.ordenitem_set.all())
+
+
+def rechazo_de(orden):
+    """Lo que el cliente rechazó al recibir, para su pantalla y para el CRM; None si no rechazó nada (la mayoría de los pedidos)."""
+    items = list(orden.ordenitem_set.select_related("producto").order_by("producto__nombre"))
+    if not any(i.cantidad_rechazada for i in items):
+        return None
+    nota, devuelto = documentos.nota_de_rechazo(orden)
+    return {"lineas": [{"producto": i.producto.nombre, "cantidad": i.cantidad, "rechazada": i.cantidad_rechazada, "aceptada": i.cantidad_aceptada,
+                        "motivo": i.get_motivo_rechazo_display()} for i in items if i.cantidad_rechazada],
+            "unidades": sum(i.cantidad_rechazada for i in items), "total": not any(i.cantidad_aceptada for i in items),
+            "monto": documentos.monto_rechazado(orden), "nota": nota, "devuelto": devuelto}
+
+
+def _leer_rechazos(orden, rechazos):
+    """Valida lo que llegó del formulario: {producto_id: (cantidad, motivo)}. Devuelve [(línea, cantidad, motivo)] solo con lo rechazado de verdad.
+    Rechazar 0 es lo normal y no pide motivo; un producto ajeno, un número inválido o más de lo pedido detienen la operación completa."""
+    lineas = {i.producto_id: i for i in orden.ordenitem_set.select_for_update(of=("self",)).select_related("producto")}
+    salida = []
+    for producto_id, (cantidad, motivo) in (rechazos or {}).items():
+        item = lineas.get(producto_id)
+        if item is None:
+            raise ErrorDeNegocio("Ese producto no es parte de este pedido.")
+        try:
+            n = 0 if cantidad in ("", None) else entradas.entero(cantidad)
+        except ValueError:
+            raise ErrorDeNegocio(f"Indica cuántas unidades de {item.producto.nombre} rechazas, con un número entre 0 y {item.cantidad}.")
+        if n > item.cantidad:
+            raise ErrorDeNegocio(f"No puedes rechazar más de lo que pediste: de {item.producto.nombre} pediste {item.cantidad}.")
+        if n == 0:
+            continue
+        if motivo not in PROBLEMAS_AL_RECIBIR:
+            raise ErrorDeNegocio(f"Elige el motivo del rechazo de {item.producto.nombre}.")
+        salida.append((item, n, motivo))
+    return salida
+
+
+def _categoria_del_rechazo(motivos):
+    """Un rechazo con varios motivos va a una sola bandeja: la temperatura manda (cadena de frío); sin categoría conocida, la clasifica la IA."""
+    categorias = [_CATEGORIA_DEL_PROBLEMA[m] for m in motivos]
+    return "Reclamo por temperatura" if "Reclamo por temperatura" in categorias else next((c for c in categorias if c), None)
+
+
+def _reclamo_de_rechazo(cliente, orden, rechazadas, comentario, total):
+    """El requerimiento para ventas: qué rechazó, por qué y qué pasó con el dinero. Va ligado a la orden, igual que cualquier reclamo al recibir."""
+    from crm import servicios as crm
+    detalle = [f"- {n} de {item.cantidad} {item.producto.nombre}: {item.get_motivo_rechazo_display()}" for item, n, _ in rechazadas]
+    partes = ["El cliente rechazó al recibir:", *detalle]
+    if comentario:
+        partes.append(f"Comentario del cliente: {comentario[:500]}")
+    nota, devuelto = documentos.nota_de_rechazo(orden)
+    if nota:
+        partes.append(f"Se emitió {nota} por {documentos._clp(nota.monto_clp)}" + (f"; se devolvieron {documentos._clp(devuelto)}." if devuelto else "."))
+    elif total:
+        partes.append("No hay documento que rebajar y este pedido no se factura.")
+    else:
+        partes.append("Aún no tiene factura: se emite solo por lo aceptado.")
+    resultado = "Rechazo total" if total else "Recepción parcial"
+    return crm.crear_requerimiento(cliente, f"{ASUNTO_RECLAMO_AL_RECIBIR} N.º {orden.pk}: {resultado}", "\n".join(partes)[:crm.TEXTO_MAXIMO], orden=orden,
+                                   categoria_nombre=_categoria_del_rechazo([m for _, _, m in rechazadas]))
+
+
+def resolver_entrega(cliente, orden_id, accion, motivo="", con_problema=False, tipo_problema="otro", rechazos=None):
+    """El cliente responde al aviso «estamos afuera». Los desenlaces, siempre solo mientras la orden está «Camión en la puerta»:
     - `aceptar`: revisó y todo llegó bien; queda «Entregada».
     - `aceptar` con `con_problema` (y en `motivo` qué falló): recibió el pedido pero algo falló. Queda «Entregada» (el camión sí entregó) y se
       crea un requerimiento para ventas ligado a la orden, que es el reclamo; sin tablas nuevas.
-    - `no_recibido` con el motivo: no pudo recibirlo; queda «Entrega no concretada» (no final) y se crea un requerimiento para ventas.
+    - `aceptar` con `rechazos` ({producto_id: (cantidad, motivo)}): RN-23, recepción parcial. Se guarda lo rechazado por línea, se rebaja el documento
+      si ya existe y queda el reclamo. El stock no se repone: en cadena de frío lo rechazado no vuelve a la venta sin revisión.
+      Si rechaza todas las unidades queda «Rechazada en recepción» (final): el camión llegó y el cliente decidió no recibir.
+    - `no_recibido` con el motivo: no pudo recibirlo, nadie revisó la mercadería; queda «Entrega no concretada» (no final) y se crea un requerimiento para ventas.
     Si el plazo la dio por entregada o ya respondió, no cambia nada y se informa."""
     from django.utils import timezone
     motivo = (motivo or "").strip()
@@ -650,8 +766,6 @@ def resolver_entrega(cliente, orden_id, accion, motivo="", con_problema=False, t
         raise ErrorDeNegocio("Elige «Recibí mi pedido» o «No pude recibirlo».")
     if accion == "no_recibido" and len(motivo) < MOTIVO_MINIMO:
         raise ErrorDeNegocio("Cuéntanos por qué no pudiste recibirlo (al menos unas palabras).")
-    if accion == "aceptar" and con_problema and len(motivo) < MOTIVO_MINIMO:
-        raise ErrorDeNegocio("Cuéntanos qué falló en tu pedido (al menos unas palabras) o marca que todo llegó bien.")
     if accion == "aceptar" and con_problema and tipo_problema not in PROBLEMAS_AL_RECIBIR:
         tipo_problema = "otro"
     with transaction.atomic():
@@ -660,14 +774,27 @@ def resolver_entrega(cliente, orden_id, accion, motivo="", con_problema=False, t
             raise ErrorDeNegocio("Orden no encontrada.")
         if orden.estado_orden.nombre != "Camión en la puerta":
             raise ErrorDeNegocio(f"El pedido está «{orden.estado_orden.nombre}»: ya no hay una entrega por confirmar.")
-        orden.estado_orden = _estado("Entregada" if accion == "aceptar" else "Entrega no concretada")
+        rechazadas = _leer_rechazos(orden, rechazos) if accion == "aceptar" else []
+        sin_explicar = accion == "aceptar" and (any(m == "otro" for _, _, m in rechazadas) or (con_problema and not rechazadas))      # el motivo de cada línea ya explica, salvo «Otro problema»
+        if sin_explicar and len(motivo) < MOTIVO_MINIMO:
+            raise ErrorDeNegocio("Cuéntanos qué falló en tu pedido (al menos unas palabras) o marca que todo llegó bien.")
+        for item, n, codigo in rechazadas:
+            item.cantidad_rechazada, item.motivo_rechazo = n, codigo
+            item.save(update_fields=["cantidad_rechazada", "motivo_rechazo"])
+        rechazo_total = bool(rechazadas) and not any(i.cantidad_aceptada for i in orden.ordenitem_set.all())
+        orden.estado_orden = _estado("Entrega no concretada" if accion == "no_recibido" else RECHAZADA if rechazo_total else "Entregada")
         orden.entrega_resuelta_en = timezone.now()
         orden.entrega_automatica = False
-        if accion == "no_recibido":
+        if accion == "no_recibido" or rechazo_total:
             orden.entrega_motivo = motivo[:500]
         orden.save(update_fields=["estado_orden", "entrega_resuelta_en", "entrega_automatica", "entrega_motivo"])
+        if rechazadas:
+            documentos.rebajar_por_rechazo(orden, "; ".join(f"{n} de {item.cantidad} {item.producto.nombre}" for item, n, _ in rechazadas)[:170])
+        cerrar_entregas_sin_pendientes([orden.despacho_id])
     from crm import servicios as crm
-    if accion == "no_recibido":
+    if rechazadas:
+        _reclamo_de_rechazo(orden.direccion.cliente, orden, rechazadas, motivo, rechazo_total)
+    elif accion == "no_recibido":
         crm.crear_requerimiento(orden.direccion.cliente, f"Entrega no concretada del pedido N.º {orden.pk}", motivo, orden=orden)
     elif con_problema:
         etiqueta, categoria = PROBLEMAS_AL_RECIBIR[tipo_problema]
@@ -684,16 +811,35 @@ def reclamo_al_recibir(orden):
 
 def confirmar_vencidas(ahora=None):
     """Da por entregadas («confirmada automáticamente») las órdenes cuyo camión lleva más de CONFIRMACION_AUTO_SEG en la puerta sin
-    respuesta. Es una sola sentencia condicional sobre el estado: si el cliente ya respondió entre medio no coincide, y repetirla
+    respuesta. No rechaza nada: el silencio del cliente no es un rechazo, así que se factura el pedido completo. Es una sola sentencia condicional sobre el estado: si el cliente ya respondió entre medio no coincide, y repetirla
     (el simulador y la web la ejecutan) no cambia nada. Devuelve cuántas órdenes cambió."""
     from datetime import timedelta
 
     from django.conf import settings
     from django.utils import timezone
     ahora = ahora or timezone.now()
-    return Orden.objects.filter(estado_orden__nombre="Camión en la puerta",
-                                puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG)).update(
-        estado_orden=_estado("Entregada"), entrega_resuelta_en=ahora, entrega_automatica=True)
+    vencidas = Orden.objects.filter(estado_orden__nombre="Camión en la puerta", puerta_en__lte=ahora - timedelta(seconds=settings.CONFIRMACION_AUTO_SEG))
+    despachos = list(vencidas.values_list("despacho_id", flat=True).distinct())
+    n = vencidas.update(estado_orden=_estado("Entregada"), entrega_resuelta_en=ahora, entrega_automatica=True)
+    if n:
+        cerrar_entregas_sin_pendientes(despachos)
+    return n
+
+
+def cerrar_entregas_sin_pendientes(despachos):
+    """Si uno de estos viajes ya no tiene pedidos en camino ni en la puerta, su recorrido de entregas queda finalizado.
+
+    No cierra un viaje que todavía debe atender otra parada. No marca el regreso a la bodega: eso lo registra el
+    simulador cuando el camión llega. Poner `llegada_en` avisa que la última entrega ya se cerró."""
+    from django.db.models import Exists, OuterRef
+    from django.db.models.functions import Coalesce, Greatest, Now
+
+    from flota.models import Despacho
+
+    pendiente = Orden.objects.filter(despacho_id=OuterRef("pk"), estado_orden__nombre__in=("Despachada", "Camión en la puerta"))
+    return Despacho.objects.filter(pk__in=despachos, salida_en__isnull=False, regreso_en__isnull=True).exclude(fase="volviendo").annotate(
+        hay_pendiente=Exists(pendiente)).filter(hay_pendiente=False).update(
+        fase="volviendo", llegada_en=Greatest(Coalesce(F("llegada_en"), Now()), F("salida_en")))
 
 
 def llegar_a_la_puerta(ordenes, ahora=None):

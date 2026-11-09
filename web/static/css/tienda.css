@@ -65,16 +65,15 @@ body.tienda {
 }
 .tb-clave:hover { color: var(--texto-2); background: var(--fondo-2); text-decoration: none; }
 .tb-salir-form { flex: none; display: flex; }
-.tb-salir svg { transition: transform .22s ease, opacity .22s ease; }
-.tb-salir--sale svg { animation: tb-salir-ico .42s ease-in forwards; }
-.tb-salir--sale { pointer-events: none; background: var(--fondo-2); }
-@keyframes tb-salir-ico {
-  0% { opacity: 1; transform: translateX(0); }
-  45% { opacity: 1; transform: translateX(4px); }
-  100% { opacity: 0; transform: translateX(11px) scale(0.9); }
+.salir-dialogo p { margin: 0 0 18px; max-width: 36ch; color: var(--texto-2); }
+.salir-dialogo .acciones { justify-content: flex-end; }
+.salir-dialogo .acciones .btn,
+.salir-dialogo .acciones .btn-sec { min-height: 44px; }
+.salir-dialogo button.btn-sec:not(#mp-brick-container button) {
+  background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); box-shadow: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  .tb-salir--sale svg { animation: none; opacity: 0; }
+.salir-dialogo button.btn-sec:not(#mp-brick-container button):hover {
+  background: var(--fondo-2); border-color: var(--texto-3); box-shadow: none;
 }
 .tb-interno { font-size: .85rem; padding: 6px 12px; border: 1px solid var(--borde-fuerte); border-radius: 8px; color: var(--texto-2); font-weight: 500; white-space: nowrap; }
 .tb-interno:hover { background: var(--fondo-2); text-decoration: none; }
@@ -89,22 +88,19 @@ body.tienda {
   will-change: opacity;
 }
 .t-pagina-escena .t-pagina-siguiente {
-  position: absolute; left: 0; top: 0; right: 0;
+  position: absolute; left: 0; top: 0; right: 0; z-index: 2;
+  background: var(--fondo);
 }
-/* Cambio de sección: crossfade limpio (sin blur), encaja con skeleton y barra fija */
-.t-pagina-escena.t-fundir.t-pre .t-pagina-saliente {
-  opacity: 1;
-}
-.t-pagina-escena.t-fundir.t-pre .t-pagina-entrante {
-  opacity: 0;
-  pointer-events: none;
-}
+/* La sección que se va se oculta de un golpe. La que entra tapa la escena con su propio fondo, sin fundir el contenido de la otra. */
 .t-pagina-escena.t-fundir .t-pagina-saliente {
-  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
+  transition: none;
 }
 .t-pagina-escena.t-fundir .t-pagina-entrante {
   opacity: 1;
+  visibility: visible;
+  transition: none;
 }
 .t-pagina-escena:not(.t-fundir) .t-pagina { will-change: auto; }
 body.t-nav-animando { pointer-events: none; }
@@ -235,6 +231,33 @@ body.t-nav-animando .tb-nav { pointer-events: auto; }
 .resumen .seguro { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 12px 0 0; color: var(--texto-3); font-size: .8rem; }
 .resumen .seguro svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 .checkout-mp { margin-top: 8px; }
+.comprobante { border: 0; margin: 16px 0 0; padding: 0; }
+.comprobante legend { font-weight: 700; padding: 0; margin-bottom: 8px; }
+.comprobante-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+label.comprobante-opcion:not(#mp-brick-container label) { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0; margin: 0; padding: 14px 8px 12px; border: 1.5px solid var(--borde); border-radius: 14px; background: var(--fondo); cursor: pointer; color: var(--texto-2); font-size: .95rem; font-weight: 600; }
+.resumen .comprobante-opcion input { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; margin: 0; opacity: 0; cursor: pointer; }
+.resumen .comprobante-opcion input:focus { outline: none; }
+.comprobante-ico { width: 40px; height: 40px; margin-bottom: 6px; border-radius: 12px; display: grid; place-items: center; background: var(--fondo-2); color: var(--texto-2); }
+.comprobante-ico svg, .comprobante-marca svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.comprobante-ico svg { width: 22px; height: 22px; }
+.comprobante-nombre { display: block; width: 100%; margin-top: 2px; font-weight: 750; color: var(--texto); letter-spacing: -.02em; }
+.comprobante-nota { display: block; width: 100%; font-size: .75rem; font-weight: 600; color: var(--texto-3); }
+.comprobante-marca { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--borde-fuerte); display: grid; place-items: center; color: transparent; }
+.comprobante-marca svg { width: 12px; height: 12px; }
+.comprobante-opcion:has(input:checked) { border-color: var(--lima); background: var(--lima-suave); }
+.comprobante-opcion:has(input:checked) .comprobante-ico { background: var(--lima); color: var(--lima-fg); }
+.comprobante-opcion:has(input:checked) .comprobante-marca { background: var(--lima); border-color: var(--lima); color: var(--lima-fg); }
+.comprobante-opcion:has(input:focus-visible) { outline: 3px solid var(--lima); outline-offset: 2px; }
+.comprobante:has(input[value="factura"]:checked) .comprobante-detalle,
+.comprobante:not(.comprobante-fija):not(:has(input[value="factura"]:checked)) .giro-factura { display: none; }
+.comprobante .giro-factura { margin-top: 10px; }
+.comprobante .giro-factura label { display: block; margin: 0 0 4px; }
+.comprobante .giro-factura input { width: 100%; margin-top: 0; }
+.comprobante-hoja { max-width: 720px; margin: 0 auto; padding: 28px; background: var(--tarjeta); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
+.comprobante-hoja h1 { margin: 4px 0 8px; letter-spacing: -.03em; }
+.comprobante-hoja table { width: 100%; margin: 18px 0; border-collapse: collapse; }
+.comprobante-hoja th, .comprobante-hoja td { padding: 8px 0; border-bottom: 1px solid var(--borde); text-align: left; }
+.comprobante-hoja .num { text-align: right; }
 
 /* Modal checkout Mercado Pago (Card Payment Brick, ancho fijo) */
 body.mp-modal-abierto { overflow: hidden; }
@@ -687,10 +710,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 .campana-tipo { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; background: var(--transito-bg); color: var(--transito-fg); }
 .campana-tipo.t-llego { background: var(--entregado-bg); color: var(--entregado-fg); }
 .campana-tipo.t-cerca { background: var(--pendiente-bg); color: var(--pendiente-fg); }
-.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
-.toast { background: var(--acento); color: var(--acento-fg); border: 1px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }
-.toast a { color: inherit; font-weight: 600; }
-.toast.sale { opacity: 0; transform: translateX(20px); }
 @media (max-width: 860px) { .campana-panel { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; } }
 
 /* datos del viaje sobre el mapa */
@@ -728,7 +747,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 @media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }
 
 .campana-tipo.t-frio { background: var(--alerta-bg); color: var(--alerta-fg); }
-.toast.t-frio { background: #991B1B; color: #fff; border-color: #FCA5A5; }
 
 /* ---------- carrito flotante + asistente (esquina inferior) ---------- */
 .dock-flotante { position: fixed; right: 18px; bottom: 18px; z-index: 1002; display: flex; flex-direction: column-reverse; align-items: flex-end; justify-content: flex-start; gap: 12px;
@@ -1085,7 +1103,7 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 /* lista de pedidos: sin resultados con el filtro activo */
 .sin-resultados { margin-top: 12px; }
 
-/* ---------- «Estamos afuera»: confirmar la entrega (pantalla del pedido, campanita y diálogo) ---------- */
+/* ---------- confirmar la entrega (pantalla del pedido, campanita y diálogo) ---------- */
 .estado-pedido.transito .entrega { margin-top: 14px; max-width: 560px; }
 .estado-pedido.cargando { opacity: .7; pointer-events: none; transition: opacity .15s; }
 .entrega-resp { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -1269,6 +1287,27 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 .revision-falla label { font-weight: 600; font-size: .9rem; }
 .revision-falla select, .revision-falla textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--fondo-campo, var(--tarjeta)); color: var(--texto); }
 .revision-falla textarea { resize: vertical; min-height: 84px; }
+.revision-lineas { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.revision-lineas legend { padding: 0; margin-bottom: 4px; font-weight: 600; }
+.revision-lineas > .frio { margin: 0; }
+.revision-linea { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 8px 12px; align-items: end; padding: 10px 12px; border-radius: var(--radio-sm); background: var(--fondo); }
+.revision-linea-nombre { margin: 0; align-self: center; overflow-wrap: anywhere; }
+.revision-linea-nombre b { font-variant-numeric: tabular-nums; }
+.revision-linea-campo { display: grid; gap: 4px; min-width: 0; }
+.revision-linea-campo[hidden] { display: none; }
+.revision-linea-campo input { width: 100%; font: inherit; min-height: 44px; padding: 8px 10px; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-sm); background: var(--fondo-campo, var(--tarjeta)); color: var(--texto); font-variant-numeric: tabular-nums; }
+.revision-linea-motivo { grid-column: 1 / -1; }
+.revision-falla input[aria-invalid="true"], .revision-falla select[aria-invalid="true"] { border-color: var(--cancelado-fg); }
+.revision-resumen { margin: 0; font-weight: 600; }
+.revision-resumen:empty { display: none; }
+.revision-resumen.todo { color: var(--alerta-fg); }
+.revision-tipo { display: grid; gap: 8px; }
+.revision-tipo[hidden] { display: none; }
+.revision-opcional { font-weight: 400; }
+.rechazo-lista { margin: 10px 0 0; padding: 10px 14px; list-style: none; display: grid; gap: 4px; border-radius: var(--radio-sm); background: var(--fondo); max-width: 62ch; }
+.rechazo-lista b { font-variant-numeric: tabular-nums; }
+.rechazo-dinero { margin: 10px 0 0; max-width: 62ch; }
+@media (max-width: 480px) { .revision-linea { grid-template-columns: minmax(0, 1fr); } }
 .revision-falla textarea[aria-invalid="true"] { border-color: var(--cancelado-fg); }
 .entrega-revision .btn, .entrega-dialogo .acciones .btn { min-height: 48px; }
 .entrega-reclamo { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--borde-fuerte); background: var(--fondo); border-radius: 0 var(--radio-sm) var(--radio-sm) 0; max-width: 62ch; overflow-wrap: anywhere; }

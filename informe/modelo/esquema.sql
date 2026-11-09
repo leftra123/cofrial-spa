@@ -140,7 +140,9 @@ CREATE TABLE camion (
   patente varchar(8) NOT NULL UNIQUE,
   capacidad_kg integer NOT NULL CHECK (capacidad_kg > 0),
   rango_temperatura_id integer NOT NULL REFERENCES rango_temperatura (rango_temperatura_id),
-  activo boolean NOT NULL DEFAULT true
+  rango_secundario_id integer REFERENCES rango_temperatura (rango_temperatura_id),
+  activo boolean NOT NULL DEFAULT true,
+  CHECK (rango_secundario_id <> rango_temperatura_id)
 );
 
 -- Viaje de un camión con una o más órdenes. Su estado se deduce de las marcas de tiempo.
@@ -163,6 +165,8 @@ CREATE TABLE orden (
   numero_oc varchar(30),
   oc_pendiente boolean NOT NULL DEFAULT false,
   recibe_nombre varchar(80) NOT NULL DEFAULT '',
+  comprobante varchar(8) NOT NULL DEFAULT 'boleta' CHECK (comprobante IN ('boleta', 'factura')),
+  camara smallint NOT NULL DEFAULT 1 CHECK (camara IN (1, 2)),
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -172,7 +176,11 @@ CREATE TABLE orden_item (
   producto_id integer NOT NULL REFERENCES producto (producto_id),
   cantidad integer NOT NULL CHECK (cantidad > 0),
   precio_unitario_clp integer NOT NULL CHECK (precio_unitario_clp > 0),
-  PRIMARY KEY (orden_id, producto_id)
+  cantidad_rechazada integer NOT NULL DEFAULT 0,
+  motivo_rechazo varchar(12) NOT NULL DEFAULT '',
+  PRIMARY KEY (orden_id, producto_id),
+  CHECK (cantidad_rechazada BETWEEN 0 AND cantidad),
+  CHECK ((cantidad_rechazada = 0 AND motivo_rechazo = '') OR (cantidad_rechazada > 0 AND motivo_rechazo IN ('temperatura', 'faltante', 'danado', 'otro')))
 );
 
 -- Documentos tributarios simulados de una orden: boleta, factura, guía de despacho y nota de crédito. El monto es una foto de lo vendido, igual que el precio de la línea. Una orden tiene a lo más una boleta, una factura y una guía (índice único parcial sobre orden y tipo).
@@ -210,8 +218,9 @@ CREATE TABLE telemetria (
   "long" double precision NOT NULL CHECK ("long" BETWEEN -180 AND 180),
   combustible_pct integer NOT NULL CHECK (combustible_pct BETWEEN 0 AND 100),
   alerta_ruptura_frio boolean NOT NULL,
+  camara smallint NOT NULL DEFAULT 1 CHECK (camara IN (1, 2)),
   registrado_en timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (camion_id, registrado_en)
+  UNIQUE (camion_id, camara, registrado_en)
 );
 
 -- Etapas del embudo comercial.
@@ -299,5 +308,6 @@ JOIN cliente c ON c.cliente_id = d.cliente_id
 JOIN tipo_cliente tc ON tc.tipo_cliente_id = c.tipo_cliente_id;
 
 CREATE VIEW v_orden_total AS
-SELECT orden_id, sum(cantidad * precio_unitario_clp) AS total_clp, sum(cantidad) AS unidades
+SELECT orden_id, sum((cantidad - cantidad_rechazada) * precio_unitario_clp) AS total_clp, sum(cantidad - cantidad_rechazada) AS unidades,
+       sum(cantidad_rechazada * precio_unitario_clp) AS rechazado_clp, sum(cantidad_rechazada) AS unidades_rechazadas
 FROM orden_item GROUP BY orden_id;

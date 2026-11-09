@@ -68,10 +68,11 @@ COMUNAS_ARAUCANIA = ["Angol", "Carahue", "Cholchol", "Collipulli", "Cunco", "Cur
                      "Loncoche", "Lonquimay", "Melipeuco", "Nueva Imperial", "Padre Las Casas", "Pitrufquén", "Pucón", "Traiguén",
                      "Victoria", "Vilcún", "Villarrica"]        # Temuco se crea aparte (comuna de la base y de las direcciones de demostración)
 ESTADOS_ORDEN = [("Recibida", False), ("Confirmada", False), ("En preparación", False), ("Despachada", False), ("Camión en la puerta", False),
-                ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True)]
+                ("Entregada", True), ("Entrega no concretada", False), ("Cancelada", True), ("Rechazada en recepción", True)]
 ETAPAS = [("Prospecto", False, False), ("Contactado", False, False), ("Propuesta enviada", False, False), ("Negociación", False, False), ("Cliente ganado", True, True), ("Perdido", True, False)]
 CATEGORIAS_REQ = ["Consulta de producto", "Reclamo por temperatura", "Atraso en entrega", "Facturación", "Problema en la entrega", "Otro"]
 CAMIONES = [("CAM-01", "HJKL-42", 8000, "Refrigerado"), ("CAM-02", "PQRS-17", 6000, "Congelado"), ("CAM-03", "TUVW-93", 8000, "Refrigerado")]
+CAMIONES_DOS_CAMARAS = ("CAM-05", "CAM-14", "CAM-23", "CAM-32", "CAM-41")      # 10 % de la flota renovada, uno por contenedor del simulador: refrigerado (cámara 1) y congelado (cámara 2)
 TOTAL_CAMIONES = 50          # la flota del caso; CAM-04 a CAM-50 se generan de forma reproducible (mismas patentes en cada carga)
 
 
@@ -179,6 +180,7 @@ class Command(BaseCommand):
         rangos = {"Refrigerado": refrigerado, "Congelado": congelado}
         for camion_id, patente, capacidad, rango in flota_completa():
             Camion.objects.get_or_create(camion_id=camion_id, defaults=dict(patente=patente, capacidad_kg=capacidad, rango_temperatura=rangos[rango]))
+        Camion.objects.filter(pk__in=CAMIONES_DOS_CAMARAS, rango_temperatura=refrigerado, rango_secundario__isnull=True).update(rango_secundario=congelado)
 
         grupo_vendedores, _ = Group.objects.get_or_create(name="vendedores")
         u_vend, nuevo = Usuario.objects.get_or_create(username="vendedora@cofrial.cl", defaults=dict(email="vendedora@cofrial.cl", is_staff=True))
@@ -199,6 +201,9 @@ class Command(BaseCommand):
             cliente, _ = Cliente.objects.get_or_create(rut=rut, defaults=dict(usuario=u, tipo_cliente=tipo, vendedor=vendedor, nombre=nombre, email=username))
             if not cliente.direccion_set.exists():
                 Direccion.objects.create(cliente=cliente, calle_numero=calle, comuna=temuco, es_principal=True)
+            if tipo == tipo_b2b and not cliente.giro:          # la factura lo exige; el hospital de la demostración no debe tener que escribirlo
+                cliente.giro = "Servicios de salud"
+                cliente.save(update_fields=["giro"])
 
         # segunda vendedora, gerencia y despachador: sirven para mostrar los permisos por rol (RN-09)
         grupo_gerencia, _ = Group.objects.get_or_create(name="gerencia")

@@ -189,7 +189,7 @@ def fin_de_exposicion(orden, ahora=None):
     """Hasta cuándo la carga de esta orden estuvo en el camión. Dos clientes pueden ir en el mismo viaje: el primero ya recibió cuando el
     camión sigue, y una falla posterior no lo afecta. Quien aún no recibe (en la puerta o sin concretar) sigue a bordo hasta el regreso."""
     d = orden.despacho
-    if orden.estado_orden.nombre == "Entregada":
+    if orden.estado_orden.nombre in pedidos.RECEPCION_CERRADA:
         return orden.entrega_resuelta_en or d.llegada_en or ahora or timezone.now()
     return d.regreso_en or ahora or timezone.now()
 
@@ -202,7 +202,7 @@ def ordenes_con_alerta(ordenes):
         n = 0
         d = o.despacho
         if d is not None and d.salida_en is not None:
-            n = Telemetria.objects.filter(camion_id=d.camion_id, alerta_ruptura_frio=True, registrado_en__gte=d.salida_en,
+            n = Telemetria.objects.filter(camion_id=d.camion_id, camara=o.camara, alerta_ruptura_frio=True, registrado_en__gte=d.salida_en,
                                           registrado_en__lte=fin_de_exposicion(o, ahora)).count()
         o.alertas_frio = n
         resultado.append(o)
@@ -214,6 +214,7 @@ def ordenes_de_cliente(cliente):
     ordenes = list(ordenes)
     for o in ordenes:
         o.total = pedidos.total_orden(o)
+        o.rechazo = pedidos.rechazo_de(o)
         o.cancelable = (not o.estado_orden.es_final and o.estado_orden.orden_flujo <= 3) or o.estado_orden.nombre == "Entrega no concretada"
     return ordenes_con_alerta(ordenes)
 
@@ -309,13 +310,13 @@ def telemetria_del_viaje(orden):
     d = orden.despacho
     if d is None or d.salida_en is None:
         return None
-    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, registrado_en__gte=d.salida_en, registrado_en__lte=fin_de_exposicion(orden))
+    lecturas = Telemetria.objects.filter(camion_id=d.camion_id, camara=orden.camara, registrado_en__gte=d.salida_en, registrado_en__lte=fin_de_exposicion(orden))
     ultima = lecturas.order_by("-registrado_en").first()
     if ultima is None:
         return {"camion": d.camion_id, "lecturas": 0}
     return {"camion": d.camion_id, "lecturas": lecturas.count(), "ultima_temp": ultima.temp_camara, "ultima_hora": ultima.registrado_en,
             "max_temp": lecturas.aggregate(m=Max("temp_camara"))["m"], "alertas": lecturas.filter(alerta_ruptura_frio=True).count(),
-            "limite": d.camion.rango_temperatura.temp_max_c}
+            "limite": d.camion.rango_de_camara(orden.camara).temp_max_c}
 
 
 def acierto_de_la_ia():
@@ -459,7 +460,7 @@ ETAPAS_APARTE = ["En riesgo", "Perdido"]
 
 
 def nivel_de(total, en_ventana, ultimo, ahora):
-    """Nivel de un cliente B2B según sus pedidos no cancelados: cuántos tiene, cuántos en la ventana de fidelización y cuándo fue el último."""
+    """Nivel de un cliente B2B según sus pedidos que fueron venta (ni cancelados ni rechazados enteros): cuántos tiene, cuántos en la ventana de fidelización y cuándo fue el último."""
     if total == 0:
         return "Ganado sin pedido"
     if ultimo < ahora - timedelta(days=DIAS_EN_RIESGO):
@@ -470,12 +471,12 @@ def nivel_de(total, en_ventana, ultimo, ahora):
 
 
 def _pedidos_vigentes():
-    return Orden.objects.exclude(estado_orden__nombre="Cancelada")
+    return Orden.objects.exclude(estado_orden__nombre__in=pedidos.SIN_VENTA)
 
 
 def _con_pedidos(clientes, ahora):
-    """Agrega a cada cliente `n_pedidos`, `n_ventana` y `ultimo_pedido` en una sola consulta (sin contar cancelados)."""
-    vigente = ~Q(direccion__orden__estado_orden__nombre="Cancelada")
+    """Agrega a cada cliente `n_pedidos`, `n_ventana` y `ultimo_pedido` en una sola consulta (sin contar cancelados ni rechazados enteros al recibir)."""
+    vigente = ~Q(direccion__orden__estado_orden__nombre__in=pedidos.SIN_VENTA)
     ventana = vigente & Q(direccion__orden__creada_en__gte=ahora - timedelta(days=VENTANA_FIDELIZADO_DIAS))
     return clientes.annotate(n_pedidos=Count("direccion__orden", filter=vigente, distinct=True),
                              n_ventana=Count("direccion__orden", filter=ventana, distinct=True),
@@ -521,8 +522,8 @@ def embudo_por_niveles(usuario):
 
     clientes = _clientes_del_embudo(clientes_visibles(usuario))
     clientes = list(_con_pedidos(clientes, ahora).order_by("nombre"))
-    montos = dict(OrdenItem.objects.filter(orden__direccion__cliente__in=[c.pk for c in clientes]).exclude(orden__estado_orden__nombre="Cancelada")
-                  .values_list("orden__direccion__cliente").annotate(t=Sum(F("cantidad") * F("precio_unitario_clp"))))
+    montos = dict(OrdenItem.objects.filter(orden__direccion__cliente__in=[c.pk for c in clientes]).exclude(orden__estado_orden__nombre__in=pedidos.SIN_VENTA)
+                  .values_list("orden__direccion__cliente").annotate(t=Sum(pedidos.MONTO_ACEPTADO)))
     for c in clientes:
         e = etapas[nivel_de(c.n_pedidos, c.n_ventana, c.ultimo_pedido, ahora)]
         monto = montos.get(c.pk, 0)

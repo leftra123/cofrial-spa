@@ -27,6 +27,7 @@
      m.puntos([{pos, numero, color, radio, offset: [x, y], popup}], {color, radio, zoomMin, zoomMax})   capa del mapa, no DOM; offset en píxeles, igual con cualquier zoom
      m.marcador(pos, {html, clase, ancho, alto, ancla, altoPopup, offset, titulo, popup})
      m.ruta(linea, {color, ancho, aproximada, flujo, gradiente: [desde, hasta], zoomMin, zoomMax})
+     m.recorridos({base: [lat, lon], alElegir: fn(viaje, tramo)})               ida y vuelta de uno o varios viajes, en capas compartidas
    popup acepta un texto, una lista de textos (una línea cada uno, siempre como texto plano) o un nodo del DOM.
 
    Cada marcador responde a: .mover(pos) .animarA(pos, ms = 4600) .latlon() .popup(contenido) .etiqueta(texto) .desplazar([x, y]) .quitar()
@@ -34,22 +35,35 @@
    Cada ruta responde a: .actualizar(linea, {aproximada}) .quitar() .mostrar(bool). Se dibuja con un halo difuso y una línea central,
    punteada si es aproximada. flujo agrega una línea que avanza; es opcional porque obliga a redibujar el mapa unas 8 veces por segundo mientras
    esté en pantalla, y se detiene con la pestaña oculta, con el mapa fuera de la vista y con prefers-reduced-motion.
-   m.puntos responde a: .actualizar(lista) .quitar() .mostrar(bool).
+   m.puntos responde a: .actualizar(lista) .enfocar(grupo) .quitar() .mostrar(bool). Cada punto puede llevar borde (color del aro) y grupo (a quién pertenece).
+   m.recorridos responde a: .poner([{id, ruta, fase} o {id, ida, vuelta, aproximada}]) .ver("ida" | "vuelta", bool) .enfocar(id) .fase(id, "ida" | "vuelta") .sacar(id) .quitar().
+   Ida: línea continua azul. Vuelta: línea a trazos ámbar. Ambas con flechas y corridas a la derecha de su sentido, para que se lean aunque usen la misma calle.
+   Es un par apto para daltonismo y no depende solo del color. Una ruta aproximada va a puntos. Con varios camiones, .enfocar atenúa los demás viajes.
+   CofrialMapa.partirRuta(ruta) separa la ruta guardada del servidor en {ida, vuelta}, en la última parada; CofrialMapa.largoKm(linea) mide un tramo.
 
-   Sueltas, sin mapa: CofrialMapa.pin / camion / destino / base entregan {html, clase, ancho, alto, …} (las leyendas usan .html); CofrialMapa.PALETA y
-   CofrialMapa.COLOR_RUTA son los colores para fondo de noche; ruta, rutaGuardada y texto no dependen del mapa.
+   Sueltas, sin mapa: CofrialMapa.pin / camion / destino / base entregan {html, clase, ancho, alto, …} (las leyendas usan .html); CofrialMapa.PALETA,
+   CofrialMapa.COLOR_RUTA, COLOR_IDA y COLOR_VUELTA son los colores para fondo de noche; ruta, rutaGuardada y texto no dependen del mapa.
+   filaParada y popupTexto arman filas y popups con datos del cliente como texto, nunca como HTML.
 
    Respaldo: el mapa parte con un estilo local (fondo azul noche, sin pedir nada a la red) y cambia al de OpenFreeMap cuando llega. Si no llega, se queda
    en el local y siguen las rutas y los puntos. Si OSRM no responde, ruta() entrega una línea recta entre los puntos. */
 window.CofrialMapa = (function () {
+  /* Escapa un texto para ponerlo como contenido de un elemento dentro de un trozo de HTML. Fuera de eso (atributos, popups, listas) usar nodos y textContent. */
+  function esc(texto) {
+    var d = document.createElement("div");
+    d.textContent = texto;
+    return d.innerHTML;
+  }
+
   var OSRM = "https://router.project-osrm.org";
   /* Estilo: viene de la variable MAP_STYLE_URL (settings.MAPA_TILES) a través de la plantilla. "local" no pide nada a la red. */
   var CONFIG = {estilo: "https://tiles.openfreemap.org/styles/dark", maxZoom: 19,
                 attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'};
   try { var cfg = document.getElementById("mapa-tiles"); if (cfg) CONFIG = Object.assign(CONFIG, JSON.parse(cfg.textContent)); } catch (e) {}
 
-  var COLOR_RUTA = "#BDE63A";                                       // lima de la marca: resalta sobre el azul noche
-  var PALETA = [COLOR_RUTA, "#38BDF8", "#C084FC", "#FB923C"];       // un color por viaje; el rojo queda para las alertas
+  /* Azul y ámbar: se distinguen con los tres tipos de daltonismo y tienen contraste alto sobre el azul noche. El rojo queda para las alertas. */
+  var COLOR_IDA = "#56B4E9", COLOR_VUELTA = "#FFB000", COLOR_RUTA = COLOR_IDA;
+  var PALETA = [COLOR_IDA, "#BDE63A", "#C084FC", "#FB923C"];
   var NOCHE = {tierra: "#0B1A33", residencial: "#0E2040", verde: "#0D2632", agua: "#123052", edificio: "#10223F", edificioBorde: "#152C4B",
                calle: "#172D4C", avenida: "#1E3A60", avenidaBorde: "#264873", autopista: "#284A78", autopistaBorde: "#335A8E", linea: "#1E3A60",
                etiqueta: "#B4C6DF", etiquetaCalle: "#8BA3C4", etiquetaAgua: "#6E9CCB", halo: "#0B1A33"};
@@ -139,7 +153,7 @@ window.CofrialMapa = (function () {
   /* Pin redondo con texto (número de parada). */
   function pin(texto, color) {
     return {clase: "pin-mapa", ancho: 30, alto: 30, ancla: "center", altoPopup: 16,
-            html: '<span style="background:' + color + '">' + texto + "</span>"};
+            html: '<span style="background:' + color + '">' + esc(texto) + "</span>"};
   }
 
   /* Camión frigorífico (imagen de marca, vista lateral mirando a la derecha). Con alerta (ruptura de frío) usa la versión roja y late.
@@ -153,7 +167,7 @@ window.CofrialMapa = (function () {
     var url = BASE_IMG + (alerta ? "camion-alerta.png" : "camion-mapa.png");
     /* PNG de 512×320: <img> + reglas globales lo pintaban casi a tamaño real; fondo en caja fija = escala de mapa */
     var html = '<span class="pin-camion-graf" role="presentation" aria-hidden="true" style="width:' + med.w + "px;height:" + med.imgH + "px;background-image:url('" + url + "')\"></span>";
-    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + etq + "</b>";
+    if (etq && med.mostrarEtq) html += '<b class="pin-etq">' + esc(etq) + "</b>";
     return {clase: "pin-camion" + (alerta ? " alerta" : ""), ancho: med.w, alto: med.imgH, ancla: "bottom", altoPopup: med.imgH + 4, html: html};
   }
 
@@ -169,7 +183,7 @@ window.CofrialMapa = (function () {
     return {clase: "pin-base", ancho: 34, alto: 34, ancla: "center", altoPopup: 18,
       html: '<svg viewBox="0 0 34 34" width="34" height="34" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="31" rx="8" fill="#0F172A" stroke="#fff" stroke-width="2"/>' +
         '<path d="M7 14l10-5.5L27 14v11H7z" fill="#fff"/><rect x="12" y="18" width="10" height="7" rx="1" fill="#0F172A"/><path d="M12 21.5h10" stroke="#fff" stroke-width="1"/></svg>' +
-        (etiqueta == null ? "" : '<b class="pin-etq base-contador">' + etiqueta + "</b>")};
+        (etiqueta == null ? "" : '<b class="pin-etq base-contador">' + esc(etiqueta) + "</b>")};
   }
 
   /* ---------- marcadores ---------- */
@@ -352,14 +366,14 @@ window.CofrialMapa = (function () {
 
   /* ---------- puntos en capa ---------- */
   /* El círculo se dibuja en un canvas y entra al mapa como imagen: el número no depende de las fuentes de OpenFreeMap, así que también sale en el respaldo local. */
-  function iconoPunto(n, color, radio, numero) {
-    var nombre = "cofrial-punto-" + color + "-" + radio + "-" + (numero == null ? "" : numero);
+  function iconoPunto(n, color, radio, numero, borde) {
+    var nombre = "cofrial-punto-" + color + "-" + radio + "-" + (numero == null ? "" : numero) + "-" + (borde || "");
     if (n.hasImage(nombre)) return nombre;
     var escala = 2, lado = (radio * 2 + 4) * escala, lienzo = document.createElement("canvas"), c = lienzo.getContext("2d");
     lienzo.width = lienzo.height = lado;
     c.beginPath(); c.arc(lado / 2, lado / 2, radio * escala, 0, Math.PI * 2);
     c.fillStyle = color; c.fill();
-    c.lineWidth = (numero == null ? 1 : 2) * escala; c.strokeStyle = "#FFFFFF"; c.stroke();
+    c.lineWidth = (borde ? 3 : numero == null ? 1 : 2) * escala; c.strokeStyle = borde || "#FFFFFF"; c.stroke();
     if (numero != null) {
       c.fillStyle = NOCHE.tierra; c.font = "700 " + Math.round(radio * escala) + "px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
       c.fillText(String(numero), lado / 2, lado / 2 + escala / 2);
@@ -371,7 +385,7 @@ window.CofrialMapa = (function () {
     op = op || {};
     this.grupo = grupo; this.mapa = grupo.mapa; this.id = "cofrial-puntos-" + (++serieRutas); this.lista = lista || [];
     this.color = op.color || "#94A3B8"; this.radio = op.radio || 5; this.zoomMin = op.zoomMin; this.zoomMax = op.zoomMax;
-    this.visible = grupo.activo();
+    this.visible = grupo.activo(); this.foco = null;
     grupo.items.push(this);
     this.mapa.rutas.push(this);
     this.pintar();
@@ -379,7 +393,7 @@ window.CofrialMapa = (function () {
   Puntos.prototype.datos = function () {
     var n = this.mapa.nativo, yo = this;
     return {type: "FeatureCollection", features: this.lista.map(function (p, i) {
-      return {type: "Feature", properties: {i: i, img: iconoPunto(n, p.color || yo.color, yo.radioDe(p), p.numero), off: p.offset || [0, 0]},
+      return {type: "Feature", properties: {i: i, img: iconoPunto(n, p.color || yo.color, yo.radioDe(p), p.numero, p.borde), off: p.offset || [0, 0], grupo: p.grupo == null ? "" : String(p.grupo)},
               geometry: {type: "Point", coordinates: lngLat(p.pos)}};
     })};
   };
@@ -389,7 +403,14 @@ window.CofrialMapa = (function () {
     n.addSource(this.id, {type: "geojson", data: this.datos()});
     n.addLayer(Object.assign({id: this.id, type: "symbol", source: this.id, layout: {
       visibility: this.visible ? "visible" : "none", "icon-image": ["get", "img"], "icon-offset": ["get", "off"], "icon-allow-overlap": true, "icon-ignore-placement": true,
-      "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport"}}, rangoZoom(this)));
+      "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport"}, paint: {"icon-opacity": this.opacidad()}}, rangoZoom(this)));
+  };
+  Puntos.prototype.opacidad = function () { return this.foco == null ? 1 : ["case", ["==", ["get", "grupo"], this.foco], 1, .2]; };
+  Puntos.prototype.enfocar = function (grupo) {
+    this.foco = grupo == null ? null : String(grupo);
+    var n = this.mapa.nativo;
+    if (n && this.mapa.estiloListo && n.getLayer(this.id)) n.setPaintProperty(this.id, "icon-opacity", this.opacidad());
+    return this;
   };
   Puntos.prototype.radioDe = function (p) { return p.radio || (p.numero != null ? 14 : this.radio); };
   /* Se compara en píxeles contra la lista en vez de consultar la capa: es más barato al mover el mouse, y la consulta entrega el offset convertido en texto, que MapLibre rechaza. */
@@ -421,6 +442,159 @@ window.CofrialMapa = (function () {
     return this;
   };
 
+  /* ---------- ida y vuelta ---------- */
+  /* La ruta guardada es una sola línea base -> paradas -> base. La ida termina en la última parada; desde ahí es la vuelta. */
+  function partirRuta(r) {
+    var p = r.puntos || [], marcas = r.paradas || [], corte = -1;
+    marcas.forEach(function (m) { if (m.indice != null && m.indice > corte) corte = m.indice; });
+    if (corte < 0 || corte >= p.length) return {ida: p, vuelta: []};
+    return {ida: p.slice(0, corte + 1), vuelta: p.slice(corte)};
+  }
+  function largoKm(linea) {
+    var total = 0, rad = Math.PI / 180;
+    for (var i = 1; i < (linea || []).length; i++) {
+      var a = linea[i - 1], b = linea[i], dLat = (b[0] - a[0]) * rad, dLon = (b[1] - a[1]) * rad;
+      var h = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.pow(Math.sin(dLon / 2), 2);
+      total += 12742 * Math.asin(Math.sqrt(h));
+    }
+    return total;
+  }
+  function iconoFlecha(n, tramo, color) {
+    var nombre = "cofrial-flecha-" + tramo;
+    if (n.hasImage(nombre)) return nombre;
+    var escala = 2, ancho = 16 * escala, alto = 14 * escala, lienzo = document.createElement("canvas"), c = lienzo.getContext("2d");
+    lienzo.width = ancho; lienzo.height = alto;
+    c.beginPath(); c.moveTo(3 * escala, 2 * escala); c.lineTo(13 * escala, 7 * escala); c.lineTo(3 * escala, 12 * escala); c.lineTo(6 * escala, 7 * escala); c.closePath();
+    c.lineJoin = "round"; c.lineWidth = 2.5 * escala; c.strokeStyle = NOCHE.tierra; c.stroke();
+    c.fillStyle = color; c.fill();
+    n.addImage(nombre, c.getImageData(0, 0, ancho, alto), {pixelRatio: escala});
+    return nombre;
+  }
+  var TRAMOS = {ida: {color: COLOR_IDA, nombre: "Ida", salida: "S"}, vuelta: {color: COLOR_VUELTA, nombre: "Vuelta", salida: "R"}};
+  var DESPLAZA = ["interpolate", ["linear"], ["zoom"], 8, 1.5, 12, 2.5, 16, 4];                                                   // a la derecha del sentido de viaje
+  var DESPLAZA_FLECHA = ["interpolate", ["linear"], ["zoom"], 8, ["literal", [0, 1.5]], 12, ["literal", [0, 2.5]], 16, ["literal", [0, 4]]];
+  var ANCHO_LINEA = ["interpolate", ["linear"], ["zoom"], 8, 2.5, 13, 3.5, 16, 5];
+  var ATENUADA = .12;
+
+  function Recorridos(grupo, op) {
+    op = op || {};
+    this.grupo = grupo; this.mapa = grupo.mapa; this.id = "cofrial-recorridos-" + (++serieRutas); this.viajes = []; this.foco = null;
+    this.ver_ = {ida: true, vuelta: true}; this.visible = grupo.activo(); this.alElegir = op.alElegir || null; this.base = op.base || null;
+    grupo.items.push(this);
+    this.mapa.rutas.push(this);
+    this.marcas = this.base ? {ida: grupo.puntos([]), vuelta: grupo.puntos([])} : null;      // después de las líneas, para quedar sobre ellas
+    this.pintar();
+    if (this.alElegir && this.mapa.nativo) this.escuchar();
+  }
+  Recorridos.prototype.datos = function (tramo) {
+    var f = [];
+    this.viajes.forEach(function (v) {
+      var linea = v[tramo];
+      if (!linea || linea.length < 2) return;
+      f.push({type: "Feature", properties: {viaje: String(v.id), aprox: !!v.aproximada, hecho: tramo === "ida" && v.fase === "vuelta"}, geometry: {type: "LineString", coordinates: linea.map(lngLat)}});
+    });
+    return {type: "FeatureCollection", features: f};
+  };
+  Recorridos.prototype.opacidad = function (base, tenue) {
+    var propia = ["case", ["==", ["get", "hecho"], true], tenue, base];        // la ida ya recorrida pierde fuerza cuando el camión viene de vuelta
+    return this.foco == null ? propia : ["case", ["==", ["get", "viaje"], this.foco], propia, ATENUADA];
+  };
+  Recorridos.prototype.pintar = function () {
+    var n = this.mapa.nativo, yo = this;
+    if (!n || !this.mapa.estiloListo || n.getSource(this.id + "-ida")) return;
+    var antes = this.mapa.capaEtiquetas();
+    Object.keys(TRAMOS).forEach(function (t) {
+      var id = yo.id + "-" + t, color = TRAMOS[t].color, ver = yo.visible && yo.ver_[t] ? "visible" : "none", esVuelta = t === "vuelta";
+      n.addSource(id, {type: "geojson", data: yo.datos(t)});
+      n.addLayer({id: id + "-halo", type: "line", source: id, layout: {visibility: ver, "line-cap": "round", "line-join": "round"},
+                  paint: {"line-color": color, "line-width": 11, "line-blur": 7, "line-offset": DESPLAZA, "line-opacity": yo.opacidad(.42, .16)}}, antes);
+      var centro = {"line-color": color, "line-width": ANCHO_LINEA, "line-offset": DESPLAZA, "line-opacity": yo.opacidad(1, .45)};
+      if (esVuelta) centro["line-dasharray"] = [2, 1.6];
+      n.addLayer({id: id + "-centro", type: "line", source: id, filter: ["==", ["get", "aprox"], false], layout: {visibility: ver, "line-cap": esVuelta ? "butt" : "round", "line-join": "round"}, paint: centro}, antes);
+      n.addLayer({id: id + "-aprox", type: "line", source: id, filter: ["==", ["get", "aprox"], true], layout: {visibility: ver, "line-cap": "round", "line-join": "round"},
+                  paint: {"line-color": color, "line-width": ANCHO_LINEA, "line-offset": DESPLAZA, "line-opacity": yo.opacidad(1, .45), "line-dasharray": [.1, 2]}}, antes);
+      n.addLayer({id: id + "-flechas", type: "symbol", source: id, layout: {visibility: ver, "symbol-placement": "line", "symbol-spacing": 90, "icon-image": iconoFlecha(n, t, color), "icon-offset": DESPLAZA_FLECHA,
+                  "icon-rotation-alignment": "map", "icon-pitch-alignment": "map", "icon-allow-overlap": true, "icon-ignore-placement": true}, paint: {"icon-opacity": yo.opacidad(1, .45)}}, antes);
+    });
+  };
+  Recorridos.prototype.capas = function (t) { return [this.id + "-" + t + "-halo", this.id + "-" + t + "-centro", this.id + "-" + t + "-aprox", this.id + "-" + t + "-flechas"]; };
+  Recorridos.prototype.refrescar = function () {
+    var n = this.mapa.nativo, yo = this;
+    if (n && this.mapa.estiloListo) Object.keys(TRAMOS).forEach(function (t) { var f = n.getSource(yo.id + "-" + t); if (f) f.setData(yo.datos(t)); });
+    if (!this.marcas) return;
+    Object.keys(TRAMOS).forEach(function (t) {
+      var hay = yo.viajes.some(function (v) { return v[t] && v[t].length > 1; }), esIda = t === "ida";
+      yo.marcas[t].actualizar(hay ? [{pos: yo.base, numero: TRAMOS[t].salida, color: TRAMOS[t].color, radio: 10, offset: [esIda ? -30 : 30, -8], popup: esIda ? "Salida del frigorífico" : "Regreso al frigorífico"}] : []);
+    });
+  };
+  Recorridos.prototype.poner = function (lista) {
+    this.viajes = (lista || []).map(function (v) {
+      var partes = v.ruta ? partirRuta(v.ruta) : v;
+      return {id: v.id, ida: partes.ida || [], vuelta: partes.vuelta || [], aproximada: v.ruta ? !!v.ruta.aproximada : !!v.aproximada, fase: v.fase || "ida"};
+    });
+    this.refrescar();
+    return this;
+  };
+  Recorridos.prototype.sacar = function (id) {
+    var antes = this.viajes.length;
+    this.viajes = this.viajes.filter(function (v) { return String(v.id) !== String(id); });
+    if (this.viajes.length !== antes) this.refrescar();
+    return this;
+  };
+  Recorridos.prototype.fase = function (id, fase) {
+    var v = this.viajes.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (v && v.fase !== fase) { v.fase = fase; this.refrescar(); }                  // solo al cambiar: una lectura de 5 s no toca las fuentes
+    return this;
+  };
+  Recorridos.prototype.aplicarVisibilidad = function () {
+    var n = this.mapa.nativo, yo = this;
+    Object.keys(TRAMOS).forEach(function (t) {
+      var ver = yo.visible && yo.ver_[t];
+      if (n && yo.mapa.estiloListo) yo.capas(t).forEach(function (c) { if (n.getLayer(c)) n.setLayoutProperty(c, "visibility", ver ? "visible" : "none"); });
+      if (yo.marcas) yo.marcas[t].alternar(ver);
+    });
+  };
+  Recorridos.prototype.ver = function (tramo, activo) { this.ver_[tramo] = !!activo; this.aplicarVisibilidad(); return this; };
+  Recorridos.prototype.alternar = function (ver) { this.visible = ver; this.aplicarVisibilidad(); };
+  Recorridos.prototype.mostrar = function (ver) { this.alternar(!!ver); return this; };
+  Recorridos.prototype.enfocar = function (id) {
+    this.foco = id == null || id === "" ? null : String(id);
+    var n = this.mapa.nativo, yo = this;
+    if (!n || !this.mapa.estiloListo) return this;
+    Object.keys(TRAMOS).forEach(function (t) {
+      var pre = yo.id + "-" + t;
+      if (!n.getLayer(pre + "-halo")) return;
+      n.setPaintProperty(pre + "-halo", "line-opacity", yo.opacidad(.42, .16));
+      n.setPaintProperty(pre + "-centro", "line-opacity", yo.opacidad(1, .45));
+      n.setPaintProperty(pre + "-aprox", "line-opacity", yo.opacidad(1, .45));
+      n.setPaintProperty(pre + "-flechas", "icon-opacity", yo.opacidad(1, .45));
+    });
+    return this;
+  };
+  /* Tocar una línea elige su viaje y tocar el fondo vuelve a todos. Los marcadores y los puntos tienen su propio popup: esos toques no cuentan. */
+  Recorridos.prototype.escuchar = function () {
+    var yo = this, n = this.mapa.nativo;
+    n.on("click", function (e) {
+      if (e.originalEvent.target !== n.getCanvas() || !yo.mapa.estiloListo || yo.mapa.puntoEn(e.point)) return;
+      var capas = [], t = 8;
+      Object.keys(TRAMOS).forEach(function (k) { if (yo.ver_[k]) [yo.id + "-" + k + "-centro", yo.id + "-" + k + "-aprox"].forEach(function (c) { if (n.getLayer(c)) capas.push(c); }); });
+      var f = capas.length ? n.queryRenderedFeatures([[e.point.x - t, e.point.y - t], [e.point.x + t, e.point.y + t]], {layers: capas}) : [];
+      yo.alElegir(f.length ? f[0].properties.viaje : null, f.length && f[0].layer.id.indexOf("-vuelta-") > 0 ? "vuelta" : "ida");
+    });
+  };
+  Recorridos.prototype.quitar = function () {
+    var n = this.mapa.nativo, yo = this;
+    Object.keys(TRAMOS).forEach(function (t) {
+      if (n && yo.mapa.estiloListo && n.getSource(yo.id + "-" + t)) {
+        yo.capas(t).forEach(function (c) { if (n.getLayer(c)) n.removeLayer(c); });
+        n.removeSource(yo.id + "-" + t);
+      }
+      if (yo.marcas) yo.marcas[t].quitar();
+    });
+    [this.grupo.items, this.mapa.rutas].forEach(function (lista) { var i = lista.indexOf(this); if (i >= 0) lista.splice(i, 1); }, this);
+    return this;
+  };
+
   /* ---------- grupos y mapa ---------- */
   function Grupo(mapa, op) {
     op = op || {};
@@ -441,6 +615,7 @@ window.CofrialMapa = (function () {
   Grupo.prototype.base = function (pos, op) { return new Marcador(this, pos, base(op && op.etiqueta), op); };
   Grupo.prototype.puntos = function (lista, op) { return new Puntos(this, lista, op); };
   Grupo.prototype.ruta = function (linea, op) { return new Ruta(this, linea, op); };
+  Grupo.prototype.recorridos = function (op) { return new Recorridos(this, op); };
   Grupo.prototype.limpiar = function () {
     this.items.slice().forEach(function (x) { x.quitar(); });
     return this;
@@ -495,6 +670,8 @@ window.CofrialMapa = (function () {
     /* Sin este oyente MapLibre escribe cada tesela fallida en la consola. Si ninguna llega, el mapa queda como en el respaldo local y se avisa. */
     n.on("error", function (e) { if (yo.fuentesBase.indexOf(e.sourceId) >= 0 && !yo.huboTesela) yo.avisoBase(true); });
     n.on("sourcedata", function (e) { if (e.tile && yo.fuentesBase.indexOf(e.sourceId) >= 0 && !yo.huboTesela) { yo.huboTesela = true; yo.avisoBase(false); } });
+    /* El estilo de OpenFreeMap pide «circle-11» al alejar y su sprite no lo trae: una imagen vacía evita el aviso en consola y deja solo el nombre del pueblo. */
+    n.on("styleimagemissing", function (e) { if (!n.hasImage(e.id)) n.addImage(e.id, {width: 1, height: 1, data: new Uint8Array(4)}); });
     n.on("zoomend", function () { yo.redimensionarCamiones(); });
     n.on("zoom", function () { yo.revisarZoom(); });
     n.on("click", function (e) {
@@ -638,9 +815,10 @@ window.CofrialMapa = (function () {
     });
     this.oyentes.camiones.forEach(function (fn) { fn(); });
   };
-  ["marcador", "camion", "parada", "destino", "base", "puntos", "ruta"].forEach(function (nombre) {
+  ["marcador", "camion", "parada", "destino", "base", "puntos", "ruta", "recorridos"].forEach(function (nombre) {
     Mapa.prototype[nombre] = function () { return this.raiz[nombre].apply(this.raiz, arguments); };
   });
+
 
   function crear(id, centro, zoom, opciones) { return new Mapa(id, centro, zoom, opciones); }
 
@@ -668,10 +846,35 @@ window.CofrialMapa = (function () {
     return (r.metros / 1000).toFixed(1).replace(".", ",") + " km · unos " + Math.max(1, Math.round(r.segundos / 60)) + " min";
   }
 
+  /* Fila de una lista de paradas: «**cliente** · dirección (detalle)». El nombre y la dirección los escribe el cliente al registrarse, así que
+     entran como texto y nunca como HTML. */
+  function filaParada(cliente, direccion, detalle) {
+    var li = document.createElement("li"), nombre = document.createElement("b"), nota = document.createElement("span");
+    nombre.textContent = cliente;
+    nota.className = "frio";
+    nota.textContent = detalle;
+    li.appendChild(nombre);
+    li.appendChild(document.createTextNode(" · " + direccion + " "));
+    li.appendChild(nota);
+    return li;
+  }
+
+  /* Contenido de un popup con datos variables. Leaflet interpreta un texto como HTML; un nodo lo deja tal cual. Una línea por cada texto. */
+  function popupTexto(lineas) {
+    var caja = document.createElement("div");
+    lineas.forEach(function (linea) {
+      var d = document.createElement("div");
+      d.textContent = linea;
+      caja.appendChild(d);
+    });
+    return caja;
+  }
+
   /* La ruta que calculó y guardó el servidor ({puntos, km, minutos, aproximada}): se dibuja tal cual, sin volver a pedirle nada a OSRM. */
   function rutaGuardada(r) {
     return {linea: r.puntos, metros: r.aproximada ? null : r.km * 1000, segundos: (r.minutos || 0) * 60, orden: null, aproximada: !!r.aproximada};
   }
 
-  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto, PALETA: PALETA, COLOR_RUTA: COLOR_RUTA};
+  return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto, PALETA: PALETA, COLOR_RUTA: COLOR_RUTA, COLOR_IDA: COLOR_IDA, COLOR_VUELTA: COLOR_VUELTA,
+          partirRuta: partirRuta, largoKm: largoKm, filaParada: filaParada, popupTexto: popupTexto};
 })();

@@ -1,17 +1,18 @@
 -- Consultas de ejemplo para el dashboard de Grafana. Cruzan ventas por canal con alertas de cadena de frío.
 
+-- RN-23: v_orden_total.total_clp suma solo lo aceptado; lo rechazado al recibir queda en rechazado_clp y unidades_rechazadas.
 -- 1. Ventas por día y canal (B2B / B2C), en pesos.
 SELECT date_trunc('day', o.creada_en) AS dia, o.canal,
        t.total_clp AS ventas_clp_orden, o.orden_id
 FROM v_orden o
 JOIN v_orden_total t ON t.orden_id = o.orden_id
-WHERE o.estado_orden_id <> (SELECT estado_orden_id FROM estado_orden WHERE nombre = 'Cancelada')
+WHERE o.estado_orden_id NOT IN (SELECT estado_orden_id FROM estado_orden WHERE nombre IN ('Cancelada', 'Rechazada en recepción'))
 ORDER BY 1, 2;
 
 -- 1b. Resumen por día y canal.
 SELECT date_trunc('day', o.creada_en) AS dia, o.canal, sum(t.total_clp) AS ventas_clp, count(*) AS ordenes
 FROM v_orden o JOIN v_orden_total t ON t.orden_id = o.orden_id
-WHERE o.estado_orden_id <> (SELECT estado_orden_id FROM estado_orden WHERE nombre = 'Cancelada')
+WHERE o.estado_orden_id NOT IN (SELECT estado_orden_id FROM estado_orden WHERE nombre IN ('Cancelada', 'Rechazada en recepción'))
 GROUP BY 1, 2 ORDER BY 1, 2;
 
 -- 2. Alertas de ruptura de frío por día y camión.
@@ -32,15 +33,16 @@ FROM v FULL JOIN a ON a.dia = v.dia ORDER BY 1;
 SELECT DISTINCT o.orden_id, c.nombre AS cliente, d.camion_id
 FROM v_orden o
 JOIN cliente c ON c.cliente_id = o.cliente_id
+JOIN orden x ON x.orden_id = o.orden_id
 JOIN despacho d ON d.despacho_id = o.despacho_id
-JOIN telemetria t ON t.camion_id = d.camion_id AND t.alerta_ruptura_frio
+JOIN telemetria t ON t.camion_id = d.camion_id AND t.camara = x.camara AND t.alerta_ruptura_frio
  AND t.registrado_en BETWEEN d.salida_en AND coalesce(d.llegada_en, now());
 
--- 5. Control de consistencia: lecturas cuya alerta no coincide con el rango del camión (debe dar 0 filas).
+-- 5. Control de consistencia: lecturas cuya alerta no coincide con el rango de su cámara (debe dar 0 filas).
 SELECT t.telemetria_id, t.camion_id, t.temp_camara, t.alerta_ruptura_frio
 FROM telemetria t
 JOIN camion ca ON ca.camion_id = t.camion_id
-JOIN rango_temperatura r ON r.rango_temperatura_id = ca.rango_temperatura_id
+JOIN rango_temperatura r ON r.rango_temperatura_id = CASE WHEN t.camara = 2 THEN ca.rango_secundario_id ELSE ca.rango_temperatura_id END
 WHERE t.alerta_ruptura_frio <> (t.temp_camara < r.temp_min_c OR t.temp_camara > r.temp_max_c);
 
 -- 6. Conversión del mes: prospectos ganados sobre cerrados (ganados + perdidos).
@@ -68,3 +70,16 @@ HAVING max(i.registrada_en) IS NULL OR max(i.registrada_en) < now() - interval '
 -- 9. Tiempo medio de primera respuesta a requerimientos, en minutos.
 SELECT round(avg(extract(epoch FROM (respondido_en - creado_en)) / 60)::numeric, 1) AS minutos_primera_respuesta
 FROM requerimiento WHERE respondido_en IS NOT NULL;
+
+-- 10. Lo rechazado al recibir por canal y motivo, y cuántos de esos pedidos tuvieron alerta de frío durante su viaje (RN-23 cruzada con RN-13).
+SELECT o.canal, i.motivo_rechazo, count(DISTINCT o.orden_id) AS pedidos, sum(i.cantidad_rechazada) AS unidades,
+       sum(i.cantidad_rechazada * i.precio_unitario_clp) AS rechazado_clp,
+       count(DISTINCT o.orden_id) FILTER (WHERE EXISTS (
+         SELECT 1 FROM telemetria t WHERE t.camion_id = d.camion_id AND t.alerta_ruptura_frio AND t.registrado_en >= d.salida_en
+           AND t.registrado_en <= coalesce(x.entrega_resuelta_en, d.llegada_en, now()))) AS pedidos_con_alerta
+FROM v_orden o
+JOIN orden x ON x.orden_id = o.orden_id
+JOIN orden_item i ON i.orden_id = o.orden_id
+LEFT JOIN despacho d ON d.despacho_id = o.despacho_id
+WHERE i.cantidad_rechazada > 0
+GROUP BY 1, 2 ORDER BY 1, 5 DESC;

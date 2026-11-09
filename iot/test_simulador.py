@@ -1,6 +1,7 @@
 """Pruebas del movimiento del camión (sin base de datos). Desde iot/:  CAMION_ID=CAM-01 python -m unittest test_simulador"""
 import os
 import unittest
+from unittest import mock
 
 os.environ.setdefault("CAMION_ID", "CAM-01")
 os.environ["VELOCIDAD_MEDIA_KMH"] = "120"      # rápido para que las pruebas sean cortas
@@ -569,3 +570,25 @@ class VelocidadCompartidaTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DosCamarasTests(unittest.TestCase):
+    def test_un_camion_simple_no_informa_segunda_camara(self):
+        self.assertIsNone(sim.Camion("CAM-01", 0, 4).paso_segunda())
+
+    def test_la_segunda_camara_mantiene_su_rango_sin_falla(self):
+        c = sim.Camion("CAM-05", 0, 4, (-25, -18))
+        with mock.patch.object(sim, "PROB_RUPTURA", 0):
+            for _ in range(30):
+                temp, alerta = c.paso_segunda()
+                self.assertFalse(alerta)
+                self.assertLess(temp, -17)
+
+    def test_una_falla_en_la_segunda_camara_no_toca_la_primera(self):
+        c = sim.Camion("CAM-05", 0, 4, (-25, -18))
+        c.segunda["ruptura"] = 14
+        c.segunda["temp"] = -18.5
+        with mock.patch.object(sim, "PROB_RUPTURA", 0):
+            alertas = [c.paso_segunda()[1] for _ in range(5)]
+            self.assertTrue(any(alertas))
+            self.assertFalse(c.paso()[4])

@@ -4,6 +4,8 @@
   viene apagado (en la defensa toda la sala sale por una sola IP pública). Ambos se ajustan por entorno (ver settings.py).
   Vale para el ingreso de la tienda y para el del panel de administración.
 - Barrido de rutas: quien acumula muchos «no encontrado» (buscando /wp-admin, /.env, /phpmyadmin…) queda con 429 hasta que vence la ventana.
+  El ingreso (tienda y panel) queda fuera de ese bloqueo: la sala o el laboratorio salen por una sola IP, y un visitante que pruebe 60 direcciones
+  no puede dejar a los demás sin poder ingresar. El ingreso se protege con su propio contador de claves malas (arriba).
 - Registro y soporte: tope por hora, porque crean cuentas y gastan la cuota gratuita de la IA.
 - Entradas absurdas: bytes NUL, números fuera de rango o textos más largos que la columna dan 400 y no 500.
 - Base de datos caída: 503 con aviso de reintentar, sin traza y sin depender de la base para dibujar la página.
@@ -107,6 +109,11 @@ def limpiar_fallos(sender, request, user, **kwargs):
 ICONOS_DEL_NAVEGADOR = {"/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"}
 
 
+def _rutas_de_ingreso():
+    """Las pantallas de ingreso: el barrido de 404 no las bloquea (tienen su propio límite de claves malas por cuenta)."""
+    return (reverse("entrar"), reverse("admin:login"))
+
+
 class ProteccionMiddleware:
     """Va antes que sesiones y autenticación: corta rápido a quien ya excedió un límite."""
 
@@ -126,7 +133,7 @@ class ProteccionMiddleware:
         return respuesta
 
     def _bloqueo(self, request, ip):
-        if _cuenta(f"escaneo:{ip}") > settings.ESCANEO_MAX_404:
+        if request.path not in _rutas_de_ingreso() and _cuenta(f"escaneo:{ip}") > settings.ESCANEO_MAX_404:
             return demasiadas("Detectamos demasiadas búsquedas de páginas que no existen desde tu conexión.", settings.ESCANEO_VENTANA_SEG)
         if "\x00" in request.path or any("\x00" in k or "\x00" in v for k, v in request.GET.items()):
             return error_400(request)

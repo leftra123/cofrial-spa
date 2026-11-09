@@ -53,6 +53,8 @@ ESPERADO = {
     '/crm/alertas/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/flota/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/sugerencias/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
+    '/api/avisos-equipo/': ('403 403 403 200 200 200 200', '405 405 405 405 405 405 405'),      # avisos del menú interno; los clientes usan /api/avisos/
+    '/flota/por-despachar/': ('L 403 403 403 200 200 200', '405 405 405 405 405 405 405'),      # el contador del menú: los mismos roles que ven Flota; solo lectura
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 403 →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
@@ -120,6 +122,7 @@ ESPERADO = {
     '/pedidos/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
     '/soporte/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
     '/pedidos/999999/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
+    '/pedidos/999999/documentos/999999/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
     '/pedidos/999999/oc/': ('405 405 405 405 405 405 405', 'L →/pedidos/… →/pedidos/… 403 403 403 403'),
     '/pedidos/999999/entrega/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
     '/pedidos/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 404 404 403 403 403 403'),

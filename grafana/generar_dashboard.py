@@ -4,11 +4,13 @@ import pathlib
 
 DS = {"type": "postgres", "uid": "cofrial-pg"}
 SIN_CANCELADAS = "e.nombre <> 'Cancelada'"
+# RN-23: t.total_clp ya es solo lo aceptado. Un pedido rechazado entero vale $0 y tampoco cuenta como venta; sí sigue en los pedidos afectados por frío.
+SIN_VENTA = "e.nombre NOT IN ('Cancelada', 'Rechazada en recepción')"
 VENTAS = f"""FROM v_orden o JOIN v_orden_total t USING (orden_id)
-JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE {SIN_CANCELADAS}"""
-# RN-13, igual que crm.servicios.fin_de_exposicion: una orden entregada deja de estar expuesta al recibirse; las demás, al volver el camión.
-A_BORDO = """m.camion_id = d.camion_id AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
-  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre = 'Entregada' THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
+JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id WHERE {SIN_VENTA}"""
+# Solo cuenta la cámara en la que viaja la orden. RN-13, igual que crm.servicios.fin_de_exposicion: una orden entregada o rechazada deja de estar expuesta al resolverse la recepción; las demás, al volver el camión.
+A_BORDO = """m.camion_id = d.camion_id AND m.camara = x.camara AND m.alerta_ruptura_frio AND m.registrado_en >= d.salida_en
+  AND m.registrado_en <= COALESCE(CASE WHEN e.nombre IN ('Entregada', 'Rechazada en recepción') THEN COALESCE(x.entrega_resuelta_en, d.llegada_en) ELSE d.regreso_en END, now())"""
 AFECTADAS = f"""FROM v_orden o JOIN v_orden_total t USING (orden_id)
 JOIN orden x USING (orden_id)
 JOIN despacho d ON d.despacho_id = o.despacho_id
@@ -75,9 +77,9 @@ def seccion(titulo, y):
 paneles = [
     seccion("1 · Resumen del período: cuánto vendimos y cuánto está en riesgo (el selector de tiempo de arriba a la derecha define el período)", 0),
     stat_monto("Ventas", f"SELECT {pesos('coalesce(sum(t.total_clp),0)')} AS ventas {VENTAS} AND $__timeFilter(o.creada_en)", 0, 1,
-         descripcion="Suma de todas las órdenes creadas en el período, B2B y B2C, sin las canceladas."),
+         descripcion="Suma de lo aceptado en las órdenes creadas en el período, B2B y B2C. No cuenta las canceladas ni las unidades rechazadas al recibir."),
     stat("Pedidos", f"SELECT count(*) AS pedidos {VENTAS} AND $__timeFilter(o.creada_en)", 4, 1,
-         descripcion="Cantidad de órdenes creadas en el período, sin las canceladas."),
+         descripcion="Cantidad de órdenes creadas en el período, sin las canceladas ni las rechazadas enteras al recibir."),
     stat("Alertas (período)", "SELECT count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en)", 8, 1, rojo_desde=1,
          descripcion="Cuántas veces un camión reportó la cámara fuera de su rango de temperatura durante el período. Cada camión reporta cada 5 s, así que una sola falla suma varias lecturas."),
     stat("En alerta AHORA", "SELECT count(DISTINCT camion_id) AS camiones FROM telemetria WHERE alerta_ruptura_frio AND registrado_en >= now() - interval '30 seconds'", 12, 1, rojo_desde=1,
@@ -85,7 +87,7 @@ paneles = [
     stat("Pedidos afectados", f"SELECT count(*) AS pedidos {AFECTADAS}", 16, 1, rojo_desde=1,
          descripcion="Órdenes despachadas cuyo camión reportó una lectura fuera de rango durante el viaje."),
     stat_monto("Ventas en riesgo", f"SELECT {pesos('coalesce(sum(t.total_clp),0)')} AS en_riesgo {AFECTADAS}", 20, 1, rojo_si_hay_monto=True,
-         descripcion="Monto de los pedidos afectados: lo que la ruptura de frío pone en juego."),
+         descripcion="Monto aceptado de los pedidos afectados: lo que la ruptura de frío pone en juego. Lo que el cliente ya rechazó no suma aquí: está abajo, en la sección 5."),
     seccion("2 · Cruce de ventas por canal con las alertas de ruptura de frío", 5),
     panel("Ventas vs alertas de frío en el tiempo", "timeseries", 0, 6, 16, 9, [
         consulta(f"SELECT $__timeGroupAlias(o.creada_en,'10m'), o.canal AS metric, sum(t.total_clp) AS value {VENTAS} AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY 1", "time_series", "A"),
@@ -101,7 +103,7 @@ paneles = [
           descripcion="Cuánto del total vendido vino de cada canal: B2B (instituciones con lista de precios) y B2C (público general)."),
     seccion("3 · Flota en vivo: 50 camiones en toda La Araucanía, con base en Temuco (se actualiza cada 5 s)", 15),
     tiempo_simulacion(0, 16, 14),
-    panel("Posición actual de la flota", "geomap", 0, 18, 14, 13, [consulta("SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC")],
+    panel("Posición actual de la flota", "geomap", 0, 18, 14, 13, [consulta("SELECT DISTINCT ON (camion_id) camion_id, lat, \"long\", temp_camara, CASE WHEN alerta_ruptura_frio THEN 1 ELSE 0 END AS estado FROM telemetria WHERE registrado_en >= now() - interval '2 minutes' ORDER BY camion_id, registrado_en DESC, alerta_ruptura_frio DESC")],
           {"view": {"id": "coords", "lat": -38.58, "lon": -72.55, "zoom": 7.6}, "controls": {"showZoom": True, "mouseWheelZoom": True},
            "basemap": {"type": "osm-standard", "name": "Mapa"},
            "layers": [{"type": "markers", "name": "Camiones", "config": {"showLegend": False, "style": {"size": {"fixed": 11, "min": 2, "max": 15}, "opacity": 0.95, "color": {"field": "estado", "fixed": "dark-green"},
@@ -110,7 +112,7 @@ paneles = [
           {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": None}, {"color": "red", "value": 1}]},
            "mappings": [{"type": "value", "options": {"0": {"text": "Normal", "color": "green", "index": 0}, "1": {"text": "Ruptura de frío", "color": "red", "index": 1}}}]},
           descripcion="Última posición de cada camión que reportó en los últimos 2 minutos. Verde = temperatura normal, rojo = ruptura de frío. Los camiones cercanos al centro hacen reparto urbano en Temuco; los lejanos van o vuelven de ciudades de La Araucanía. Pasa el mouse sobre un camión para ver su temperatura."),
-    panel("Temperatura de cámara (camiones elegidos arriba)", "timeseries", 14, 16, 10, 7, [consulta("SELECT registrado_en AS time, camion_id AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1", "time_series")],
+    panel("Temperatura de cámara (camiones elegidos arriba)", "timeseries", 14, 16, 10, 7, [consulta("SELECT registrado_en AS time, CASE WHEN camara = 2 THEN camion_id || ' cámara 2' ELSE camion_id END AS metric, temp_camara AS value FROM telemetria WHERE $__timeFilter(registrado_en) AND camion_id IN ($camion) ORDER BY 1", "time_series")],
           {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}, {"unit": "celsius", "custom": {"lineWidth": 2, "fillOpacity": 0}},
           descripcion="Una línea por camión elegido en el selector «Camión» de la parte superior (por defecto CAM-01 a CAM-03). Una subida brusca fuera del rango del camión es una ruptura de frío."),
     panel("Camiones con más alertas de frío (período)", "bargauge", 14, 23, 10, 8, [consulta("SELECT camion_id AS camion, count(*) AS alertas FROM telemetria WHERE alerta_ruptura_frio AND $__timeFilter(registrado_en) GROUP BY 1 ORDER BY 2 DESC LIMIT 10")],
@@ -129,11 +131,26 @@ WHERE d.salida_en IS NOT NULL AND {SIN_CANCELADAS} GROUP BY 1,2,3,4,6 ORDER BY 5
            {"matcher": {"id": "byName", "options": "Lecturas con alerta"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}},
                                                                                      {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "orange", "value": None}, {"color": "red", "value": 10}]}}]}],
           "Órdenes despachadas cuyo camión reportó temperatura fuera de rango mientras iba en ruta. Más lecturas con alerta = más tiempo expuesto al calor."),
+    seccion("5 · Recepción: lo que el cliente rechazó al recibir, por canal y motivo, cruzado con las alertas de frío", 39),
+    stat_monto("Rechazado en recepción", f"SELECT {pesos('coalesce(sum(t.rechazado_clp),0)')} AS rechazado FROM v_orden o JOIN v_orden_total t USING (orden_id) WHERE $__timeFilter(o.creada_en)", 0, 40, w=6, rojo_si_hay_monto=True,
+         descripcion="Valor de las unidades rechazadas en las órdenes del período: venta que se perdió en la puerta. Es neto en B2B e IVA incluido en B2C, igual que Ventas."),
+    stat("Unidades rechazadas", "SELECT coalesce(sum(t.unidades_rechazadas),0) AS unidades FROM v_orden o JOIN v_orden_total t USING (orden_id) WHERE $__timeFilter(o.creada_en)", 0, 44, w=6, rojo_desde=1,
+         descripcion="Unidades que los clientes no aceptaron al revisar el pedido. No vuelven a la venta sin revisión de bodega."),
+    panel("Rechazos por canal y motivo", "table", 6, 40, 18, 8, [consulta(f"""SELECT o.canal AS "Canal", CASE i.motivo_rechazo WHEN 'temperatura' THEN 'Temperatura' WHEN 'faltante' THEN 'Faltante' WHEN 'danado' THEN 'Dañado' ELSE 'Otro' END AS "Motivo",
+count(DISTINCT o.orden_id) AS "Pedidos", sum(i.cantidad_rechazada) AS "Unidades", {pesos('sum(i.cantidad_rechazada * i.precio_unitario_clp)')} AS "Monto",
+count(DISTINCT o.orden_id) FILTER (WHERE EXISTS (SELECT 1 FROM telemetria m WHERE {A_BORDO})) AS "Pedidos con alerta de frío"
+FROM v_orden o JOIN orden x USING (orden_id) JOIN orden_item i USING (orden_id)
+JOIN estado_orden e ON e.estado_orden_id = o.estado_orden_id
+LEFT JOIN despacho d ON d.despacho_id = o.despacho_id
+WHERE i.cantidad_rechazada > 0 AND $__timeFilter(o.creada_en) GROUP BY 1,2 ORDER BY sum(i.cantidad_rechazada * i.precio_unitario_clp) DESC""")],
+          {"showHeader": True}, {"custom": {"align": "auto"}, "noValue": "Sin rechazos en el período"},
+          [{"matcher": {"id": "byName", "options": "Monto"}, "properties": [{"id": "custom.align", "value": "right"}]}],
+          "Cruza lo rechazado con la telemetría: si el cliente rechazó por temperatura y el camión registró alerta en el viaje, el reclamo tiene respaldo. Un rechazo por temperatura sin alerta conviene revisarlo aparte."),
 ]
 
 dashboard = {
     "uid": "cofrial-torre", "title": "Cofrial: ventas y cadena de frío", "tags": ["cofrial", "bi"], "timezone": "browser",
-    "schemaVersion": 39, "version": 3, "refresh": "5s", "time": {"from": "now-6h", "to": "now"},
+    "schemaVersion": 39, "version": 4, "refresh": "5s", "time": {"from": "now-6h", "to": "now"},
     "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m"]}, "panels": paneles, "annotations": {"list": []},
     "templating": {"list": [{"name": "camion", "label": "Camión", "type": "query", "datasource": DS, "query": "SELECT camion_id FROM camion ORDER BY 1", "refresh": 1, "multi": True, "includeAll": False,
                              "current": {"selected": True, "text": ["CAM-01", "CAM-02", "CAM-03"], "value": ["CAM-01", "CAM-02", "CAM-03"]}, "sort": 1}]},

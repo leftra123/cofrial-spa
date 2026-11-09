@@ -23,6 +23,14 @@ from .models import CategoriaRequerimiento, EtapaPipeline, Prospecto
 ERRORES = (pedidos.ErrorDeNegocio, ValueError)
 
 
+def _seccion(ruta):
+    """Cómo nombra el 403 a la sección a la que se intentó entrar (antes todas decían «del CRM», también la flota)."""
+    for prefijo, nombre in (("/flota/", "a la flota"), ("/crm/", "al CRM"), ("/demo/", "al modo demostración")):
+        if ruta.startswith(prefijo):
+            return nombre
+    return "a esta sección"
+
+
 def con_rol(*roles):
     """Permiso por rol (Tabla 2 del informe). Los clientes del portal no entran al CRM."""
     def decorador(vista):
@@ -34,7 +42,7 @@ def con_rol(*roles):
                 return redirect(entradas.url_de_ingreso(request, "/crm/"))
             mi_rol = s.rol(request.user)
             if mi_rol not in roles:
-                return render(request, "403.html", {"detalle": "Tu cuenta no tiene acceso a esta sección del CRM."}, status=403)
+                return render(request, "403.html", {"detalle": f"Tu cuenta no tiene acceso {_seccion(request.path)}."}, status=403)
             request.rol = mi_rol
             return vista(request, *args, **kwargs)
         return envoltura
@@ -268,7 +276,8 @@ def requerimiento_detalle(request, pk):
     d = r.desglose or None
     habla_de_frio = (d or {}).get("motivo_principal") == "temperatura_inadecuada" or any(p in f"{r.asunto} {r.descripcion}".lower() for p in PALABRAS_DE_FRIO)
     dato = s.telemetria_del_viaje(r.orden) if r.orden_id and habla_de_frio else None      # sin IA también: la telemetría no depende de ella
-    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
+    rechazo = pedidos.rechazo_de(r.orden) if r.orden_id else None
+    return render(request, "crm/requerimiento.html", _contexto(request, r=r, d=d, dato=dato, rechazo=rechazo, umbral=s.UMBRAL_CONFIANZA, categorias=CategoriaRequerimiento.objects.all()))
 
 
 @require_POST

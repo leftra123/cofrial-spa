@@ -22,7 +22,7 @@
 | Base de datos | RDS PostgreSQL | PostgreSQL instalado en EC2 | Menos control del servidor a cambio de respaldos y parches gestionados |
 | IoT | EC2 dedicada con Docker | Simulador en la misma EC2 del backend | Una instancia más de créditos a cambio de aislar la carga de telemetría de la web |
 | Escenarios del simulador | Tabla en RDS que los contenedores leen en cada ciclo | Endpoint en el contenedor o consulta a la API web | Hasta un ciclo de espera a cambio de no abrir puertos en la EC2 IoT ni hacerla depender de la EC2 web |
-| Disponibilidad | Single-AZ en el prototipo, Multi-AZ en producción | Multi-AZ desde el inicio | Riesgo de caída por zona a cambio de costo cero y compatibilidad con el Learner Lab |
+| Disponibilidad | Balanceador, dos web y RDS Multi-AZ en dos zonas | Single-AZ con una sola web | Más créditos y más piezas a cambio de sobrevivir a la caída de una zona (exigido en la revisión técnica del 8-nov-2026) |
 | Respaldos | Respaldos automáticos de RDS más un snapshot manual antes de cualquier borrado | Respaldos manuales periódicos | Costo de almacenamiento a cambio de eliminar la dependencia de una persona |
 
 *Nota.* Elaboración propia.
@@ -89,15 +89,15 @@
 
 **Limitación del prototipo.** Los camiones reales no insertarían directamente en la base de datos: lo harían a través de un gateway o un protocolo de mensajería (por ejemplo MQTT) con una API de ingesta que valide y limite el tráfico. Insertar directo acopla el dispositivo a la base. Se acepta porque Cofrial requiere la inyección automatizada a la BD y el nodo simula justamente el borde.
 
-### 6. Disponibilidad: Single-AZ en el prototipo
+### 6. Disponibilidad: balanceador, dos web y RDS Multi-AZ
 
-**Decisión.** Todo en una sola zona de disponibilidad.
+**Decisión.** Un Application Load Balancer internet-facing repartido en dos zonas de disponibilidad, dos EC2 web idénticas (una por zona) registradas en su grupo de destino y RDS PostgreSQL en modo Multi-AZ. El ALB envía tráfico solo a la web que responde `/salud/` (chequeo cada 15 s; dos fallos la sacan de rotación) y mantiene a cada visitante en la misma web con una cookie de afinidad. RDS mantiene una réplica síncrona en la otra zona y conmuta sola si cae la principal, sin cambiar el endpoint. El simulador IoT sigue en una sola EC2 dedicada porque el requerimiento de redundancia es para web y base de datos.
 
-**Por qué.** El Learner Lab no soporta Multi-AZ en RDS, y aunque lo soportara duplicaría el costo en créditos. Es una restricción del entorno, no una omisión de diseño.
+**Por qué.** En la revisión técnica del 8-nov-2026 el evaluador condicionó la aprobación a incorporar balanceador y despliegue redundante en múltiples zonas. Es también la respuesta directa al dolor original del caso: un servidor único cuya caída detiene la operación.
 
-**Qué se cede.** Una caída de la zona deja sin servicio al sistema completo. Cofrial hoy tiene un punto único de falla en el servidor de la bodega; el prototipo mejora los respaldos y la recuperación, pero no la alta disponibilidad, y así debe decirse en la defensa.
+**Qué se cede.** Más créditos del laboratorio (segunda EC2 web, ALB y réplica de RDS) y más piezas que operar. Como la caché de Django es memoria de cada proceso, los contadores de intentos de ingreso quedan por instancia; la afinidad del ALB mantiene a cada usuario en una sola web y limita el efecto. Solo la web primaria migra la base y corre el podador y el despachador, para que dos instancias nunca hagan lo mismo a la vez. Quedan sin cubrir la caída de la región completa y la del propio ALB (servicio gestionado por AWS, repartido en las dos zonas).
 
-**Mitigación.** Los datos quedan protegidos por los respaldos de RDS, y la aplicación se reconstruye en minutos con Docker Compose en una instancia nueva. En producción: Multi-AZ para RDS y dos instancias web detrás de un balanceador.
+**Mitigación y prueba.** La caída de una zona se demuestra apagando una web desde la consola de EC2 (el sitio sigue respondiendo por la otra) y forzando la conmutación de la base con `aws rds reboot-db-instance --force-failover` (la zona activa cambia). En producción se agregaría una réplica de lectura y copia entre regiones.
 
 ### 7. Respaldos: automáticos y no manuales
 
@@ -114,7 +114,7 @@
 
 | Limitación | Causa | Mitigación en el prototipo | En producción |
 |---|---|---|---|
-| Sin alta disponibilidad | Single-AZ; el laboratorio no permite Multi-AZ en RDS | Respaldos y reconstrucción con Docker Compose | Multi-AZ y balanceador |
+| Disponibilidad limitada a una región | El laboratorio solo ofrece us-east-1 y us-west-2 | Dos zonas: ALB, dos web y RDS Multi-AZ | Réplica o copia entre regiones y DNS con conmutación |
 | Tráfico sin cifrar | Sin dominio no hay certificado | Datos ficticios y declararlo en la defensa | Dominio, certificado y HTTPS |
 | Permisos amplios | Solo se puede usar `LabRole` | Security Groups estrictos | Un rol por servicio con permisos mínimos |
 | Nodo IoT en subred pública | Sin NAT para ahorrar créditos | `sg-iot` sin entradas | Subred privada con salida controlada |
@@ -129,7 +129,7 @@ Las restricciones siguientes provienen del documento técnico de AWS para el Lea
 
 - **Regiones:** solo us-east-1 y us-west-2. El prototipo usa us-east-1.
 - **EC2:** tamaños nano a large, solo instancias On-Demand, máximo 9 instancias y 32 vCPU en ejecución por región, AMIs de Linux o Windows entregadas por Amazon, discos EBS de hasta 100 GB. El prototipo usa `t3.small` (2 GB): alcanza para el backend con Grafana y Docker; una `t3.micro` (1 GB) quedaría justa.
-- **RDS:** tamaños nano a medium (entra `db.t3.micro`), motores Aurora, MySQL, PostgreSQL y MariaDB, disco de hasta 100 GB gp2. **Multi-AZ no está soportado**: el prototipo queda Single-AZ y la subred de reserva en la segunda zona solo cumple el requisito del DB subnet group. El monitoreo mejorado tampoco está soportado.
+- **RDS:** tamaños nano a medium (entra `db.t3.micro`), motores Aurora, MySQL, PostgreSQL y MariaDB, disco de hasta 100 GB gp2. El documento de 2021 indica que Multi-AZ no está soportado, pero la revisión técnica del 8-nov-2026 lo exigió: `aws/provision.sh` lo solicita (`--multi-az`, o `modify-db-instance` si la base ya existía) y avisa en voz alta si el laboratorio lo rechaza. Confirmar en la corrida real. El monitoreo mejorado tampoco está soportado.
 - **Fin de sesión:** al terminar, las instancias en ejecución pueden quedar detenidas y hay que volver a encenderlas. Sin IP elástica, la IP pública cambia en cada arranque. Un RDS detenido por siete días se reinicia solo y consume créditos. El backend debe arrancar solo (systemd o `docker compose` con reinicio automático).
 - **IAM:** no se pueden crear usuarios, grupos ni roles (salvo los vinculados a servicios); se usa el rol `LabRole` y el perfil `LabInstanceProfile`, que además permite entrar a la EC2 por la terminal del navegador (Session Manager).
 - **Servicios disponibles:** VPC, EC2, RDS, ECR, S3, CloudWatch, Secrets Manager, Elastic Load Balancing y Elastic Beanstalk, entre otros.
@@ -154,7 +154,7 @@ El diseño anterior se construyó en el Learner Lab con el script `aws/provision
 | Administración remota | Session Manager con `LabInstanceProfile`, sin abrir el puerto 22 | SSH con llave y puerto 22 abierto solo a la IP del equipo, sin perfil de instancia | El script no asocia el perfil; el SSH de la instancia web recreada llegó a rechazar conexiones |
 | Cifrado hacia la base | No especificado | `sslmode=require` desde la aplicación y el simulador | RDS moderno exige conexiones cifradas |
 | Seguridad entre capas | Tres Security Groups encadenados por referencia | Igual | Sin diferencias |
-| Cómputo y base | EC2 `t3.small` con Docker Compose y RDS `db.t3.micro` Single-AZ en subred privada | Igual; el nodo IoT usa `t3.micro` | Sin diferencias de fondo |
+| Cómputo y base | EC2 `t3.small` con Docker Compose y RDS `db.t3.micro` Single-AZ en subred privada | Desde el 8-nov-2026: dos EC2 `t3.small` (una por zona) detrás de un ALB y RDS `db.t3.micro` Multi-AZ en subred privada; el nodo IoT usa `t3.micro` | Revisión técnica: alta disponibilidad exigida (ver decisión 6) |
 | HTTPS | Solo HTTP, riesgo aceptado | Igual | Sin dominio no hay certificado |
 
 *Nota.* Elaboración propia. Verificado el 22-oct-2026 sobre la instalación en AWS.

@@ -264,6 +264,7 @@ window.CofrialMapa = (function () {
   Marcador.prototype.dibujar = function (pos) {
     this.dibujada = pos;
     if (this.mk) this.mk.setLngLat(lngLat(pos));
+    if (this.alDeslizar) this.alDeslizar(pos);
   };
   Marcador.prototype.mover = function (pos) {
     this.anim = null; this.pos = pos.slice();

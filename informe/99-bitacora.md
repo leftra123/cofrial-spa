@@ -136,3 +136,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).
 - Documentado en `docs/decisiones.md`, `informe/03` (decisión 6 y tablas), `informe/04a` y `aws/README.md`. El dibujo de la Figura 1 está pendiente de redibujar.
 - Pendiente: corrida real en el laboratorio (Multi-AZ puede ser rechazado), certificado de confianza para el dominio y mover el registro del dominio al ALB.
+
+## 2026-11-09: la ruta del cliente sigue al camión
+- En el mapa del pedido la línea azul se recortaba con la señal de GPS (cada 15 s) y se adelantaba al ícono, que se desliza entre lecturas. Ahora el tramo sale del camión dibujado y se acorta con él; el servidor sigue entregando solo lo que falta hasta la parada propia. Sin cambio de modelo.
+- Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
+- Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.

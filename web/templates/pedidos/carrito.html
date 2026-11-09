@@ -43,15 +43,18 @@
     {% else %}<div class="total"><dt>Total (IVA incluido)</dt><dd>{{ total|clp }}</dd></div>{% endif %}
     </dl>
     {% if mp_brick %}
-    <div class="checkout-mp" data-checkout="mp-modal-v4">{% csrf_token %}
+    <form class="checkout-mp" data-checkout="mp-modal-v4" method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
       {% include "pedidos/_quien_recibe.html" %}
       {% include "pedidos/_comprobante.html" %}
-      <p class="ayuda" id="ayuda-pago">Elige dirección y abre el checkout seguro. El formulario aparece en un modal centrado (Mercado Pago, modo prueba).</p>
-      <button type="button" class="confirmar" id="mp-mostrar-pago" aria-haspopup="dialog" aria-controls="mp-pago-modal"{% if sin_stock %} disabled{% endif %}>Continuar al pago · {{ total|clp }}</button>
+      {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
+      <p class="ayuda" id="ayuda-pago">Paga ahora con Mercado Pago (modo prueba) o genera la orden y págala a 30 días. Si la tarjeta no resulta, puedes reintentar: el pedido se crea solo cuando el pago queda aprobado.</p>
+      <button type="button" class="confirmar" id="mp-mostrar-pago" aria-haspopup="dialog" aria-controls="mp-pago-modal"{% if sin_stock %} disabled{% endif %}>Pagar ahora · {% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}</button>
+      <button class="btn-sec generar-orden" data-cargando="Generando orden…" aria-describedby="ayuda-plazo"{% if sin_stock %} disabled{% endif %}>Generar orden</button>
+      <p class="ayuda" id="ayuda-plazo">{% if pide_oc %}La orden queda en Mis pedidos. Pagas a {{ cliente.tipo_cliente.dias_credito }} días y descargas la factura después de la entrega, como siempre.{% else %}La orden queda en Mis pedidos. Pagas a 30 días y descargas la boleta o la factura desde el pedido.{% endif %}</p>
       <p class="ayuda mp-inline-error" id="mp-inline-error" hidden role="alert"></p>
-    </div>
+    </form>
     {% else %}
     <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
@@ -59,8 +62,8 @@
       {% include "pedidos/_quien_recibe.html" %}
       {% include "pedidos/_comprobante.html" %}
       {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
-      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega.{% else %}Pagas ahora (Webpay simulado) y recibes en seguida la boleta o, si la eliges, la factura.{% endif %}</p>
-      <button class="confirmar" data-cargando="{% if pide_oc %}Generando orden…{% else %}Procesando pago…{% endif %}"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>{% if pide_oc %}Generar orden{% else %}Pagar y generar orden{% endif %}</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
+      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega. La descargas desde el pedido.{% else %}La orden queda en Mis pedidos. Pagas a 30 días y descargas la boleta o la factura desde el pedido.{% endif %}</p>
+      <button class="confirmar" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>Generar orden</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
     </form>
     {% endif %}
     <details class="acc-doc"{% if not direcciones %} open{% endif %}><summary>Agregar otra dirección</summary>{% include "pedidos/_direccion_nueva.html" with accion="/carrito/direccion/" con_ubicacion=True %}</details>
@@ -93,7 +96,7 @@
       <div>
         <p class="mp-modal__etiq">Pago seguro</p>
         <h2 id="mp-pago-titulo">Pago con tarjeta</h2>
-        <p class="ayuda" id="mp-pago-sub">Total {{ total|clp }} · crédito o débito · Mercado Pago (modo prueba)</p>
+        <p class="ayuda" id="mp-pago-sub">Total {% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %} · crédito o débito · Mercado Pago (modo prueba)</p>
       </div>
       <button type="button" class="mp-modal__cerrar" data-mp-cerrar aria-label="Cerrar">×</button>
     </header>

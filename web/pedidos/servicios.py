@@ -218,7 +218,7 @@ def elegir_comprobante(cliente, comprobante=None, giro=""):
 
 
 @transaction.atomic
-def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe="", comprobante=None, giro=""):
+def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=True, checkout_pago=None, recibe="", comprobante=None, giro="", plazo_dias=None):
     """Convierte el carrito en órdenes. RN-02, RN-03, RN-04, RN-05 y RN-06 se aplican aquí, en una sola transacción.
 
     RN-09: la cadena de frío no se mezcla en un camión, así que un carrito con productos de más de un rango de temperatura
@@ -242,7 +242,9 @@ def generar_ordenes(cliente, direccion_id, numero_oc="", cobrar_b2c_al_crear=Tru
             OrdenItem.objects.create(orden=orden, producto_id=i.producto_id, cantidad=i.cantidad,
                                      precio_unitario_clp=precios[i.producto_id])
             Producto.objects.filter(pk=i.producto_id).update(stock_disponible=F("stock_disponible") - i.cantidad)
-        if cliente.tipo_cliente.codigo == "B2C" and cobrar_b2c_al_crear:
+        if plazo_dias:
+            documentos.emitir_a_plazo(orden, plazo_dias)
+        elif cliente.tipo_cliente.codigo == "B2C" and cobrar_b2c_al_crear:
             if comprobante == "factura":
                 documentos.cobrar_factura_contado(orden)
             else:
@@ -381,7 +383,7 @@ def seguimiento(orden):
         from flota.vigente import ultima_vigente
         ultima = ultima_vigente(camion, orden.camara) or ultima         # con el modo demostración, la temperatura forzada (no aplica a una entrega ya cerrada)
     rango = camion.rango_de_camara(orden.camara)
-    en_vivo = mapa_en_vivo(orden)                     # el mapa y la posición solo se muestran mientras el camión va o está en la puerta
+    en_vivo = mapa_en_vivo(orden)                     # el mapa y la posición solo mientras va en camino y aún no llegó a esta parada
     return {
         "camion_id": camion.camion_id, "patente": camion.patente, "mapa_en_vivo": en_vivo,
         "banda": {"min": rango.temp_min_c, "max": rango.temp_max_c, "nombre": rango.nombre},
@@ -414,8 +416,8 @@ def fin_de_exposicion(orden, ahora=None):
 
 
 def mapa_en_vivo(orden):
-    """RN-16: el cliente ve el mapa en vivo solo con el pedido «Despachada» (en ruta) o «Camión en la puerta»."""
-    return orden.estado_orden.nombre in ("Despachada", "Camión en la puerta")
+    """El cliente ve el mapa en vivo solo con el pedido «Despachada» y antes de que el camión registre la llegada a esta parada."""
+    return orden.estado_orden.nombre == "Despachada" and orden.puerta_en is None
 
 
 def itinerario_de(orden):
@@ -442,6 +444,37 @@ def itinerario_de(orden):
     return {"parada": n + 1, "total": total, "antes": antes, "texto": texto}
 
 
+def _km_al_segmento(punto, a, b):
+    """Distancia en km del punto al tramo a–b. Sirve para saber en qué calle va el camión, no solo qué vértice tiene más cerca."""
+    from math import cos, radians
+    ay, ax = a[0], a[1]
+    by, bx = b[0], b[1]
+    py, px = punto[0], punto[1]
+    kx = 111.32 * cos(radians((ay + by) / 2))
+    ax, bx, px = ax * kx, bx * kx, px * kx
+    ay, by, py = ay * 110.57, by * 110.57, py * 110.57
+    dx, dy = bx - ax, by - ay
+    largo2 = dx * dx + dy * dy
+    if largo2 == 0:
+        from flota import rutas
+        return rutas.km_entre(punto, a)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / largo2))
+    qx, qy = ax + t * dx, ay + t * dy
+    return ((px - qx) ** 2 + (py - qy) ** 2) ** 0.5
+
+
+def _vertice_por_delante(puntos, hasta, posicion):
+    """Índice del primer vértice que el camión todavía no ha pasado, dentro de puntos[:hasta+1]."""
+    if hasta <= 0:
+        return 0
+    tramo, mejor = 0, None
+    for i in range(hasta):
+        d = _km_al_segmento(posicion, puntos[i], puntos[i + 1])
+        if mejor is None or d < mejor:
+            tramo, mejor = i, d
+    return tramo + 1
+
+
 def ruta_del_pedido(orden):
     """Lo que el cliente puede ver de la ruta: SOLO el tramo desde donde está el camión hasta la parada de este pedido.
 
@@ -464,12 +497,12 @@ def ruta_del_pedido(orden):
     posicion = (ultima.lat, ultima.long) if ultima else (settings.BASE_LOGISTICA["lat"], settings.BASE_LOGISTICA["long"])
     destino = [propia["lat"], propia["long"]]
     puntos, hasta = ruta["puntos"], propia["indice"]
-    actual = min(range(hasta + 1), key=lambda i: rutas.km_entre(puntos[i], posicion))     # el vértice de la ruta más cercano al camión, sin pasarse de esta parada
-    antes_de_la_propia = [p for p in ruta["paradas"] if p is not propia and actual < p["indice"] <= hasta]
+    siguiente = _vertice_por_delante(puntos, hasta, posicion)     # el próximo vértice de la calle, no el más cercano (ese puede estar ya atrás y la línea se adelanta al camión)
+    antes_de_la_propia = [p for p in ruta["paradas"] if p is not propia and siguiente <= p["indice"] <= hasta]
     if antes_de_la_propia:
         tramo, aproximada = [list(posicion), destino], True
     else:
-        tramo, aproximada = [list(posicion)] + [list(p) for p in puntos[actual + 1:hasta + 1]], ruta["aproximada"]
+        tramo, aproximada = [list(posicion)] + [list(p) for p in puntos[siguiente:hasta + 1]], ruta["aproximada"]
         if len(tramo) == 1 or tramo[-1] != destino:
             tramo.append(destino)
     return {"puntos": tramo, "parada": {"lat": propia["lat"], "long": propia["long"]}, "aproximada": aproximada,

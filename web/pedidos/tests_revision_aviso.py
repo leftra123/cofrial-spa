@@ -47,6 +47,11 @@ class AvisoDestacadoDeLlegadaTests(EntregaBase):
         self.assertIn("aviso-llegada", js)
         self.assertIn("CofrialEntrega.revisar", js)
         self.assertIn("cofrial-aviso-cerrado", js)                             # el aviso de «cerca» se puede cerrar; el que espera tu respuesta no
+        self.assertIn("ac.appendChild(x)", js)                                 # la cruz va en la misma fila que «Ver dónde va»
+        self.assertNotIn("it.appendChild(x)", js)
+        css = open("static/css/tienda.css", encoding="utf-8").read()
+        self.assertIn("button.al-cerrar:not(#mp-brick-container button)", css)
+        self.assertNotIn(".al-cerrar { position: absolute", css)
         self.entrar()
         self.assertContains(self.client.get("/catalogo/"), "js/campana.js")
 
@@ -70,8 +75,13 @@ class RevisionAlRecibirTests(EntregaBase):
             self.assertIn(f"<b>{item.cantidad}</b> × {item.producto.nombre}", html)
         self.assertIn("Temperatura del viaje", html)
         self.assertIn("Dentro de rango", html)
-        for esperado in ("Sí, todo llegó bien", "No, algo falló", 'name="resultado"', 'name="tipo_problema"', 'name="problema"', "Recibí mi pedido"):
+        for esperado in ("Sí, todo llegó bien", "No, algo falló", "No recibiré mi pedido", 'value="no"', 'name="resultado"', 'name="tipo_problema"', 'name="problema"', "Recibí mi pedido", 'value="no_recibido"'):
             self.assertIn(esperado, html, esperado)
+        js = open("static/js/entrega.js", encoding="utf-8").read()
+        self.assertIn('["no", "No recibiré mi pedido"]', js)
+        self.assertIn('value: "no_recibido"', js)
+        self.assertIn('type: "button", "class": "btn-sec"}, "Cancelar"', js)
+        self.assertIn('enviar(ordenId, "no_recibido"', js)
 
     def test_la_revision_marca_la_temperatura_fuera_de_rango(self):
         cliente, orden = self.en_la_puerta(con_lectura=False)
@@ -127,6 +137,16 @@ class RevisionAlRecibirTests(EntregaBase):
                 cliente, orden = self.en_la_puerta()
                 s.resolver_entrega(cliente, orden.pk, "aceptar", "Una caja venía abierta", con_problema=True, tipo_problema=tipo)
                 self.assertEqual(str(Requerimiento.objects.get(orden=orden).categoria_requerimiento), categoria)
+
+    def test_decir_que_no_recibe_no_confirma_la_entrega(self):
+        cliente, orden = self.en_la_puerta()
+        r = self.client.post(f"/pedidos/{orden.pk}/entrega/", {"accion": "aceptar", "resultado": "no", "motivo": "No había nadie en la casa"},
+                             headers={"X-Requested-With": "fetch"})
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("exitosamente", r.json()["mensaje"])
+        orden.refresh_from_db()
+        self.assertEqual(orden.estado_orden.nombre, "Entrega no concretada")
+        self.assertEqual(orden.entrega_motivo, "No había nadie en la casa")
 
     def test_si_algo_fallo_hay_que_contar_que_y_no_cambia_nada_hasta_hacerlo(self):
         cliente, orden = self.en_la_puerta()

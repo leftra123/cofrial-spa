@@ -97,7 +97,7 @@
 
 **Qué se cede.** Más créditos del laboratorio (segunda EC2 web, ALB y réplica de RDS) y más piezas que operar. Como la caché de Django es memoria de cada proceso, los contadores de intentos de ingreso quedan por instancia; la afinidad del ALB mantiene a cada usuario en una sola web y limita el efecto. Solo la web primaria migra la base y corre el podador y el despachador, para que dos instancias nunca hagan lo mismo a la vez. Quedan sin cubrir la caída de la región completa y la del propio ALB (servicio gestionado por AWS, repartido en las dos zonas).
 
-**Mitigación y prueba.** La caída de una zona se demuestra apagando una web desde la consola de EC2 (el sitio sigue respondiendo por la otra) y forzando la conmutación de la base con `aws rds reboot-db-instance --force-failover` (la zona activa cambia). En producción se agregaría una réplica de lectura y copia entre regiones.
+**Mitigación y prueba.** La caída de una zona se demuestra apagando una web desde la consola de EC2 (el sitio sigue respondiendo por la otra) y forzando la conmutación de la base con `aws rds reboot-db-instance --force-failover` (probado el 8-nov-2026: RDS registra «Multi-AZ instance failover completed» y la aplicación retoma sola en ~1 minuto). En producción se agregaría una réplica de lectura y copia entre regiones.
 
 ### 7. Respaldos: automáticos y no manuales
 

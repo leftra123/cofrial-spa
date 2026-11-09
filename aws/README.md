@@ -39,7 +39,7 @@ Requisito de la revisión técnica del 8-nov-2026. Diseño y trade-offs: `docs/d
 
 **Demostración de la caída (evaluador).**
 - Web: apagar una EC2 web desde la consola; `curl http://DNS-ALB/salud/` sigue en 200 (el ALB la saca en ~30 s). `bash aws/provision.sh estado` muestra el destino caído.
-- Base: `aws rds reboot-db-instance --db-instance-identifier cofrial-db --force-failover`; la zona activa (`AvailabilityZone`) cambia y el endpoint es el mismo. Hacerlo con calma: corta las conexiones 1-2 minutos y la web las retoma sola.
+- Base: `aws rds reboot-db-instance --db-instance-identifier cofrial-db --force-failover`; los eventos de RDS (`aws rds describe-events --source-identifier cofrial-db --source-type db-instance --duration 15`) muestran «Multi-AZ instance failover completed», `/salud/bd/` vuelve a 200 en ~1 min y el endpoint es el mismo (probado el 8-nov-2026: un único corte de unos 15 s; el campo `AvailabilityZone` puede tardar en reflejar el cambio). Hacerlo con calma: corta las conexiones y la web las retoma sola.
 
 **Límites.** Una EC2 IoT (el requisito fue web y base de datos); los contadores de intentos son por instancia (el ALB mantiene a cada visitante en una); Learner Lab puede no admitir Multi-AZ (el script avisa). Cada web ocupa 2 vCPU: con el ALB y la RDS de respaldo consume más créditos que antes.
 

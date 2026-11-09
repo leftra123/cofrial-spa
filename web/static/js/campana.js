@@ -104,7 +104,7 @@
     });
     var primero = lista[0];
     document.title = (pide(primero) ? "¡Tu pedido llegó! · " : "Tu pedido está por llegar · ") + tituloBase;
-    lista.forEach(function (a) { if (anunciados.indexOf(a.id) < 0) { anunciados.push(a.id); try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {} } });
+    lista.forEach(function (a) { if (anunciados.indexOf(a.id) < 0) { anunciados.push(a.id); try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate([200, 100, 200]); } catch (e) {} } });
   }
   function programar() { clearTimeout(timer); timer = setTimeout(cargar, actuales.some(function (a) { return a.destacado; }) ? 5000 : 15000); }      // con el camión cerca, cada 5 s
 

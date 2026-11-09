@@ -20,11 +20,14 @@ Nota. Elaboración propia. Las líneas indican acceso web, consultas SQL cifrada
 |---|---|---|
 | Región | us-east-1 por defecto | Entorno del laboratorio académico |
 | VPC | 10.0.0.0/16 | Comunicación privada común |
-| Subred pública | 10.0.1.0/24, zona A | EC2 web t3.small y EC2 IoT t3.micro; salida por IGW |
+| Subred pública A | 10.0.1.0/24, zona A | EC2 web primaria t3.small y EC2 IoT t3.micro; salida por IGW |
+| Subred pública B | 10.0.4.0/24, zona B | EC2 web secundaria t3.small |
+| ALB `cofrial-alb` | Internet-facing en las dos subredes públicas; 80 (redirige a 443 con certificado de confianza) y 443 | Reparte entre las dos web; chequeo `/salud/`; afinidad por cookie |
 | Subred privada A | 10.0.2.0/24, zona A | Integrante del grupo de subredes de RDS |
-| Subred privada B | 10.0.3.0/24, zona B | Segundo integrante del grupo; sin réplica Multi-AZ |
-| RDS | PostgreSQL 16, db.t3.micro, 20 GB, Single-AZ, sin acceso público | Pedidos, CRM y telemetría |
-| sg-web | 80 y 3000 públicos; 22 desde la IP del equipo | Portal y Grafana; administración SSH |
+| Subred privada B | 10.0.3.0/24, zona B | Segundo integrante del grupo; aloja la réplica síncrona de RDS |
+| RDS | PostgreSQL 16, db.t3.micro, 20 GB, Multi-AZ, sin acceso público | Pedidos, CRM y telemetría; conmuta sola a la otra zona |
+| sg-alb | 80 y 443 desde internet | Único punto de entrada público |
+| sg-web | 80 solo desde sg-alb; 22 desde la IP del equipo | Portal y Grafana (por `/bi/`); administración SSH |
 | sg-iot | 22 desde la IP del equipo | Administración; sin servicio público IoT |
 | sg-rds | 5432 desde sg-web y sg-iot | Acceso SQL de aplicación, BI y simulador |
 | API de IA externa | Gemini y Groq | Clasificación y asistente de tienda |
@@ -34,4 +37,6 @@ Nota. Elaboración propia. Zona A y zona B identifican las zonas seleccionadas p
 
 El cliente compra por el portal; Django persiste las órdenes y el CRM las consulta sin duplicarlas. El nodo IoT inserta lecturas y Grafana consulta RDS con una cuenta de solo lectura. Las llamadas a IA salen desde la aplicación; el navegador obtiene teselas y rutas según la pantalla. La protección de RDS depende de su acceso privado y de las referencias entre Security Groups, aunque las EC2 compartan subred.
 
-La topología no incluye Nginx, balanceador, NAT Gateway, réplica Multi-AZ, Secrets Manager ni Session Manager porque esos componentes no están configurados en el despliegue actual. Sus alternativas de evolución se justifican en `03-arquitectura-cloud.md`.
+**Actualización del 8-nov-2026 (revisión técnica).** Se incorporaron el balanceador, la segunda web y Multi-AZ en RDS; el dibujo de la Figura 1 y el diagrama de archify muestran la versión anterior y están pendientes de redibujar con estas piezas. La tabla de arriba es la vigente. Las dos web corren el mismo compose; la primaria migra la base y corre el podador y el despachador, la secundaria solo sirve la aplicación.
+
+La topología no incluye Nginx, NAT Gateway, Secrets Manager ni Session Manager porque esos componentes no están configurados en el despliegue actual. Sus alternativas de evolución se justifican en `03-arquitectura-cloud.md`.

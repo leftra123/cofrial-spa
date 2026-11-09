@@ -46,6 +46,13 @@ class SesionFalsa:
 
 
 class Ayudantes(unittest.TestCase):
+    def test_el_80_del_alb_puede_servir_o_redirigir_a_https(self):
+        self.assertTrue(v.juzgar_alb_http(200, "", '{"estado": "ok"}')[0])                     # sin certificado de confianza el 80 sirve la aplicación
+        self.assertTrue(v.juzgar_alb_http(301, "https://cofrialspa.webhop.me/salud/", "")[0])   # con certificado de confianza redirige al 443
+        self.assertFalse(v.juzgar_alb_http(301, "http://otro/", "")[0])                         # una redirección a HTTP plano no es la del ALB
+        self.assertFalse(v.juzgar_alb_http(503, "", "")[0])
+        self.assertFalse(v.juzgar_alb_http(0, "", "")[0])
+
     def test_una_direccion_local_nunca_se_contrasta_con_aws(self):
         for host in ("localhost", "127.0.0.1", "mi-rama.localhost"):
             self.assertTrue(v.es_local(host))

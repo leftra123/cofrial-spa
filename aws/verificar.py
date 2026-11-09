@@ -155,6 +155,28 @@ def consulta_grafana(sesion, sql):
         return json.loads(e.read())["results"]["A"]
 
 
+def juzgar_alb_http(estado, destino, cuerpo):
+    """(cumple, detalle) del /salud/ del ALB por HTTP, sin seguir redirecciones: sin certificado de confianza el 80 sirve la aplicación y, con él, redirige
+    al 443 (cuyo certificado es del dominio, no del DNS del ALB: seguirla fallaría aunque el balanceador esté sano)."""
+    if estado == 200 and '"ok"' in cuerpo:
+        return True, ""
+    if estado in (301, 302, 307, 308) and (destino or "").startswith("https://"):
+        return True, ""
+    return False, f"HTTP {estado}"
+
+
+def salud_sin_redireccion(url):
+    """GET sin seguir redirecciones: (estado, Location, cuerpo). Estado 0 si no responde."""
+    pedido = urllib.request.Request(url, headers={"User-Agent": "cofrial-verificar/1.0"})
+    try:
+        r = urllib.request.build_opener(SinRedireccion).open(pedido, timeout=20)
+        return r.status, "", r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.headers.get("Location", ""), ""
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return 0, "", ""
+
+
 def es_local(host):
     """Una dirección de esta máquina (stack de desarrollo): --infra no la contrasta con ninguna cuenta de AWS, aunque haya credenciales cargadas."""
     return host in ("localhost", "127.0.0.1", "::1") or host.endswith(".localhost")
@@ -519,8 +541,8 @@ def main():
         for cumple, nombre, detalle in juzgar_infra(info):
             exigir(cumple, nombre, detalle)
         if info.get("lb"):
-            st, cuerpo, _ = Sesion().pedir("/salud/", base="http://" + info["lb"]["dns"])
-            exigir(st == 200 and '"ok"' in cuerpo, "La aplicación responde por el DNS del ALB (/salud/)", f"HTTP {st}")
+            cumple, detalle = juzgar_alb_http(*salud_sin_redireccion("http://" + info["lb"]["dns"] + "/salud/"))
+            exigir(cumple, "La aplicación responde por el DNS del ALB (/salud/; con certificado de confianza el 80 redirige al 443)", detalle)
     else:
         marca("info", "Comprobación omitida. Para incluirla: python3 aws/verificar.py --infra (con --defensa es obligatoria)")
 

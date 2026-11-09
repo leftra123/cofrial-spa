@@ -14,6 +14,7 @@ Pauta completa y rúbrica: `informe/00-pauta-y-rubrica.md`. El objetivo es **Log
 
 ## Requisitos NO negociables (no se suponen ni se cambian)
 - Backend en **EC2**, corriendo de forma persistente, conectado a **Amazon RDS** (BD relacional). Nada que dependa de un PC local.
+- **Alta disponibilidad** (exigida en la revisión técnica del 8-nov-2026): balanceador de carga, **dos EC2 web** en zonas distintas y **RDS Multi-AZ**. Ver `aws/README.md` y `docs/decisiones.md`.
 - E-commerce conectado a la BD: catálogo de refrigerados, perfiles **B2B** (lista de precios institucional) y **B2C**, carrito y generación de órdenes.
 - CRM conectado a la misma BD: clientes, prospectos (pipeline) y seguimiento de pedidos web.
 - Simulación IoT con **contenedores Docker en un nodo EC2 dedicado**, que inserte automáticamente en la BD estos campos con estos nombres exactos:

@@ -6,9 +6,10 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
-| EC2 web (`t3.small`) | Subred pública, IP elástica | `aws/docker-compose.web.yml`: Django (puerto 80), Grafana (solo red interna, se abre en `/bi/`) y los servicios `podador` y `despachador` (este último apagado salvo `DESPACHO_AUTO=1`) |
+| Application Load Balancer (`cofrial-alb`) | Subredes públicas de las zonas A y B | Único punto de entrada: 80 (redirige a 443 con certificado de confianza) y 443; chequeo `/salud/`; afinidad por cookie |
+| EC2 web ×2 (`t3.small`) | Una por zona (`cofrial-ec2-web` primaria, `cofrial-ec2-web-b` secundaria) | `aws/docker-compose.web.yml`: Django (puerto 80, solo desde el ALB), Grafana (solo red interna, se abre en `/bi/`) y los servicios `podador` y `despachador` (solo en la primaria; este último apagado salvo `DESPACHO_AUTO=1`) |
 | EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
-| RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, Single-AZ | Base `cofrial` |
+| RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, **Multi-AZ** (réplica síncrona en la otra zona) | Base `cofrial` |
 
 ## Opción rápida: script de aprovisionamiento
 
@@ -23,6 +24,24 @@ bash aws/provision.sh destruir   # borra todo al terminar
 ```
 
 Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), parámetro público de SSM para la AMI de Ubuntu 24.04 y que el laboratorio permite crear VPC, RDS y EC2 (no crea roles de IAM). Si algo de esto no se cumple, usa los pasos manuales de más abajo. Las claves quedan también en el user-data de la EC2: aceptable para un laboratorio, no para producción (allí iría Secrets Manager).
+
+## Alta disponibilidad (balanceador, dos web, RDS Multi-AZ)
+
+Requisito de la revisión técnica del 8-nov-2026. Diseño y trade-offs: `docs/decisiones.md` («Alta disponibilidad…») e `informe/03-arquitectura-cloud.md` (decisión 6). `provision.sh` lo arma todo; la prueba sin AWS es `bash aws/test_provision_ha.sh`.
+
+**Sobre una instalación que ya existe (una web, RDS en una zona).** No recrear la base: se convierte.
+1. `bash aws/provision.sh`: crea la subred B, el ALB, la web secundaria y convierte la RDS a Multi-AZ (10-20 min; corte breve al final). La web vieja queda registrada en el ALB con su configuración anterior.
+2. `bash aws/provision.sh recrear-web`: rodante; recrea la web A con la configuración nueva (proxy de confianza, orígenes del ALB) y, cuando el ALB la da por sana, la B.
+3. Probar por el DNS del ALB: `bash aws/provision.sh estado` (destinos `healthy` y RDS `True`) y `python3 aws/verificar.py`.
+4. Apuntar el dominio al DNS del ALB y, cuando abra por el nombre, `bash aws/provision.sh cerrar-acceso-directo` (cierra el 80/443 abiertos a internet en `sg-web`; desde entonces solo entra el ALB).
+
+**HTTPS.** Con `CERT_ARN=arn:aws:acm:...` (o `cert.pem`, `cert.key` y `cert-cadena.pem` en `aws/.estado/`, que el script importa a ACM) el 80 redirige al 443 y Django activa cookies seguras y HSTS. Sin certificado se genera uno autofirmado: el 443 abre con aviso y el 80 sigue sirviendo. Para reutilizar el certificado de Let's Encrypt del Caddy manual, copiar de su volumen `certificates/acme-v02.api.letsencrypt.org-directory/<dominio>/` el `.key` y el `.crt` (hoja en `cert.pem`, el resto en `cert-cadena.pem`). Importar un certificado a ACM exige permisos que el laboratorio puede negar: en ese caso el script avisa y deja solo el 80.
+
+**Demostración de la caída (evaluador).**
+- Web: apagar una EC2 web desde la consola; `curl http://DNS-ALB/salud/` sigue en 200 (el ALB la saca en ~30 s). `bash aws/provision.sh estado` muestra el destino caído.
+- Base: `aws rds reboot-db-instance --db-instance-identifier cofrial-db --force-failover`; la zona activa (`AvailabilityZone`) cambia y el endpoint es el mismo. Hacerlo con calma: corta las conexiones 1-2 minutos y la web las retoma sola.
+
+**Límites.** Una EC2 IoT (el requisito fue web y base de datos); los contadores de intentos son por instancia (el ALB mantiene a cada visitante en una); Learner Lab puede no admitir Multi-AZ (el script avisa). Cada web ocupa 2 vCPU: con el ALB y la RDS de respaldo consume más créditos que antes.
 
 ## Activar la IA (clave gratuita de Gemini)
 
@@ -66,7 +85,7 @@ Supone: región `us-east-1`, repositorio público (las EC2 lo clonan solas), par
 ## Reglas del Learner Lab que importan
 
 - Al cerrar la sesión (4 horas) AWS detiene las EC2 y la base. En la primera prueba real (22-oct) la base y las EC2 estaban de nuevo encendidas al iniciar la sesión siguiente, pero no hay garantía documentada; `bash aws/provision.sh estado` lo muestra y `bash aws/provision.sh encender` arranca lo que esté apagado (primero RDS, luego las EC2, y espera a que la aplicación responda). La IP elástica no cambia y `restart: unless-stopped` hace que los contenedores vuelvan solos una vez encendida la EC2. `bash aws/provision.sh estado` muestra cómo están.
-- Si la EC2 web cambia de IP, actualiza `DJANGO_CSRF_ORIGINS` en su `.env` y ejecuta `docker compose ... up -d`; sin eso los formularios responden 403.
+- Con el ALB la dirección estable es su DNS (no cambia mientras exista); las EC2 web ya no necesitan IP elástica. Si cambia el dominio o el DNS, actualiza `DJANGO_CSRF_ORIGINS` en el `.env` de **cada** web y ejecuta `docker compose ... up -d`; sin eso los formularios responden 403.
 - `DB_SSLMODE=require` es obligatorio contra RDS. Grafana solo admite `require`, `verify-ca`, `verify-full` o `disable` (no `prefer`).
 - Imágenes desde un Mac con chip Apple: construir en la EC2 (como indica el paso 6) evita el problema de arquitectura.
 

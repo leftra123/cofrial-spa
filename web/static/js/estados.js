@@ -3,6 +3,7 @@
    - ocupar(boton, texto): estado «cargando» de un botón (se deshabilita al tiro; el spinner aparece solo si tarda más de 300 ms).
    - [data-carga] en un <form>: aplica ese estado al enviar, con el texto de data-cargando en el botón.
    - [data-confirmar="texto"] en un botón: acción destructiva en dos pasos (el primer toque pide confirmar, el segundo envía).
+   - [data-enter-avanza] en un <form>: Enter (o «Siguiente» del teclado del celular) pasa al campo que falta; con el campo vacío, o sin nada más que llenar, envía y el navegador avisa.
    - vivo(elemento, opciones): indicador de conexión de los paneles que se refrescan solos (conectando, en vivo, reintentando, sin conexión).
    - anunciar(texto): lo dice a los lectores de pantalla.
    - tiempo(x): prende o apaga el aviso de tiempo acelerado sin recargar (lo llaman los paneles que se refrescan solos). */
@@ -42,6 +43,22 @@
     if (e.defaultPrevented || !f.hasAttribute || !f.hasAttribute("data-carga") || !b || b.disabled) return;
     var fin = ocupar(b, b.dataset.cargando || "Procesando…");
     window.addEventListener("pageshow", function () { fin(); }, {once: true});     // si el navegador vuelve atrás desde su caché, el botón queda usable
+  });
+
+  /* ---------- Enter avanza de campo ----------
+     Sin esto, Enter en el usuario envía el formulario con la clave vacía. Avanza solo si el campo tiene texto y aún falta otro por llenar. Solo cuenta el Enter de un <input> de texto: un botón, una
+     lista o un <textarea> conservan su comportamiento, y mientras una tilde o un teclado de otro idioma componen texto (isComposing) no se toca. */
+  document.addEventListener("keydown", function (e) {
+    var c = e.target, f = c && c.form;
+    if (e.key !== "Enter" || e.isComposing || e.defaultPrevented || !f || c.tagName !== "INPUT" || !f.hasAttribute("data-enter-avanza")) return;
+    var campos = Array.prototype.filter.call(f.elements, function (x) {
+      return x.tagName === "INPUT" && !x.disabled && !x.readOnly && x.offsetParent !== null && ["hidden", "submit", "button", "checkbox", "radio"].indexOf(x.type) < 0;
+    });
+    var i = campos.indexOf(c);
+    if (i < 0 || !c.value) return;                      // campo vacío: Enter envía y el navegador marca el que falta, en vez de pasar al siguiente sin avisar
+    var falta = campos.slice(i + 1).filter(function (x) { return !x.value; })[0];
+    if (!falta) return;                                 // el último campo, o el gestor de claves ya llenó los demás: Enter envía como siempre
+    e.preventDefault(); falta.focus();
   });
 
   /* ---------- confirmación en dos pasos ---------- */

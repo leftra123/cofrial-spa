@@ -114,6 +114,17 @@ svg.spark { max-width: 100%; height: auto; display: block; }
 .nav a:hover { background: var(--fondo); text-decoration: none; color: var(--texto); }
 .nav a.activo { background: var(--acento-suave); color: var(--acento); font-weight: 600; }
 .nav a.activo::before { content: ""; position: absolute; left: -14px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--lima); }
+.nav-fila { display: flex; align-items: center; gap: 4px; }
+.nav-fila > a { flex: 1; min-width: 0; }
+/* El contador es un botón: necesita el :not() para ganarle al CTA genérico, incluido su display (si no, `hidden` no lo ocultaría). */
+button.nav-n:not(#mp-brick-container button) { flex: none; min-width: 32px; min-height: 32px; padding: 0 8px; border-radius: 999px; font-size: .8125rem; font-weight: 700; box-shadow: none; }
+button.nav-n:not(#mp-brick-container button)[hidden], .nav-n-menu[hidden] { display: none; }
+button.nav-n.sin-actualizar:not(#mp-brick-container button) { opacity: .55; }
+.nav-n-menu { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--acento-fg); color: var(--acento); font-size: .75rem; font-weight: 700; line-height: 20px; text-align: center; }   /* el botón Menú ya usa el color de acento: se invierte */
+.nav-despacho { margin: 2px 0 8px; padding: 10px 12px; border-radius: 10px; background: var(--fondo); font-size: .8125rem; line-height: 1.45; color: var(--texto-2); }
+.nav-despacho p { margin: 0 0 6px; }
+.nav .nav-despacho a { display: flex; min-height: 32px; padding: 4px 0; border-radius: 0; color: var(--acento); font-weight: 600; }
+.nav .nav-despacho a:hover { background: none; text-decoration: underline; }
 .nav svg, .marca-logo svg { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .usuario { margin-top: auto; border-top: 1px solid var(--borde); padding: 14px 6px 0; display: flex; align-items: center; gap: 10px; }
 .usuario-datos { min-width: 0; flex: 1; font-size: .85rem; }
@@ -425,6 +436,8 @@ td select { padding: 6px 2rem 6px 8px; max-width: 220px; }
   .lateral.abierto { display: flex; animation: entra .18s ease-out; }
   .lateral .marca { display: none; }
   .nav a { padding: 12px 14px; }
+  button.nav-n:not(#mp-brick-container button) { min-width: 44px; min-height: 44px; }
+  .nav .nav-despacho a { min-height: 44px; padding: 8px 0; align-items: center; }
   .nav a.activo::before { left: -18px; }
   .contenido { padding: 20px 16px 40px; }
   .pagina-cab h1 { font-size: 1.45rem; }
@@ -889,3 +902,39 @@ button.ver-en-mapa:not(#mp-brick-container button):hover { background: var(--fon
   .llegada-insignia { top: 8px; right: 8px; max-width: calc(100% - 56px); padding: 7px 12px 8px; }
   .llegada-insignia b { font-size: 1.02rem; }
 }
+
+/* ---------- avisos en tiempo real y permisos del navegador ---------- */
+.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.toast { background: var(--acento); color: var(--acento-fg); border: 1px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }
+.toast a { color: inherit; font-weight: 600; }
+.toast.sale { opacity: 0; transform: translateX(20px); }
+.toast.t-frio { background: #991B1B; color: #fff; border-color: #FCA5A5; }
+.nav-avisos { margin-bottom: 4px; }
+button.nav-campana:not(#mp-brick-container button) { display: flex; justify-content: flex-start; width: 100%; gap: 12px; padding: 9px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--texto-2); font-weight: 500; box-shadow: none; }
+button.nav-campana:not(#mp-brick-container button):hover { background: var(--fondo); color: var(--texto); }
+button.nav-campana[aria-expanded=true]:not(#mp-brick-container button) { background: var(--fondo); color: var(--texto); }
+.nav-campana svg { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-campana-n { margin-left: auto; min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--acento); color: var(--acento-fg); font-size: .75rem; font-weight: 700; line-height: 22px; text-align: center; }
+.nav-campana-n.urgente { background: #991B1B; color: #fff; }
+.nav-campana-n[hidden] { display: none; }
+button.nav-campana.sin-actualizar:not(#mp-brick-container button) .nav-campana-n { opacity: .55; }
+.nav-avisos .nav-despacho ul { list-style: none; margin: 0; padding: 0; }
+.nav-avisos .nav-despacho a { display: flex; align-items: center; min-height: 32px; padding: 4px 0; color: var(--acento); font-weight: 600; }
+.nav-avisos .nav-despacho a.urgente { color: var(--estado-alerta-fg, #B91C1C); }
+.nav-avisos .nav-despacho small { display: block; margin-top: 4px; }
+.permisos { width: min(480px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--borde); border-radius: 16px; background: var(--tarjeta); color: var(--texto); box-shadow: var(--sombra-alta); }
+.permisos::backdrop { background: rgba(11, 26, 51, .55); }
+.permisos h2 { margin: 0 0 6px; font-size: 1.25rem; }
+.permisos > p { margin: 0 0 14px; color: var(--texto-2); }
+.permisos-inseguro { padding: 10px 12px; border-radius: 10px; background: var(--pendiente-bg); color: var(--pendiente-fg); font-size: .875rem; }
+.permiso { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--borde); }
+.permiso b { display: block; }
+.permiso p { margin: 2px 0 0; color: var(--texto-2); font-size: .875rem; }
+.permiso small { display: block; margin-top: 4px; color: var(--texto-3); }
+.permiso small:empty { display: none; }
+.permisos button.permiso-pedir:not(#mp-brick-container button) { flex: none; min-height: 40px; padding: 8px 14px; }
+.permisos button.permiso-pedir[hidden]:not(#mp-brick-container button) { display: none; }
+.permisos-pie { display: flex; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--borde); }
+.permisos-pie button:not(#mp-brick-container button) { min-height: 40px; background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); }
+.usar-ubicacion small { display: block; margin-top: 4px; color: var(--texto-3); }
+@media (max-width: 860px) { button.nav-campana:not(#mp-brick-container button) { padding: 12px 14px; } .nav-avisos .nav-despacho a { min-height: 44px; } }

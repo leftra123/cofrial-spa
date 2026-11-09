@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from clientes import geo
 from cofrial import entradas
@@ -92,6 +92,18 @@ def sugerencias_despacho(request):
     texto, por_ia = sugerencias.redactar(viajes, resto)
     return JsonResponse({"texto": texto, "por_ia": por_ia, "viajes": sugerencias.con_enlaces(viajes), **resto},
                         json_dumps_params={"ensure_ascii": False})
+
+
+@require_GET
+@con_rol("admin", "gerencia", "despachador")
+def por_despachar(request):
+    """Contador junto a «Flota». Sin `detalle` es un solo COUNT, sin sugerencias ni IA. El menú recibe ese número con la consulta común de
+    `/api/avisos-equipo/`; con `detalle=1` (al abrir el contador) agrega el aviso y a dónde ir, con el texto del código: abrirlo no gasta la cuota gratuita."""
+    datos = {"total": servicios.pedidos_por_despachar().count()}
+    if request.GET.get("detalle") == "1":
+        viajes, resto = sugerencias.calcular()
+        datos.update(texto=sugerencias.texto_base(viajes, resto), acciones=sugerencias.acciones_del_menu(viajes, request.rol in DESPACHAN))
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
 
 
 @con_rol("admin", "gerencia", "despachador")

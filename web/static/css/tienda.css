@@ -710,10 +710,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 .campana-tipo { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; background: var(--transito-bg); color: var(--transito-fg); }
 .campana-tipo.t-llego { background: var(--entregado-bg); color: var(--entregado-fg); }
 .campana-tipo.t-cerca { background: var(--pendiente-bg); color: var(--pendiente-fg); }
-.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
-.toast { background: var(--acento); color: var(--acento-fg); border: 1px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }
-.toast a { color: inherit; font-weight: 600; }
-.toast.sale { opacity: 0; transform: translateX(20px); }
 @media (max-width: 860px) { .campana-panel { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; } }
 
 /* datos del viaje sobre el mapa */
@@ -751,7 +747,6 @@ html.filtros-vivos .filtros noscript { display: none; }
 @media (max-width: 380px) { .tb-cuenta { gap: 6px; } .tb-marca .marca-texto-logo { font-size: .95rem; } }
 
 .campana-tipo.t-frio { background: var(--alerta-bg); color: var(--alerta-fg); }
-.toast.t-frio { background: #991B1B; color: #fff; border-color: #FCA5A5; }
 
 /* ---------- carrito flotante + asistente (esquina inferior) ---------- */
 .dock-flotante { position: fixed; right: 18px; bottom: 18px; z-index: 1002; display: flex; flex-direction: column-reverse; align-items: flex-end; justify-content: flex-start; gap: 12px;

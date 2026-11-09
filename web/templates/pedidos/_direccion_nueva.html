@@ -1,6 +1,8 @@
-{% comment %}Formulario de una dirección nueva. Recibe `accion` (a dónde enviar) y `comunas`.{% endcomment %}
+{% comment %}Formulario de una dirección nueva. Recibe `accion` (a dónde enviar), `comunas` y `con_ubicacion` (solo el cliente que la agrega para sí: el vendedor no está en la dirección del cliente).{% endcomment %}
 <form method="post" action="{{ accion }}" data-carga>{% csrf_token %}
   <label for="dir-calle">Calle y número</label><input id="dir-calle" name="calle_numero" maxlength="150" required autocomplete="street-address">
   <label for="dir-comuna">Comuna</label><select id="dir-comuna" name="comuna" required>{% for c in comunas %}<option value="{{ c.pk }}">{{ c.nombre }}</option>{% endfor %}</select>
+  {% if con_ubicacion %}<input type="hidden" name="lat"><input type="hidden" name="long">
+  <p class="usar-ubicacion" data-usar-ubicacion hidden><button type="button" class="enlace" data-usar-ubicacion-btn>Estoy en esta dirección: usar mi ubicación</button> <small data-usar-ubicacion-estado role="status"></small></p>{% endif %}
   <p style="margin-top:12px"><button class="btn btn-sec" data-cargando="Guardando…">Guardar dirección</button></p>
 </form>

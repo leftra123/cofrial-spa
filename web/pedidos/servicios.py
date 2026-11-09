@@ -167,8 +167,18 @@ def _contexto_desde_carrito(cliente, direccion_id, numero_oc="", recibe=""):
 MAX_DIRECCIONES = 20
 
 
-def agregar_direccion(cliente, calle_numero, comuna_id):
-    """Dirección nueva de un cliente; la primera queda como principal. La ubicación en el mapa es de mejor esfuerzo."""
+def _coordenadas_en_chile(lat, long):
+    """Las coordenadas que mandó el navegador, o None si no sirven: vienen del cliente, así que no se les cree sin revisar."""
+    try:
+        lat, long = float(lat), float(long)
+    except (TypeError, ValueError):
+        return None
+    return (lat, long) if -56.0 <= lat <= -17.0 and -76.0 <= long <= -66.0 else None    # NaN e infinito no pasan estas comparaciones
+
+
+def agregar_direccion(cliente, calle_numero, comuna_id, lat=None, long=None):
+    """Dirección nueva de un cliente; la primera queda como principal. La ubicación en el mapa es de mejor esfuerzo. `lat` y `long` son la
+    posición que el cliente pidió usar desde su navegador; si no vienen o no sirven, se busca la dirección en OpenStreetMap."""
     calle_numero = (calle_numero or "").strip()
     if not calle_numero or len(calle_numero) > 150:
         raise ErrorDeNegocio("Escribe la calle y el número (hasta 150 caracteres).")
@@ -178,7 +188,8 @@ def agregar_direccion(cliente, calle_numero, comuna_id):
     existentes = cliente.direccion_set.count()
     if existentes >= MAX_DIRECCIONES:
         raise ErrorDeNegocio(f"Se admiten hasta {MAX_DIRECCIONES} direcciones por cliente.")
-    direccion = Direccion.objects.create(cliente=cliente, calle_numero=calle_numero, comuna=comuna, es_principal=existentes == 0)
+    punto = _coordenadas_en_chile(lat, long) or (None, None)
+    direccion = Direccion.objects.create(cliente=cliente, calle_numero=calle_numero, comuna=comuna, es_principal=existentes == 0, lat=punto[0], long=punto[1])
     geo.ubicar(direccion)
     return direccion
 

@@ -1,9 +1,9 @@
 """Crea una cuenta de acceso con su rol. La clave se pide por teclado (no queda en el historial ni en la pantalla).
 
     python manage.py crear_cuenta jefa@cofrial.test --rol vendedor --nombre "Camila Soto"
-    python manage.py crear_cuenta compras@hotel.test --rol cliente-b2b --nombre "Hotel Villarrica" --rut 76.111.222-3 \
+    python manage.py crear_cuenta compras@hotel.test --rol cliente-b2b --nombre "Hotel Villarrica" --rut 76.111.222-8 \
         --direccion "Av. Pedro de Valdivia 100" --comuna Temuco --vendedor vendedora@cofrial.cl
-    python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana Díaz" --rut 11.222.333-4 --direccion "Calle 1 123"
+    python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana Díaz" --rut 11.222.333-9 --direccion "Calle 1 123"
 
 Roles: cliente-b2b, cliente-b2c, vendedor, gerencia, despachador, admin. Para automatizar (por ejemplo en pruebas) la clave
 puede venir de la variable CUENTA_CLAVE. Las mismas cuentas se crean desde la web: Operación > Crear cuenta (/operacion/cuentas/nueva/,

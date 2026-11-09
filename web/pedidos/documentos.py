@@ -239,6 +239,18 @@ def entregadas_sin_factura(clientes):
     return ordenes
 
 
+def cuantas_sin_factura(clientes):
+    """Lo mismo que `entregadas_sin_factura`, solo el número: lo consulta el menú cada 15 s."""
+    return (Orden.objects.filter(direccion__cliente__in=clientes, direccion__cliente__tipo_cliente__codigo="B2B", estado_orden__nombre="Entregada")
+            .exclude(documento__tipo="factura").count())
+
+
+def cuantas_facturas_vencidas(clientes):
+    """Facturas vencidas con saldo. El saldo sale de `_con_estado`, que trae pagos y notas de crédito juntos: no crece con las facturas."""
+    vencidas = list(Documento.objects.filter(tipo="factura", orden__direccion__cliente__in=clientes, vence_en__lt=timezone.localdate()))
+    return sum(1 for f in _con_estado(vencidas) if f.saldo > 0)
+
+
 def lineas_de_documento(documento):
     """Lo que ampara este documento. Una factura emitida después de un rechazo trae solo lo aceptado y sus montos cuadran con esas líneas.
     Una boleta o factura pagada al comprar es una foto de lo comprado: muestra lo pedido y la rebaja queda en su nota de crédito. Devuelve (filas, neto)."""

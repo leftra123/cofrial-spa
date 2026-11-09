@@ -26,6 +26,7 @@ Este documento no contiene claves. Las claves viven solo en `aws/.estado/secreto
 | `felipe@cofrial.cl` | Cliente institucional B2B | Catálogo con lista institucional, carrito, órdenes, orden de compra | CRM y flota (403); pedidos ajenos (404) |
 | `sergio@cofrial.cl`, `ana@correo.test` | Cliente particular B2C | Catálogo al público, carrito, seguimiento de sus pedidos | CRM y flota (403); pedidos ajenos (404) |
 | `abastecimiento@hospital.test` | Cliente institucional B2B | Igual que Felipe | CRM y flota (403) |
+| `abastecimiento@hospitalangol.test`, `abastecimiento@hospitalvillarrica.test`, `abastecimiento@hospitalpucon.test` | Cliente institucional B2B (reparto regional) | Igual que Felipe; sus pedidos salen lejos del frigorífico (Angol, Villarrica, Pucón) | CRM y flota (403) |
 | `vendedora@cofrial.cl`, `vendedor2@cofrial.cl` | Vendedor | CRM de su cartera, prospectos nuevos | Flota (403) |
 | `gerencia@cofrial.cl` | Gerencia | Lectura del CRM y los tableros; inicia en la Torre de control (`/torre/`, datos en `/torre/pulso/`) | Crear prospectos (403) |
 | `despacho@cofrial.cl` | Despachador | Flota, armar y cerrar despachos | Embudo del CRM (403) |

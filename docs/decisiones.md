@@ -325,6 +325,40 @@ Reproducido en un stack local: un cliente registrado con `<img src=x onerror=…
 - **El filtro de facturas se resuelve en el servidor** (`?estado=`) porque la barra de `filtros.js` solo arma selectores con la primera tabla de la página, que en Cobranza es la de entregas sin facturar. Los totales de arriba y la lista de morosos no cambian al filtrar.
 - **No se avisa ni se bloquea la compra** de un cliente moroso: tocaría el flujo central del e-commerce cerca de la defensa.
 
+## Contador de pedidos por despachar y capacidad sin implementar (8-nov-2026)
+
+**Contador en el menú interno.** Quien despacha solo veía lo pendiente si entraba a `/flota/`. Ahora el menú lo muestra junto a «Flota» y se actualiza solo. Detalle de uso y rutas en `docs/ciclo-entrega.md`.
+
+- **Una ruta con dos niveles de costo:** `GET /flota/por-despachar/` es un solo `COUNT` (`.count()` descarta el `select_related` y el `prefetch_related` de `pedidos_por_despachar()`). El número del menú llega ahora con la consulta común de `/api/avisos-equipo/`, descrita en la sección siguiente. Con `?detalle=1` corre `sugerencias.calcular()`, que sí lee ítems, telemetría y camiones, pero solo cuando alguien abre el contador. Por eso no se reutilizó `/flota/sugerencias/`: consultarla cada pocos segundos habría repetido ese cálculo y gastado la cuota gratuita de la IA.
+- **El detalle usa `texto_base`, sin IA:** el aviso sale al instante y dice lo mismo («sin camión libre de ese rango», qué camión conviene). La redacción con IA sigue en el panel de `/flota/`.
+- **Sin consulta en cada página:** el número lo trae el JavaScript y no un procesador de contexto, así que abrir una pantalla no suma consultas. A cambio, el número aparece un instante después de cargar. Con la pestaña oculta no se consulta.
+- **Sin caché:** el equipo interno es pequeño y el conteo usa llaves foráneas indexadas; una caché agregaría un número atrasado sin un ahorro que se note.
+- **Límites que no se ven afectados:** el limitador de barridos solo cuenta respuestas 404, y la consulta no renueva la sesión (`SESSION_SAVE_EVERY_REQUEST` sigue apagado), así que una pestaña abierta no mantiene viva una sesión.
+- **Quién queda fuera:** la plantilla solo entrega el contador si `menu.flota` es verdadero, y la ruta repite el permiso en el servidor con `con_rol`. Ventas y clientes reciben 403 con o sin `detalle`. Gerencia ve el aviso, pero no recibe enlaces a «Armar despacho»: ya era la regla de su menú.
+- **Qué se cede:** es un aviso visual dentro de la aplicación. No suena ni manda correos, y en móvil el número aparece en el botón «Menú». El aviso no distingue qué pedidos son nuevos desde la última vez que se miró.
+
+**Capacidad en kg: no se implementa porque no hay datos para hacerlo.** `camion.capacidad_kg` existe, pero no hay con qué comparar. Se revisó antes de decidir:
+
+- `Producto` no tiene peso, y `orden_item` solo tiene `cantidad` y precio. `unidad_medida` tampoco ayuda: los 20 productos de la demostración se venden por `caja`, que no dice cuánto pesa.
+- Los kilos del SKU y del nombre son texto, no datos. En los 20 productos cargados el SKU y el nombre coinciden (`VAC-LOM-5K`, «Lomo vetado de vacuno 5 kg»), pero el SKU es texto libre: las pruebas de `/operacion/productos/nuevo/` crean `NUE-001`, y ese formulario no exige ningún formato. El nombre se puede editar. Además, esa cifra parece ser el contenido de la caja, sin el embalaje.
+- Sacar el peso del texto sería inventar el dato. Un producto con otro SKU no pesaría nada, o el cálculo fallaría sin que nadie lo note, y en la defensa no se podría sostener de dónde sale el número.
+
+**Qué faltaría y cómo afecta al modelo:**
+
+| Aspecto | Qué haría falta | Efecto en 3FN |
+|---|---|---|
+| Campo nuevo | `producto.peso_kg numeric(7,3) NOT NULL CHECK (peso_kg > 0)`: peso bruto de una unidad de venta, entregado por Cofrial. No puede ser entero porque hay unidades de menos de 1 kg | Depende solo de `producto_id`: la tabla sigue en 3FN y no se necesita otra |
+| Peso del viaje | Se calcula: `SUM(orden_item.cantidad × producto.peso_kg)` de las órdenes del despacho | No se guarda en `orden` ni en `despacho`: sería un dato derivado que puede quedar desalineado |
+| Historia | Si un peso cambia, también cambia el cálculo de los viajes pasados. `orden_item.peso_unitario_kg` lo congelaría, igual que `precio_unitario_clp`, solo si hiciera falta auditar | Una foto de la línea depende de la clave de la línea: tampoco rompe 3FN |
+| Pedido que no cabe en ningún camión | `orden.despacho_id` admite un solo despacho por orden, así que hoy un pedido no se puede repartir entre dos camiones. Habría que dividirlo al confirmarlo, como ya ocurre por rango de frío (RN-16), o cambiar la relación | Dividir no toca el modelo. Repartir una orden en varios despachos exigiría una tabla intermedia `orden`–`despacho` |
+| Datos | Una migración con `peso_kg` para cada producto, el campo en `ProductoForm`, y actualizar `informe/modelo/modelo.py`, `informe/modelo/esquema.sql` e `informe/04b-modelo-datos.md`. Mientras Cofrial no entregue los pesos, la columna tendría que admitir nulos y habría que decidir si un producto sin peso bloquea el despacho | Una columna con nulos transitorios no afecta 3FN |
+
+**Cambios en el código cuando exista el dato:** `despachar` sumaría el peso con las órdenes bloqueadas y rechazaría el exceso; `sugerencias.calcular` armaría los grupos por peso además de `MAX_PARADAS` y elegiría un camión donde quepan; `autodespacho` lo heredaría de ese cálculo, y su texto «sin camión apto» tendría que nombrar la capacidad.
+
+**Cuánto se pierde mientras tanto:** poco en la demostración. Si las etiquetas fueran correctas, todo el stock cargado sumaría 9 400 kg y la flota va de 3 000 a 10 000 kg por camión; un viaje de 6 paradas con pedidos comunes queda muy por debajo. En una operación real sí importa, y por eso queda registrado como límite. `CapacidadSinPesoTests`, en `flota/tests_por_despachar.py`, deja constancia del comportamiento actual y falla si alguien agrega el peso sin implementar la regla.
+
+Camiones de dos temperaturas quedan fuera de este cambio.
+
 ## Recepción parcial de un pedido (8-nov-2026, RN-23)
 Antes el cliente aceptaba o rechazaba el pedido completo y la rebaja dependía de que el vendedor emitiera a mano una nota de crédito. En un trabajo anterior, Eric vio que un cliente como un supermercado recibe parte de la mercadería, rechaza el resto tras el control de calidad (no solo por temperatura) y la factura corresponde a lo aceptado. **Es un supuesto a validar con Cofrial:** el caso no lo describe.
 
@@ -380,6 +414,54 @@ Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qu�
   - `verificar.py --infra` (obligatorio con `--defensa`): lee de AWS con la AWS CLI, solo `describe-*`, lo que pide la revisión del 8-nov: ALB activo y público en dos zonas con oyente 443, al menos dos web sanas en zonas distintas, RDS Multi-AZ disponible y `cofrial-sg-web` sin 80/443/3000 abiertos al mundo. Los nombres (`cofrial-alb`, `cofrial-tg`, `cofrial-sg-web`, `cofrial-db`) son los que crea `provision.sh` de la rama de alta disponibilidad. Sin AWS CLI con credenciales vigentes la fila falla (no se puede afirmar lo que no se comprobó). La lógica de juicio está separada de la lectura y se prueba sin AWS; la lectura en sí **no se ha corrido contra AWS**.
 - **Costos:** `--defensa` suma ~20 s por las lecturas espaciadas. La compra B2C de ensayo no lleva OC `ENSAYO-` (el B2C no pide OC), así que su idempotencia es «cualquier pedido real de `ana@correo.test` en 7 días»; ante la duda, el verificador no compra de más. El comando no se corre solo en el arranque: restablecer el reclamo con cada reinicio deshacería lo clasificado en vivo.
 - **Orden obligatorio en un despliegue:** la clave única se aplica **después** de la última `recrear-web` (la carga forzada devuelve a las cuentas a su clave propia), y `restablecer_demo_ia` **al final**, tras los ensayos de IA. Probado en un stack local aislado (clave única en 13 cuentas, compra de ensayo repetida sin duplicar, `--defensa` fallando donde debe: D1 y D5 sin RDS ni IA); **no se ha corrido contra AWS**.
+- **Dominio gratuito frente al ALB (8-nov-2026).** `cofrialspa.webhop.me` es un registro A en No-IP hacia la IP elástica; un ALB solo tiene DNS. `cerrar-acceso-directo` con el dominio todavía en la IP deja el dominio sin acceso, y el certificado de confianza (Let's Encrypt) vive en un Caddy manual de la web A que `recrear-web` elimina. Se decidió comprobar antes de cerrar (alias/CNAME posible en No-IP, certificado importado a ACM, `verificar.py --nombre=` con el formulario CSRF) y, si no se puede, mostrar el ALB por su nombre y la alta disponibilidad en vivo sin ocultar que el dominio no pasa por el balanceador (guía, sección «Dominio»). `MERCADOPAGO_PUBLIC_URL` no llega a la web desde `provision.sh` y el código no la usa hoy: se prueba una compra B2C de ensayo por el nombre real de entrada.
+
+## Avisos en tiempo real por tipo de usuario y permisos del navegador (8-nov-2026)
+
+Pedido de Eric: que cada tipo de usuario reciba avisos sin recargar y que el sitio pida permiso para notificaciones y ubicación.
+
+| Tipo de usuario | Qué recibe | Dónde lleva |
+|---|---|---|
+| Cliente B2B y B2C | Salió, ventana de llegada, cerca, en la puerta, entregado, no concretada, variación de frío y stock que esperaba | Su pedido o `/avisos/` |
+| Despachador | Pedidos por despachar y viajes en curso con ruptura de frío | «Armar despacho», alertas |
+| Vendedor | Solo de su cartera: frío, requerimientos, entregas sin facturar y facturas vencidas; además, empresas por aprobar | CRM, cobranza, alertas |
+| Gerencia | Todo lo anterior, sin enlaces para armar viajes | Flota, CRM, cobranza, alertas |
+| Administrador | Todo lo anterior | «Armar despacho», CRM, cobranza, alertas |
+
+- **Consulta periódica cada 15 s y no conexiones abiertas (SSE o WebSocket):** gunicorn corre con 1 proceso y 16 hilos, y cada conexión abierta ocuparía un hilo; ASGI y Redis serían infraestructura nueva a días de la defensa. Es la misma técnica de la campanita del cliente.
+- **Costo:** cada aviso es un conteo. Con el administrador son 15 consultas y unos 5 ms en una base local (4 de ellas son del rol). No se usó `ordenes_afectadas`, que hace una consulta por orden; una prueba comprueba que el número de consultas no crece con los pedidos.
+- **El aviso de frío cuenta viajes en curso con una alerta desde su salida:** un viaje que ya llegó o una alerta anterior a la salida no cuentan, y un viaje cuenta una vez aunque tenga varias lecturas, varias órdenes o las dos cámaras con alerta.
+- **Camiones de dos cámaras:** el despachador ve la alerta de cualquier cámara, porque responde por el camión. Ventas, gerencia y administración la ven solo si una orden de su alcance va en esa cámara (`orden.camara`), porque la otra sigue en su rango. Un carrito mixto son dos órdenes (RN-16), y por eso cuenta como dos pedidos por despachar: lo mismo que lista «Armar despacho».
+- **Los avisos no se guardan:** se calculan y desaparecen cuando se hace el trabajo. Sin tablas nuevas ni «marcar como leído»; el modelo de datos no cambia.
+- **Pestaña oculta:** sigue consultando solo si hay permiso de notificaciones, porque es justo cuando sirven. El navegador puede espaciar esas consultas, hasta una por minuto, en una pestaña que lleva rato oculta.
+- **Varias pestañas:** la última cifra conocida y las notificaciones enviadas se recuerdan en `localStorage`, y cada notificación lleva un `tag`, para no repetirla por cada pestaña.
+- **La primera vez solo se toma nota:** quien entra con 8 pedidos pendientes los ve en el contador, sin 8 avisos de golpe.
+
+**Permisos:**
+
+- **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Se abre una vez por cuenta y navegador, explica para qué es cada permiso según el rol y se reabre con «Permisos» en el menú.
+- **La ubicación solo se pide a los clientes:** se usa en «Estoy en esta dirección: usar mi ubicación» al agregar una dirección de entrega. Al equipo no se le pide porque no tendría ningún uso. La posición se manda solo al guardar esa dirección; no se sigue a nadie.
+- **Las coordenadas del navegador no se creen sin revisar:** `agregar_direccion` acepta solo valores numéricos dentro de Chile continental; si no, busca la dirección escrita en OpenStreetMap. Con una precisión peor que 300 m no se usan, porque el camión podría ir a otra cuadra.
+- **Sin HTTPS no hay permisos nativos:** `Notification` y `geolocation` no piden permiso sin contexto seguro, y la EC2 sirve por HTTP. El diálogo lo dice y los avisos dentro de la página funcionan igual. La pauta del Hito 2 no exige HTTPS, así que se entrega así; el plan para activarlo está más abajo, como opcional.
+- **Qué se cede:** en Android la notificación exige un service worker y en iOS una app instalada, que no se agregaron: en esos equipos quedan los avisos dentro de la página. Las notificaciones solo llegan con una pestaña abierta, porque no hay notificaciones push desde el servidor. Un viaje con frío no distingue si la carga de ese vendedor ya se entregó; eso lo detalla `/crm/alertas/`.
+
+### Opcional: HTTPS con Caddy (no aplicado)
+
+No está autorizado ni hace falta para la pauta, y agrega riesgo cerca de la defensa. Solo tiene sentido después de verificar lo esencial, y en una sesión de laboratorio sin demostración encima. Con él, los permisos nativos empiezan a funcionar sin cambiar la aplicación.
+
+1. En `aws/docker-compose.web.yml`, agregar `caddy:2-alpine` con los puertos 80 y 443 y un volumen `caddy_data`; a `web`, quitarle `ports` y dejar `expose: 8000`.
+2. Crear un Caddyfile para AWS (`docker/caddy/Caddyfile` es solo para uso local): `54-82-100-161.sslip.io { reverse_proxy web:8000 }` y `http://54.82.100.161 { redir https://54-82-100-161.sslip.io{uri} }`.
+3. En `aws/provision.sh`, abrir el 443 en `SG_WEB`. El reto de Let's Encrypt usa el 80, que ya está abierto.
+4. En el `.env` que escribe `provision.sh`: `DJANGO_HTTPS=1`, `DJANGO_CONFIAR_PROXY=1`, `DJANGO_CSRF_ORIGINS=https://54-82-100-161.sslip.io` y `MERCADOPAGO_PUBLIC_URL` con esa misma dirección, que además hay que agregar a la lista de `aws/docker-compose.web.yml`.
+
+| Riesgo | Qué hacer |
+|---|---|
+| `DJANGO_HTTPS=1` fija HSTS de un año en `settings.py`: si Caddy falla, quien ya entró no vuelve por HTTP con ese nombre | Hacer configurable `SECURE_HSTS_SECONDS` y dejarlo en 0 hasta después de la defensa |
+| Las cookies pasan a ser `Secure`: el ingreso por `http://IP` deja de funcionar | Por eso la redirección del paso 2 es obligatoria |
+| Let's Encrypt permite 5 certificados por semana para el mismo nombre, y `recrear-web` vacía el volumen | Ensayar con `acme_ca` de pruebas y no recrear la EC2 después del certificado real |
+| `aws/verificar.py` usa `http://IP` por defecto | Pasarle la URL con https como argumento; revisar `/salud/` y `/bi/` detrás del proxy |
+
+Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.io está en la Public Suffix List, que afecta otro límite de certificados por dominio.
 
 ## Camiones de dos cámaras (8-nov-2026)
 - **Por qué:** un carrito con refrigerados y congelados obligaba a mandar dos camiones a la misma dirección. Decisión de Eric: parte de la flota lleva ambos rangos. Una empresa no renueva 50 camiones de golpe, así que son 5 (10 %), uno por contenedor del simulador.
@@ -390,5 +472,10 @@ Eric pidió una pantalla donde él y el profesor vean, con datos en vivo, de qu�
 - **Uso de la flota:** para un solo rango se prefiere un camión simple, porque los de dos cámaras son escasos; si no hay uno simple libre, sirve uno de dos cámaras.
 - **Despliegue:** primero la web, que migra la base, y después reiniciar el simulador, que lee la segunda cámara al arrancar y ya inserta la columna `camara`. `flota/0008_camion_dos_camaras` reconstruye la restricción única de `telemetria` sin `CONCURRENTLY`, así que puede bloquear las inserciones mientras dure; conviene hacerlo fuera de una demostración.
 - **Qué no se hizo:** repartir la capacidad por cámara; `capacidad_kg` es del camión completo. Los escenarios por viaje fallan solo en la cámara 1; para mostrar una falla en la cámara 2 se usa `/demo/`.
-- **Dominio gratuito frente al ALB (8-nov-2026).** `cofrialspa.webhop.me` es un registro A en No-IP hacia la IP elástica; un ALB solo tiene DNS. `cerrar-acceso-directo` con el dominio todavía en la IP deja el dominio sin acceso, y el certificado de confianza (Let's Encrypt) vive en un Caddy manual de la web A que `recrear-web` elimina. Se decidió comprobar antes de cerrar (alias/CNAME posible en No-IP, certificado importado a ACM, `verificar.py --nombre=` con el formulario CSRF) y, si no se puede, mostrar el ALB por su nombre y la alta disponibilidad en vivo sin ocultar que el dominio no pasa por el balanceador (guía, sección «Dominio»). `MERCADOPAGO_PUBLIC_URL` no llega a la web desde `provision.sh` y el código no la usa hoy: se prueba una compra B2C de ensayo por el nombre real de entrada.
 
+## El barrido de rutas no bloquea el ingreso (8-nov-2026)
+- **Problema (revisión de usuarios del 8-nov):** el contador de «no encontrado» es por IP y, pasado el umbral, cortaba todo el sitio con 429, también `/cuenta/entrar/`. En la defensa y en el laboratorio toda la sala sale por una IP: un visitante que probara unas 60 direcciones dejaba a los demás sin poder ingresar.
+- **Decisión:** el ingreso de la tienda (`/cuenta/entrar/`) y el del panel (`/admin/login/`) quedan fuera de ese bloqueo. El resto del sitio sigue cortado mientras dura la ventana. El ingreso conserva su propia protección: 10 claves malas seguidas bloquean esa cuenta 15 minutos, y el límite por IP sigue apagado (`ACCESO_MAX_FALLOS_IP=0`).
+- **Umbral documentado:** 60 «no encontrado» en 10 minutos por IP (`ESCANEO_MAX_404`, `ESCANEO_VENTANA_SEG`; los íconos que el navegador pide solo no cuentan). Se cambia por variable de entorno.
+- **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
+- **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).

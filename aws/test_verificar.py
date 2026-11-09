@@ -46,12 +46,15 @@ class SesionFalsa:
 
 
 class Ayudantes(unittest.TestCase):
-    def test_nombre_sslip_desde_la_ip(self):
-        self.assertEqual(v.nombre_sslip("54.82.100.161"), "54-82-100-161.sslip.io")
-
-    def test_nombre_sslip_no_toca_un_nombre_de_host(self):
-        self.assertIsNone(v.nombre_sslip("localhost"))
-        self.assertIsNone(v.nombre_sslip("54-82-100-161.sslip.io"))
+    def test_nombre_alterno_solo_si_se_pide(self):
+        original = sys.argv[:]
+        try:
+            sys.argv = ["verificar.py", "http://localhost:1"]
+            self.assertIsNone(v.nombre_alterno())                          # nunca se adivina un nombre: la clave no se manda a un host que nadie pidió
+            sys.argv = ["verificar.py", "http://localhost:1", "--nombre=https://mi.dominio/"]
+            self.assertEqual(v.nombre_alterno(), "https://mi.dominio")
+        finally:
+            sys.argv = original
 
     def test_fila_del_requerimiento_lee_solo_su_fila(self):
         html = '<tr><td><a><b>Otro</b></a></td><span>sin clasificar</span></tr><tr><td><a><b>Mi pedido llegó tibio</b></a></td><span>clasificado</span></tr>'

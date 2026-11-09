@@ -6,6 +6,7 @@
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
     python3 aws/verificar.py --compra-ensayo # además hace la compra de ensayo B2B y B2C (crea pedidos reales); no repite si ya hay una vigente
     python3 aws/verificar.py --defensa       # modo previo a la defensa: las 5 filas D1 a D5 de la Torre deben quedar «verificado» y /torre/pulso/ rápido
+    python3 aws/verificar.py --nombre=https://mi.dominio   # además prueba el mismo ingreso (con CSRF) por ese nombre; solo si se pide: cada prueba suma un ingreso a la cuenta
 
 Las claves se toman de DEMO_PASSWORD, ADMIN_PASSWORD y CLAVE_UNICA_DEMO (variables o aws/.estado/secretos.env); no se imprimen.
 Cada cuenta entra con la clave única (si se aplicó cambiar_clave_demo --misma), con su clave propia (web/clientes/cuentas_demo.py) o, si no, con la común de antes.
@@ -158,9 +159,12 @@ def exigir(cond, nombre, detalle_mal=""):
     return bool(cond)
 
 
-def nombre_sslip(host):
-    """54.82.100.161 -> 54-82-100-161.sslip.io (sslip.io devuelve la IP escrita en el nombre); None si el host ya es un nombre."""
-    return host.replace(".", "-") + ".sslip.io" if re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", host) else None
+def nombre_alterno():
+    """Dirección extra a probar (--nombre=https://dominio) o None. No se adivina ninguna: probar un nombre ajeno enviaría la clave allí."""
+    for a in sys.argv[1:]:
+        if a.startswith("--nombre="):
+            return a.split("=", 1)[1].rstrip("/") or None
+    return None
 
 
 def fila_del_requerimiento(html, asunto):
@@ -262,13 +266,12 @@ def main():
     falso = Sesion()
     st, html, _ = falso.pedir("/cuenta/entrar/", {"csrfmiddlewaretoken": falso.token("/cuenta/entrar/"), "username": "no-existe@cofrial.test", "password": "x", "next": "/"})
     chk(st == 200 and "/cuenta/salir/" not in html, "Con token CSRF pero clave falsa el ingreso se rechaza", f"HTTP {st}")
-    nombre = nombre_sslip(HOST)
-    if nombre:
-        base_nombre = "http://" + nombre
+    base_nombre = nombre_alterno()
+    if base_nombre:
         sesion_nombre = Sesion()
         st, cuerpo, _ = sesion_nombre.pedir("/salud/", base=base_nombre)
-        chk(st == 200 and '"ok"' in cuerpo, f"El nombre {nombre} responde (/salud/)", f"HTTP {st}: sin respuesta (¿sin internet o sin DNS?)")
-        chk(sesion_nombre.entrar("gerencia@cofrial.cl", base=base_nombre), f"Ingreso con formulario y CSRF por {nombre}", "el formulario no entra por el nombre (¿DJANGO_CSRF_ORIGINS?)")
+        chk(st == 200 and '"ok"' in cuerpo, f"{base_nombre} responde (/salud/)", f"HTTP {st}: sin respuesta (¿sin internet, sin DNS o sin certificado?)")
+        chk(sesion_nombre.entrar("gerencia@cofrial.cl", base=base_nombre), f"Ingreso con formulario y CSRF por {base_nombre}", "el formulario no entra por ese nombre (¿DJANGO_CSRF_ORIGINS?)")
 
     titulo("2. E-commerce: perfiles B2B y B2C")
     if sesiones["hospital"] and sesiones["ana"]:

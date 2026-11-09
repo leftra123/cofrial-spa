@@ -320,7 +320,7 @@
     fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
       if (!r) return;
       if (linea) linea.actualizar(r.puntos, {aproximada: !!r.aproximada});
-      else linea = mapa.ruta(r.puntos, {aproximada: !!r.aproximada, color: "#7E9F3C", gradiente: ["#56773A", CofrialMapa.COLOR_RUTA]});       // tenue junto al camión, intensa al llegar a la dirección
+      else linea = mapa.ruta(r.puntos, {aproximada: !!r.aproximada, color: "#3F8DBE", gradiente: ["#2F6C94", CofrialMapa.COLOR_RUTA]});       // tenue junto al camión, intensa al llegar a la dirección
       if (!encuadreRuta) { encuadreRuta = true; encuadrar(r.puntos, Date.now() - creadoEn > 800); }
     });
   }

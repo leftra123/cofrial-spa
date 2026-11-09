@@ -823,6 +823,86 @@ td.vacio-caja, td.vacio { white-space: normal; }
 :root[data-tema="oscuro"] .subnav-2 a.activo { color: var(--texto); } @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .subnav-2 a.activo { color: var(--texto); } }
 .subnav .panel-bi { margin-left: auto; }
 
+/* ---------- vista del administrador en /flota/: detalle por zoom y atención primero ---------- */
+/* Ruptura de frío: franja sobre el mapa con un botón por camión. No depende del zoom ni de qué esté en pantalla. */
+.alertas-mapa { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 10px; padding: 8px 12px; border: 1px solid var(--alerta-borde); border-radius: var(--radio-sm); background: var(--alerta-bg); color: var(--alerta-fg); font-size: .9rem; font-weight: 600; }
+.alertas-mapa[hidden] { display: none; }
+.alertas-mapa-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+button.alerta-mapa:not(#mp-brick-container button) { min-height: 36px; padding: 4px 12px; border: 1px solid var(--alerta-borde); border-radius: 999px; background: var(--tarjeta); color: var(--alerta-fg); font-size: .86rem; font-weight: 700; box-shadow: none; }
+button.alerta-mapa:not(#mp-brick-container button):hover { background: var(--fondo-2); color: var(--alerta-fg); box-shadow: none; }
+@media (max-width: 480px) { .alertas-mapa-txt { width: 100%; } }
+/* Nivel de detalle actual: dice en qué escala se está mirando sin tapar la atribución. */
+.nivel-mapa { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; border-radius: 8px; overflow: hidden; background: rgba(11, 26, 51, .86); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); font-size: .72rem; line-height: 1.5; color: #8BA3C4; pointer-events: none; }
+.nivel-mapa span { padding: 2px 8px; }
+.nivel-mapa span.activo { background: #E7EFFA; color: #0B1A33; font-weight: 700; }
+@media (max-width: 560px) { .nivel-mapa { left: 50px; top: 8px; bottom: auto; } #mapa-flota .mapa-sin-base { top: 38px; } }   /* en un teléfono, la atribución ocupa todo el borde inferior */
+/* Camión a nivel de ciudad: el código lleva el dibujo de su estado. Sin señal, el camión se apaga. */
+.pin-camion .pin-etq::before { content: ""; display: inline-block; width: 11px; height: 11px; margin: 0 4px 0 -3px; vertical-align: -2px; background: var(--estado-ico, none) center / contain no-repeat; }
+.pin-camion.sin-senal .pin-camion-graf { filter: grayscale(1) brightness(.75); }
+/* Resumen del camión a nivel de calle: texto de la lectura, sin interceptar los toques al camión. */
+.pin-resumen { z-index: 4; pointer-events: none; }
+.pin-resumen-caja { position: absolute; left: 0; bottom: 0; transform: translateX(-50%); display: flex; gap: 7px; align-items: baseline; width: max-content; padding: 2px 9px; border-radius: 8px; background: rgba(11, 26, 51, .94); color: #E7EFFA; font-size: .74rem; line-height: 1.5; box-shadow: 0 0 0 1px rgba(255, 255, 255, .22), 0 2px 8px rgba(0, 0, 0, .45); }
+.pin-resumen-caja .resumen-temp { font-weight: 700; }
+.pin-resumen-caja .mal { color: #FF8A8A; font-weight: 700; }
+.pin-resumen-caja .resumen-sit { color: #B4C6DF; }
+.pin-resumen.alerta .pin-resumen-caja { box-shadow: 0 0 0 2px #FF6B6B, 0 2px 8px rgba(0, 0, 0, .45); }
+.pin-resumen.alerta .resumen-sit { color: #FF8A8A; font-weight: 700; }
+.pin-resumen.atenuado { opacity: .35; }
+/* Anillo de la alerta de lejos: anima solo transform y opacity, que no obligan a redibujar el mapa. */
+.pulso-frio { z-index: 4; pointer-events: none; }                            /* sobre la base: una alerta junto al frigorífico también se nota */
+.pulso-frio span { display: block; width: 100%; height: 100%; border: 3px solid #FF6B6B; border-radius: 50%; animation: pulso-frio 1.6s ease-out infinite; }
+@keyframes pulso-frio { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pulso-frio span { animation: none; transform: scale(.85); opacity: .9; } }
+/* Tarjetas que llevan al camión en el mapa */
+.vehiculo[data-foco], .viaje[data-foco] { cursor: pointer; }
+.viaje[data-foco] form, .viaje[data-foco] .conductor { cursor: auto; }
+button.ver-en-mapa:not(#mp-brick-container button) { min-height: 28px; padding: 2px 10px; border: 1px solid var(--borde-fuerte); border-radius: 999px; background: transparent; color: var(--texto-2); font-size: .78rem; font-weight: 600; box-shadow: none; }
+button.ver-en-mapa:not(#mp-brick-container button):hover { background: var(--fondo-2); color: var(--texto); box-shadow: none; }
+#leyenda-estados { margin-top: 12px; }
+#leyenda-estados + .leyenda { margin-top: 8px; }
+.pin-resumen.alerta { z-index: 5; }
+#mapa-flota .pin-camion.alerta { z-index: 4; }                              /* ni la base tapa a un camión en ruptura de frío */
+
+/* ---------- seguimiento del comprador (pedidos/detalle.html) ----------
+   Un mapa tranquilo: cuánto falta manda y lo único que se mueve aquí es transform y opacity. Va con #seg porque tienda.css se carga después de este archivo. */
+#seg .seg-sub { margin: 2px 0 12px; color: var(--texto-3); }
+#seg .seg-mapa { position: relative; margin-bottom: 14px; }
+#seg .seg-mapa.sin-mapa .mapa.alto { height: 140px; }
+#seg .seg-mapa.sin-mapa + .solo-lector + .seg-datos .seg-llegada b { font-size: 1.7rem; }
+.llegada-insignia { position: absolute; top: 10px; right: 10px; z-index: 4; max-width: calc(100% - 64px); padding: 9px 14px 10px; border-radius: var(--radio-sm); background: rgba(11, 26, 51, .94); color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 6px 18px rgba(0, 0, 0, .35); pointer-events: none; animation: insignia-entra .35s ease-out; }
+.llegada-insignia b { display: block; font-size: 1.12rem; line-height: 1.25; letter-spacing: -.01em; }
+.llegada-insignia span { display: block; margin-top: 1px; color: #B4C6DF; font-size: .84rem; line-height: 1.3; }
+.llegada-insignia[data-tipo="cerca"] { background: var(--lima); color: var(--lima-fg); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.llegada-insignia[data-tipo="cerca"] span { color: var(--lima-fg); }
+.llegada-insignia[data-tipo="llego"] { background: #15803D; }
+.llegada-insignia[data-tipo="llego"] span { color: #E7F9EE; }
+.llegada-insignia[data-tipo="pausa"] span, .llegada-insignia[data-tipo="calculando"] span, .llegada-insignia[data-tipo="espera"] span { color: #B4C6DF; }
+.desactualizado .llegada-insignia { opacity: .86; }
+#seg .mapa-sin-base { top: auto; right: auto; bottom: 26px; left: 8px; max-width: calc(100% - 16px); }      /* su esquina de siempre la ocupa el distintivo */
+@keyframes insignia-entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* fila de datos: la llegada ocupa más que el resto */
+#seg .seg-datos-llegada { grid-template-columns: 2fr 1fr 1fr; align-items: stretch; }
+#seg .seg-datos-llegada:has(> :nth-child(2):last-child) { grid-template-columns: 2fr 1fr; }
+#seg .seg-llegada small { display: block; margin-top: 1px; color: var(--texto-2); font-size: .84rem; }
+/* halo del destino: nace en la punta de la gota, detrás de ella; apagado salvo que el camión esté cerca */
+.destino-halo { position: absolute; left: 50%; bottom: 0; z-index: -1; width: 76px; height: 76px; margin: 0 0 -38px -38px; border-radius: 50%; background: radial-gradient(circle, rgba(189, 230, 58, .55) 0%, rgba(189, 230, 58, .22) 55%, rgba(189, 230, 58, 0) 72%); opacity: 0; pointer-events: none; }
+.seg-mapa.cerca .destino-halo { will-change: transform, opacity; animation: destino-halo 2.6s ease-out infinite; }
+@keyframes destino-halo { 0% { transform: scale(.35); opacity: .9; } 70% { opacity: .35; } 100% { transform: scale(1.1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .llegada-insignia { animation: none; }
+  .seg-mapa.cerca .destino-halo { animation: none; will-change: auto; transform: scale(.9); opacity: .7; }
+}
+@media (max-width: 480px) {
+  #seg .mapa.alto { height: 300px; }
+  #seg .seg-mapa.sin-mapa .mapa.alto { height: 150px; }
+  #seg .seg-datos-llegada, #seg .seg-datos-llegada:has(> :nth-child(2):last-child) { grid-template-columns: 1fr 1fr; }
+  #seg .seg-datos-llegada .seg-llegada { grid-column: 1 / -1; }
+  #seg .seg-datos-llegada > div:nth-child(2) { border-left: 0; border-top: 1px solid var(--borde); }
+  #seg .seg-datos-llegada > div:nth-child(3) { grid-column: auto; border-left: 1px solid var(--borde); border-top: 1px solid var(--borde); }
+  .llegada-insignia { top: 8px; right: 8px; max-width: calc(100% - 56px); padding: 7px 12px 8px; }
+  .llegada-insignia b { font-size: 1.02rem; }
+}
+
 /* ---------- avisos en tiempo real y permisos del navegador ---------- */
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); }
 .toast { background: var(--acento); color: var(--acento-fg); border: 1px solid var(--lima); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sombra-alta); animation: entra .25s ease-out; transition: opacity .4s, transform .4s; }

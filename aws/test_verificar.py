@@ -109,5 +109,53 @@ class CompraDeEnsayo(unittest.TestCase):
         self.assertEqual(v.comprar_ensayo(SesionFalsa([], confirma_bien=False), "B2B")[0], "error")
 
 
+def infra_ok():
+    """Lo que dejaría la rama de alta disponibilidad: ALB en dos zonas, dos web sanas en zonas distintas y RDS Multi-AZ."""
+    return {"cli": True, "lb": {"estado": "active", "esquema": "internet-facing", "zonas": ["us-east-1a", "us-east-1b"], "dns": "cofrial-alb-1.us-east-1.elb.amazonaws.com"},
+            "puertos": [80, 443],
+            "destinos": [{"id": "i-1", "estado": "healthy", "zona": "us-east-1a"}, {"id": "i-2", "estado": "healthy", "zona": "us-east-1b"}],
+            "db": {"multi_az": True, "estado": "available", "zona": "us-east-1a", "respaldo": "us-east-1b"}, "sg_web_abierto": []}
+
+
+def fallan(info):
+    return [nombre for ok, nombre, _ in v.juzgar_infra(info) if not ok]
+
+
+class InfraDeAltaDisponibilidad(unittest.TestCase):
+    def test_la_instalacion_de_alta_disponibilidad_pasa_completa(self):
+        self.assertEqual(fallan(infra_ok()), [])
+
+    def test_sin_aws_cli_con_credenciales_no_se_puede_comprobar(self):
+        self.assertEqual(len(fallan({"cli": False})), 1)
+
+    def test_sin_balanceador_falla(self):
+        info = infra_ok(); info["lb"] = None
+        self.assertTrue(any("ALB" in n for n in fallan(info)))
+
+    def test_un_balanceador_en_una_sola_zona_falla(self):
+        info = infra_ok(); info["lb"]["zonas"] = ["us-east-1a"]
+        self.assertTrue(any("dos zonas" in n for n in fallan(info)))
+
+    def test_dos_web_en_la_misma_zona_fallan(self):
+        info = infra_ok(); info["destinos"][1]["zona"] = "us-east-1a"
+        self.assertTrue(any("zonas distintas" in n for n in fallan(info)))
+
+    def test_una_web_que_no_esta_sana_no_cuenta(self):
+        info = infra_ok(); info["destinos"][1]["estado"] = "unhealthy"
+        self.assertTrue(any("sanas" in n for n in fallan(info)))
+
+    def test_rds_sin_multi_az_falla(self):
+        info = infra_ok(); info["db"]["multi_az"] = False
+        self.assertTrue(any("Multi-AZ" in n for n in fallan(info)))
+
+    def test_sin_listener_https_falla(self):
+        info = infra_ok(); info["puertos"] = [80]
+        self.assertTrue(any("443" in n for n in fallan(info)))
+
+    def test_el_acceso_directo_abierto_a_internet_falla(self):
+        info = infra_ok(); info["sg_web_abierto"] = [80, 443]
+        self.assertTrue(any("acceso directo" in n for n in fallan(info)))
+
+
 if __name__ == "__main__":
     unittest.main(argv=["test_verificar"], verbosity=1)

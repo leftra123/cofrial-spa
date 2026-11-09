@@ -6,17 +6,19 @@
     python3 aws/verificar.py --ia            # además envía un reclamo de prueba por Soporte y comprueba la clasificación
     python3 aws/verificar.py --compra-ensayo # además hace la compra de ensayo B2B y B2C (crea pedidos reales); no repite si ya hay una vigente
     python3 aws/verificar.py --defensa       # modo previo a la defensa: las 5 filas D1 a D5 de la Torre deben quedar «verificado» y /torre/pulso/ rápido
+    python3 aws/verificar.py --infra         # además lee de AWS (CLI, solo lectura) el balanceador, las dos web por zona y RDS Multi-AZ; con --defensa es obligatorio
     python3 aws/verificar.py --nombre=https://mi.dominio   # además prueba el mismo ingreso (con CSRF) por ese nombre; solo si se pide: cada prueba suma un ingreso a la cuenta
 
 Las claves se toman de DEMO_PASSWORD, ADMIN_PASSWORD y CLAVE_UNICA_DEMO (variables o aws/.estado/secretos.env); no se imprimen.
 Cada cuenta entra con la clave única (si se aplicó cambiar_clave_demo --misma), con su clave propia (web/clientes/cuentas_demo.py) o, si no, con la común de antes.
-Solo usa la biblioteca estándar de Python (sin instalar nada). Sale con código 0 si todo pasó y 1 si algo falló.
+Solo usa la biblioteca estándar de Python (sin instalar nada); --infra además necesita la AWS CLI con las credenciales del laboratorio. Sale con código 0 si todo pasó y 1 si algo falló.
 """
 import datetime
 import http.cookiejar
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -59,6 +61,8 @@ CLAVE_ADMIN = os.environ.get("ADMIN_PASSWORD") or leer_estado("ADMIN_PASSWORD") 
 CLAVE_UNICA = os.environ.get("CLAVE_UNICA_DEMO") or leer_estado("CLAVE_UNICA_DEMO")
 DEFENSA = "--defensa" in sys.argv
 COMPRA_ENSAYO = "--compra-ensayo" in sys.argv
+INFRA = "--infra" in sys.argv or "--defensa" in sys.argv       # la alta disponibilidad se exige antes de la defensa
+NOMBRES_AWS = {"alb": "cofrial-alb", "tg": "cofrial-tg", "sg_web": "cofrial-sg-web", "db": "cofrial-db"}      # los crea aws/provision.sh
 PULSO_MAX_MS = 3000          # peor caso aceptado de /torre/pulso/ sin caché; la pantalla marca «Sin conexión» a los 8000 ms (ESPERA_MS)
 VIGENCIA_ENSAYO_DIAS = 7     # la rúbrica D2/D4 de la Torre mira los últimos 7 días
 ADMINISTRADORES = cuentas_demo.ADMINISTRADORES
@@ -149,6 +153,66 @@ def consulta_grafana(sesion, sql):
         return json.loads(sesion.abre.open(pedido, timeout=30).read())["results"]["A"]
     except urllib.error.HTTPError as e:
         return json.loads(e.read())["results"]["A"]
+
+
+def aws_json(*args):
+    """Consulta de solo lectura con la AWS CLI. None si no está instalada, no hay credenciales vigentes o el laboratorio la rechaza."""
+    try:
+        r = subprocess.run(["aws", *args, "--output", "json"], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    try:
+        return json.loads(r.stdout) if r.returncode == 0 else None
+    except ValueError:
+        return None
+
+
+def leer_infra():
+    """Hechos de la infraestructura de alta disponibilidad, leídos de AWS sin cambiar nada (describe-*)."""
+    info = {"cli": aws_json("sts", "get-caller-identity") is not None, "lb": None, "puertos": [], "destinos": [], "db": None, "sg_web_abierto": []}
+    if not info["cli"]:
+        return info
+    lbs = (aws_json("elbv2", "describe-load-balancers", "--names", NOMBRES_AWS["alb"]) or {}).get("LoadBalancers") or []
+    if lbs:
+        lb = lbs[0]
+        info["lb"] = {"estado": lb["State"]["Code"], "esquema": lb["Scheme"], "zonas": [z["ZoneName"] for z in lb["AvailabilityZones"]], "dns": lb["DNSName"]}
+        info["puertos"] = [l["Port"] for l in (aws_json("elbv2", "describe-listeners", "--load-balancer-arn", lb["LoadBalancerArn"]) or {}).get("Listeners") or []]
+    tgs = (aws_json("elbv2", "describe-target-groups", "--names", NOMBRES_AWS["tg"]) or {}).get("TargetGroups") or []
+    if tgs:
+        salud = (aws_json("elbv2", "describe-target-health", "--target-group-arn", tgs[0]["TargetGroupArn"]) or {}).get("TargetHealthDescriptions") or []
+        zonas = {}
+        if salud:
+            res = (aws_json("ec2", "describe-instances", "--instance-ids", *[t["Target"]["Id"] for t in salud]) or {}).get("Reservations") or []
+            zonas = {i["InstanceId"]: i["Placement"]["AvailabilityZone"] for r in res for i in r["Instances"]}
+        info["destinos"] = [{"id": t["Target"]["Id"], "estado": t["TargetHealth"]["State"], "zona": zonas.get(t["Target"]["Id"])} for t in salud]
+    bds = (aws_json("rds", "describe-db-instances", "--db-instance-identifier", NOMBRES_AWS["db"]) or {}).get("DBInstances") or []
+    if bds:
+        info["db"] = {"multi_az": bool(bds[0].get("MultiAZ")), "estado": bds[0].get("DBInstanceStatus"), "zona": bds[0].get("AvailabilityZone"), "respaldo": bds[0].get("SecondaryAvailabilityZone")}
+    sgs = (aws_json("ec2", "describe-security-groups", "--filters", f"Name=group-name,Values={NOMBRES_AWS['sg_web']}") or {}).get("SecurityGroups") or []
+    for sg in sgs:
+        for perm in sg["IpPermissions"]:
+            if any(r.get("CidrIp") == "0.0.0.0/0" for r in perm.get("IpRanges", [])) and perm.get("FromPort") in (80, 443, 3000):
+                info["sg_web_abierto"].append(perm["FromPort"])
+    return info
+
+
+def juzgar_infra(info):
+    """Lista de (cumple, nombre, detalle_si_falla) sobre los hechos de leer_infra(): lo que pide la revisión técnica del 8-nov."""
+    if not info.get("cli"):
+        return [(False, "La AWS CLI responde con las credenciales del laboratorio (necesaria para --infra)", "sin AWS CLI o con credenciales vencidas: pbpaste > ~/.aws/credentials")]
+    lb, db = info.get("lb"), info.get("db")
+    sanos = [d for d in info.get("destinos", []) if d["estado"] == "healthy"]
+    return [
+        (bool(lb) and lb["estado"] == "active" and lb["esquema"] == "internet-facing", "Balanceador de carga (ALB cofrial-alb) activo y público",
+         "no existe o no está activo: bash aws/provision.sh"),
+        (bool(lb) and len(set(lb["zonas"])) >= 2, "El ALB abarca dos zonas de disponibilidad", f"zonas: {', '.join(lb['zonas']) if lb else 'ninguna'}"),
+        (443 in info.get("puertos", []), "El ALB escucha en el puerto 443 (HTTPS)", f"puertos: {info.get('puertos') or 'ninguno'}"),
+        (len(sanos) >= 2, f"Al menos dos web sanas detrás del ALB ({len(sanos)} sanas)", "estados: " + (", ".join(f"{d['id']}={d['estado']}" for d in info.get("destinos", [])) or "sin destinos")),
+        (len({d["zona"] for d in sanos if d["zona"]}) >= 2, "Las web sanas están en zonas distintas", "zonas: " + (", ".join(sorted({d["zona"] or "?" for d in sanos})) or "ninguna")),
+        (bool(db) and db["multi_az"] and db["estado"] == "available", "RDS en Multi-AZ y disponible",
+         f"MultiAZ={db['multi_az']}, estado={db['estado']} (RDS_MULTI_AZ=0 o el laboratorio lo rechazó)" if db else "la base cofrial-db no existe"),
+        (not info.get("sg_web_abierto"), "Sin acceso directo a las web desde internet (solo entra el ALB)", f"puertos abiertos al mundo en cofrial-sg-web: {info.get('sg_web_abierto')}: bash aws/provision.sh cerrar-acceso-directo"),
+    ]
 
 
 def exigir(cond, nombre, detalle_mal=""):
@@ -441,6 +505,17 @@ def main():
     if sesiones["vendedora"]:
         st, html, _ = sesiones["vendedora"].pedir("/crm/ia/")
         chk(st == 200 and "Panel de IA" in html and "Probar la IA ahora" in html, "El CRM tiene el panel de IA (estado y prueba en vivo)", f"HTTP {st}")
+
+    titulo("10. Alta disponibilidad: ALB, dos web en zonas distintas y RDS Multi-AZ (AWS CLI, solo lectura)")
+    if INFRA:
+        info = leer_infra()
+        for cumple, nombre, detalle in juzgar_infra(info):
+            exigir(cumple, nombre, detalle)
+        if info.get("lb"):
+            st, cuerpo, _ = Sesion().pedir("/salud/", base="http://" + info["lb"]["dns"])
+            exigir(st == 200 and '"ok"' in cuerpo, "La aplicación responde por el DNS del ALB (/salud/)", f"HTTP {st}")
+    else:
+        marca("info", "Comprobación omitida. Para incluirla: python3 aws/verificar.py --infra (con --defensa es obligatoria)")
 
     malos = [r for r in RESULTADOS if r[0] == "mal"]
     print(f"\nResumen: {sum(1 for r in RESULTADOS if r[0] == 'ok')} correctas, {len(malos)} con falla, "

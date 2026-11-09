@@ -96,7 +96,7 @@ class VentanaDeLlegadaTests(SimpleTestCase):
         ahora = datetime(2026, 11, 8, 16, 57, 30, tzinfo=dt_timezone.utc)
         v = s._ventana(ahora + timedelta(minutes=2), 1, ahora)
         self.assertEqual(datetime.fromisoformat(v["desde"]), ahora.replace(second=0))
-        self.assertEqual(datetime.fromisoformat(v["hasta"]).minute, 15)
+        self.assertEqual(datetime.fromisoformat(v["hasta"]).minute, 10)           # 16:59:30 + 10 min, a la baja de 5 en 5 (17:05), más 5
 
     def test_lejos_sigue_la_ventana_de_siempre(self):
         ahora = datetime(2026, 11, 8, 14, 0, tzinfo=dt_timezone.utc)

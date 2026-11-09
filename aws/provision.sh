@@ -24,6 +24,7 @@
 #   DOMINIO_HTTPS=cofrialspa.webhop.me   # nombre público (CN del certificado autofirmado y origen CSRF permitido)
 #   CERT_ARN=arn:aws:acm:...             # certificado ya importado en ACM (de confianza). Sin él: aws/.estado/cert.pem + cert.key (+ cert-cadena.pem)
 #                                        # se importan; si tampoco están, se genera uno autofirmado (el navegador avisa y el 80 sigue sirviendo)
+#   ACTIVAR_HSTS=1                       # con certificado de confianza: cookies seguras y HSTS de un año (irreversible para los navegadores que visiten)
 #   RDS_MULTI_AZ=0                       # solo si el laboratorio rechaza Multi-AZ y se decide seguir sin él (el script avisa en voz alta)
 set -euo pipefail
 
@@ -285,10 +286,13 @@ fi
 
 # Orígenes que Django acepta en los formularios (CSRF): el ALB, el dominio y, si existe de una instalación anterior, la IP elástica.
 EIP=$(q ec2 describe-addresses --filters "Name=tag:Name,Values=${P}-eip" --query 'Addresses[0].PublicIp' 2>/dev/null || echo None)
+# El PRIMER origen es el que la app usa para armar enlaces de correo (recuperar clave): con dominio va primero y con https.
 ORIGENES="http://${ALB_DNS},https://${ALB_DNS}"
-[ -n "${DOMINIO_HTTPS:-}" ] && ORIGENES="$ORIGENES,http://${DOMINIO_HTTPS},https://${DOMINIO_HTTPS}"
+[ -n "${DOMINIO_HTTPS:-}" ] && ORIGENES="https://${DOMINIO_HTTPS},http://${DOMINIO_HTTPS},$ORIGENES"
 [ "$EIP" != "None" ] && [ -n "$EIP" ] && ORIGENES="$ORIGENES,http://${EIP}"
-HTTPS_DJANGO=0; [ "$CERT_CONFIABLE" = 1 ] && HTTPS_DJANGO=1     # cookies seguras y HSTS solo con certificado de confianza; la redirección la hace el ALB
+# DJANGO_HTTPS=1 activa cookies seguras y HSTS de UN AÑO (en cualquier host que responda, también el DNS del ALB, cuyo certificado no calza): solo si se pide
+# a propósito con ACTIVAR_HSTS=1 y hay certificado de confianza. Por defecto 0: la redirección 80->443 del ALB ya fuerza el cifrado.
+HTTPS_DJANGO=0; [ "$CERT_CONFIABLE" = 1 ] && [ "${ACTIVAR_HSTS:-0}" = 1 ] && HTTPS_DJANGO=1
 
 # ---------------------------------------------------------------- EC2
 log "EC2 web (una por zona) e IoT"

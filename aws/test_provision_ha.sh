@@ -76,7 +76,7 @@ UD_A="$TMP/aws/.estado/userdata-web.sh"; UD_B="$TMP/aws/.estado/userdata-web-b.s
 [ -f "$UD_A" ] && [ -f "$UD_B" ] || fallo "faltan los user-data de las dos web"
 grep -q "^ROL_WEB=primario" "$UD_A" && grep -q "^ROL_WEB=secundario" "$UD_B" || fallo "los roles de las web no son primario/secundario"
 grep -q "^DJANGO_CONFIAR_PROXY=1" "$UD_B" || fallo "falta DJANGO_CONFIAR_PROXY=1"
-grep -q "^DJANGO_CSRF_ORIGINS=http://cofrial-alb-123.us-east-1.elb.amazonaws.com,https://cofrial-alb-123.us-east-1.elb.amazonaws.com,http://cofrialspa.webhop.me,https://cofrialspa.webhop.me" "$UD_A" || fallo "orígenes CSRF incorrectos: $(grep CSRF "$UD_A")"
+grep -q "^DJANGO_CSRF_ORIGINS=https://cofrialspa.webhop.me,http://cofrialspa.webhop.me,http://cofrial-alb-123.us-east-1.elb.amazonaws.com,https://cofrial-alb-123.us-east-1.elb.amazonaws.com" "$UD_A" || fallo "orígenes CSRF incorrectos: $(grep CSRF "$UD_A")"
 grep -q "^DJANGO_HTTPS=0" "$UD_A" || fallo "con certificado autofirmado no debe activarse HSTS (DJANGO_HTTPS=1)"
 grep -q "aviso de certificado" "$TMP/salida.txt" || fallo "el resumen no avisa del certificado autofirmado"
 [ "$(cat "$TMP/aws/.estado/ip.txt")" = "cofrial-alb-123.us-east-1.elb.amazonaws.com" ] || fallo "ip.txt debe contener el DNS del ALB"

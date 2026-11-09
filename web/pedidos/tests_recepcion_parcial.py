@@ -371,6 +371,8 @@ class PantallasTests(RecepcionBase):
         self.assertNotIn("No pudimos entregar tu pedido", html)
         self.assertIn('class="chip alerta">Rechazada en recepción', html)
         self.assertNotIn("La factura de este pedido se emite", html)
+        self.assertNotIn('id="mapa"', html)                                # viaje cerrado: sin mapa, y sin decir que aparecerá cuando el camión parta
+        self.assertIn("El mapa en vivo ya no está disponible", html)
 
     def test_con_todo_bien_se_ignoran_los_numeros_del_formulario(self):
         """Sin JavaScript el bloque de rechazo queda a la vista: si marcó «todo llegó bien», lo escrito ahí no cuenta."""

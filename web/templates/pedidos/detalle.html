@@ -148,7 +148,7 @@
     <p class="itinerario" id="itinerario"{% if not seg.itinerario %} hidden{% endif %}>{{ seg.itinerario.texto }}</p>
     <ul class="leyenda" id="leyenda-pedido" aria-label="Leyenda del mapa"></ul>
     {% else %}
-    <p class="ruta-info">{% if orden.estado_orden.nombre == "Entregada" %}El mapa en vivo ya no está disponible. Aquí queda el registro de temperatura del viaje.{% elif orden.estado_orden.nombre == "Entrega no concretada" %}El mapa en vivo se apaga cuando el camión deja tu dirección. Si reprogramamos la entrega, volverá a aparecer aquí.{% else %}El mapa en vivo aparece cuando el camión parta.{% endif %}</p>
+    <p class="ruta-info">{% if orden.estado_orden.nombre == "Entregada" or orden.estado_orden.nombre == "Rechazada en recepción" %}El mapa en vivo ya no está disponible. Aquí queda el registro de temperatura del viaje.{% elif orden.estado_orden.nombre == "Entrega no concretada" %}El mapa en vivo se apaga cuando el camión deja tu dirección. Si reprogramamos la entrega, volverá a aparecer aquí.{% else %}El mapa en vivo aparece cuando el camión parta.{% endif %}</p>
     {% endif %}
   </div>
   <div class="tarjeta-ui">
@@ -249,6 +249,7 @@
   function llegada(s, estado) {
     var llegoA = s.llegada_en ? "a las " + hora(s.llegada_en) : "";
     if (estado === "Entregada") return {tipo: "llego", titulo: "Tu pedido llegó", franja: llegoA, corto: "Ya llegó"};
+    if (estado === "Rechazada en recepción") return {tipo: "llego", titulo: "El camión llegó", franja: llegoA, corto: "Ya llegó"};
     if (estado === "Camión en la puerta") return {tipo: "llego", titulo: "El camión llegó", franja: llegoA || "Está en tu dirección", corto: "Ya llegó"};
     if (estado === "Entrega no concretada") return {tipo: "pausa", titulo: "Entrega por reprogramar", franja: "Ventas te contacta para coordinarla", corto: "Por reprogramar"};
     if (!s.salida_en) return {tipo: "espera", titulo: "Esperando la salida", franja: "Te avisamos cuando parta el camión", corto: "Cuando salga"};

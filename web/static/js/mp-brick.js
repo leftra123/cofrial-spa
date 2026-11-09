@@ -91,6 +91,7 @@
     var cerrando = false;
     var escalaObs = null;
     var mensajeCarritoPendiente = "";
+    var mensajeCarritoNeutro = false;   // true: el aviso del carrito es informativo (cancelaste), no un error
     var accionReintentar = null;
 
     function limpiarEscalaBrick() {
@@ -191,7 +192,7 @@
       estadoBox.hidden = false;
       estadoBox.removeAttribute("hidden");
       estadoBox.className = "mp-modal__estado mp-modal__estado--" + tipo;
-      var clave = tipo === "ok" ? "ok" : tipo === "off" ? "off" : tipo === "carga" ? "carga" : "err";
+      var clave = tipo === "ok" ? "ok" : tipo === "off" ? "off" : tipo === "carga" ? "carga" : tipo === "conf" ? "" : "err";   // «conf» (confirmar la compra) no lleva ícono: no es un error
       mostrarMarca(clave);
       estadoTit.textContent = titulo;
       if (estadoSub) estadoSub.textContent = subt || "";
@@ -210,6 +211,7 @@
       if (!estadoAcc || !btnReintentar || !btnCarrito) return;
       estadoBox.classList.add("mp-modal__estado--accion");
       mensajeCarritoPendiente = opts.mensajeCarrito || "";
+      mensajeCarritoNeutro = !!opts.neutro;
       accionReintentar = typeof opts.onRetry === "function" ? opts.onRetry : reintentarEnModal;
       btnReintentar.textContent = opts.retryLabel || "Reintentar pago";
       btnReintentar.hidden = !!opts.ocultarReintentar;
@@ -233,9 +235,9 @@
     function volverAlCarritoDesdeModal() {
       if (cerrando) return;
       cerrando = true;
-      var msg = mensajeCarritoPendiente;
+      var msg = mensajeCarritoPendiente, neutro = mensajeCarritoNeutro;
       ocultarEstado();
-      if (msg) avisarCarrito(msg);
+      if (msg) avisarCarrito(msg, neutro);
       finalizarCierre();
     }
 
@@ -286,9 +288,10 @@
       return formData;
     }
 
-    function avisarCarrito(msg) {
+    function avisarCarrito(msg, neutro) {
       var inline = document.getElementById("mp-inline-error");
       if (!inline) return;
+      inline.classList.toggle("mp-inline-error--info", !!neutro);
       if (msg) {
         inline.textContent = msg;
         inline.hidden = false;
@@ -475,12 +478,14 @@
         });
         return;
       }
-      mostrarDecision("off", "¿Salir del pago?", "Puedes seguir con el formulario o volver al carrito.", {
+      mostrarDecision("off", "¿Cancelar la compra?", "No se cobra nada. Puedes seguir pagando o cancelar y volver al carrito.", {
         onRetry: function () {
           ocultarEstado();
         },
         retryLabel: "Seguir pagando",
-        mensajeCarrito: "",
+        carritoLabel: "Cancelar compra",
+        mensajeCarrito: "Cancelaste la compra: no se cobró nada. Tu carrito sigue igual.",
+        neutro: true,
       });
     }
 
@@ -517,8 +522,29 @@
       mostrar.disabled = true;
       animarEntrada();
       montarBrick();
-      var cerrar = modal.querySelector(".mp-modal__cerrar");
-      if (cerrar) window.setTimeout(function () { cerrar.focus(); }, SALIDA_MS);
+      confirmarCompra();
+    }
+
+    /* Paso de confirmación: antes de pedir la tarjeta se resume lo que se va a comprar. «Confirmar y pagar» sigue al formulario;
+       «Cancelar compra» cierra sin cobrar y lo dice en el carrito, para que no se confunda con seguir. */
+    function confirmarCompra() {
+      var op = direccion.options[direccion.selectedIndex];
+      var marca = document.querySelector('.checkout-mp input[name="comprobante"]:checked');
+      var doc = marca && marca.value === "factura" ? "Factura" : "Boleta";
+      var total = "$" + Math.round(Number(cfg.amount)).toLocaleString("es-CL");
+      var quien = valorRecibe();
+      var subt = "Total " + total + " (IVA incluido) · " + doc + " · Entrega en " + (op ? op.text : "") + (quien ? " · Recibe " + quien : "") + ". Aún no se cobra nada.";
+      mostrarDecision("conf", "Confirma tu compra", subt, {
+        retryLabel: "Confirmar y pagar",
+        carritoLabel: "Cancelar compra",
+        mensajeCarrito: "Cancelaste la compra: no se cobró nada. Tu carrito sigue igual.",
+        neutro: true,
+        onRetry: function () {
+          ocultarEstado();
+          var cerrar = modal.querySelector(".mp-modal__cerrar");
+          if (cerrar) cerrar.focus();
+        },
+      });
     }
 
     mostrar.addEventListener("click", abrirPago);

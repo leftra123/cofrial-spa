@@ -466,3 +466,17 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Umbral documentado:** 60 «no encontrado» en 10 minutos por IP (`ESCANEO_MAX_404`, `ESCANEO_VENTANA_SEG`; los íconos que el navegador pide solo no cuentan). Se cambia por variable de entorno.
 - **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
 - **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).
+
+## La salud no se redirige a HTTPS (8-nov-2026)
+- **Problema:** con `DJANGO_HTTPS=1` Django redirige todo el HTTP a HTTPS. Un balanceador de carga revisa `/salud/` por HTTP directo a cada instancia, sin `X-Forwarded-Proto`: recibiría un 301 y daría por caídas a todas las instancias.
+- **Decisión:** `SECURE_REDIRECT_EXEMPT` deja `/salud/` y `/salud/bd/` fuera de la redirección (no llevan datos). El resto del sitio sigue redirigiendo.
+- **Qué falta para HTTPS detrás de un balanceador:** `DJANGO_HTTPS=1`, `DJANGO_CONFIAR_PROXY=1` y `DJANGO_CSRF_ORIGINS` con las direcciones `https://`; sin ellas el POST responde 403.
+- **Prueba:** `cofrial/tests_seguridad.py`, `test_con_https_obligatorio_la_salud_responde_por_http_para_el_balanceador`.
+
+## Pago: confirmar o cancelar la compra (8-nov-2026)
+- **Problema (revisión del 8-nov):** el modal de Mercado Pago abría el formulario de tarjeta sin confirmación, y «Cancelar» en los diálogos de entrega solo cerraba la ventana: no se distinguía de responder.
+- **Decisión:** al pulsar «Continuar al pago» aparece primero «Confirma tu compra» (total, documento, dirección y quién recibe) con «Confirmar y pagar» y «Cancelar compra». Cancelar cierra sin cobrar y el carrito lo dice. En los diálogos de entrega, «Cancelar» pasa a «Volver sin responder» (revisión) y «Volver sin enviar» (no pude recibir), con una ayuda que explica que el pedido sigue pendiente.
+- **Causa de que Mercado Pago «nunca funcionara» en AWS:** el `secretos.env` del estado vivo no tenía las variables `MERCADOPAGO_*`, así que `activo()` daba falso y el carrito usaba el pago simulado. No es un error del modal: hay que agregar `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY` y `MERCADOPAGO_PAYER_EMAIL` (claves `TEST-`) y hacer `recrear-web`.
+- **Salida distinta de la acción principal:** «Cancelar compra», «Volver sin responder» y «Volver sin enviar» se ven como botones secundarios (borde, sin relleno). Antes el estilo global de `button` los pintaba igual que «Confirmar y pagar» y «Recibí mi pedido», y por eso «Cancelar» parecía una respuesta más. La confirmación no lleva el ícono rojo de error y el aviso «Cancelaste la compra» es neutro.
+- **Probado en navegador (Playwright, Chromium, stack local, 8-nov-2026):** modal de pago con el SDK de Mercado Pago simulado (confirmar, formulario, ×, cancelar: 8 comprobaciones) y diálogos de entrega con una orden real en «Camión en la puerta» (volver sin responder y volver sin enviar no registran nada; «Informar el problema» sí registra la entrega no concretada). **No** probado con el SDK real de Mercado Pago ni con un pago aprobado.
+- **Pendiente:** el flujo B2B (orden de compra y transferencia o pagaré simulado) no cambió.

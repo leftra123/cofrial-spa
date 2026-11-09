@@ -24,8 +24,8 @@ Agregar `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY` y `MERCADOPAGO_PAYE
 
 ## Flujo
 
-1. Cliente B2C abre el carrito (resumen con total y dirección).
-2. Pulsa **Continuar al pago** → modal con skeleton y luego Card Payment Brick.
+1. Cliente B2C abre el carrito (resumen con total y dirección) y elige boleta o factura.
+2. Pulsa **Continuar al pago** → el modal abre con **«Confirma tu compra»** (total, documento, dirección, quién recibe). **Confirmar y pagar** sigue al Card Payment Brick; **Cancelar compra** cierra sin cobrar y el carrito avisa que no se cobró nada.
 3. `onSubmit` → `POST /carrito/mp/pagar/` con `formData` de MP.
 4. Backend valida carrito, crea `CheckoutPago`, llama `POST /v1/payments`.
 5. Si `approved` → `generar_ordenes` + boletas → redirect al pedido.

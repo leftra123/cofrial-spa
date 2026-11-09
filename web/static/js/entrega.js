@@ -154,7 +154,7 @@
       '<label for="ed-motivo">Cuéntanos qué pasó</label><textarea id="ed-motivo" rows="4" maxlength="' + MAX + '" required aria-describedby="ed-ayuda ed-error"></textarea>' +
       '<div class="entrega-pie"><span id="ed-ayuda" class="frio">Mínimo ' + MIN + ' y máximo ' + MAX + ' caracteres. Ventas lo revisa y te contacta.</span><span class="entrega-cuenta-car" aria-hidden="true">0 / ' + MAX + '</span></div>' +
       '<p class="entrega-error" id="ed-error" role="alert" hidden></p>' +
-      '<div class="acciones"><button class="btn btn-sec" value="enviar">Informar el problema</button><button type="button" class="btn-sec" data-cerrar>Cancelar</button></div></form>';
+      '<div class="acciones"><button class="btn btn-sec" value="enviar">Informar el problema</button><button type="button" class="btn-sec" data-cerrar title="Cierra esta ventana sin enviar nada">Volver sin enviar</button></div></form>';
     document.body.appendChild(d);
     var form = d.querySelector("form"); form.querySelector("textarea").name = "motivo";
     ligarFormularioNo(form, ordenId, function (r) { if (r.ok) { d.close(); termino(ordenId, r); } else termino(ordenId, r); });
@@ -210,7 +210,7 @@
       form.appendChild(fl);
       form.appendChild(el("p", {"class": "entrega-error", id: "rv-error", role: "alert", hidden: ""}));
       var ac = el("div", {"class": "acciones"}); ac.appendChild(el("button", {"class": "btn"}, "Recibí mi pedido"));
-      var cerrar = el("button", {type: "button", "class": "btn-sec"}, "Cancelar"); cerrar.addEventListener("click", function () { dlg.close(); }); ac.appendChild(cerrar);
+      var cerrar = el("button", {type: "button", "class": "btn-sec", title: "Cierra esta ventana sin responder: el pedido sigue pendiente de confirmar"}, "Volver sin responder"); cerrar.addEventListener("click", function () { dlg.close(); }); ac.appendChild(cerrar);
       form.appendChild(ac); dlg.appendChild(form); document.body.appendChild(dlg);
       ligarRevision(form, ordenId, null, function (r) { if (r.ok) { dlg.close(); termino(ordenId, r); } else termino(ordenId, r); });
       dlg.addEventListener("close", function () { dlg.remove(); if (revisar.origen && document.contains(revisar.origen)) revisar.origen.focus(); });

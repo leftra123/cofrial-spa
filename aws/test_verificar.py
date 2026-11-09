@@ -46,6 +46,12 @@ class SesionFalsa:
 
 
 class Ayudantes(unittest.TestCase):
+    def test_una_direccion_local_nunca_se_contrasta_con_aws(self):
+        for host in ("localhost", "127.0.0.1", "mi-rama.localhost"):
+            self.assertTrue(v.es_local(host))
+        for host in ("54.82.100.161", "cofrialspa.webhop.me", "cofrial-alb-1.us-east-1.elb.amazonaws.com"):
+            self.assertFalse(v.es_local(host))
+
     def test_nombre_alterno_solo_si_se_pide(self):
         original = sys.argv[:]
         try:

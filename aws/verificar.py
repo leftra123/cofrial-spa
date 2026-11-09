@@ -155,6 +155,11 @@ def consulta_grafana(sesion, sql):
         return json.loads(e.read())["results"]["A"]
 
 
+def es_local(host):
+    """Una dirección de esta máquina (stack de desarrollo): --infra no la contrasta con ninguna cuenta de AWS, aunque haya credenciales cargadas."""
+    return host in ("localhost", "127.0.0.1", "::1") or host.endswith(".localhost")
+
+
 def aws_json(*args):
     """Consulta de solo lectura con la AWS CLI. None si no está instalada, no hay credenciales vigentes o el laboratorio la rechaza."""
     try:
@@ -507,7 +512,9 @@ def main():
         chk(st == 200 and "Panel de IA" in html and "Probar la IA ahora" in html, "El CRM tiene el panel de IA (estado y prueba en vivo)", f"HTTP {st}")
 
     titulo("10. Alta disponibilidad: ALB, dos web en zonas distintas y RDS Multi-AZ (AWS CLI, solo lectura)")
-    if INFRA:
+    if INFRA and es_local(HOST):
+        marca("info", f"Omitida: {HOST} es una dirección local y esta comprobación lee la cuenta de AWS (aunque haya credenciales cargadas, no se consulta)")
+    elif INFRA:
         info = leer_infra()
         for cumple, nombre, detalle in juzgar_infra(info):
             exigir(cumple, nombre, detalle)

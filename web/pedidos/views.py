@@ -70,19 +70,21 @@ def ver_carrito(request, cliente):
     filas = s.lineas(cliente)
     sin_stock = [f for f in filas if not f["hay_stock"]]
     es_b2c = cliente.tipo_cliente.codigo == "B2C"
-    mp_brick = es_b2c and mp.activo() and filas and not sin_stock
+    mp_brick = mp.activo() and filas and not sin_stock
     total = s.total(filas)
+    monto_mp = round(total * (1 + documentos.IVA)) if not es_b2c else total
     ctx = {
         "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
         "direcciones": cliente.direccion_set.select_related("comuna"), "comunas": Comuna.objects.order_by("nombre"),
         "pide_oc": cliente.tipo_cliente.codigo == "B2B",
         "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
         "mp_brick": mp_brick,
+        "monto_mp": monto_mp,
     }
     if mp_brick:
         ctx["mp_brick_cfg"] = {
             "publicKey": mp.clave_publica(),
-            "amount": total,
+            "amount": monto_mp,
             "email": mp.email_cliente_mp(cliente),
             "csrf": get_token(request),
             "urlPago": "/carrito/mp/pagar/",
@@ -145,7 +147,14 @@ def _mensaje_ordenes_creadas(ordenes):
     if emitidos:
         nombre = emitidos[0].get_tipo_display().lower()
         folios = " y ".join(str(d.folio) for d in emitidos)
-        mensaje += f" Pago aprobado y {nombre} N.º {folios} emitida." if len(emitidos) == 1 else f" Pago aprobado y {nombre}s N.º {folios} emitidas."
+        pagado = documentos.Pago.objects.filter(documento__in=emitidos, monto_clp__gt=0).exists()
+        if len(emitidos) == 1:
+            mensaje += f" Pago aprobado y {nombre} N.º {folios} emitida." if pagado else f" {nombre.capitalize()} N.º {folios} queda por pagar a 30 días. Puedes verla y descargarla en el pedido."
+        else:
+            mensaje += f" Pago aprobado y {nombre}s N.º {folios} emitidas." if pagado else f" {nombre.capitalize()}s N.º {folios} quedan por pagar a 30 días. Puedes verlas y descargarlas en el pedido."
+    elif orden.comprobante == "factura":
+        dias = orden.direccion.cliente.tipo_cliente.dias_credito or 30
+        mensaje += f" Pagas a {dias} días. El pedido ya está en Mis pedidos y la factura se descarga después de la entrega."
     return mensaje, orden
 
 
@@ -154,11 +163,9 @@ def _mensaje_ordenes_creadas(ordenes):
 def confirmar(request, cliente):
     direccion = request.POST.get("direccion") or 0
     numero_oc = request.POST.get("numero_oc", "")
-    if cliente.tipo_cliente.codigo == "B2C" and mp.activo():
-        messages.info(request, "Completa el pago con Mercado Pago en el formulario del carrito.")
-        return redirect("carrito")
+    plazo = 30 if cliente.tipo_cliente.codigo == "B2C" else None
     try:
-        ordenes = s.generar_ordenes(cliente, direccion, numero_oc, recibe=_quien_recibe_del_formulario(request.POST), comprobante=request.POST.get("comprobante") or None, giro=request.POST.get("giro", ""))
+        ordenes = s.generar_ordenes(cliente, direccion, numero_oc, recibe=_quien_recibe_del_formulario(request.POST), comprobante=request.POST.get("comprobante") or None, giro=request.POST.get("giro", ""), plazo_dias=plazo)
     except s.ErrorDeNegocio as e:
         _mostrar_errores(request, e)
         return redirect("carrito")
@@ -173,7 +180,7 @@ def mp_pagar_brick(request, cliente):
     """Recibe el formData del Payment Brick y crea el pago en MP."""
     import json
     from django.http import JsonResponse
-    if cliente.tipo_cliente.codigo != "B2C" or not mp.activo():
+    if not mp.activo():
         return JsonResponse({"ok": False, "mensaje": "El pago con Mercado Pago no está disponible."}, status=403)
     try:
         datos = json.loads(request.body.decode("utf-8"))
@@ -341,6 +348,8 @@ def entrega(request, cliente, orden_id):
             datos["revision"] = s.revision_de(orden)
         return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
     accion = request.POST.get("accion", "")
+    if accion == "aceptar" and request.POST.get("resultado") == "no":       # eligió no recibirlo y envió el botón de confirmar: no se da por entregado
+        accion = "no_recibido"
     con_problema = accion == "aceptar" and request.POST.get("resultado") == "falla"      # sin «resultado» (clientes antiguos de la API) todo llegó bien
     try:
         orden = s.resolver_entrega(cliente, orden_id, accion, request.POST.get("problema" if con_problema else "motivo", ""),

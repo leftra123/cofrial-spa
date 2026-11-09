@@ -197,8 +197,15 @@ class BotonesDeLosAvisosTests(EntregaBase):
 
     def test_los_botones_del_banner_y_de_la_campanita_estan_en_el_script(self):
         js = open("static/js/campana.js", encoding="utf-8").read()
-        for esperado in ("a.accion", "datosDelPedido", "CofrialEntrega.revisar", "CofrialEntrega.modal"):
+        for esperado in ("a.accion", "datosDelPedido", "CofrialEntrega.revisar", "CofrialEntrega.modal", 'ir.className = "btn"', "conMarca(ir, marcaDe(a.tipo))"):
             self.assertIn(esperado, js)
+        css = open("static/css/tienda.css", encoding="utf-8").read()
+        self.assertIn(".campana-item > a", css)
+        self.assertIn(".campana-item.nuevo { background: var(--lima-suave); }", css)
+        self.assertIn("campana-acciones campana-par", js)
+        self.assertIn(".campana-par { flex-wrap: nowrap;", css)
+        self.assertNotIn(".campana-item a {", css)
+        self.assertNotIn(".campana-item.nuevo a", css)
 
     def test_la_lista_de_avisos_no_trae_datos_de_otro_cliente(self):
         _, orden, _ = self.orden_despachada()

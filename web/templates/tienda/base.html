@@ -10,8 +10,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=nav-v2">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux12">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux16">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -89,7 +89,7 @@
 </dialog>{% endif %}
 <script src="{% static 'js/tienda.js' %}?v=sesion-salir-v2"></script>
 {% if menu.crm or menu.cliente %}{% include "componentes/permisos.html" %}<script src="{% static 'js/permisos.js' %}"></script>{% endif %}
-{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-cof07"></script><script src="{% static 'js/entrega.js' %}"></script><script src="{% static 'js/campana.js' %}"></script>{% endif %}
+{% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-cof07"></script><script src="{% static 'js/entrega.js' %}?v=lle03"></script><script src="{% static 'js/campana.js' %}?v=lle03d"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>
 {% block scripts %}{% endblock %}

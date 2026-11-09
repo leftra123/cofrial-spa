@@ -12,6 +12,24 @@
   function hora(iso) { return new Date(iso).toLocaleTimeString("es-CL", {hour: "2-digit", minute: "2-digit", hour12: false}); }
   var pide = CofrialEntrega.pide, contar = CofrialEntrega.contarAvisos;      // reglas del contador en entrega.js (una función pura, con prueba)
   var ICONOS = {salio: "Salió", ventana: "Llegada", cerca: "Cerca", puerta: "En la puerta", llego: "Entregado", no_concretada: "No concretada", rechazada: "Rechazado", frio: "Temperatura"};
+  var MARCA = {
+    mapa: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.5"/></svg>',
+    no: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-6.4A8 8 0 1121 12z"/></svg>',
+    temp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14.5V5a2 2 0 014 0v9.5a4 4 0 11-4 0z"/></svg>',
+    caja: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>'
+  };
+  function marcaDe(tipo) {
+    if (tipo === "salio" || tipo === "ventana" || tipo === "cerca") return MARCA.mapa;
+    if (tipo === "llego") return MARCA.doc;
+    if (tipo === "no_concretada") return MARCA.chat;
+    if (tipo === "frio") return MARCA.temp;
+    if (tipo === "rechazada") return MARCA.no;
+    return MARCA.caja;
+  }
+  function conMarca(el, svg) { el.insertAdjacentHTML("afterbegin", svg); }
 
   function datosDelPedido(a) {
     var p = a.pedido; if (!p) return "";
@@ -42,14 +60,14 @@
       /* Todo aviso trae su botón con una acción real (el servidor dice a qué pantalla lleva); el de «estamos afuera» trae las dos respuestas. */
       if (a.accion && !(a.tipo === "puerta" && pide(a))) {
         var ab = document.createElement("div"); ab.className = "campana-acciones";
-        var ir = document.createElement("a"); ir.className = "btn-sec"; ir.href = a.accion.url; ir.textContent = a.accion.texto; ab.appendChild(ir); li.appendChild(ab);
+        var ir = document.createElement("a"); ir.className = "btn"; ir.href = a.accion.url; ir.textContent = a.accion.texto; if (a.accion.texto === "Ver dónde va") ir.classList.add("campana-ir"); conMarca(ir, marcaDe(a.tipo)); ab.appendChild(ir); li.appendChild(ab);
       }
       /* «Estamos afuera»: mientras el camión sigue en la puerta (el servidor cambia el texto cuando ya no), el aviso trae las dos respuestas */
       if (a.tipo === "puerta" && /^Estamos afuera/.test(a.texto) && window.CofrialEntrega) {
-        var ac = document.createElement("div"); ac.className = "campana-acciones";
-        var si = document.createElement("button"); si.type = "button"; si.className = "btn"; si.textContent = "Revisar y recibir";
+        var ac = document.createElement("div"); ac.className = "campana-acciones campana-par";
+        var si = document.createElement("button"); si.type = "button"; si.className = "btn"; si.textContent = "Revisar y recibir"; conMarca(si, MARCA.ok);
         si.addEventListener("click", function (e) { e.stopPropagation(); panel.hidden = true; btn.setAttribute("aria-expanded", "false"); CofrialEntrega.revisar(a.orden_id); });
-        var no = document.createElement("button"); no.type = "button"; no.className = "btn-sec"; no.textContent = "No pude recibirlo";
+        var no = document.createElement("button"); no.type = "button"; no.className = "btn-sec"; no.textContent = "No pude recibirlo"; conMarca(no, MARCA.no);
         no.addEventListener("click", function (e) { e.stopPropagation(); panel.hidden = true; btn.setAttribute("aria-expanded", "false"); CofrialEntrega.modal(a.orden_id); });
         ac.appendChild(si); ac.appendChild(no); li.appendChild(ac);
       }
@@ -80,8 +98,8 @@
       var ac = nodo("div", "al-acciones");
       if (llego) { var r = nodo("button", "btn", "Revisar y recibir"); r.type = "button"; r.addEventListener("click", function () { CofrialEntrega.revisar(a.orden_id); }); ac.appendChild(r); }
       var ver = nodo("a", llego ? "btn-sec" : "btn", llego ? "Ver mi pedido" : "Ver dónde va"); ver.href = a.accion ? a.accion.url : "/pedidos/" + a.orden_id + "/"; ac.appendChild(ver);
+      if (!llego) { var x = nodo("button", "al-cerrar", "×"); x.type = "button"; x.setAttribute("aria-label", "Cerrar este aviso"); x.addEventListener("click", function () { cerrar(a.id); }); ac.appendChild(x); }
       it.appendChild(cuerpo); it.appendChild(ac);
-      if (!llego) { var x = nodo("button", "al-cerrar", "×"); x.type = "button"; x.setAttribute("aria-label", "Cerrar este aviso"); x.addEventListener("click", function () { cerrar(a.id); }); it.appendChild(x); }
       banner.appendChild(it);
     });
     var primero = lista[0];

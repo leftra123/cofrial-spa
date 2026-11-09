@@ -83,6 +83,37 @@ class MercadoPagoCheckout(TestCase):
         self.assertFalse(CheckoutPago.objects.exists())
 
     @override_settings(**MP_SETTINGS)
+    def test_empresa_y_particular_ven_pagar_ahora_y_generar_orden(self):
+        for usuario in ("ana@correo.test", "abastecimiento@hospital.test"):
+            c = self.client
+            c.force_login(get_user_model().objects.get(username=usuario))
+            if usuario.startswith("ana"):
+                s.agregar(self.ana, self.lomo.pk, 1)
+            else:
+                s.agregar(self.hospital, self.lomo.pk, 1)
+            pagina = c.get("/carrito/")
+            self.assertContains(pagina, "Pagar ahora")
+            self.assertContains(pagina, "Generar orden")
+            self.assertContains(pagina, "mp-mostrar-pago")
+
+    @override_settings(**MP_SETTINGS)
+    @patch("pedidos.mercadopago._api")
+    def test_la_empresa_puede_pagar_con_mercado_pago(self, api_mock):
+        s.agregar(self.hospital, self.lomo.pk, 1)
+        ctx = s._contexto_desde_carrito(self.hospital, self.hospital.direccion_set.first().pk, "OC-MP")
+        monto = mp.monto_a_cobrar(self.hospital, ctx)
+        neto = sum(ctx["precios"][i.producto_id] * i.cantidad for i in ctx["items"])
+        self.assertEqual(monto, round(neto * 1.19))
+        api_mock.return_value = {"id": 777, "status": "approved", "transaction_amount": float(monto)}
+        c = self.client
+        c.force_login(get_user_model().objects.get(username="abastecimiento@hospital.test"))
+        r = c.post("/carrito/mp/pagar/", data='{"direccion": %d, "comprobante": "factura", "formData": {"token": "tok", "payment_method_id": "visa", "installments": 1}}'
+                   % self.hospital.direccion_set.first().pk, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ok"])
+        self.assertEqual(api_mock.call_args[0][2]["transaction_amount"], monto)
+
+    @override_settings(**MP_SETTINGS)
     def test_email_demo_se_normaliza_para_mp(self):
         self.assertEqual(mp.email_cliente_mp(self.ana), "test_user_1@testuser.com")
 

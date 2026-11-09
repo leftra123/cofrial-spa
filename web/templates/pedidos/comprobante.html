@@ -1,10 +1,12 @@
 {% extends "tienda/base.html" %}
+{% load static %}
 {% block titulo %}{{ doc }} | Cofrial SpA{% endblock %}
 {% block contenido %}
 <p class="volver"><a href="/pedidos/{{ orden.orden_id }}/#documentos">Volver al pedido N.º {{ orden.orden_id }}</a></p>
+<div class="comprobante-vista">
 <article class="comprobante-hoja">
   <header>
-    <p class="frio">Cofrial SpA · Frigorífico y distribución</p>
+    <img class="comprobante-logo" src="{% static 'img/marca/logo-horizontal-900.png' %}" alt="Cofrial SpA" width="220" height="62">
     <h1>{{ doc.get_tipo_display }} N.º {{ doc.folio }}</h1>
     <p>Pedido N.º {{ orden.orden_id }} · emitida el {{ doc.emitido_en|date:"d/m/Y" }}</p>
   </header>
@@ -30,4 +32,5 @@
   <p class="frio">Documento simulado para la demostración. No es un documento tributario electrónico del SII.</p>
   <p><a class="btn" href="/pedidos/{{ orden.orden_id }}/documentos/{{ doc.documento_id }}/?descarga=1">Descargar PDF</a></p>
 </article>
+</div>
 {% endblock %}

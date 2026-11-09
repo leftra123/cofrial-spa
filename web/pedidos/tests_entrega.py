@@ -186,7 +186,7 @@ class EndpointEntregaTests(EntregaBase):
         self.assertContains(r, "Tu paquete llegó")
         self.assertNotContains(r, "Pedido entregado exitosamente")
         self.assertContains(r, "Recibí mi pedido")
-        self.assertContains(r, "No pude recibirlo")
+        self.assertContains(r, "No recibiré mi pedido")
 
     def test_aviso_de_la_campanita_cuando_el_camion_esta_afuera(self):
         cliente, orden, _ = self.orden_despachada()
@@ -197,7 +197,7 @@ class EndpointEntregaTests(EntregaBase):
 
 
 class MapaSegunEstadoTests(EntregaBase):
-    """El cliente ve el mapa en vivo solo con el pedido en ruta o con el camión en la puerta."""
+    """El cliente ve el mapa en vivo solo mientras el pedido va en camino y el camión no llegó a esta parada."""
 
     def seguimiento(self, orden):
         self.entrar()
@@ -215,18 +215,75 @@ class MapaSegunEstadoTests(EntregaBase):
             self.assertEqual(d["mensaje"], "Tu pedido aún no sale.")
             self.assertEqual(self.client.get(f"/api/pedidos/{orden.pk}/ruta/").status_code, 404)
 
-    def test_en_ruta_y_en_la_puerta_si_hay_mapa(self):
+    def test_la_pantalla_abierta_pasa_sola_a_en_camino_y_el_catalogo_no(self):
+        cliente = s.cliente_de(__import__("django.contrib.auth", fromlist=["x"]).get_user_model().objects.get(username="ana@correo.test"))
+        s.agregar(cliente, Producto.objects.get(sku="VAC-LOM-5K").pk, 1)
+        orden = s.generar_ordenes(cliente, cliente.direccion_set.first().pk)[0]
+        Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="En preparación"))
+        self.entrar()
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, "Estamos preparando tu pedido")
+        self.assertContains(pagina, "pasa sola a «en camino»")
+        self.assertContains(pagina, "espera-salida")
+        self.assertContains(pagina, f"/api/pedidos/{orden.pk}/seguimiento/")
+        self.assertNotContains(pagina, "Tu pedido va en camino")
+        self.assertNotContains(pagina, 'id="seg"', html=False)
+        self.assertNotContains(self.client.get("/catalogo/"), "espera-salida")
+        rango = flota.rangos_de(orden)[0]
+        camion = next(c for c in flota.camiones_libres() if c.rango_temperatura.nombre == rango)
+        flota.despachar(camion.camion_id, [orden.pk])
+        salida = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(salida, "Tu pedido va en camino")
+        self.assertContains(salida, 'id="seg"', html=False)
+        self.assertContains(salida, 'id="mapa"', html=False)
+        self.assertNotContains(salida, "espera-salida")
+
+    def test_en_ruta_si_hay_mapa(self):
         cliente, orden, despacho = self.orden_despachada()
         from flota.models import Telemetria
         Telemetria.objects.create(camion=despacho.camion, temp_camara=2.0, lat=-38.74, long=-72.60, combustible_pct=80, alerta_ruptura_frio=False)
-        for etapa in ("Despachada", "Camión en la puerta"):
-            Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre=etapa))
-            d = self.seguimiento(orden)
-            self.assertTrue(d["mapa_en_vivo"], etapa)
-            self.assertIsNotNone(d["seguimiento"]["ultima"]["lat"], etapa)
-            r = self.client.get(f"/api/pedidos/{orden.pk}/ruta/")
-            self.assertEqual(r.status_code, 200, etapa)
-            self.assertTrue(r.json()["puntos"])
+        d = self.seguimiento(orden)
+        self.assertEqual(d["estado"], "Despachada")
+        self.assertTrue(d["mapa_en_vivo"])
+        self.assertIsNotNone(d["seguimiento"]["ultima"]["lat"])
+        r = self.client.get(f"/api/pedidos/{orden.pk}/ruta/")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["puntos"])
+        pagina = self.client.get(f"/pedidos/{orden.pk}/")
+        self.assertContains(pagina, 'id="mapa"', html=False)
+        self.assertContains(pagina, "Última señal")
+
+    def test_en_la_puerta_no_vuelve_el_mapa_aunque_se_recargue(self):
+        cliente, orden, despacho = self.orden_despachada()
+        from flota.models import Telemetria
+        Telemetria.objects.create(camion=despacho.camion, temp_camara=2.0, lat=-38.74, long=-72.60, combustible_pct=80, alerta_ruptura_frio=False)
+        s.llegar_a_la_puerta([orden])
+        orden.refresh_from_db()
+        d = self.seguimiento(orden)
+        self.assertEqual(d["estado"], "Camión en la puerta")
+        self.assertFalse(d["mapa_en_vivo"])
+        u = d["seguimiento"]["ultima"]
+        self.assertIsNotNone(u["temp_camara"])
+        self.assertIsNone(u["lat"])
+        self.assertIsNone(u["long"])
+        self.assertIsNone(d["seguimiento"]["destino"])
+        self.assertIsNone(d["seguimiento"]["ruta_url"])
+        self.assertIsNotNone(d["seguimiento"]["llegada_en"])
+        self.assertEqual(self.client.get(f"/api/pedidos/{orden.pk}/ruta/").status_code, 404)
+        for _ in range(2):                                          # la recarga pide la misma página y tampoco dibuja el mapa
+            pagina = self.client.get(f"/pedidos/{orden.pk}/")
+            self.assertContains(pagina, "Tu paquete llegó")
+            self.assertContains(pagina, "Tu pedido llegó a su destino")
+            self.assertContains(pagina, "Registro de temperatura del viaje")
+            self.assertContains(pagina, "Llegó")
+            self.assertContains(pagina, orden.quien_recibe)
+            self.assertContains(pagina, str(orden.direccion))
+            self.assertNotContains(pagina, "Última señal")
+            self.assertNotContains(pagina, "Llega entre")
+            self.assertNotContains(pagina, 'id="mapa"', html=False)
+            self.assertNotContains(pagina, 'id="seg-vivo"', html=False)
+            self.assertNotContains(pagina, "El mapa en vivo ya no está disponible")
+            self.assertNotContains(pagina, "Pedido entregado exitosamente")
 
     def test_entregada_o_no_concretada_muestran_el_resumen_sin_posicion(self):
         cliente, orden, despacho = self.orden_despachada()
@@ -244,11 +301,18 @@ class MapaSegunEstadoTests(EntregaBase):
 
     def test_la_pagina_del_pedido_no_dibuja_mapa_en_vivo_al_entregar(self):
         cliente, orden, despacho = self.orden_despachada()
-        Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Entregada"))
         self.entrar()
-        pagina = self.client.get(f"/pedidos/{orden.pk}/")
-        self.assertContains(pagina, "El mapa en vivo ya no está disponible")
-        self.assertNotContains(pagina, "Pedido entregado exitosamente")            # no lo confirmó el cliente
+        for etapa, titulo in (("Entregada", "Tu pedido llegó a su destino"),
+                              ("Rechazada en recepción", "Tu pedido llegó a su destino"),
+                              ("Entrega no concretada", "El seguimiento de este pedido terminó")):
+            Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre=etapa))
+            pagina = self.client.get(f"/pedidos/{orden.pk}/")
+            self.assertContains(pagina, titulo, msg_prefix=etapa)
+            self.assertContains(pagina, "Registro de temperatura del viaje", msg_prefix=etapa)
+            self.assertNotContains(pagina, "Última señal", msg_prefix=etapa)
+            self.assertNotContains(pagina, 'id="mapa"', html=False, msg_prefix=etapa)
+            self.assertNotContains(pagina, "El mapa en vivo ya no está disponible", msg_prefix=etapa)
+            self.assertNotContains(pagina, "Pedido entregado exitosamente", msg_prefix=etapa)            # no lo confirmó el cliente
 
 
 class ReprogramarTests(EntregaBase):

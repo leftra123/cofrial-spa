@@ -23,9 +23,18 @@
       }
     }
     sincronizarBotones();
+    document.addEventListener("mousedown", function (ev) {
+      if (ev.button !== 0 || !ev.target.closest("[data-tema-btn]")) return;
+      raiz.classList.add("tema-puntero");
+    });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Tab") raiz.classList.remove("tema-puntero");
+    });
     document.addEventListener("click", function (ev) {
-      if (!ev.target.closest("[data-tema-btn]")) return;
+      var b = ev.target.closest("[data-tema-btn]");
+      if (!b) return;
       alternar();
+      if (ev.detail !== 0) b.blur();
     });
     window.CofrialTema = { iniciado: true, oscuro: oscuro, alternar: alternar, sincronizarBotones: sincronizarBotones };
   })();

@@ -1,6 +1,9 @@
 """COF-04: el cliente elige boleta o factura, y el documento emitido se consulta y se descarga."""
+from datetime import timedelta
+
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 
 from catalogo.models import Producto
 from pedidos import documentos, servicios as s
@@ -34,21 +37,33 @@ class EleccionDeComprobante(TestCase):
         orden = Orden.objects.filter(direccion__cliente=self.ana).order_by("-orden_id").first()
         boleta = Documento.objects.get(orden=orden, tipo="boleta")
         self.assertEqual(orden.comprobante, "boleta")
+        self.assertGreater(documentos.saldo(boleta), 0)
+        self.assertIsNotNone(boleta.vence_en)
         pagina = self.client.get(f"/pedidos/{orden.pk}/")
         self.assertContains(pagina, f"Boleta N.º {boleta.folio}")
-        self.assertContains(pagina, "Descargar")
+        self.assertContains(pagina, "Ver boleta")
+        self.assertContains(pagina, "Descargar PDF")
+        self.assertNotContains(pagina, f"Boleta N.º {boleta.folio} <a")
         visto = self.client.get(f"/pedidos/{orden.pk}/documentos/{boleta.pk}/")
         self.assertContains(visto, self.ana.rut)
+        self.assertContains(visto, f"Boleta N.º {boleta.folio}")
+        self.assertContains(visto, "logo-horizontal-900.png")
+        self.assertContains(visto, "comprobante-hoja")
+        self.assertContains(visto, orden.ordenitem_set.select_related("producto").first().producto.nombre)
+        self.assertContains(visto, "Total (IVA incluido)")
         self.assertContains(visto, "No es un documento tributario")
         pdf = self.client.get(f"/pedidos/{orden.pk}/documentos/{boleta.pk}/?descarga=1")
         self.assertEqual(pdf["Content-Type"], "application/pdf")
         self.assertTrue(pdf.content.startswith(b"%PDF"))
         self.assertIn(self.ana.rut.encode("latin-1"), pdf.content)
+        self.assertIn("Documento simulado para la demostración.".encode("latin-1"), pdf.content)
+        self.assertIn(b"No es un documento tributario", pdf.content)
+        self.assertIn(b"SII.", pdf.content)
         self.client.logout()
         self.client.login(username="abastecimiento@hospital.test", password=CLAVE)
         self.assertEqual(self.client.get(f"/pedidos/{orden.pk}/documentos/{boleta.pk}/").status_code, 404)
 
-    def test_la_factura_exige_giro_y_queda_pagada_en_el_pedido(self):
+    def test_la_factura_exige_giro_y_queda_por_pagar_a_30_dias(self):
         antes = Orden.objects.filter(direccion__cliente=self.ana).count()
         self.client.post("/carrito/confirmar/", {"direccion": self.direccion, "comprobante": "factura", "giro": ""})
         self.assertEqual(Orden.objects.filter(direccion__cliente=self.ana).count(), antes)
@@ -58,7 +73,8 @@ class EleccionDeComprobante(TestCase):
         orden = Orden.objects.filter(direccion__cliente=self.ana).order_by("-orden_id").first()
         factura = Documento.objects.get(orden=orden, tipo="factura")
         self.assertEqual(orden.comprobante, "factura")
-        self.assertEqual(documentos.saldo(factura), 0)
+        self.assertGreater(documentos.saldo(factura), 0)
+        self.assertEqual(factura.vence_en, timezone.localdate() + timedelta(days=30))
         self.assertContains(self.client.get(f"/pedidos/{orden.pk}/documentos/{factura.pk}/"), "Venta de alimentos")
         self.assertFalse(Documento.objects.filter(orden=orden, tipo="boleta").exists())
 
@@ -72,7 +88,8 @@ class EleccionDeComprobante(TestCase):
         self.client.logout()
         self.client.login(username="abastecimiento@hospital.test", password=CLAVE)
         self.assertContains(self.client.get(f"/pedidos/{orden.pk}/"), "La factura de este pedido se emite después de la entrega.")
-        self.assertNotContains(self.client.get(f"/pedidos/{orden.pk}/"), "Descargar")
+        self.assertNotContains(self.client.get(f"/pedidos/{orden.pk}/"), "Descargar PDF")
+        self.assertNotContains(self.client.get(f"/pedidos/{orden.pk}/"), "Ver boleta")
 
     def _hospital(self):
         from django.contrib.auth import get_user_model
@@ -107,6 +124,20 @@ class EleccionDeComprobante(TestCase):
         self.assertEqual(self.ana.giro, "123")
         with self.assertRaises(s.ErrorDeNegocio):
             s.elegir_comprobante(self.ana, ["factura"], "")
+
+    def test_la_guia_acompaña_la_entrega_y_no_se_abre_como_boleta(self):
+        self.client.post("/carrito/confirmar/", {"direccion": self.direccion, "comprobante": "boleta"})
+        orden = Orden.objects.filter(direccion__cliente=self.ana).order_by("-orden_id").first()
+        Orden.objects.filter(pk=orden.pk).update(estado_orden=EstadoOrden.objects.get(nombre="Entregada"))
+        guia = documentos.emitir_guia(orden)
+        boleta = Documento.objects.get(orden=orden, tipo="boleta")
+        html = self.client.get(f"/pedidos/{orden.pk}/").content.decode()
+        self.assertIn("Ver boleta", html)
+        self.assertIn("Descargar PDF", html)
+        self.assertIn(f"Guía de despacho N.º {guia.folio}", html)
+        self.assertIn("Acompaña la entrega", html)
+        self.assertNotIn(f"/documentos/{guia.pk}/", html)
+        self.assertIn(f"/documentos/{boleta.pk}/", html)
 
     def test_el_pdf_institucional_desglosa_el_iva(self):
         hospital = self._hospital()

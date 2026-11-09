@@ -132,8 +132,16 @@ def _api(metodo, ruta, cuerpo=None, error_usuario=None, idempotencia=None):
         raise ErrorMercadoPago("No hay conexión con Mercado Pago en este momento.") from e
 
 
+def monto_a_cobrar(cliente, ctx):
+    """Lo que se cobra en Mercado Pago. El institucional informa precios netos: el pago lleva el IVA."""
+    neto = sum(ctx["precios"][i.producto_id] * i.cantidad for i in ctx["items"])
+    if cliente.tipo_cliente.codigo == "B2B":
+        return round(neto * (1 + documentos.IVA))
+    return neto
+
+
 def _crear_checkout(cliente, ctx, comprobante="boleta"):
-    monto = sum(ctx["precios"][i.producto_id] * i.cantidad for i in ctx["items"])
+    monto = monto_a_cobrar(cliente, ctx)
     checkout = CheckoutPago.objects.create(cliente=cliente, direccion=ctx["direccion"], numero_oc=ctx["numero_oc"],
                                            recibe_nombre=ctx["recibe"], comprobante=comprobante, monto_clp=monto, external_reference=f"TMP-{uuid.uuid4().hex}")
     checkout.external_reference = f"COF-{checkout.checkout_id:08d}"

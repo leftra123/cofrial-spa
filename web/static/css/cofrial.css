@@ -219,7 +219,26 @@ td.vacio { text-align: center; color: var(--texto-3); padding: 40px 20px; }
 .tab:hover { border-color: var(--borde-fuerte); background: var(--tarjeta); color: var(--texto); text-decoration: none; box-shadow: none; }
 .tab .n { background: var(--fondo); color: var(--texto-3); border-radius: 999px; padding: 0 8px; font-size: .78rem; font-weight: 600; min-width: 22px; text-align: center; }
 .tab.activo, .tab.activo:hover { background: var(--acento); border-color: var(--acento); color: var(--acento-fg); }
-.tab.activo .n { background: rgba(255, 255, 255, .24); color: inherit; }
+.tab.activo .n { background: color-mix(in srgb, var(--acento-fg) 18%, transparent); color: inherit; }
+/* La regla global de botones (lleva un id en :not) pinta cualquier <button> como el botón lima.
+   Estas pestañas son botones: sin esta especificidad, la activa y las demás se ven iguales. */
+button.tab:not(#mp-brick-container button) {
+  background: var(--tarjeta); color: var(--texto-2); border: 1px solid var(--borde-fuerte);
+  border-radius: 999px; padding: 8px 14px; font-weight: 600; box-shadow: none; min-height: 40px; line-height: 1.2;
+}
+button.tab:not(#mp-brick-container button):hover {
+  background: var(--fondo-2); border-color: var(--borde-fuerte); color: var(--texto); box-shadow: none; transform: none;
+}
+button.tab.activo:not(#mp-brick-container button),
+button.tab[aria-pressed="true"]:not(#mp-brick-container button),
+button.tab.activo:not(#mp-brick-container button):hover,
+button.tab[aria-pressed="true"]:not(#mp-brick-container button):hover {
+  background: var(--acento); border-color: var(--acento); color: var(--acento-fg); box-shadow: none; transform: none;
+}
+button.tab.activo:not(#mp-brick-container button) .n,
+button.tab[aria-pressed="true"]:not(#mp-brick-container button) .n {
+  background: color-mix(in srgb, var(--acento-fg) 18%, transparent); color: var(--acento-fg);
+}
 
 /* ---------- formularios y botones ---------- */
 /* El Brick de Mercado Pago trae su propio CSS; estas reglas no deben alcanzarlo. */
@@ -246,7 +265,14 @@ button:focus-visible, .btn:focus-visible, .tab:focus-visible, a:focus-visible, s
 input:user-invalid { border-color: #DC2626; }
 form:not(.en-linea) > input:not([type=hidden]):not([type=number]):not([type=radio]):not([type=checkbox]), form:not(.en-linea) > select, form:not(.en-linea) > textarea { width: 100%; max-width: 460px; display: block; }
 input[type=number] { width: 84px; }
-input[type=radio], input[type=checkbox] { accent-color: var(--acento); width: 16px; height: 16px; padding: 0; }
+/* El padding de los campos de texto gana por especificidad y empuja el círculo hacia arriba del rótulo. */
+input[type=radio]:not(#mp-brick-container input),
+input[type=checkbox]:not(#mp-brick-container input) {
+  accent-color: var(--acento); width: 18px; height: 18px; min-width: 18px; margin: 0; padding: 0;
+  border: 0; background: transparent; flex: none; align-self: center; vertical-align: middle;
+}
+input[type=radio]:not(#mp-brick-container input):focus,
+input[type=checkbox]:not(#mp-brick-container input):focus { box-shadow: 0 0 0 3px var(--foco); }
 button:not(#mp-brick-container button), .btn {
   font: inherit; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
   padding: 10px 18px; border-radius: var(--radio-sm); border: 1px solid var(--acento); background: var(--acento); color: var(--acento-fg); text-decoration: none;
@@ -265,6 +291,11 @@ a.tema-btn {
 }
 button.tema-btn:not(#mp-brick-container button):hover,
 a.tema-btn:hover { background: var(--fondo-2); color: var(--texto); border-color: var(--borde-fuerte); box-shadow: none; transform: none; }
+button.tema-btn:not(#mp-brick-container button):active,
+button.tema-btn:not(#mp-brick-container button):focus { box-shadow: none; transform: none; outline: none; }
+button.tema-btn:not(#mp-brick-container button):focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+html.tema-puntero button.tema-btn:not(#mp-brick-container button):focus,
+html.tema-puntero button.tema-btn:not(#mp-brick-container button):focus-visible { outline: none; }
 button.enlace:not(#mp-brick-container button) {
   background: none; border: 0; color: var(--texto-2); padding: 4px 2px; font-weight: 500; font-size: .85rem;
   text-decoration: underline; text-underline-offset: 3px; box-shadow: none; border-radius: 0; width: auto; height: auto; min-width: 0; min-height: 0;
@@ -639,7 +670,7 @@ label.filtro-camion:not(#mp-brick-container label) { display: inline-flex; align
 
 
 /* ---------- estados compartidos (estados.js y componentes/vacio_estado.html) ---------- */
-.vacio-caja .vacio-titulo { margin: 0 0 6px; color: var(--texto); font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+.vacio-caja .vacio-titulo { max-width: 44ch; margin: 0 auto 6px; text-align: center; color: var(--texto); font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
 .vacio-caja.compacto { padding: 24px 20px; }
 .vacio-caja.compacto .vacio-ico { width: 44px; height: 44px; margin-bottom: 10px; }
 .vacio-caja.compacto .vacio-ico svg { width: 22px; height: 22px; }

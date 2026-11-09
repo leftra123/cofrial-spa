@@ -13,6 +13,7 @@
 Los contadores viven en la caché de Django (en memoria de cada proceso): por eso gunicorn corre con un solo proceso y varios hilos.
 Con dos procesos cada uno llevaría su cuenta y el bloqueo saldría al azar. Para varias instancias detrás de un balanceador hace
 falta una caché compartida (ver docs/decisiones.md)."""
+import ipaddress
 import logging
 import sys
 
@@ -63,13 +64,22 @@ def demasiadas(motivo, segundos):
 
 
 # ---------------------------------------------------------------- contadores
+def _desde_red_privada(direccion):
+    try:
+        return ipaddress.ip_address(direccion).is_private
+    except ValueError:
+        return False
+
+
 def ip_de(request):
-    """IP del visitante. Detrás de un balanceador (CONFIAR_PROXY=1) se toma el último salto de X-Forwarded-For, que agregó él."""
-    if settings.CONFIAR_PROXY:
+    """IP del visitante. Detrás de un proxy (CONFIAR_PROXY=1) se toma el último salto de X-Forwarded-For, que agregó él.
+    Solo vale si la conexión viene de una red privada, donde está el proxy: en una conexión directa desde internet, la cabecera la escribe el cliente."""
+    directa = request.META.get("REMOTE_ADDR", "?")
+    if settings.CONFIAR_PROXY and _desde_red_privada(directa):
         salto = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[-1].strip()
         if salto:
             return salto
-    return request.META.get("REMOTE_ADDR", "?")
+    return directa
 
 
 def _contar(clave, ventana):

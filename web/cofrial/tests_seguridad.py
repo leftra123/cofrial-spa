@@ -566,6 +566,14 @@ class LimiteDeIntentosTests(BaseSeguridad):
             self.anonimo().post("/cuenta/entrar/", {"username": f"w{i}@correo.test", "password": "x1y2z3w4"}, HTTP_X_FORWARDED_FOR="198.51.100.4")
         self.assertEqual(self.anonimo().post("/cuenta/entrar/", {"username": "z@correo.test", "password": "x"}, HTTP_X_FORWARDED_FOR="198.51.100.4").status_code, 429)
 
+    @override_settings(CONFIAR_PROXY=True, ACCESO_MAX_FALLOS_IP=20)
+    def test_una_conexion_directa_no_falsifica_su_ip_aunque_haya_proxy(self):
+        """Mientras la web siga abierta a internet, un cliente directo escribe él mismo X-Forwarded-For: la cabecera solo vale si la conexión viene de la red privada del proxy."""
+        for i in range(20):
+            self.anonimo().post("/cuenta/entrar/", {"username": f"v{i}@correo.test", "password": "x1y2z3w4"}, HTTP_X_FORWARDED_FOR=f"1.2.3.{i}", REMOTE_ADDR="54.200.1.7")
+        r = self.anonimo().post("/cuenta/entrar/", {"username": "otro@correo.test", "password": "x"}, HTTP_X_FORWARDED_FOR="9.9.9.9", REMOTE_ADDR="54.200.1.7")
+        self.assertEqual(r.status_code, 429)
+
     @override_settings(ACCESO_MAX_FALLOS_IP=20)
     def test_sin_confiar_en_el_proxy_una_cabecera_falsa_no_evade_el_limite(self):
         for i in range(20):

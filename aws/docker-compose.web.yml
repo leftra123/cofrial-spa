@@ -1,4 +1,8 @@
 # EC2 WEB (subred pública): aplicación Django + Grafana. La base está en RDS (subred privada), no aquí.
+# Alta disponibilidad: hay DOS EC2 web (una por zona) detrás de un Application Load Balancer, con este mismo compose. ROL_WEB decide qué hace cada una:
+#   primario (por defecto)  migra la base, carga datos de demostración, crea el usuario de Grafana y corre podador y despachador
+#   secundario              espera a que la base esté migrada y solo sirve la aplicación (podador y despachador quedan dormidos)
+# Así dos instancias nunca migran ni despachan a la vez. Un solo servidor (sin ALB) funciona igual: es primario.
 # Uso desde la raíz del repositorio:  docker compose -f aws/docker-compose.web.yml --env-file .env up -d --build
 x-bd: &bd
   DB_HOST: ${DB_HOST:?define DB_HOST (endpoint de RDS) en .env}
@@ -12,9 +16,14 @@ services:
   web:
     build: ../web
     # migrate es idempotente; los datos de demostración se cargan solo la primera vez para no deshacer lo editado en /operacion/; preparar_bi crea el usuario de solo lectura de Grafana en RDS
-    command: sh -c "python manage.py migrate --noinput && python manage.py cargar_demo --solo-primera-vez && python manage.py preparar_bi && gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 16 --timeout 60 --access-logfile - --error-logfile -"
+    command: >
+      sh -c 'if [ "$$ROL_WEB" = "secundario" ]; then
+      until python manage.py migrate --check >/dev/null 2>&1; do echo "web secundaria: esperando las migraciones de la primaria"; sleep 10; done;
+      else python manage.py migrate --noinput && python manage.py cargar_demo --solo-primera-vez && python manage.py preparar_bi; fi
+      && exec gunicorn cofrial.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 16 --timeout 60 --access-logfile - --error-logfile -'
     environment:
       <<: *bd
+      ROL_WEB: ${ROL_WEB:-primario}                              # primario | secundario (ver arriba)
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
       RETENCION_TELEMETRIA_DIAS: ${RETENCION_TELEMETRIA_DIAS:-7}   # la usa Podar telemetría en /operacion/sistema/: debe ser la misma del podador
       FORZAR_CARGA_DEMO: ${FORZAR_CARGA_DEMO:-0}                 # 1 = cargar datos de demostración nuevos en este arranque; usarlo antes de editar datos en /operacion/
@@ -35,6 +44,7 @@ services:
       DJANGO_CSRF_ORIGINS: ${DJANGO_CSRF_ORIGINS:-}
       DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}            # ruta propia del panel de administración; por defecto /admin/
       DJANGO_HTTPS: ${DJANGO_HTTPS:-0}                         # 1 solo cuando hay certificado (cookies seguras y HSTS)
+      DJANGO_HTTPS_REDIRECT: ${DJANGO_HTTPS_REDIRECT:-1}       # 0 detrás del ALB: él redirige 80->443 y sus chequeos de salud llegan por HTTP plano
       DJANGO_CONFIAR_PROXY: ${DJANGO_CONFIAR_PROXY:-0}         # 1 solo detrás de un balanceador que agrega X-Forwarded-For
       ACCESO_MAX_FALLOS_CUENTA: ${ACCESO_MAX_FALLOS_CUENTA:-10}   # claves malas por cuenta antes de bloquearla 15 min
       ACCESO_MAX_FALLOS_IP: ${ACCESO_MAX_FALLOS_IP:-0}           # 0 = sin límite por IP (en la defensa toda la sala sale por una IP)
@@ -71,10 +81,11 @@ services:
   # Borra cada día la telemetría normal antigua (docs/decisiones.md). Espera 10 min para no competir con el arranque.
   podador:
     build: ../web
-    command: sh -c "sleep 600; while true; do python manage.py podar_telemetria; sleep 86400; done"
+    command: sh -c 'if [ "$$ROL_WEB" = "secundario" ]; then echo "Podador solo en la web primaria"; exec sleep infinity; fi; sleep 600; while true; do python manage.py podar_telemetria; sleep 86400; done'
     init: true
     environment:
       <<: *bd
+      ROL_WEB: ${ROL_WEB:-primario}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
       DJANGO_DEBUG: "0"
       RETENCION_TELEMETRIA_DIAS: ${RETENCION_TELEMETRIA_DIAS:-7}
@@ -88,10 +99,11 @@ services:
   # Servicio propio y no un paso del arranque: debe correr aunque nadie abra el panel, y gunicorn no lo espera (docs/decisiones.md).
   despachador:
     build: ../web
-    command: sh -c 'if [ "$$DESPACHO_AUTO" != "1" ]; then echo "Despacho automático apagado"; exec sleep infinity; fi; sleep 90; exec python manage.py despachar_auto --bucle'
+    command: sh -c 'if [ "$$ROL_WEB" = "secundario" ]; then echo "Despachador solo en la web primaria"; exec sleep infinity; fi; if [ "$$DESPACHO_AUTO" != "1" ]; then echo "Despacho automático apagado"; exec sleep infinity; fi; sleep 90; exec python manage.py despachar_auto --bucle'
     init: true
     environment:
       <<: *bd
+      ROL_WEB: ${ROL_WEB:-primario}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
       DJANGO_DEBUG: "0"
       DESPACHO_AUTO: ${DESPACHO_AUTO:-0}

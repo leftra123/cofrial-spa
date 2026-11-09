@@ -535,13 +535,14 @@ def _ultima_parada_atendida(orden, ruta, parada):
     return max((indice for direccion_id, indice in anteriores.items() if direccion_id not in pendientes), default=0)
 
 
-def _ventana(centro, multiplicador):
-    """Ventana de llegada alrededor de la hora estimada. Con tiempo acelerado el viaje entero dura minutos: la ventana de siempre (unos 20 min) no diría nada."""
+def _ventana(centro, multiplicador, ahora):
+    """Ventana de llegada alrededor de la hora estimada. Con tiempo acelerado el viaje entero dura minutos: la ventana de siempre (unos 20 min) no diría nada.
+    Nunca parte antes de ahora: con el camión recién salido, redondear hacia atrás daba «Salió 16:57» y «entre 16:50 y 17:10»."""
     from datetime import timedelta
     if multiplicador > 1:
         minuto = centro.replace(second=0, microsecond=0)
         return {"desde": minuto.isoformat(), "hasta": (minuto + timedelta(minutes=2)).isoformat()}
-    return {"desde": _redondear5(centro - timedelta(minutes=5)).isoformat(),
+    return {"desde": max(_redondear5(centro - timedelta(minutes=5)), ahora.replace(second=0, microsecond=0)).isoformat(),
             "hasta": (_redondear5(centro + timedelta(minutes=10)) + timedelta(minutes=5)).isoformat()}
 
 
@@ -569,7 +570,7 @@ def _llegada(orden, ultima):
         km = _km(ultima.lat, ultima.long, orden.direccion.lat, orden.direccion.long) * settings.FACTOR_CALLES
     minutos = tiempo.minutos_de_viaje(km, multiplicador)
     return {**vacio, "km_restantes": round(km, 1), "cerca": km <= cerca_km, "minutos": max(1, round(minutos)),
-            "eta": _ventana(timezone.now() + timedelta(minutes=minutos), multiplicador)}
+            "eta": _ventana(timezone.now() + timedelta(minutes=minutos), multiplicador, timezone.now())}
 
 
 def en_minutos(minutos):

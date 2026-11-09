@@ -131,7 +131,14 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Torre de control y embudo de niveles con RN-23 (8-nov-2026): al integrar ambas ramas, la Torre y el embudo seguían sumando las unidades rechazadas y contando como venta los pedidos rechazados enteros. Ahora usan lo aceptado y excluyen esos pedidos, igual que Grafana; un cliente cuyo único pedido se rechazó entero queda en «Ganado sin pedido». La traza de un pedido y los pedidos afectados por frío los siguen mostrando, porque el viaje ocurrió.
 - Camiones de dos cámaras (8-nov-2026): 5 de los 50 llevan refrigerado y congelado, de modo que un carrito mixto sale en un solo viaje. Se agregan `camion.rango_secundario_id`, `telemetria.camara` y `orden.camara` (migraciones `flota/0008` y `pedidos/0012`). Una ruptura de frío afecta solo a los pedidos de esa cámara. Detalle en `docs/decisiones.md`.
 
+## 2026-11-08 (revisión técnica: alta disponibilidad)
+- El evaluador aprobó la aplicación salvo infraestructura: pidió balanceador de carga, dos EC2 web y RDS en múltiples zonas, HTTPS con nombre de dominio y Grafana con autenticación y HTTPS.
+- `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).
+- Documentado en `docs/decisiones.md`, `informe/03` (decisión 6 y tablas), `informe/04a` y `aws/README.md`. El dibujo de la Figura 1 está pendiente de redibujar.
+- Pendiente: corrida real en el laboratorio (Multi-AZ puede ser rechazado), certificado de confianza para el dominio y mover el registro del dominio al ALB.
+
 ## 2026-11-09: la ruta del cliente sigue al camión
 - En el mapa del pedido la línea azul se recortaba con la señal de GPS (cada 15 s) y se adelantaba al ícono, que se desliza entre lecturas. Ahora el tramo sale del camión dibujado y se acorta con él; el servidor sigue entregando solo lo que falta hasta la parada propia. Sin cambio de modelo.
+- Mientras va en camino se conserva el distintivo de llegada que trajo `main`. Al llegar a la puerta el mapa se apaga.
 - Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
 - Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.

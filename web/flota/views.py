@@ -54,7 +54,9 @@ def panel(request):
     # Datos del mapa: la base, los camiones en operación, los guardados en la base (se muestran a pedido) y las paradas ubicadas de cada viaje.
     mapa = {"base": settings.BASE_LOGISTICA,
             "camiones": [{"id": x["camion"].camion_id, "patente": x["camion"].patente, "lat": x["lectura"].lat, "long": x["lectura"].long,
-                          "alerta": x["alerta"]} for x in tarjetas if x["lectura"] and x["en_operacion"]],
+                          "alerta": x["alerta"], "situacion": x["situacion"], "situacion_texto": x["situacion_texto"], "sin_senal": x["sin_senal"],
+                          "temp": x["lectura"].temp_camara, "temps": [t.temp_camara for t in getattr(x["lectura"], "camaras", [x["lectura"]])], "comb": x["lectura"].combustible_pct, "comb_bajo": x["combustible_bajo"]}
+                         for x in tarjetas if x["lectura"] and x["en_operacion"]],
             "en_base": [{"id": x["camion"].camion_id, "patente": x["camion"].patente} for x in tarjetas if not x["en_operacion"]],
             "viajes": [{"camion": x["camion"].camion_id, "patente": x["camion"].patente, "despacho": x["viaje"].despacho_id,
                         "situacion": x["situacion_texto"], "ruta": _ruta_para_mapa(x["viaje"]),

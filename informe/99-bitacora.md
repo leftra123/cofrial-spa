@@ -131,3 +131,10 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Torre de control y embudo de niveles con RN-23 (8-nov-2026): al integrar ambas ramas, la Torre y el embudo seguían sumando las unidades rechazadas y contando como venta los pedidos rechazados enteros. Ahora usan lo aceptado y excluyen esos pedidos, igual que Grafana; un cliente cuyo único pedido se rechazó entero queda en «Ganado sin pedido». La traza de un pedido y los pedidos afectados por frío los siguen mostrando, porque el viaje ocurrió.
 - Camiones de dos cámaras (8-nov-2026): 5 de los 50 llevan refrigerado y congelado, de modo que un carrito mixto sale en un solo viaje. Se agregan `camion.rango_secundario_id`, `telemetria.camara` y `orden.camara` (migraciones `flota/0008` y `pedidos/0012`). Una ruptura de frío afecta solo a los pedidos de esa cámara. Detalle en `docs/decisiones.md`.
 - Pago y salud (8-nov-2026, revisión técnica): el modal de Mercado Pago pide confirmación («Confirmar y pagar» / «Cancelar compra»), «Cancelar» de la entrega deja de ser ambiguo y `/salud/` queda exenta de la redirección HTTPS para el balanceador. Probado solo en local; el balanceador y Multi-AZ los lleva otra sesión. Detalle en `docs/decisiones.md`.
+
+
+## 2026-11-08 (revisión técnica: alta disponibilidad)
+- El evaluador aprobó la aplicación salvo infraestructura: pidió balanceador de carga, dos EC2 web y RDS en múltiples zonas, HTTPS con nombre de dominio y Grafana con autenticación y HTTPS.
+- `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).
+- Documentado en `docs/decisiones.md`, `informe/03` (decisión 6 y tablas), `informe/04a` y `aws/README.md`. El dibujo de la Figura 1 está pendiente de redibujar.
+- Pendiente: corrida real en el laboratorio (Multi-AZ puede ser rechazado), certificado de confianza para el dominio y mover el registro del dominio al ALB.

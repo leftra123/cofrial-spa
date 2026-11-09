@@ -18,6 +18,7 @@ import http.cookiejar
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -153,6 +154,28 @@ def consulta_grafana(sesion, sql):
         return json.loads(sesion.abre.open(pedido, timeout=30).read())["results"]["A"]
     except urllib.error.HTTPError as e:
         return json.loads(e.read())["results"]["A"]
+
+
+def ips_de(nombre):
+    """IPv4 que resuelve el nombre con el DNS del sistema; vacío si no resuelve."""
+    try:
+        return {i[4][0] for i in socket.getaddrinfo(nombre, 443, socket.AF_INET, socket.SOCK_STREAM)}
+    except OSError:
+        return set()
+
+
+def juzgar_dominio_en_alb(ips_dominio, ips_alb):
+    """(cumple, detalle): el registro A del dominio (No-IP gratis solo admite A) debe ser una IP actual del ALB. Un ALB no tiene IP fija: si AWS
+    cambia sus nodos, el dominio queda apuntando a una IP que ya no sirve la aplicación."""
+    if not ips_dominio:
+        return False, "el dominio no resuelve (¿falta el registro A en No-IP?)"
+    if not ips_alb:
+        return False, "no se pudo resolver el DNS del ALB: no se puede comprobar el dominio"
+    if ips_dominio <= ips_alb:
+        return True, ""
+    fuera = sorted(ips_dominio - ips_alb)
+    return False, (f"el dominio resuelve a {', '.join(sorted(ips_dominio))} y el ALB hoy a {', '.join(sorted(ips_alb))}; {', '.join(fuera)} no es del ALB. "
+                   "Las IP de un ALB no están fijas: revisar y cambiar el A en No-IP (guía, «Revisar antes de la defensa»)")
 
 
 def juzgar_alb_http(estado, destino, cuerpo):
@@ -543,6 +566,12 @@ def main():
         if info.get("lb"):
             cumple, detalle = juzgar_alb_http(*salud_sin_redireccion("http://" + info["lb"]["dns"] + "/salud/"))
             exigir(cumple, "La aplicación responde por el DNS del ALB (/salud/; con certificado de confianza el 80 redirige al 443)", detalle)
+            if base_nombre:
+                host_nombre = base_nombre.split("//", 1)[-1].split("/")[0].split(":")[0]
+                cumple, detalle = juzgar_dominio_en_alb(ips_de(host_nombre), ips_de(info["lb"]["dns"]))
+                exigir(cumple, f"El registro A de {host_nombre} es una IP actual del ALB", detalle)
+            else:
+                marca("info", "Sin --nombre: no se comprobó que el dominio apunte al ALB (python3 aws/verificar.py --nombre=https://dominio --infra)")
     else:
         marca("info", "Comprobación omitida. Para incluirla: python3 aws/verificar.py --infra (con --defensa es obligatoria)")
 

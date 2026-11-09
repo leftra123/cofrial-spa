@@ -46,6 +46,19 @@ class SesionFalsa:
 
 
 class Ayudantes(unittest.TestCase):
+    def test_el_a_del_dominio_debe_estar_entre_las_ip_actuales_del_alb(self):
+        alb = {"32.198.141.234", "32.196.47.239"}
+        self.assertTrue(v.juzgar_dominio_en_alb({"32.198.141.234"}, alb)[0])                   # un A con una de las IP del ALB
+        self.assertFalse(v.juzgar_dominio_en_alb({"54.82.100.161"}, alb)[0])                   # la IP elástica de la web A: no pasa por el balanceador
+        self.assertFalse(v.juzgar_dominio_en_alb({"32.198.141.234", "54.82.100.161"}, alb)[0])   # una sola IP fuera del ALB basta para que algunos visitantes lo esquiven
+        self.assertFalse(v.juzgar_dominio_en_alb(set(), alb)[0])                               # el dominio no resuelve
+        self.assertFalse(v.juzgar_dominio_en_alb({"32.198.141.234"}, set())[0])                # no se pudo resolver el ALB: no se afirma nada
+
+    def test_el_aviso_dice_que_las_ip_del_alb_no_son_fijas(self):
+        _, detalle = v.juzgar_dominio_en_alb({"54.82.100.161"}, {"32.198.141.234"})
+        self.assertIn("54.82.100.161", detalle)
+        self.assertIn("No-IP", detalle)
+
     def test_el_80_del_alb_puede_servir_o_redirigir_a_https(self):
         self.assertTrue(v.juzgar_alb_http(200, "", '{"estado": "ok"}')[0])                     # sin certificado de confianza el 80 sirve la aplicación
         self.assertTrue(v.juzgar_alb_http(301, "https://cofrialspa.webhop.me/salud/", "")[0])   # con certificado de confianza redirige al 443

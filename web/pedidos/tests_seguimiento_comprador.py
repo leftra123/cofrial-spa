@@ -62,13 +62,14 @@ class PantallaDelCompradorTests(EntregaBase):
             self.assertNotIn(pieza, pagina)
         self.assertNotIn("Dónde va su pedido", pagina)
 
-    def test_en_la_puerta_sigue_el_mapa(self):
+    def test_en_la_puerta_el_mapa_se_apaga(self):
         _, orden, despacho = self.orden_despachada()
         lectura(despacho)
         s.llegar_a_la_puerta([orden])
         pagina = self.pagina(orden)
-        self.assertIn('id="mapa"', pagina)
-        self.assertIn('id="llegada-insignia"', pagina)
+        self.assertIn("Tu pedido llegó a su destino", pagina)
+        self.assertNotIn('id="mapa"', pagina)
+        self.assertNotIn('id="llegada-insignia"', pagina)
 
     def test_sin_despacho_no_hay_seguimiento_y_se_dice_que_aun_no_sale(self):
         cliente = s.cliente_de(get_user_model().objects.get(username="ana@correo.test"))

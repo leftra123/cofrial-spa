@@ -139,5 +139,6 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 
 ## 2026-11-09: la ruta del cliente sigue al camión
 - En el mapa del pedido la línea azul se recortaba con la señal de GPS (cada 15 s) y se adelantaba al ícono, que se desliza entre lecturas. Ahora el tramo sale del camión dibujado y se acorta con él; el servidor sigue entregando solo lo que falta hasta la parada propia. Sin cambio de modelo.
+- Mientras va en camino se conserva el distintivo de llegada que trajo `main`. Al llegar a la puerta el mapa se apaga.
 - Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
 - Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.

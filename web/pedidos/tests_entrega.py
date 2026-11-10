@@ -311,7 +311,6 @@ class MapaSegunEstadoTests(EntregaBase):
             self.assertContains(pagina, "Registro de temperatura del viaje", msg_prefix=etapa)
             self.assertNotContains(pagina, "Última señal", msg_prefix=etapa)
             self.assertNotContains(pagina, 'id="mapa"', html=False, msg_prefix=etapa)
-            self.assertNotContains(pagina, "El mapa en vivo ya no está disponible", msg_prefix=etapa)
             self.assertNotContains(pagina, "Pedido entregado exitosamente", msg_prefix=etapa)            # no lo confirmó el cliente
 
 

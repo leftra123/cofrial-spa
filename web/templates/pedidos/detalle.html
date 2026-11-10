@@ -11,9 +11,7 @@
   </div>
 </div>
 {% endblock %}
-
-{% block cabeza %}{% if seg and seg.mapa_en_vivo %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">{% endif %}{% endblock %}
-
+{% block cabeza %}{% if seg.mapa_en_vivo %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">{% endif %}{% endblock %}
 {% block contenido %}
 {% if request.GET.nueva and orden.estado_orden.orden_flujo <= 2 %}
 <section class="confirmacion" aria-labelledby="conf-t">
@@ -101,10 +99,8 @@
       {% if orden.entrega_motivo %}<blockquote class="entrega-motivo"><span class="frio">Lo que nos contaste</span>{{ orden.entrega_motivo }}</blockquote>{% endif %}
       <ol class="que-sigue" aria-label="Qué sigue"><li>Ventas ya tiene tu aviso en su bandeja.</li><li>Te contactamos para reprogramar la entrega o cancelar el pedido.</li><li>Si lo reprogramamos, verás aquí el nuevo viaje y te avisamos por la campanita.</li></ol>
       <div class="acciones"><a class="btn btn-sec" href="/soporte/?orden={{ orden.orden_id }}">Escribir a ventas</a></div>
-
-    {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p id="ep-sub">Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.</p>
+    {% elif n == "Despachada" %}<h2 id="ep-t">Tu pedido va en camino</h2><p id="ep-sub">Estamos calculando cuánto falta.</p>
     {% elif n == "En preparación" %}<h2 id="ep-t">Estamos preparando tu pedido</h2><p>Tu pedido aún no sale. Cada producto se arma en su rango de temperatura. Cuando el camión parta, esta pantalla pasa sola a «en camino» y aparece el mapa.</p>
-
     {% elif n == "Confirmada" %}<h2 id="ep-t">Tu pedido está confirmado</h2><p>Ya reservamos el stock. Tu pedido aún no sale; el mapa aparece cuando el camión parta.</p>
     {% else %}<h2 id="ep-t">Recibimos tu pedido</h2><p>Estamos confirmando el stock.{% if puede_cancelar %} Mientras esté en esta etapa puedes cancelarlo.{% endif %}</p>{% endif %}
   </div>
@@ -126,54 +122,41 @@
 </div>
 {% endif %}
 {% if seg %}
-<div class="seg-grid{% if not seg.mapa_en_vivo %} seg-cerrado{% endif %}" id="seg" data-estado="{{ orden.estado_orden.nombre }}"{% if orden.estado_orden.es_final %} data-final{% endif %}{% if not seg.mapa_en_vivo %} data-cerrado{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
+<div class="seg-grid{% if not seg.mapa_en_vivo %} seg-cerrado{% endif %}" id="seg" data-estado="{{ orden.estado_orden.nombre }}"{% if orden.estado_orden.es_final %} data-final{% endif %} data-url="/api/pedidos/{{ orden.orden_id }}/seguimiento/" data-min="{{ seg.banda.min }}" data-max="{{ seg.banda.max }}">
   <div class="tarjeta-ui">
     {% if seg.mapa_en_vivo %}
     <h2>Dónde va su pedido</h2>
     <p class="sub seg-sub"><span id="seg-vivo">Conectando…</span></p>
     <div class="seg-mapa" id="seg-mapa">
       <div id="mapa" class="mapa alto" role="group" aria-label="Mapa con la posición del camión y la ruta a su dirección"></div>
-
-
+      <div class="llegada-insignia" id="llegada-insignia" aria-hidden="true" hidden><b id="insignia-titulo"></b><span id="insignia-franja"></span></div>
       <div class="mapa-vacio" id="mapa-vacio" {% if seg.ultima %}hidden{% endif %}><div><b>Esperando la señal del camión</b>Apenas llegue su primera posición, la verá aquí con la ruta hasta su dirección.</div></div>
     </div>
+    {% elif orden.estado_orden.nombre == "Camión en la puerta" %}
+    <h2>Tu pedido llegó a su destino</h2>
+    <p class="seg-cierre">El camión {{ seg.camion_id }} ya está en tu dirección. El mapa y la ruta quedan solo mientras va en camino.</p>
+    {% elif orden.estado_orden.nombre == "Entrega no concretada" %}
+    <h2>El seguimiento de este pedido terminó</h2>
+    <p class="seg-cierre">El camión {{ seg.camion_id }} ya no va hacia esta dirección.</p>
     {% else %}
-    <h2>El viaje de tu pedido</h2>
-    <p class="sub seg-sub"><span id="seg-vivo">Conectando…</span></p>
+    <h2>Tu pedido llegó a su destino</h2>
+    <p class="seg-cierre">El recorrido de este pedido terminó. El mapa en vivo ya no está disponible. El camión {{ seg.camion_id }} ya no se sigue en el mapa.</p>
     {% endif %}
     <p class="solo-lector" id="llegada-anuncio" role="status" aria-live="polite"></p>
     <div class="seg-datos seg-datos-llegada">
+      {% if seg.mapa_en_vivo %}
       <div class="seg-llegada"><span>Llegada</span><b id="seg-eta" class="skeleton">En unos 00 min</b><small id="seg-franja" hidden></small></div>
       <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
-      {% if seg.mapa_en_vivo %}<div><span>Última señal</span><b id="seg-senal" class="skeleton">hace 0 min</b></div>{% endif %}
+      <div><span>Última señal</span><b id="seg-senal" class="skeleton">hace 0 min</b></div>
+      {% else %}
+      <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
+      <div><span>Llegó</span><b id="seg-eta" class="skeleton">00:00</b><small id="seg-franja" hidden></small></div>
+      {% endif %}
     </div>
     {% if seg.mapa_en_vivo %}
     <p class="ruta-info" id="ruta-info"></p>
     <p class="itinerario" id="itinerario"{% if not seg.itinerario %} hidden{% endif %}>{{ seg.itinerario.texto }}</p>
     <ul class="leyenda" id="leyenda-pedido" aria-label="Leyenda del mapa"></ul>
-
-    {% elif orden.estado_orden.nombre == "Camión en la puerta" %}
-    <h2>Tu pedido llegó a su destino</h2>
-    <p class="seg-cierre">El camión {{ seg.camion_id }} ya está en tu dirección. El mapa y la ruta quedan solo mientras va en camino.</p>
-    <div class="seg-datos">
-      <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
-      <div><span>Llegó</span><b id="seg-llegada" class="skeleton">00:00</b></div>
-    </div>
-    {% elif orden.estado_orden.nombre == "Entrega no concretada" %}
-    <h2>El seguimiento de este pedido terminó</h2>
-    <p class="seg-cierre">El camión {{ seg.camion_id }} ya no va hacia esta dirección.</p>
-    <div class="seg-datos">
-      <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
-      <div><span>Llegó a la dirección</span><b id="seg-llegada" class="skeleton">00:00</b></div>
-    </div>
-    {% else %}
-    <h2>Tu pedido llegó a su destino</h2>
-    <p class="seg-cierre">El recorrido de este pedido terminó. El camión {{ seg.camion_id }} ya no se sigue en el mapa.</p>
-    <div class="seg-datos">
-      <div><span>Salió</span><b id="seg-salio" class="skeleton">00:00</b></div>
-      <div><span>Llegó</span><b id="seg-llegada" class="skeleton">00:00</b></div>
-    </div>
-
     {% endif %}
   </div>
   <div class="tarjeta-ui">
@@ -184,7 +167,7 @@
     <div class="grafico-x" id="spark-x" hidden><span id="spark-t0"></span><span id="spark-t1"></span></div>
     <p class="spark-stats" id="spark-stats" hidden></p>
     <div class="spark-vacio" id="spark-vacio">Aún no hay lecturas de temperatura de este viaje.</div>
-    <p class="frio" style="margin:6px 0 0">{% if seg.mapa_en_vivo %}Última hora{% else %}Lecturas del viaje{% endif %} · la franja verde es el rango permitido</p>
+    <p class="frio" style="margin:6px 0 0">Última hora · la franja verde es el rango permitido</p>
     <div class="aviso error" id="seg-ruptura" style="margin-top:14px" {% if not seg.hubo_ruptura %}hidden{% endif %}>Detectamos una variación de temperatura en el transporte de su pedido. Ya estamos revisándola; si lo desea, informe cualquier problema.</div>
   </div>
 </div>
@@ -244,20 +227,19 @@
 </script>
 {% endif %}
 {% if seg %}
-
-{% if seg.mapa_en_vivo %}
-<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
-<script src="{% static 'js/mapa.js' %}?v=ruta-camion"></script>
+{% if seg.mapa_en_vivo %}<script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
+<script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
-<script>CofrialLeyenda("leyenda-pedido", ["camion", "destino", "ruta"]);</script>
-{% endif %}
+<script>CofrialLeyenda("leyenda-pedido", ["camion", "destino", "ruta"]);</script>{% endif %}
 <script>
 (function () {
   var raiz = document.getElementById("seg"), min = parseFloat(raiz.dataset.min), max = parseFloat(raiz.dataset.max);
-  var mapa = null, marcador = null, linea = null, restoRuta = null, rutaAprox = false, encuadrado = false, final = raiz.hasAttribute("data-final"), cerrado = raiz.hasAttribute("data-cerrado"), temporizador = null, conectado = false;
+  var mapa = null, marcador = null, linea = null, restoRuta = null, rutaAprox = false, ultimaRuta = 0, final = raiz.hasAttribute("data-final"), temporizador = null, conectado = false;
+  var tocado = false, encuadreCerca = false, encuadreRuta = false, creadoEn = 0;   // tocado: quien compra movió el mapa, y desde ahí la cámara es suya
+  var sinRed = false, ultimoSeg = null, ultimoEstado = null, anunciado = null;
   var nodoVivo = document.getElementById("seg-vivo");
-  var vivo = nodoVivo ? CofrialEstados.vivo(nodoVivo, {alCambiar: function (e) { raiz.classList.toggle("desactualizado", e === "caido"); }}) : {ok: function () {}, falla: function () {}};
-
+  var vivo = nodoVivo ? CofrialEstados.vivo(nodoVivo, {alCambiar: function (e) { raiz.classList.toggle("desactualizado", e === "caido"); sinRed = e === "caido"; if (ultimoSeg) mostrarLlegada(ultimoSeg, ultimoEstado); }}) : {ok: function () {}, falla: function () {}};
+  if (nodoVivo) nodoVivo.removeAttribute("role");      // lo reescribe cada lectura: los cambios de conexión ya se anuncian con CofrialEstados.anunciar
   function pintarSerie(serie) {
     var svg = document.getElementById("spark");
     var vacio = document.getElementById("spark-vacio");
@@ -333,24 +315,58 @@
   }
   function ponerFacts(s, estado) {
     quitarSk("seg-salio", s.salida_en ? hora(s.salida_en) : "Aún no sale");
-
-    var llego = !!s.llegada_en || estado === "Entregada" || estado === "Rechazada en recepción";
-    var aviso = document.getElementById("seg-llego");
-    if (aviso) { aviso.hidden = !llego; if (llego && s.llegada_en) document.getElementById("seg-llego-hora").textContent = "a las " + hora(s.llegada_en); }
-    var llegada = document.getElementById("seg-llegada");
-    if (llegada) quitarSk("seg-llegada", s.llegada_en ? hora(s.llegada_en) : (llego ? "Ya llegó" : "Sin hora"));
-    var eta = document.getElementById("seg-eta");
-    if (eta) {
-      quitarSk("seg-eta", llego ? "Ya llegó" : s.eta ? hora(s.eta.desde) + " y " + hora(s.eta.hasta) : s.salida_en ? (s.ultima && s.ultima.hace_seg > 600 ? "Sin estimado" : "Calculando…") : "Cuando salga");
-      eta.classList.toggle("cerca", !!s.cerca && !llego);
-    }
-    if (document.getElementById("seg-senal")) {
-      if (s.ultima) { ultimaSenal = Date.now() - s.ultima.hace_seg * 1000; mostrarSenal(); } else quitarSk("seg-senal", "Sin señal aún");
+    quitarSk("seg-senal", s.ultima ? haceTxt(s.ultima.hace_seg) : "Sin señal aún");
+    mostrarLlegada(s, estado);
+  }
+  /* El distintivo tapa la esquina superior: el encuadre deja ese espacio libre para que no quede sobre el camión ni sobre el destino. */
+  var MARGEN = {top: 112, right: 44, bottom: 44, left: 44};
+  function encuadrar(puntos, animar) { if (!tocado) mapa.encuadrar(puntos, {padding: MARGEN, animar: animar}); }
+  function crearMapa(s, u, cam, dest) {
+    mapa = CofrialMapa.crear("mapa", cam, 12); creadoEn = Date.now(); encuadreCerca = !!s.cerca;
+    if (!mapa.disponible) { document.getElementById("seg-mapa").classList.add("sin-mapa"); document.getElementById("leyenda-pedido").hidden = true; return; }
+    mapa.nativo.scrollZoom.disable();                    // la rueda sigue bajando por la página; para acercar están los botones y el doble clic
+    mapa.al("movestart", function (e) { if (e.originalEvent) tocado = true; });
+    marcador = mapa.camion(cam, {alerta: u.alerta_ruptura_frio, titulo: "Tu pedido viaja en este camión", popup: "Tu pedido viaja en este camión"});
+    marcador.alDeslizar = pegarLinea;
+    if (dest) {
+      var ic = CofrialMapa.destino();                    // el mismo destino de siempre, con un halo detrás que el CSS anima cuando el camión está cerca
+      mapa.marcador(dest, {html: '<span class="destino-halo" aria-hidden="true"></span>' + ic.html, clase: ic.clase, ancho: ic.ancho, alto: ic.alto, ancla: ic.ancla, altoPopup: ic.altoPopup, titulo: "Tu dirección de entrega", popup: s.destino.direccion});
+      encuadrar([cam, dest], false);
     }
   }
-  function mostrarSenal() { if (ultimaSenal && document.getElementById("seg-senal")) quitarSk("seg-senal", haceTxt(Math.max(0, Math.round((Date.now() - ultimaSenal) / 1000)))); }
-  if (!cerrado) setInterval(mostrarSenal, 1000);
-
+  /* La cámara se mueve sola solo en tres casos y nunca si la persona ya movió el mapa: la ruta real recién llegada, la primera vez que el camión está cerca y cuando se sale de la vista (pasa por otra entrega). */
+  function seguirConLaCamara(s, cam, dest) {
+    if (!dest || tocado) return;
+    var cerca = !!s.cerca && !encuadreCerca, fuera = !mapa.nativo.getBounds().contains([cam[1], cam[0]]);
+    if (s.cerca) encuadreCerca = true;
+    if (cerca || fuera) encuadrar([cam, dest], true);
+  }
+  function kmPlano(a, b) {
+    var dx = (a[1] - b[1]) * 88, dy = (a[0] - b[0]) * 111;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  /* La línea nace en el camión dibujado, no en la señal suelta, y se acorta mientras el ícono se desliza. */
+  function pegarLinea(pos) {
+    if (!restoRuta || !linea || !pos) return;
+    while (restoRuta.length > 1 && kmPlano(pos, restoRuta[0]) < 0.03 && kmPlano(pos, restoRuta[1]) <= kmPlano(restoRuta[0], restoRuta[1])) restoRuta.shift();
+    var primero = linea.linea && linea.linea[0];
+    if (primero && kmPlano(primero, pos) < 0.004 && linea.linea.length === restoRuta.length + 1) return;
+    linea.actualizar([pos].concat(restoRuta), {aproximada: rutaAprox});
+  }
+  function pedirRuta(s) {
+    ultimaRuta = Date.now();
+    fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
+      if (!r || !r.puntos || r.puntos.length < 2) return;
+      restoRuta = r.puntos.slice(1);
+      rutaAprox = !!r.aproximada;
+      var inicio = (marcador && marcador.dibujada) || r.puntos[0];
+      var puntos = [inicio].concat(restoRuta);
+      var opt = {aproximada: rutaAprox, color: "#3F8DBE", gradiente: ["#2F6C94", CofrialMapa.COLOR_RUTA]};       // tenue junto al camión, intensa al llegar a la dirección
+      if (linea) linea.actualizar(puntos, opt);
+      else linea = mapa.ruta(puntos, opt);
+      if (!encuadreRuta) { encuadreRuta = true; encuadrar(r.puntos, Date.now() - creadoEn > 800); }
+    });
+  }
   function pintar(d) {
     if (d.estado && d.estado !== raiz.dataset.estado) { location.reload(); return; }     // el estado cambió (llegó el camión, entrega confirmada...): se vuelve a dibujar la orden
     var s = d.seguimiento; if (!s) return;
@@ -358,71 +374,28 @@
     if (s.tiempo_x) CofrialEstados.tiempo(s.tiempo_x);
     var u = s.ultima;
     if (u) {
-
-      var tt = document.getElementById("seg-temp"); tt.textContent = u.temp_camara.toFixed(1).replace(".", ","); tt.classList.remove("skeleton");
-      var vacio = document.getElementById("mapa-vacio"), hace = document.getElementById("seg-hace");
-      if (u.lat != null && vacio) vacio.hidden = true;
-      if (hace) hace.textContent = u.hace_seg > 300 ? "sin señal reciente" : "última posición hace " + u.hace_seg + " s";
-      var e = document.getElementById("seg-estado"); e.textContent = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango"; e.className = "chip " + (u.alerta_ruptura_frio ? "alerta" : "entregado");
-      if (u.lat != null && document.getElementById("mapa")) {
+      quitarSk("seg-temp", u.temp_camara.toFixed(1).replace(".", ","));
+      var e = document.getElementById("seg-estado"), txt = u.alerta_ruptura_frio ? "Fuera de rango" : "Dentro de rango", cl = "chip " + (u.alerta_ruptura_frio ? "alerta" : "entregado");
+      if (e.textContent !== txt) e.textContent = txt;    // tiene role="status": reescribirla igual la volvería a anunciar
+      if (e.className !== cl) e.className = cl;
+      if (u.lat != null) {
+        document.getElementById("mapa-vacio").hidden = true;
         var cam = [u.lat, u.long], dest = s.destino ? [s.destino.lat, s.destino.long] : null;
-        function kmPlano(a, b) {
-          var dx = (a[1] - b[1]) * 88, dy = (a[0] - b[0]) * 111;
-          return Math.sqrt(dx * dx + dy * dy);
-        }
-        function pegarLinea(pos) {
-          if (!restoRuta || !linea || !pos) return;
-          while (restoRuta.length > 1 && kmPlano(pos, restoRuta[0]) < 0.03 && kmPlano(pos, restoRuta[1]) <= kmPlano(restoRuta[0], restoRuta[1])) restoRuta.shift();
-          var primero = linea.linea && linea.linea[0];
-          if (primero && kmPlano(primero, pos) < 0.004 && linea.linea.length === restoRuta.length + 1) return;
-          linea.actualizar([pos].concat(restoRuta), {aproximada: rutaAprox});
-        }
-        if (!window.__pegarRuta) {
-          window.__pegarRuta = true;
-          (function seguir() {
-            if (marcador && marcador.dibujada) pegarLinea(marcador.dibujada);
-            if (!final) requestAnimationFrame(seguir);
-          })();
-        }
-        if (!mapa) {
-          mapa = CofrialMapa.crear("mapa", cam, 13);
-          marcador = mapa.camion(cam, {alerta: u.alerta_ruptura_frio, etiqueta: s.camion_id, titulo: "Camión " + s.camion_id, popup: "Camión " + s.camion_id});
-          marcador.alDeslizar = pegarLinea;
-          if (dest) mapa.destino(dest, {titulo: "Tu dirección de entrega", popup: s.destino.direccion});
-        } else marcador.animarA(cam).alerta(u.alerta_ruptura_frio);
-        if (dest && s.ruta_url) {       // la línea sale del camión (no de la señal suelta) y se acorta con él; el servidor solo entrega lo que falta hasta esta dirección
-          fetch(s.ruta_url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
-            if (!r || !r.puntos || r.puntos.length < 2) return;
-            restoRuta = r.puntos.slice(1);
-            rutaAprox = !!r.aproximada;
-            var inicio = (marcador && marcador.dibujada) || cam;
-            if (linea) linea.actualizar([inicio].concat(restoRuta), {aproximada: rutaAprox});
-            else linea = mapa.ruta([inicio].concat(restoRuta), {aproximada: rutaAprox});
-            if (!encuadrado) { mapa.encuadrar(r.puntos, {padding: 30, animar: false}); encuadrado = true; }
-          });
-        }
-        var info = document.getElementById("ruta-info"); if (info) info.textContent = (s.km_restantes != null ? "Faltan " + String(s.km_restantes).replace(".", ",") + " km hasta " : "Entrega en ") + (s.destino ? s.destino.direccion : "tu dirección");
-
+        if (!mapa) crearMapa(s, u, cam, dest);
+        else if (marcador) { marcador.animarA(cam).alerta(u.alerta_ruptura_frio); seguirConLaCamara(s, cam, dest); }
+        if (marcador && dest && s.ruta_url && Date.now() - ultimaRuta > (s.tiempo_x > 1 ? 5000 : 15000)) pedirRuta(s);       // el servidor entrega solo el tramo que le falta al camión hasta esta dirección (sale de la ruta guardada, sin consultar a OSRM): se pide cada 15 s para que la línea parta del camión
+        document.getElementById("ruta-info").textContent = (s.km_restantes != null ? "Faltan " + String(s.km_restantes).replace(".", ",") + " km hasta " : "Entrega en ") + (s.destino ? s.destino.direccion : "tu dirección");
       }
     }
     else quitarSk("seg-temp", "–");                      // sin lecturas no se queda cargando: el chip ya dice «Sin lecturas»
     ponerFacts(s, d.estado);
-
-    var it = document.getElementById("itinerario"); if (it) { it.hidden = !s.itinerario; if (s.itinerario) it.textContent = s.itinerario.texto; }      // en qué parada va y por qué pasa antes por otra entrega, sin datos de otros clientes
-    var cab = document.getElementById("ep-t"), sub = document.getElementById("ep-sub"), tarjeta = cab && cab.closest(".estado-pedido");
-    if (cab && sub && d.estado === "Despachada") {         // cerca: el estado del pedido lo dice con todas sus letras, no solo el resaltado de la hora
-      cab.textContent = s.cerca ? "Tu pedido está por llegar" : "Tu pedido va en camino";
-      sub.textContent = s.cerca ? "El camión está a menos de " + s.cerca_km + " km" + (s.minutos ? " (llega " + (s.minutos <= 1 ? "en cerca de un minuto" : "en unos " + s.minutos + " min") + ")" : "") + ". Deja a alguien listo para recibirlo." : "Mira abajo dónde está el camión y a qué temperatura viaja; se actualiza solo.";
-      if (tarjeta) tarjeta.classList.toggle("cerca", !!s.cerca);
-    }
-
+    var it = document.getElementById("itinerario");
+    if (it) { it.hidden = !s.itinerario; if (s.itinerario) it.textContent = s.itinerario.texto; }      // en qué parada va y por qué pasa antes por otra entrega, sin datos de otros clientes
     document.getElementById("seg-ruptura").hidden = !s.hubo_ruptura;
     pintarSerie(s.serie || []);
   }
   /* Si la primera consulta falla, los marcadores de carga no pueden quedarse girando: se reemplazan por «Sin datos» y el indicador avisa que no hay conexión. */
-
-  function sinDatos() { ["seg-salio", "seg-eta", "seg-senal", "seg-llegada"].forEach(function (id) { var e = document.getElementById(id); if (e && e.classList.contains("skeleton")) quitarSk(id, "Sin datos"); }); var t = document.getElementById("seg-temp"); if (t.classList.contains("skeleton")) quitarSk("seg-temp", "–"); }
-
+  function sinDatos() { ["seg-salio", "seg-eta", "seg-senal"].forEach(function (id) { var e = document.getElementById(id); if (e && e.classList.contains("skeleton")) quitarSk(id, "Sin datos"); }); var t = document.getElementById("seg-temp"); if (t.classList.contains("skeleton")) quitarSk("seg-temp", "–"); }
   function cargar() {
     fetch(raiz.dataset.url, {headers: {"Accept": "application/json"}, credentials: "same-origin"}).then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (d) {
       conectado = true; vivo.ok(); pintar(d);

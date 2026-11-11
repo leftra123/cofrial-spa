@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",     # Content-Security-Policy en cada respuesta (ver SECURE_CSP más abajo)
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "cofrial.seguridad.ProteccionMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -125,12 +126,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # Detrás de HTTPS (DJANGO_HTTPS=1): cookies solo por canal seguro, HSTS y redirección. Apagado por defecto porque la demo en EC2 puede ir por HTTP.
 if entorno("DJANGO_HTTPS", "0") == "1":
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
+    # HSTS: el navegador recuerda durante este tiempo que el sitio solo se abre por HTTPS y no deja saltarse un error de certificado.
+    # Un año por defecto; DJANGO_HSTS_SEG lo acorta mientras el dominio o el certificado aún pueden cambiar (provision.sh usa un día).
+    SECURE_HSTS_SECONDS = int(entorno("DJANGO_HSTS_SEG") or 31536000)
     # nginx/Caddy terminan TLS y pasan HTTP a gunicorn: sin esto Django cree que todo llega por HTTP y redirige en bucle.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     # En local con Caddy en :8443 y Gunicorn aún en :8000, desactivar redirección (DJANGO_HTTPS_REDIRECT=0).
     SECURE_SSL_REDIRECT = entorno("DJANGO_HTTPS_REDIRECT", "1") == "1"
-SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_HTTPONLY = True                  # la cookie de sesión no se lee desde JavaScript (es el valor de Django; queda escrito a propósito)
+SESSION_COOKIE_SAMESITE = CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 LOGIN_URL = "/cuenta/entrar/"
@@ -140,6 +144,47 @@ LOGOUT_REDIRECT_URL = "/"
 # Django envía por defecto «same-origin», que quita el Referer en las peticiones a otro sitio. Los servicios de mapas gratuitos lo piden para
 # su política de uso (OpenStreetMap responde «403 Access blocked» sin él). Con esta política se envía solo el origen (sin ruta ni datos).
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+# ---- Política de seguridad de contenido (CSP): qué puede cargar el navegador en las páginas del sitio.
+# Todo sale del propio sitio salvo el mapa (OpenFreeMap, o el estilo de MAP_STYLE_URL). Las plantillas tienen scripts y estilos en línea, por eso
+# 'unsafe-inline': quitarlo exige pasar esos bloques a archivos o marcarlos con nonce, y queda como evolución. Lo que sí se cierra: scripts y
+# conexiones hacia otros sitios, complementos (object-src), <base> ajeno, formularios hacia otro sitio y que otra página enmarque a esta.
+# MapLibre crea su worker desde un blob y dibuja sprites como blob/data (docs/decisiones.md, «Mapas con MapLibre»).
+# DJANGO_CSP: 1 = se aplica (por defecto) · informe = solo avisa en la consola del navegador, sin bloquear · 0 = sin cabecera.
+# Dos vistas llevan política propia (cofrial/csp.py): el carrito, que carga el pago de Mercado Pago, y el panel /bi/, que es la interfaz de Grafana.
+from urllib.parse import urlsplit                     # noqa: E402
+from django.utils.csp import CSP                      # noqa: E402
+
+_ESTILO_MAPA = os.environ.get("MAP_STYLE_URL") or "https://tiles.openfreemap.org/styles/dark"
+_ORIGEN_MAPA = [f"{urlsplit(_ESTILO_MAPA).scheme}://{urlsplit(_ESTILO_MAPA).netloc}"] if _ESTILO_MAPA.startswith("http") else []
+_CSP = {
+    "default-src": [CSP.SELF],
+    "script-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:", "blob:", "https:"],
+    "font-src": [CSP.SELF, "data:"],
+    "connect-src": [CSP.SELF, "https://tiles.openfreemap.org", *_ORIGEN_MAPA],
+    "worker-src": [CSP.SELF, "blob:"],
+    "child-src": [CSP.SELF, "blob:"],
+    "frame-src": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "object-src": [CSP.NONE],
+}
+_CSP["connect-src"] = list(dict.fromkeys(_CSP["connect-src"]))        # sin repetir el origen del mapa cuando es el de por defecto
+CSP_MODO = entorno("DJANGO_CSP", "1")
+SECURE_CSP = _CSP if CSP_MODO == "1" else {}
+SECURE_CSP_REPORT_ONLY = _CSP if CSP_MODO == "informe" else {}
+# El carrito carga el formulario de pago de Mercado Pago: su SDK trae scripts, estilos, marcos con los campos de la tarjeta y llamadas desde
+# dominios que Mercado Pago decide y cambia. En esa sola página se admite cualquier origen https (y eval, por si su SDK lo usa): el formulario
+# real no se pudo probar contra una lista cerrada. Siguen vigentes ahí: sin http plano, sin complementos, sin enmarcado y formularios solo al sitio.
+CSP_DEL_PAGO = {**_CSP, "script-src": [CSP.SELF, CSP.UNSAFE_INLINE, CSP.UNSAFE_EVAL, "https:"], "style-src": [CSP.SELF, CSP.UNSAFE_INLINE, "https:"],
+                "font-src": [CSP.SELF, "data:", "https:"], "connect-src": [CSP.SELF, "https:"], "child-src": [CSP.SELF, "blob:", "https:"],
+                "frame-src": [CSP.SELF, "https:"]}
+# La interfaz de Grafana usa eval, estilos y scripts en línea propios: la política del sitio la rompería. /bi/ lleva una mínima, que igual impide
+# enmarcar el tablero desde otra página y cargar complementos; el acceso ya exige sesión y rol.
+CSP_DEL_TABLERO = {"frame-ancestors": [CSP.NONE], "object-src": [CSP.NONE]}
 
 # Asistente de IA de la tienda (ASISTENTE_ACTIVO=0 lo apaga sin tocar el resto).
 ASISTENTE_ACTIVO = os.environ.get("ASISTENTE_ACTIVO", "1") == "1"

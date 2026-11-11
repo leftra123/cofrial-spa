@@ -1,5 +1,6 @@
 from functools import wraps
 
+from django.conf import settings
 from django.contrib import messages
 from django.http import Http404
 from django.middleware.csrf import get_token
@@ -10,6 +11,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from clientes.models import Comuna
 from cofrial import entradas
+from cofrial.csp import politica_propia
 from crm import servicios as crm
 from crm.models import Requerimiento
 
@@ -64,6 +66,7 @@ def agregar(request, cliente):
     return redirect(destino if seguro else "/catalogo/")           # misma validación que /avisos/pedir/: sin redirección abierta
 
 
+@politica_propia(settings.CSP_DEL_PAGO)         # esta página carga el formulario de Mercado Pago (ver settings.py)
 @ensure_csrf_cookie
 @solo_clientes
 def ver_carrito(request, cliente):

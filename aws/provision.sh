@@ -26,13 +26,18 @@
 #                                        # se importan; si tampoco están, se genera uno autofirmado (el navegador avisa y el 80 sigue sirviendo)
 #   ACTIVAR_HSTS=1                       # con certificado de confianza: cookies seguras y HSTS de un año (irreversible para los navegadores que visiten)
 #   RDS_MULTI_AZ=0                       # solo si el laboratorio rechaza Multi-AZ y se decide seguir sin él (el script avisa en voz alta)
+#   COFRIAL_ESTADO=/ruta/a/aws/.estado   # carpeta de estado vigente (claves, llave SSH, certificado) cuando no es la de este checkout
+#   HSTS_SEG=86400                       # segundos de HSTS cuando Django va en modo HTTPS (un día por defecto; ACTIVAR_HSTS=1 lo deja en un año)
+#
+# Una instalación que ya existe se endurece con aws/endurecer.sh (protección de la base, respaldos, security groups, chequeo /health y alarmas),
+# que muestra cada comando antes de ejecutarlo. Este script deja esas mismas prácticas en las instalaciones nuevas.
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-east-1}"; export AWS_DEFAULT_REGION="$REGION"
 P=cofrial
 REPO_URL="${REPO_URL:-https://github.com/leftra123/cofrial-spa.git}"
 RAMA="${RAMA:-main}"
-ESTADO="$(cd "$(dirname "$0")" && pwd)/.estado"; mkdir -p "$ESTADO"
+ESTADO="${COFRIAL_ESTADO:-$(cd "$(dirname "$0")" && pwd)/.estado}"; mkdir -p "$ESTADO"
 log() { printf '\n==> %s\n' "$*"; }
 q() { aws "$@" --output text; }
 
@@ -51,6 +56,10 @@ if [ "${1:-}" = "destruir" ]; then
   [ -f "$ESTADO/cert-arn.txt" ] && { aws acm delete-certificate --certificate-arn "$(cat "$ESTADO/cert-arn.txt")" 2>/dev/null || true; rm -f "$ESTADO/cert-arn.txt" "$ESTADO/cert-confiable"; }
   for id in $(q ec2 describe-instances --filters "Name=tag:Name,Values=${P}-*" "Name=instance-state-name,Values=pending,running,stopped,stopping" --query 'Reservations[].Instances[].InstanceId'); do aws ec2 terminate-instances --instance-ids "$id" >/dev/null; done
   aws ec2 wait instance-terminated --instance-ids $(q ec2 describe-instances --filters "Name=tag:Name,Values=${P}-*" --query 'Reservations[].Instances[].InstanceId') 2>/dev/null || true
+  ALARMAS=$(q cloudwatch describe-alarms --alarm-name-prefix "${P}-" --query 'MetricAlarms[].AlarmName' 2>/dev/null || true)
+  [ -n "$ALARMAS" ] && [ "$ALARMAS" != "None" ] && { aws cloudwatch delete-alarms --alarm-names $ALARMAS || true; }
+  # La base nace protegida contra borrado: destruir la desprotege a propósito (es el único camino que la borra).
+  aws rds modify-db-instance --db-instance-identifier "${P}-db" --no-deletion-protection --apply-immediately >/dev/null 2>&1 || true
   aws rds delete-db-instance --db-instance-identifier "${P}-db" --skip-final-snapshot --delete-automated-backups >/dev/null 2>&1 && aws rds wait db-instance-deleted --db-instance-identifier "${P}-db" || true
   aws rds delete-db-subnet-group --db-subnet-group-name "${P}-subnets" 2>/dev/null || true
   for a in $(q ec2 describe-addresses --filters "Name=tag:Name,Values=${P}-eip" --query 'Addresses[].AllocationId'); do aws ec2 release-address --allocation-id "$a" || true; done
@@ -151,6 +160,12 @@ fi
 
 # ---------------------------------------------------------------- secretos generados (se guardan solo en aws/.estado)
 gen() { openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 20; }
+# Si la base ya existe en AWS pero aquí no están sus claves, generar otras dejaría a las web nuevas sin conexión a la base: se detiene antes.
+if [ ! -f "$ESTADO/secretos.env" ] && aws rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].DBInstanceStatus' --output text >/dev/null 2>&1; then
+  echo "La base ${P}-db ya existe, pero $ESTADO/secretos.env no. Este checkout no tiene las claves de esa instalación."
+  echo "Repite el comando con COFRIAL_ESTADO=/ruta/al/aws/.estado vigente (o recupéralas: bash aws/endurecer.sh secretos-bajar --aplicar)."
+  exit 1
+fi
 [ -f "$ESTADO/secretos.env" ] || cat > "$ESTADO/secretos.env" <<S
 DB_PASSWORD=$(gen)
 DJANGO_SECRET_KEY=$(openssl rand -hex 32)
@@ -215,7 +230,8 @@ if ! aws rds describe-db-instances --db-instance-identifier "${P}-db" >/dev/null
   aws rds create-db-instance --db-instance-identifier "${P}-db" --engine postgres --engine-version 16 --db-instance-class db.t3.micro \
     --allocated-storage 20 --db-name cofrial --master-username cofrial --master-user-password "$DB_PASSWORD" \
     --db-subnet-group-name "${P}-subnets" --vpc-security-group-ids "$SG_RDS" --no-publicly-accessible "$FLAG_MAZ" \
-    --backup-retention-period 1 --no-enable-performance-insights >/dev/null
+    --backup-retention-period 7 --copy-tags-to-snapshot --deletion-protection --tags Key=Proyecto,Value=cofrial Key=Entorno,Value=aws-academy \
+    --no-enable-performance-insights >/dev/null
 elif [ "$RDS_MULTI_AZ" = 1 ] && [ "$(q rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].MultiAZ')" = "False" ]; then
   # Base ya creada en una sola zona: se convierte en el sitio (sin recrearla ni perder datos; unos 10-20 min, con un corte breve al final)
   log "Convirtiendo la RDS existente a Multi-AZ (los datos se conservan)"
@@ -228,7 +244,7 @@ DB_HOST=$(q rds describe-db-instances --db-instance-identifier "${P}-db" --query
 
 # ---------------------------------------------------------------- Balanceador (ALB)
 # Se crea ANTES que las EC2 porque su DNS entra en el .env de la web (orígenes CSRF). Reparte entre las dos web, cada una en su zona, y solo envía
-# tráfico a la que responde /salud/. Con "stickiness" cada visitante se queda en la misma web: los contadores de intentos viven en la memoria de la instancia.
+# tráfico a la que responde /health (200 solo si además alcanza la base). Con "stickiness" cada visitante se queda en la misma web: los contadores de intentos viven en la memoria de la instancia.
 log "Application Load Balancer en dos zonas (${AZ_A} y ${AZ_B})"
 LB_ARN=$(aws elbv2 describe-load-balancers --names "${P}-alb" --query 'LoadBalancers[0].LoadBalancerArn' --output text 2>/dev/null || true)
 if [ -z "$LB_ARN" ] || [ "$LB_ARN" = "None" ]; then
@@ -239,7 +255,7 @@ ALB_DNS=$(q elbv2 describe-load-balancers --load-balancer-arns "$LB_ARN" --query
 TG_ARN=$(aws elbv2 describe-target-groups --names "${P}-tg" --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null || true)
 if [ -z "$TG_ARN" ] || [ "$TG_ARN" = "None" ]; then
   TG_ARN=$(q elbv2 create-target-group --name "${P}-tg" --protocol HTTP --port 80 --vpc-id "$VPC" --target-type instance \
-    --health-check-protocol HTTP --health-check-path /salud/ --health-check-interval-seconds 15 --health-check-timeout-seconds 5 \
+    --health-check-protocol HTTP --health-check-path /health --health-check-interval-seconds 15 --health-check-timeout-seconds 5 \
     --healthy-threshold-count 2 --unhealthy-threshold-count 2 --matcher HttpCode=200 --query 'TargetGroups[0].TargetGroupArn')
 fi
 aws elbv2 modify-target-group-attributes --target-group-arn "$TG_ARN" --attributes Key=stickiness.enabled,Value=true Key=stickiness.type,Value=lb_cookie \
@@ -290,9 +306,14 @@ EIP=$(q ec2 describe-addresses --filters "Name=tag:Name,Values=${P}-eip" --query
 ORIGENES="http://${ALB_DNS},https://${ALB_DNS}"
 [ -n "${DOMINIO_HTTPS:-}" ] && ORIGENES="https://${DOMINIO_HTTPS},http://${DOMINIO_HTTPS},$ORIGENES"
 [ "$EIP" != "None" ] && [ -n "$EIP" ] && ORIGENES="$ORIGENES,http://${EIP}"
-# DJANGO_HTTPS=1 activa cookies seguras y HSTS de UN AÑO (en cualquier host que responda, también el DNS del ALB, cuyo certificado no calza): solo si se pide
-# a propósito con ACTIVAR_HSTS=1 y hay certificado de confianza. Por defecto 0: la redirección 80->443 del ALB ya fuerza el cifrado.
-HTTPS_DJANGO=0; [ "$CERT_CONFIABLE" = 1 ] && [ "${ACTIVAR_HSTS:-0}" = 1 ] && HTTPS_DJANGO=1
+# DJANGO_HTTPS=1 marca las cookies como Secure y anuncia HSTS. Se activa cuando TODO visitante llega por HTTPS: certificado de confianza (el 80 del ALB
+# redirige) y las web cerradas al acceso directo (sg-web sin 80 abierto a internet). Si la dirección vieja sigue abierta por HTTP queda en 0: con cookies
+# Secure nadie podría iniciar sesión por ella. HSTS parte en un día (HSTS_SEG) y no en un año: el navegador que lo recibe deja de aceptar excepciones de
+# certificado para ese nombre durante ese plazo, y el dominio y su certificado todavía pueden cambiar. ACTIVAR_HSTS=1 lo deja en un año.
+WEB_ABIERTA=$(q ec2 describe-security-groups --group-ids "$SG_WEB" --query "length(SecurityGroups[0].IpPermissions[?FromPort==\`80\`].IpRanges[?CidrIp=='0.0.0.0/0'][])" 2>/dev/null || echo 1)
+HTTPS_DJANGO=0; [ "$CERT_CONFIABLE" = 1 ] && [ "$WEB_ABIERTA" = 0 ] && HTTPS_DJANGO=1
+[ "${ACTIVAR_HSTS:-0}" = 1 ] && HSTS_SEG=31536000; HSTS_SEG="${HSTS_SEG:-86400}"
+[ "$CERT_CONFIABLE" = 1 ] && [ "$HTTPS_DJANGO" = 0 ] && echo "AVISO: las web aún aceptan el 80 directo desde internet: Django sigue sin cookies Secure ni HSTS. Tras cerrar el acceso directo, repite recrear-web."
 
 # ---------------------------------------------------------------- EC2
 log "EC2 web (una por zona) e IoT"
@@ -333,7 +354,9 @@ DJANGO_ALLOWED_HOSTS=*
 DJANGO_CSRF_ORIGINS=${ORIGENES}
 DJANGO_CONFIAR_PROXY=1
 DJANGO_HTTPS=${HTTPS_DJANGO}
+DJANGO_HSTS_SEG=${HSTS_SEG}
 DJANGO_HTTPS_REDIRECT=0
+DJANGO_CSP=${DJANGO_CSP:-1}
 ROL_WEB=${ROL}
 DB_HOST=${DB_HOST}
 DB_PORT=5432
@@ -403,7 +426,7 @@ esperar_sano() {
     [ "$ok" = 1 ] && return 0; sleep 15
   done; return 1
 }
-log "Registrando las web en el ALB y esperando a que respondan /salud/ (la primera vez tardan ~5-8 min en construirse)"
+log "Registrando las web en el ALB y esperando a que respondan el chequeo de salud (la primera vez tardan ~5-8 min en construirse)"
 sincronizar_destinos "$WEB_ID" "$WEB_B_ID"
 if [ "$ROLLING_B" = 1 ]; then
   esperar_sano "$WEB_ID" || { echo "La web A nueva no se puso sana en 15 min: NO se toca la B (sigue sirviendo con la versión anterior). Revisa: ssh ... 'cd /opt/cofrial && sudo docker compose -f aws/docker-compose.web.yml logs web'"; exit 1; }
@@ -423,7 +446,8 @@ cat <<R
     Aplicación : $([ "$CERT_CONFIABLE" = 1 ] && echo https || echo http)://$ALB_DNS   (balanceador en $AZ_A y $AZ_B; $([ "$CERT_CONFIABLE" = 1 ] && echo "el 80 redirige a https://" || echo "https://$ALB_DNS abre con aviso de certificado autofirmado"))
     Dominio    : apuntar ${DOMINIO_HTTPS:-el dominio} al DNS del balanceador (CNAME/ALIAS) y, cuando abra por el dominio, ejecutar: bash aws/provision.sh cerrar-acceso-directo
     Panel BI   : http://$ALB_DNS/bi/   (con sesión de la aplicación: administración edita, gerencia mira; el puerto 3000 no está abierto)
-    Verificar  : curl http://$ALB_DNS/salud/   y   python3 aws/verificar.py
+    Verificar  : curl -L http://$ALB_DNS/health   y   python3 aws/verificar.py
+    Endurecer  : bash aws/endurecer.sh revisar   (y, tras cada recrear-web o recrear-iot: bash aws/endurecer.sh alarmas --aplicar)
     Base       : RDS Multi-AZ=$(aws rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].MultiAZ' --output text)  (zona de respaldo: $(aws rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].SecondaryAvailabilityZone' --output text))
     SSH web A  : ssh -i $ESTADO/${P}-key.pem ubuntu@$IP_WEB_A   (primaria: migra la base, podador y despachador)
     SSH web B  : ssh -i $ESTADO/${P}-key.pem ubuntu@$IP_WEB_B   (secundaria)

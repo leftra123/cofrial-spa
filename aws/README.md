@@ -6,10 +6,10 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
-| Application Load Balancer (`cofrial-alb`) | Subredes públicas de las zonas A y B | Único punto de entrada: 80 (redirige a 443 con certificado de confianza) y 443; chequeo `/salud/`; afinidad por cookie |
+| Application Load Balancer (`cofrial-alb`) | Subredes públicas de las zonas A y B | Único punto de entrada: 80 (redirige a 443 con certificado de confianza) y 443; chequeo `/salud/` (pasa a `/health`, que prueba la base, con `endurecer.sh salud`; las instalaciones nuevas ya nacen con él); afinidad por cookie |
 | EC2 web ×2 (`t3.small`) | Una por zona (`cofrial-ec2-web` primaria, `cofrial-ec2-web-b` secundaria) | `aws/docker-compose.web.yml`: Django (puerto 80, solo desde el ALB), Grafana (solo red interna, se abre en `/bi/`) y los servicios `podador` y `despachador` (solo en la primaria; este último apagado salvo `DESPACHO_AUTO=1`) |
 | EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
-| RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, **Multi-AZ** (réplica síncrona en la otra zona) | Base `cofrial` |
+| RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, **Multi-AZ** (réplica síncrona en la otra zona); las instalaciones nuevas nacen con protección contra borrado y respaldos de 7 días | Base `cofrial` |
 
 ## Opción rápida: script de aprovisionamiento
 
@@ -42,6 +42,56 @@ Requisito de la revisión técnica del 8-nov-2026. Diseño y trade-offs: `docs/d
 - Base: `aws rds reboot-db-instance --db-instance-identifier cofrial-db --force-failover`; la zona activa (`AvailabilityZone`) cambia y el endpoint es el mismo. Hacerlo con calma: corta las conexiones 1-2 minutos y la web las retoma sola.
 
 **Límites.** Una EC2 IoT (el requisito fue web y base de datos); los contadores de intentos son por instancia (el ALB mantiene a cada visitante en una); Learner Lab puede no admitir Multi-AZ (el script avisa). Cada web ocupa 2 vCPU: con el ALB y la RDS de respaldo consume más créditos que antes.
+
+## Endurecimiento (11-nov-2026)
+
+Decisiones y trade-offs: `docs/decisiones.md` («Endurecimiento de la infraestructura y la aplicación»).
+
+**Estado.** Lo de la aplicación y los contenedores está en el código y probado en local. Lo de AWS está **preparado y sin aplicar**: el 11-nov-2026 el laboratorio estaba apagado y las credenciales, vencidas, así que no se leyó ni cambió nada en la cuenta. Lo único observado desde fuera: el balanceador responde, su 80 redirige al 443 con un 301 y el 443 devuelve 503 mientras las web están apagadas.
+
+| Qué | Dónde quedó | Estado |
+|---|---|---|
+| Política de contenido (CSP), cookies `Secure`/`HttpOnly`/`SameSite`, HSTS configurable, respeto de `X-Forwarded-Proto` | `web/cofrial/settings.py`, `web/cofrial/csp.py` | En el código; llega a AWS con el próximo `recrear-web` |
+| `/health` (200 solo si la aplicación alcanza la base) | `web/cofrial/urls.py` | En el código; el balanceador sigue chequeando `/salud/` hasta aplicar el paso `salud` |
+| Límites de memoria y CPU, y rotación de registros en todos los contenedores | `aws/docker-compose.web.yml`, `aws/docker-compose.iot.yml` | En el código; llega con `recrear-web` y `recrear-iot` |
+| Base: protección contra borrado, respaldos de 7 días, etiquetas en snapshots | `aws/endurecer.sh rds` (y `provision.sh` para instalaciones nuevas) | Preparado |
+| Security groups: base solo desde web e IoT; web solo desde el balanceador | `aws/endurecer.sh sg` | Preparado |
+| TLS 1.2/1.3, redirección 301 y descarte de cabeceras inválidas en el balanceador | `aws/endurecer.sh https` | Preparado (la redirección ya responde) |
+| Alarmas de CloudWatch | `aws/endurecer.sh alarmas` | Preparado |
+| Copia de las claves en SSM Parameter Store | `aws/endurecer.sh secretos-subir` | Preparado; falta comprobar que el laboratorio lo permita |
+
+**Cómo se aplica.** `aws/endurecer.sh` no recrea nada. Cada paso muestra los comandos exactos y **no ejecuta ninguno**; con `--aplicar` los ejecuta de a uno y pregunta antes de cada uno. Si las claves de la instalación están en otro checkout, se le indica con `COFRIAL_ESTADO=/ruta/a/aws/.estado` (lo mismo vale para `provision.sh`, que ahora se detiene si la base existe y no encuentra sus claves, en vez de generar otras).
+
+```bash
+bash aws/endurecer.sh revisar              # solo lectura: qué cumple y qué falta
+bash aws/endurecer.sh rds                  # vista previa; con --aplicar, sin corte
+bash aws/endurecer.sh rds-multiaz          # solo si revisar dice que no es Multi-AZ: 10-20 min, posible corte breve al final
+bash aws/endurecer.sh https
+bash aws/endurecer.sh alarmas              # ALARMA_EMAIL=correo@dominio para recibir avisos (hay que confirmar la suscripción)
+```
+
+Orden para lo que depende del código nuevo:
+1. Fusionar la rama en `main` (las EC2 clonan `main`) y `bash aws/provision.sh recrear-web` (rodante; ~8 min por web) y `recrear-iot`.
+2. `bash aws/endurecer.sh salud --aplicar`: comprueba seis veces que `/health` responde 200 por el balanceador y recién entonces cambia el chequeo. Deja impreso el comando para volver a `/salud/`.
+3. `bash aws/endurecer.sh sg --aplicar`: quita de la base y del nodo IoT las reglas que sobren. Cierra el acceso directo a las web solo si el balanceador tiene destinos sanos y el dominio ya apunta a él; si no, se detiene y lo dice (`CORTAR_DOMINIO=1` lo fuerza).
+4. Con las web cerradas y certificado de confianza, otro `recrear-web` deja a Django en modo HTTPS (`DJANGO_HTTPS=1`: cookies `Secure` y HSTS de un día). Mientras el 80 de las web siga abierto a internet ese modo queda apagado a propósito: con cookies `Secure` nadie podría iniciar sesión por la dirección vieja.
+5. `bash aws/endurecer.sh alarmas --aplicar` otra vez: las alarmas de CPU van atadas al ID de cada EC2, que cambia al recrearla.
+
+Después de cada paso: `bash aws/endurecer.sh revisar`, `curl -sI http://DNS-ALB/health` (301 a https), `curl -sk https://DNS-ALB/health` (200) y `python3 aws/verificar.py https://DOMINIO --infra`.
+
+**Certificado.** El 443 usa el certificado de Let's Encrypt de `cofrialspa.webhop.me`, importado a ACM (vence el 6-feb-2027 y no se renueva solo). ACM con validación por DNS (`endurecer.sh acm-dns`) exige crear un CNAME en la zona del dominio, y un nombre gratuito de No-IP no lo permite; con un dominio propio ese es el camino, porque ACM renueva solo. Sin dominio, `provision.sh` genera un certificado autofirmado y lo importa: el navegador muestra «La conexión no es privada» (`NET::ERR_CERT_AUTHORITY_INVALID`) y hay que aceptar la excepción a mano; por eso en ese caso el 80 no redirige y no se anuncia HSTS. Lo mismo se ve hoy al abrir por HTTPS el nombre DNS del balanceador, porque el certificado es del dominio (`NET::ERR_CERT_COMMON_NAME_INVALID`).
+
+**Cifrado en reposo.** `provision.sh` no pide cifrado al crear la base y RDS no permite activarlo sobre una instancia existente: hay que restaurarla desde una copia cifrada. No se hace desde los scripts; el procedimiento, si el equipo lo decide, es:
+1. Detener los escritores (EC2 IoT y las dos web) para no perder lo que se escriba entre la copia y el cambio.
+2. `aws rds create-db-snapshot --db-instance-identifier cofrial-db --db-snapshot-identifier cofrial-pre-cifrado` y esperar a que termine.
+3. `aws rds copy-db-snapshot --source-db-snapshot-identifier cofrial-pre-cifrado --target-db-snapshot-identifier cofrial-cifrado --kms-key-id alias/aws/rds` (la copia es la que queda cifrada).
+4. `aws rds restore-db-instance-from-db-snapshot --db-instance-identifier cofrial-db-cifrada --db-snapshot-identifier cofrial-cifrado` con el mismo grupo de subredes, `cofrial-sg-rds`, `--multi-az`, `--no-publicly-accessible`, `--deletion-protection` y `--copy-tags-to-snapshot`; después, `modify-db-instance --backup-retention-period 7`.
+5. Renombrar: la actual a `cofrial-db-vieja` y la nueva a `cofrial-db` (`modify-db-instance --new-db-instance-identifier`). El endpoint lleva el identificador, así que el de la nueva queda igual al actual y el `.env` de las EC2 no cambia.
+6. Encender web e IoT, verificar, y borrar la vieja solo cuando todo funcione (quitándole antes la protección contra borrado).
+
+Son 30 a 45 minutos con el sitio detenido y sin vuelta atrás rápida si el laboratorio rechaza la clave de KMS. No conviene hacerlo en la víspera de la defensa.
+
+**Pruebas sin AWS.** `bash aws/test_endurecer.sh` ejecuta el script contra un `aws` falso con estado y consultas JMESPath reales (necesita el módulo `jmespath` de Python; sin él se omite): la vista previa no cambia nada, cada paso hace solo lo suyo, las web no se cierran si el balanceador no sirve o el dominio no apunta a él, y ninguna clave sale por pantalla. No valida los permisos del laboratorio.
 
 ## Activar la IA (clave gratuita de Gemini)
 
@@ -91,7 +141,7 @@ Requisito de la revisión técnica del 8-nov-2026. Diseño y trade-offs: `docs/d
 
 ## Lista de verificación antes de la demo
 
-- [ ] `http://IP-WEB/salud/` responde `{"estado": "ok"}`.
+- [ ] `http://IP-WEB/salud/` responde `{"estado": "ok"}` y, con el código del 11-nov, también `/health` (este prueba la base).
 - [ ] Entrar con `abastecimiento@hospital.test` (B2B) y con `ana@correo.test` (B2C): precios distintos en el catálogo, carrito y orden generada.
 - [ ] En el CRM (`vendedora@cofrial.cl`) aparece el pedido web y el embudo.
 - [ ] `docker compose -f aws/docker-compose.iot.yml logs -f` muestra una inserción cada 5 s por camión (50 camiones, en 5 contenedores); en `/flota/` las tarjetas cambian solas.

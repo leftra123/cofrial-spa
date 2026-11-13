@@ -96,7 +96,7 @@ class CuentasTests(TestCase):
 
 class RegistroB2CTests(TestCase):
     datos = {"nombre": "Luis Mora", "rut": "11.111.111-1", "email": "luis@correo.test", "telefono": "",
-             "direccion": "Calle 1 123", "clave": "una-clave-larga-92", "clave2": "una-clave-larga-92"}
+             "direccion": "Calle 1 123", "clave": "una-clave-larga-92", "clave2": "una-clave-larga-92", "acepta": "on"}
 
     @classmethod
     def setUpTestData(cls):

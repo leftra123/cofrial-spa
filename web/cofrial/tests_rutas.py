@@ -51,6 +51,7 @@ ESPERADO = {
     '/crm/ia/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
     '/crm/demanda/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/crm/alertas/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
+    '/crm/alertas/999999/avisar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/alertas/ →/crm/alertas/ 403 →/crm/alertas/'),
     '/flota/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/sugerencias/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/api/avisos-equipo/': ('403 403 403 200 200 200 200', '405 405 405 405 405 405 405'),      # avisos del menú interno; los clientes usan /api/avisos/
@@ -134,9 +135,15 @@ ESPERADO = {
     '/cuenta/recuperar/NO-EXISTE/NO-EXISTE/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),   # «el enlace ya no sirve»
     '/cuenta/recuperar/listo/': ('200 200 200 200 200 200 200', '405 405 405 405 405 405 405'),
     '/cuenta/clave/': ('L 200 200 200 200 200 200', 'L 200 200 200 200 200 200'),
+    # Mis datos: solo clientes (el equipo no tiene ficha de cliente). Eliminar es POST y las cuentas demo vuelven a la página sin eliminar nada.
+    '/cuenta/mis-datos/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
+    '/cuenta/mis-datos/descargar/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
+    '/cuenta/mis-datos/eliminar/': ('405 405 405 405 405 405 405', 'L →/cuenta/mis-datos/ →/cuenta/mis-datos/ 403 403 403 403'),
+    '/legal/no-existe/': ('404 404 404 404 404 404 404', '404 404 404 404 404 404 404'),     # las cinco páginas legales son públicas
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/salud/bd/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
+    '/health': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),          # chequeo del balanceador: igual que /salud/bd/
     '/admin/': ('L L L L L L L', 'L L L L L L L'),       # el administrador de empresa no entra a /admin/ de Django
 }
 

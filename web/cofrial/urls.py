@@ -4,10 +4,11 @@ from django.db import connection
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from . import bi, vistas
+from . import bi, legal, vistas
 from .vistas import api_avisos_equipo
 from catalogo import views as catalogo_views
 from flota import demo as flota_demo
+from salud import vistas as salud_vista
 
 from flota.urls import api_urlpatterns as flota_api
 
@@ -16,13 +17,10 @@ admin.site.site_header = "Cofrial SpA: CRM y operación"
 admin.site.site_title = "Cofrial"
 
 
-def salud(request):
-    """Responde 200 si la aplicación está viva; el balanceo y las pruebas la usan."""
-    return JsonResponse({"estado": "ok"})
-
-
 def salud_bd(request):
-    """Además de estar viva, la aplicación alcanza la base de datos (503 si no). Para ver la caída controlada sin abrir una pantalla."""
+    """Además de estar viva, la aplicación alcanza la base de datos (503 si no). Para ver la caída controlada sin abrir una pantalla.
+    Es también el chequeo del balanceador (/health): una web que perdió la base sale de rotación. Si la base cae para las dos web a la vez
+    (conmutación de RDS), el ALB no tiene a quién preferir y sigue repartiendo entre ambas, que responden el 503 propio hasta que vuelve."""
     from django.db import DatabaseError
     try:
         with connection.cursor() as c:
@@ -68,7 +66,12 @@ urlpatterns = [
         template_name="cuenta/clave.html", success_url="/cuenta/clave/hecho/"), name="cambiar_clave"),
     path("cuenta/clave/hecho/", auth_views.PasswordChangeDoneView.as_view(template_name="cuenta/clave_hecha.html"), name="clave_hecha"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
-    path("salud/", salud),
+    path("cuenta/mis-datos/", legal.mis_datos, name="mis_datos"),
+    path("cuenta/mis-datos/descargar/", legal.descargar_datos, name="mis_datos_descargar"),
+    path("cuenta/mis-datos/eliminar/", legal.eliminar_cuenta, name="mis_datos_eliminar"),
+    path("legal/<slug:nombre>/", legal.pagina, name="legal"),
+    path("salud/", salud_vista.pagina),
     path("salud/bd/", salud_bd),
+    path("health", salud_bd),            # nombre convencional para el chequeo del ALB; sin barra final, tal como lo pide el balanceador
     path(settings.ADMIN_URL, admin.site.urls),
 ]

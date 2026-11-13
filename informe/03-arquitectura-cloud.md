@@ -107,6 +107,18 @@
 
 **Qué se cede y cómo se mitiga.** Los respaldos automáticos se eliminan junto con la instancia, salvo que se pida retenerlos, mientras que los snapshots manuales no se ven afectados (Amazon Web Services, s.f.); por eso se toma uno antes de cualquier borrado. Tampoco hay copia en otra región; en producción se agregaría una copia entre regiones.
 
+### 8. Endurecimiento (11 de noviembre de 2026)
+
+**Hecho en el código.** La aplicación envía una política de seguridad de contenido (CSP) en cada respuesta, marca las cookies de sesión como `HttpOnly` y `SameSite=Lax`, y como `Secure` cuando todo el tráfico llega por HTTPS; respeta `X-Forwarded-Proto` del balanceador y anuncia HSTS. Se agregó `/health`, que responde 200 solo si la aplicación alcanza la base de datos. Los contenedores tienen tope de memoria y CPU y rotación de registros.
+
+**Hecho en AWS el 12 de noviembre de 2026.** El sitio se publica en `https://www.cofrialspa.shop`, un dominio propio que apunta al balanceador. El certificado lo emite AWS Certificate Manager con validación por DNS y se renueva solo; el puerto 80 redirige al 443. Las EC2 web ya no aceptan tráfico directo de internet: solo el del balanceador. La base tiene protección contra borrado, respaldos automáticos de 7 días y copia de etiquetas en sus snapshots, además de ser Multi-AZ y privada. El balanceador descarta cabeceras HTTP mal formadas y hay ocho alarmas de CloudWatch (CPU de las tres EC2 y de la base, conexiones y espacio de la base, destinos no sanos y errores 5xx del balanceador). Cada comando se mostró antes de ejecutarlo con `aws/endurecer.sh`.
+
+Ese mismo día se desplegó el código nuevo en las dos web, una a la vez, y en el nodo IoT: el balanceador chequea `/health`, las cookies van marcadas `Secure`, se anuncia HSTS y los contenedores tienen tope de memoria y CPU.
+
+El 13 de noviembre se desplegó, también de a una web, la información legal del sitio (privacidad, términos, devoluciones, cookies y «Mis datos»). Hubo dos cortes de unos 20 segundos, uno por cada web reemplazada, y luego se rehicieron las alarmas con los ID nuevos; la verificación de punta a punta quedó sin fallas. Ese mismo día, con el mismo procedimiento, se desplegó la página de estado en `/salud/`, que guarda cada minuto el resultado de revisar la web, la base, el IoT, Grafana, la IA y los pagos.
+
+**Preparado y sin aplicar en AWS.** La copia de las claves en Parameter Store. El cifrado en reposo de la base no está activo y exige restaurarla desde una copia cifrada.
+
 ### Limitaciones declaradas del prototipo
 
 **Tabla 2**
@@ -115,7 +127,7 @@
 | Limitación | Causa | Mitigación en el prototipo | En producción |
 |---|---|---|---|
 | Disponibilidad limitada a una región | El laboratorio solo ofrece us-east-1 y us-west-2 | Dos zonas: ALB, dos web y RDS Multi-AZ | Réplica o copia entre regiones y DNS con conmutación |
-| Tráfico sin cifrar | Sin dominio no hay certificado | Datos ficticios y declararlo en la defensa | Dominio, certificado y HTTPS |
+| HSTS de solo un día | El dominio es nuevo y conviene poder corregirlo | Todo el tráfico entra por el balanceador, que redirige a HTTPS con certificado de ACM | HSTS de un año y precarga |
 | Permisos amplios | Solo se puede usar `LabRole` | Security Groups estrictos | Un rol por servicio con permisos mínimos |
 | Nodo IoT en subred pública | Sin NAT para ahorrar créditos | `sg-iot` sin entradas | Subred privada con salida controlada |
 | Telemetría y pedidos en la misma base | Una sola instancia RDS | Índices y retención de datos | Base de series de tiempo separada |

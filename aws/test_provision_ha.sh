@@ -26,6 +26,7 @@ case "$A" in
   "ec2 create-subnet"*) echo "subnet-$RANDOM";;
   "ec2 create-internet-gateway"*) echo igw-1;;
   "ec2 create-route-table"*) echo rtb-1;;
+  "ec2 describe-security-groups --group-ids"*) cat "$ST/web-abierta" 2>/dev/null || echo 0;;
   "ec2 describe-security-groups"*) n=$(echo "$A" | sed -n 's/.*group-name,Values=\([^ ]*\).*/\1/p'); [ -f "$ST/$n" ] && cat "$ST/$n" || echo None;;
   "ec2 create-security-group"*) n=$(echo "$A" | sed -n 's/.*--group-name \([^ ]*\).*/\1/p'); echo "sg-$n";;
   "ssm get-parameter"*|"ec2 describe-images"*) echo ami-1;;
@@ -67,7 +68,9 @@ corre() { ( cd "$TMP/aws" && bash provision.sh "$@" ) > "$TMP/salida.txt" 2>&1 |
 corre
 grep -q "rds create-db-instance.* --multi-az" "$LOG" || fallo "RDS no se creó Multi-AZ"
 grep -q "elbv2 create-load-balancer.*--subnets subnet-[0-9]* subnet-[0-9]*" "$LOG" || fallo "el ALB no recibió dos subredes"
-grep -q "elbv2 create-target-group.*--health-check-path /salud/" "$LOG" || fallo "el grupo de destino no chequea /salud/"
+grep -q "elbv2 create-target-group.*--health-check-path /health " "$LOG" || fallo "el grupo de destino no chequea /health"
+grep -q "rds create-db-instance.*--backup-retention-period 7 --copy-tags-to-snapshot --deletion-protection" "$LOG" || fallo "la RDS nueva no nace con respaldos de 7 días, copia de etiquetas y protección contra borrado"
+grep -q "rds create-db-instance.*--no-publicly-accessible" "$LOG" || fallo "la RDS nueva sería pública"
 grep -q "elbv2 create-listener.*--port 80" "$LOG" && grep -q "elbv2 create-listener.*--port 443" "$LOG" || fallo "faltan los listeners 80 y 443"
 grep -q "authorize-security-group-ingress --group-id sg-cofrial-sg-web --protocol tcp --port 80 --source-group sg-cofrial-sg-alb" "$LOG" || fallo "sg-web no abre el 80 solo al ALB"
 grep -q "authorize-security-group-ingress --group-id sg-cofrial-sg-web --protocol tcp --port 80 --cidr 0.0.0.0/0" "$LOG" && fallo "sg-web quedó abierto al mundo"
@@ -109,4 +112,20 @@ echo "ok: RDS Single-AZ existente se modifica a Multi-AZ (sin recrear)"
 grep -q "revoke-security-group-ingress.*--port 80 --cidr 0.0.0.0/0" "$LOG" && grep -q "revoke-security-group-ingress.*--port 443 --cidr 0.0.0.0/0" "$LOG" || fallo "cerrar-acceso-directo no revoca 80 y 443"
 grep -q "bash aws/provision.sh cerrar-acceso-directo" "$AQUI/provision.sh" || fallo "cerrar-acceso-directo no está documentado"
 echo "ok: cerrar-acceso-directo revoca 80 y 443 abiertos al mundo"
+
+# 6) modo HTTPS de Django: solo con certificado de confianza y las web cerradas al acceso directo
+: > "$LOG"; CERT_ARN=arn:aws:acm:us-east-1:1:certificate/confiable corre recrear-web
+grep -q "^DJANGO_HTTPS=1" "$UD_A" && grep -q "^DJANGO_HSTS_SEG=86400" "$UD_B" || fallo "con certificado de confianza y web cerradas debía activarse DJANGO_HTTPS=1 con HSTS de un día: $(grep -E 'DJANGO_HTTPS=|HSTS' "$UD_A" | tr '\n' ' ')"
+grep -q "^DJANGO_CSP=1" "$UD_A" || fallo "falta DJANGO_CSP en el .env de la web"
+echo 1 > "$TMP/st/web-abierta"; : > "$LOG"; CERT_ARN=arn:aws:acm:us-east-1:1:certificate/confiable corre recrear-web
+grep -q "^DJANGO_HTTPS=0" "$UD_A" || fallo "con el 80 de las web abierto a internet no deben activarse las cookies Secure"
+grep -q "Django sigue sin cookies Secure" "$TMP/salida.txt" || fallo "no avisó de que el acceso directo impide el modo HTTPS"
+echo "ok: cookies Secure y HSTS solo cuando todo llega por HTTPS (certificado de confianza y web cerradas al acceso directo)"
+
+# 7) con la base creada y sin sus claves locales, no se generan claves nuevas
+rm "$TMP/aws/.estado/secretos.env"; : > "$LOG"
+( cd "$TMP/aws" && bash provision.sh ) > "$TMP/salida.txt" 2>&1 && fallo "debió detenerse: la base existe y faltan sus claves"
+grep -q "no tiene las claves de esa instalación" "$TMP/salida.txt" || fallo "no explicó por qué se detuvo"
+grep -Eq "run-instances|create-db-instance|terminate-instances" "$LOG" && fallo "tocó recursos pese a faltar las claves"
+echo "ok: sin las claves de una base que ya existe, el script se detiene sin tocar nada"
 echo "TODO OK"

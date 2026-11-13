@@ -130,9 +130,37 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - **Estado: nada de esto está desplegado en AWS.** Se probó solo en local; la suite completa, con base de pruebas nueva tras integrar `main` y corregir la revisión final, dio `Ran 977 tests in 898.383s`, `OK (skipped=9)`. El despliegue requiere el visto bueno de Eric; si el miércoles 11-nov a las 18:00 `verificar.py` no pasa completo en AWS, la defensa sigue el guion anterior (`docs/guia-pruebas-aws.md`, sección de la Torre).
 - Torre de control y embudo de niveles con RN-23 (8-nov-2026): al integrar ambas ramas, la Torre y el embudo seguían sumando las unidades rechazadas y contando como venta los pedidos rechazados enteros. Ahora usan lo aceptado y excluyen esos pedidos, igual que Grafana; un cliente cuyo único pedido se rechazó entero queda en «Ganado sin pedido». La traza de un pedido y los pedidos afectados por frío los siguen mostrando, porque el viaje ocurrió.
 - Camiones de dos cámaras (8-nov-2026): 5 de los 50 llevan refrigerado y congelado, de modo que un carrito mixto sale en un solo viaje. Se agregan `camion.rango_secundario_id`, `telemetria.camara` y `orden.camara` (migraciones `flota/0008` y `pedidos/0012`). Una ruptura de frío afecta solo a los pedidos de esa cámara. Detalle en `docs/decisiones.md`.
+- Pago y salud (8-nov-2026, revisión técnica): el modal de Mercado Pago pide confirmación («Confirmar y pagar» / «Cancelar compra»), «Cancelar» de la entrega deja de ser ambiguo y `/salud/` queda exenta de la redirección HTTPS para el balanceador. Probado solo en local; el balanceador y Multi-AZ los lleva otra sesión. Detalle en `docs/decisiones.md`. Revisión del 13-nov (PR 87, aún borrador): se integró `main`; la exención de salud ahora incluye `/health`; el modal toma el documento también del campo oculto de la institución, monta la tarjeta solo al confirmar y cierra la confirmación con Esc.
+
+
+- Activación del laboratorio en cada sesión (13-nov-2026): `aws/activar.sh` pide las credenciales, enciende la base y las EC2, espera al balanceador y verifica por el dominio; no recrea nada, porque detener y encender conserva las IDs de las instancias y las alarmas. Se corrigió la espera final de `provision.sh encender`, que no seguía la redirección a HTTPS. Probado con AWS falso y en solo lectura contra el laboratorio vivo; en la primera sesión nueva real (13-nov, 15:39) el laboratorio ya había encendido las EC2 y la base, y `activar.sh` solo guardó las credenciales y verificó; `encender` sobre máquinas detenidas sigue sin probarse. Detalle en `docs/decisiones.md`.
+
+- Panel de salud (13-nov-2026): Eric notó que «salud» no muestra rojos: `/health` y `/salud/` son texto y viven en las mismas web. `aws/panel-salud.sh` crea el panel `cofrial-salud` en CloudWatch (alarmas, web sanas, 5xx, CPU, base), alojado por AWS fuera de las EC2. Detalle en `docs/decisiones.md`.
 
 ## 2026-11-08 (revisión técnica: alta disponibilidad)
 - El evaluador aprobó la aplicación salvo infraestructura: pidió balanceador de carga, dos EC2 web y RDS en múltiples zonas, HTTPS con nombre de dominio y Grafana con autenticación y HTTPS.
 - `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).
 - Documentado en `docs/decisiones.md`, `informe/03` (decisión 6 y tablas), `informe/04a` y `aws/README.md`. El dibujo de la Figura 1 está pendiente de redibujar.
 - Pendiente: corrida real en el laboratorio (Multi-AZ puede ser rechazado), certificado de confianza para el dominio y mover el registro del dominio al ALB.
+
+## 2026-11-09: la ruta del cliente sigue al camión
+- En el mapa del pedido la línea azul se recortaba con la señal de GPS (cada 15 s) y se adelantaba al ícono, que se desliza entre lecturas. Ahora el tramo sale del camión dibujado y se acorta con él; el servidor sigue entregando solo lo que falta hasta la parada propia. Sin cambio de modelo.
+- Mientras va en camino se conserva el distintivo de llegada que trajo `main`. Al llegar a la puerta el mapa se apaga.
+- Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
+- Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.
+
+## 2026-11-13: el asistente de IA crea tickets y agrega al carrito
+- Cada consulta de un cliente al asistente queda como ticket. La IA resuelve sola lo que puede (ticket «Resuelto por la IA») y deriva a una persona lo que no (reclamos, facturas, cuando falla o no tiene el dato); el cliente ve el N.º y el estado en Soporte, y el CRM cuenta resueltas y derivadas.
+- El asistente conoce todo el catálogo (SKU, stock y precio de su perfil). Si el cliente pide agregar algo, lo agrega a su carrito; el servidor valida stock y límites y escribe la confirmación. No crea pedidos ni cobra.
+- Detalle y pendientes en `docs/decisiones.md`.
+
+## 2026-11-13: la página de estado ahora es real
+- `/salud/` mostraba solo «ok» y no guardaba nada. Ahora el servicio `vigilante` revisa cada minuto web, base, IoT, Grafana y la dirección pública, y cada 5 minutos Gemini, Groq y Mercado Pago (solo listan la cuenta: sin gasto de cuota ni cobros). Cada revisión queda en la tabla `chequeo_servicio` con su hora.
+- La página muestra barras de 90 días y de 24 horas, la disponibilidad y qué pasó en los últimos 7 días. Cuando el laboratorio está apagado nadie revisa: esas horas aparecen en gris como «sin registros», sin contarse como caída ni como éxito. El historial parte del día en que se enciende el monitor.
+- Sin cambios para el balanceador: `/salud/` sigue respondiendo `{"estado": "ok"}` a quien no es un navegador. Detalle en `docs/decisiones.md`.
+- Pendiente en AWS: reconstruir la web primaria (`recrear-web`) para que nazca el servicio `vigilante` y se cree la tabla; opcional, definir `SALUD_URL_PUBLICA=https://www.cofrialspa.shop` para vigilar también el balanceador.
+
+## 2026-11-13: extras de la Torre y de las alertas de frío
+- Torre de control: al tocar un camión (en el mapa o en la lista) se abre un panel de detalle con su estado, temperatura, combustible, antigüedad de la última lectura y los clientes a bordo, con enlace a su ficha. Si hay ruptura de frío ofrece ir a avisar a los clientes. Cada cliente a bordo se limita al alcance del usuario y la consulta es una sola, sin importar cuántos camiones haya.
+- CRM, alertas de frío: la lista muestra contacto del cliente (teléfono y correo), temperatura máxima y hora de la primera lectura, y el vendedor o administrador registra el aviso. Queda en el historial del cliente y la orden pasa a «Avisado».
+- Pendiente (necesita AWS encendido): probar una restauración de RDS a un punto en el tiempo y agregar la revisión de respaldos a `aws/verificar.py --infra`.

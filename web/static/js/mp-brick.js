@@ -71,6 +71,12 @@
       if (letras < 2 || /[^\p{L} .'’-]/u.test(n)) return "Escribe el nombre de quien recibe solo con letras (puedes usar espacios, punto, guion o apóstrofo).";
       return "";
     }
+    /* Boleta o factura: el público elige con un radio; la institución lleva el campo oculto con «factura». Leer solo el radio marcado
+       mostraba «Boleta» a una institución y el servidor rechazaba el pago («Las instituciones reciben factura después de la entrega»). */
+    function comprobanteElegido() {
+      var campo = document.querySelector('.checkout-mp input[name="comprobante"]:checked') || document.querySelector('.checkout-mp input[type="hidden"][name="comprobante"]');
+      return campo && campo.value === "factura" ? "factura" : "boleta";
+    }
     var errEl = document.getElementById("mp-brick-error");
     var estadoBox = document.getElementById("mp-modal-estado");
     var estadoTit = document.getElementById("mp-modal-estado-t");
@@ -91,6 +97,7 @@
     var cerrando = false;
     var escalaObs = null;
     var mensajeCarritoPendiente = "";
+    var mensajeCarritoNeutro = false;   // true: el aviso del carrito es informativo (cancelaste), no un error
     var accionReintentar = null;
 
     function limpiarEscalaBrick() {
@@ -191,7 +198,7 @@
       estadoBox.hidden = false;
       estadoBox.removeAttribute("hidden");
       estadoBox.className = "mp-modal__estado mp-modal__estado--" + tipo;
-      var clave = tipo === "ok" ? "ok" : tipo === "off" ? "off" : tipo === "carga" ? "carga" : "err";
+      var clave = tipo === "ok" ? "ok" : tipo === "off" ? "off" : tipo === "carga" ? "carga" : tipo === "conf" ? "" : "err";   // «conf» (confirmar la compra) no lleva ícono: no es un error
       mostrarMarca(clave);
       estadoTit.textContent = titulo;
       if (estadoSub) estadoSub.textContent = subt || "";
@@ -210,6 +217,7 @@
       if (!estadoAcc || !btnReintentar || !btnCarrito) return;
       estadoBox.classList.add("mp-modal__estado--accion");
       mensajeCarritoPendiente = opts.mensajeCarrito || "";
+      mensajeCarritoNeutro = !!opts.neutro;
       accionReintentar = typeof opts.onRetry === "function" ? opts.onRetry : reintentarEnModal;
       btnReintentar.textContent = opts.retryLabel || "Reintentar pago";
       btnReintentar.hidden = !!opts.ocultarReintentar;
@@ -233,9 +241,9 @@
     function volverAlCarritoDesdeModal() {
       if (cerrando) return;
       cerrando = true;
-      var msg = mensajeCarritoPendiente;
+      var msg = mensajeCarritoPendiente, neutro = mensajeCarritoNeutro;
       ocultarEstado();
-      if (msg) avisarCarrito(msg);
+      if (msg) avisarCarrito(msg, neutro);
       finalizarCierre();
     }
 
@@ -286,9 +294,10 @@
       return formData;
     }
 
-    function avisarCarrito(msg) {
+    function avisarCarrito(msg, neutro) {
       var inline = document.getElementById("mp-inline-error");
       if (!inline) return;
+      inline.classList.toggle("mp-inline-error--info", !!neutro);
       if (msg) {
         inline.textContent = msg;
         inline.hidden = false;
@@ -355,7 +364,7 @@
           direccion: direccion.value,
           recibe: valorRecibe(),
           formData: formData,
-          comprobante: (document.querySelector('.checkout-mp input[name="comprobante"]:checked') || {}).value || "boleta",
+          comprobante: comprobanteElegido(),
           giro: (document.querySelector('.checkout-mp input[name="giro"]') || {}).value || "",
         }),
       })
@@ -462,6 +471,8 @@
 
     function cerrarModal() {
       if (cerrando) return;
+      /* En «Confirma tu compra» todavía no hay nada que perder: Esc o un clic fuera equivalen a «Cancelar compra». */
+      if (estadoBox && !estadoBox.hidden && estadoBox.classList.contains("mp-modal__estado--conf")) { volverAlCarritoDesdeModal(); return; }
       if (estadoBox && !estadoBox.hidden && estadoBox.classList.contains("mp-modal__estado--accion")) return;
       if (estadoBox && !estadoBox.hidden && estadoBox.classList.contains("mp-modal__estado--carga")) {
         mostrarDecision("off", "Pago en curso", "Si vuelves al carrito, revisa Mis pedidos por si el cargo se registró.", {
@@ -475,39 +486,28 @@
         });
         return;
       }
-      mostrarDecision("off", "¿Salir del pago?", "Puedes seguir con el formulario o volver al carrito.", {
+      mostrarDecision("off", "¿Cancelar la compra?", "No se cobra nada. Puedes seguir pagando o cancelar y volver al carrito.", {
         onRetry: function () {
           ocultarEstado();
         },
         retryLabel: "Seguir pagando",
-        mensajeCarrito: "",
+        carritoLabel: "Cancelar compra",
+        mensajeCarrito: "Cancelaste la compra: no se cobró nada. Tu carrito sigue igual.",
+        neutro: true,
       });
     }
 
     function abrirPago() {
       if (!direccion || !direccion.value) {
-        var msg = "Elige una dirección de entrega antes de pagar.";
-        var inline = document.getElementById("mp-inline-error");
-        if (inline) {
-          inline.textContent = msg;
-          inline.hidden = false;
-        }
+        avisarCarrito("Elige una dirección de entrega antes de pagar.");
         direccion && direccion.focus();
         return;
       }
-      var inline = document.getElementById("mp-inline-error");
       var errNombre = errorRecibe();
       if (errNombre) {
-        if (inline) {
-          inline.textContent = errNombre;
-          inline.hidden = false;
-        }
+        avisarCarrito(errNombre);
         (recibeNuevo || recibeLista) && (recibeNuevo || recibeLista).focus();
         return;
-      }
-      if (inline) {
-        inline.hidden = true;
-        inline.textContent = "";
       }
       mostrarError("");
       avisarCarrito("");
@@ -516,9 +516,29 @@
       document.body.classList.add("mp-modal-abierto");
       mostrar.disabled = true;
       animarEntrada();
-      montarBrick();
-      var cerrar = modal.querySelector(".mp-modal__cerrar");
-      if (cerrar) window.setTimeout(function () { cerrar.focus(); }, SALIDA_MS);
+      confirmarCompra();
+    }
+
+    /* Paso de confirmación: antes de pedir la tarjeta se resume lo que se va a comprar. «Confirmar y pagar» sigue al formulario;
+       «Cancelar compra» cierra sin cobrar y lo dice en el carrito, para que no se confunda con seguir. */
+    function confirmarCompra() {
+      var op = direccion.options[direccion.selectedIndex];
+      var doc = comprobanteElegido() === "factura" ? "Factura" : "Boleta";
+      var total = "$" + Math.round(Number(cfg.amount)).toLocaleString("es-CL");
+      var quien = valorRecibe();
+      var subt = "Total " + total + " (IVA incluido) · " + doc + " · Entrega en " + (op ? op.text : "") + (quien ? " · Recibe " + quien : "") + ". Aún no se cobra nada.";
+      mostrarDecision("conf", "Confirma tu compra", subt, {
+        retryLabel: "Confirmar y pagar",
+        carritoLabel: "Cancelar compra",
+        mensajeCarrito: "Cancelaste la compra: no se cobró nada. Tu carrito sigue igual.",
+        neutro: true,
+        onRetry: function () {
+          ocultarEstado();
+          montarBrick();   // el formulario de tarjeta no existe hasta aquí: no queda enfocable detrás de la confirmación ni se inicializa si se cancela
+          var cerrar = modal.querySelector(".mp-modal__cerrar");
+          if (cerrar) cerrar.focus();
+        },
+      });
     }
 
     mostrar.addEventListener("click", abrirPago);

@@ -1,0 +1,42 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}Mis datos | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab"><div><h1>Mis datos</h1><p class="sub">Revisa, descarga o elimina lo que Cofrial guarda de tu cuenta. Detalle en la <a href="/legal/privacidad/">política de privacidad</a>.</p></div></div>
+{% endblock %}
+{% block contenido %}
+<div class="mis-datos">
+  <section class="tarjeta-ui" aria-labelledby="md-perfil">
+    <h2 id="md-perfil">Tu cuenta</h2>
+    <dl class="md-lista">
+      <div><dt>{% if cliente.tipo_cliente.codigo == "B2B" %}Razón social{% else %}Nombre{% endif %}</dt><dd>{{ cliente.nombre }}</dd></div>
+      <div><dt>RUT</dt><dd>{{ cliente.rut }}</dd></div>
+      <div><dt>Correo</dt><dd>{{ cliente.email }}</dd></div>
+      <div><dt>Teléfono</dt><dd>{{ cliente.telefono|default:"No indicado" }}</dd></div>
+      <div><dt>Términos aceptados</dt><dd>{% if aceptacion %}Versión {{ aceptacion.version }}, el {{ aceptacion.aceptado_en|date:"d/m/Y H:i" }}{% else %}Cuenta creada antes del registro de aceptación{% endif %}</dd></div>
+    </dl>
+    <p class="ayuda">Para corregir un dato escríbenos en <a href="/soporte/">Soporte</a>.</p>
+  </section>
+
+  <section class="tarjeta-ui" aria-labelledby="md-descargar">
+    <h2 id="md-descargar">Descargar mis datos</h2>
+    <p>Un archivo JSON con tu cuenta, direcciones, pedidos, consultas, avisos de stock y los términos que aceptaste. Lo puedes abrir con cualquier editor de texto o llevar a otro servicio.</p>
+    <p><a class="btn" href="/cuenta/mis-datos/descargar/" download>Descargar mis datos</a></p>
+  </section>
+
+  <section class="tarjeta-ui md-eliminar" aria-labelledby="md-eliminar">
+    <h2 id="md-eliminar">Eliminar mi cuenta</h2>
+    <p>Se cierra el acceso y se borran tu nombre, correo, teléfono, direcciones, carrito y avisos de stock. Se conservan los pedidos y los documentos tributarios con tu RUT durante el plazo que exige la ley, y la constancia de los términos que aceptaste. No se puede deshacer.</p>
+    {% if es_demo %}
+      <p class="aviso">Esta es una cuenta de demostración y no se puede eliminar.</p>
+    {% elif abiertos %}
+      <p class="aviso">Tienes {{ abiertos }} pedido{{ abiertos|pluralize }} en curso. Podrás eliminar la cuenta cuando termine{{ abiertos|pluralize:"n" }}.</p>
+    {% else %}
+      <form method="post" action="/cuenta/mis-datos/eliminar/" data-carga>{% csrf_token %}
+        <label for="md-clave">Escribe tu clave para confirmar</label>
+        <input type="password" name="clave" id="md-clave" required autocomplete="current-password">
+        <p style="margin-top:12px"><button class="btn-peligro" data-cargando="Eliminando…">Eliminar mi cuenta</button></p>
+      </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

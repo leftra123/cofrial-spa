@@ -130,6 +130,16 @@ def cobrar_b2c(orden, medio="webpay", referencia=None):
 
 
 @transaction.atomic
+def emitir_a_plazo(orden, dias=30):
+    """Orden generada sin pago inmediato: el documento se puede ver y descargar ya, y vence a los `dias` días. No registra un pago."""
+    tipo_doc = "factura" if orden.comprobante == "factura" else "boleta"
+    ya = Documento.objects.filter(orden=orden, tipo=tipo_doc).first()
+    if ya:
+        return ya
+    return _emitir(orden, tipo_doc, monto_con_iva(orden), vence_en=timezone.localdate() + timedelta(days=dias))
+
+
+@transaction.atomic
 def cobrar_factura_contado(orden, medio="webpay", referencia=None):
     """Factura elegida por el público, que paga al comprar: se emite y queda pagada en el acto. No reemplaza la factura a crédito del institucional."""
     monto = monto_con_iva(orden)

@@ -1,7 +1,7 @@
 {% extends "tienda/base.html" %}
 {% block titulo %}Soporte | Cofrial SpA{% endblock %}
 {% block cabecera %}
-<div class="pagina-cab"><div><h1>Soporte</h1><p class="sub">Cuéntanos tu consulta o reclamo. Un asistente de IA la clasifica y la deriva al área que corresponde.</p></div></div>
+<div class="pagina-cab"><div><h1>Soporte</h1><p class="sub">Cuéntanos tu consulta o reclamo. Las consultas que le haces al asistente de IA también quedan aquí como tickets: las que no pudo resolver las ve una persona del equipo.</p></div></div>
 {% endblock %}
 {% block contenido %}
 <div class="tarjeta-ui" style="max-width:680px">
@@ -18,9 +18,9 @@
 <div class="tabla-caja"><table>
   <thead><tr><th>Asunto</th><th>Categoría</th><th>Estado</th><th>Fecha</th></tr></thead>
   <tbody>
-  {% for r in requerimientos %}<tr><td style="white-space:normal;min-width:220px"><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:90 }}</span></td>
+  {% for r in requerimientos %}<tr><td style="white-space:normal;min-width:220px"><b>{{ r.asunto }}</b><br><span class="frio">{{ r.descripcion|truncatechars:90 }}</span>{% if r.respuesta_ia %}<br><span class="frio"><b>Asistente:</b> {{ r.respuesta_ia|truncatechars:160 }}</span>{% endif %}</td>
     <td>{{ r.categoria_requerimiento|default:"En revisión" }}</td>
-    <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% elif r.estado == 'resuelto' %}entregado{% else %}asignado{% endif %}">{{ r.get_estado_display }}</span></td>
+    <td><span class="chip {% if r.estado == 'sin_clasificar' %}pendiente{% elif r.estado == 'resuelto' %}entregado{% else %}asignado{% endif %}">{{ r.etiqueta_estado }}</span></td>
     <td>{{ r.creado_en|date:"d/m/Y H:i" }}</td></tr>
   {% empty %}{% include "componentes/vacio_estado.html" with cols=4 compacto=True ico="chat" titulo="Aún no has enviado consultas" texto="Cuando escribas una, verás aquí cómo la clasificamos y en qué estado va." %}{% endfor %}
   </tbody>

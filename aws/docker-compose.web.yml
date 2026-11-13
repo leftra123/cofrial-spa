@@ -4,6 +4,11 @@
 #   secundario              espera a que la base esté migrada y solo sirve la aplicación (podador y despachador quedan dormidos)
 # Así dos instancias nunca migran ni despachan a la vez. Un solo servidor (sin ALB) funciona igual: es primario.
 # Uso desde la raíz del repositorio:  docker compose -f aws/docker-compose.web.yml --env-file .env up -d --build
+# Límites por contenedor (la EC2 web es una t3.small: 2 vCPU y 2 GB). Son topes, no reservas: si un proceso se desboca, Docker lo reinicia a él
+# (restart: unless-stopped) en vez de dejar a la instancia sin memoria y al balanceador sin destino. Los registros rotan para no llenar el disco.
+x-registro: &registro
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
 x-bd: &bd
   DB_HOST: ${DB_HOST:?define DB_HOST (endpoint de RDS) en .env}
   DB_PORT: ${DB_PORT:-5432}
@@ -44,6 +49,8 @@ services:
       DJANGO_CSRF_ORIGINS: ${DJANGO_CSRF_ORIGINS:-}
       DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}            # ruta propia del panel de administración; por defecto /admin/
       DJANGO_HTTPS: ${DJANGO_HTTPS:-0}                         # 1 solo cuando hay certificado (cookies seguras y HSTS)
+      DJANGO_HSTS_SEG: ${DJANGO_HSTS_SEG:-}                    # segundos de HSTS con DJANGO_HTTPS=1; vacío = un año
+      DJANGO_CSP: ${DJANGO_CSP:-1}                             # política de contenido: 1 se aplica · informe solo avisa en el navegador · 0 sin cabecera
       DJANGO_HTTPS_REDIRECT: ${DJANGO_HTTPS_REDIRECT:-1}       # 0 detrás del ALB: él redirige 80->443 y sus chequeos de salud llegan por HTTP plano
       DJANGO_CONFIAR_PROXY: ${DJANGO_CONFIAR_PROXY:-0}         # 1 solo detrás de un balanceador que agrega X-Forwarded-For
       ACCESO_MAX_FALLOS_CUENTA: ${ACCESO_MAX_FALLOS_CUENTA:-10}   # claves malas por cuenta antes de bloquearla 15 min
@@ -74,9 +81,9 @@ services:
       EMAIL_REMITENTE: ${EMAIL_REMITENTE:-}
     ports: ["80:8000"]
     restart: unless-stopped
-    logging:                                  # los registros (incluidos los tracebacks) se leen con `docker logs`; con rotación para no llenar el disco
-      driver: json-file
-      options: {max-size: "10m", max-file: "3"}
+    mem_limit: 1100m
+    cpus: 1.5
+    logging: *registro                        # los registros (incluidos los tracebacks) se leen con `docker logs`; con rotación para no llenar el disco
 
   # Borra cada día la telemetría normal antigua (docs/decisiones.md). Espera 10 min para no competir con el arranque.
   podador:
@@ -91,9 +98,32 @@ services:
       RETENCION_TELEMETRIA_DIAS: ${RETENCION_TELEMETRIA_DIAS:-7}
     depends_on: [web]
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options: {max-size: "10m", max-file: "3"}
+    mem_limit: 256m
+    cpus: 0.5
+    logging: *registro
+
+  # Vigilante de salud: cada minuto revisa web, base, IoT, Grafana, IA y pagos y guarda el resultado (alimenta /salud/). Solo en la web primaria
+  # (una sola escritora). Si el laboratorio se apaga no hay quien revise: esas horas quedan como «sin registros» y no como caída.
+  # Los chequeos de IA y pagos solo listan la cuenta: no gastan cuota ni cobran. SALUD_URL_PUBLICA (p. ej. https://www.cofrialspa.shop) agrega la revisión del balanceador.
+  vigilante:
+    build: ../web
+    command: sh -c 'if [ "$$ROL_WEB" = "secundario" ]; then echo "Vigilante solo en la web primaria"; exec sleep infinity; fi; sleep 45; exec python manage.py vigilar --bucle'
+    init: true
+    environment:
+      <<: *bd
+      ROL_WEB: ${ROL_WEB:-primario}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      DJANGO_DEBUG: "0"
+      SALUD_URL_WEB: http://web:8000/salud/
+      SALUD_URL_PUBLICA: ${SALUD_URL_PUBLICA:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
+    depends_on: [web]
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    logging: *registro
 
   # Despacho sin personas (flota/autodespacho.py). Apagado por defecto: queda dormido y no gasta nada hasta que DESPACHO_AUTO=1.
   # Servicio propio y no un paso del arranque: debe correr aunque nadie abra el panel, y gunicorn no lo espera (docs/decisiones.md).
@@ -119,9 +149,9 @@ services:
       CLAUDE_MODELS: ${CLAUDE_MODELS:-}
     depends_on: [web]
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options: {max-size: "10m", max-file: "3"}
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *registro
 
   grafana:
     image: grafana/grafana:11.6.16
@@ -155,4 +185,7 @@ services:
       - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on: [web]
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+    logging: *registro                        # la imagen oficial ya corre como el usuario grafana (472), no como root
 

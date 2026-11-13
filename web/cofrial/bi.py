@@ -21,6 +21,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from crm import servicios as crm
 
+from .csp import politica_propia
+
 log = logging.getLogger("cofrial.bi")
 
 ROLES_BI = {"admin": "Admin", "gerencia": "Viewer"}          # rol de Django -> rol dentro de Grafana
@@ -74,6 +76,7 @@ def _cuerpo(respuesta, conexion):
         conexion.close()
 
 
+@politica_propia(settings.CSP_DEL_TABLERO)      # Grafana trae su propia interfaz: no puede llevar la política del sitio (ver settings.py)
 @csrf_exempt                       # la defensa contra CSRF es _origen_valido, SameSite=Lax en la cookie de sesión y la revisión propia de Grafana
 def proxy(request, ruta=""):
     if not request.user.is_authenticated:

@@ -19,6 +19,7 @@ from catalogo.models import Categoria, Producto
 from clientes.forms import RegistroB2CForm, RegistroEmpresaForm
 from clientes.models import Cliente
 from .acceso import inicio_de
+from .seguridad import ip_de
 from crm import servicios as crm
 from flota.models import Camion, Telemetria
 
@@ -87,7 +88,7 @@ def registro(request):
         return redirect(inicio_de(request.user))
     form = RegistroB2CForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        usuario = form.guardar()
+        usuario = form.guardar(ip=ip_de(request))
         login(request, usuario)
         messages.success(request, "Cuenta creada. Ya puedes comprar con precios para clientes particulares.")
         if not form.ubicada:
@@ -110,7 +111,7 @@ def registro_empresa(request):
         return redirect("registro_empresa")
     form = RegistroEmpresaForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        cliente = form.guardar()
+        cliente = form.guardar(ip=ip_de(request))
         request.session["empresa_enviada"] = {"pk": cliente.pk, "ubicada": bool(form.ubicada)}
         return redirect(reverse("registro_empresa") + "?enviado=1")
     return render(request, "cuenta/registro_empresa.html", {"form": form})

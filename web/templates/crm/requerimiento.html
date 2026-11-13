@@ -1,6 +1,7 @@
 {% extends "crm/base.html" %}
 {% block titulo %}Requerimiento {{ r.requerimiento_id }} | Cofrial SpA{% endblock %}
 {% block crm %}
+{% include "componentes/migas.html" with a1="/crm/" t1="CRM" a2="/crm/requerimientos/" t2="Requerimientos" actual=r.asunto %}
 <div class="pagina-cab">
   <div><h1>{{ r.asunto }}</h1><p class="sub">Requerimiento N.º {{ r.requerimiento_id }} · {{ r.creado_en|date:"d/m/Y H:i" }} · {{ r.cliente|default:"Sin cliente" }}{% if r.orden_id %} · pedido N.º {{ r.orden_id }}{% endif %}</p></div>
   <div class="acciones"><a class="btn btn-sec" href="{% url 'crm_requerimientos' %}">Volver a requerimientos</a></div>

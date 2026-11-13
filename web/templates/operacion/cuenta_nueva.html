@@ -1,6 +1,7 @@
 {% extends "operacion/base.html" %}
 {% block titulo %}{% if tipo %}Agregar {{ tipo_nombre }}{% else %}Crear cuenta{% endif %} | Cofrial SpA{% endblock %}
 {% block operacion %}
+{% include "componentes/migas.html" with a1="/operacion/" t1="Operación" a2="/operacion/cuentas/" t2="Usuarios" actual=tipo_nombre|default:"Crear cuenta" %}
 <div class="pagina-cab"><div><h1>{% if tipo %}Agregar: {{ tipo_nombre }}{% else %}Crear cuenta{% endif %}</h1><p class="sub">{% if tipo %}Solo los datos que pide este tipo de usuario. <a href="/operacion/cuentas/nueva/">Elegir otro tipo</a>.{% else %}Elige el rol y completa los datos que pide.{% endif %}</p></div><div class="acciones"><a class="btn btn-sec" href="/operacion/cuentas/{% if tipo %}?tipo={{ tipo }}{% endif %}">Cancelar</a></div></div>
 <div class="tarjeta-ui" style="max-width:560px">
 <form method="post" id="form-cuenta" data-carga autocomplete="off">{% csrf_token %}

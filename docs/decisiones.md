@@ -463,7 +463,7 @@ Pedido de Eric: que cada tipo de usuario reciba avisos sin recargar y que el sit
 
 **Permisos:**
 
-- **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Se abre una vez por cuenta y navegador, explica para qué es cada permiso según el rol y se reabre con «Permisos» en el menú.
+- **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Explica para qué es cada permiso según el rol y se abre con «Permisos» en el menú. Desde el 13-nov-2026 ya no se abre solo al entrar (ver «Orden visual y alcance del pulgar»).
 - **La ubicación solo se pide a los clientes:** se usa en «Estoy en esta dirección: usar mi ubicación» al agregar una dirección de entrega. Al equipo no se le pide porque no tendría ningún uso. La posición se manda solo al guardar esa dirección; no se sigue a nadie.
 - **Las coordenadas del navegador no se creen sin revisar:** `agregar_direccion` acepta solo valores numéricos dentro de Chile continental; si no, busca la dirección escrita en OpenStreetMap. Con una precisión peor que 300 m no se usan, porque el camión podría ir a otra cuadra.
 - **Sin HTTPS no hay permisos nativos:** `Notification` y `geolocation` no piden permiso sin contexto seguro, y la EC2 sirve por HTTP. El diálogo lo dice y los avisos dentro de la página funcionan igual. La pauta del Hito 2 no exige HTTPS, así que se entrega así; el plan para activarlo está más abajo, como opcional.
@@ -504,11 +504,17 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
 - **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).
 
+## Panel de salud en CloudWatch (13-nov-2026)
+- **Problema (Eric):** «salud no muestra rojos». `/health`, `/salud/` y `/salud/bd/` son respuestas JSON sin pantalla y viven en las web que vigilan: con la web caída no responde nada que se pueda poner rojo. `/salud/` nunca falla a propósito (solo dice que la aplicación está viva); la que prueba la base es `/salud/bd/` (503).
+- **Decisión:** el aviso visual va fuera de las EC2. `aws/panel-salud.sh` crea el panel `cofrial-salud` en CloudWatch con las alarmas, las web sanas, los 5xx, la respuesta, la CPU y la base, leídos de las métricas de AWS. No depende de IDs de EC2 y es idempotente. Alternativas vistas: un monitor externo gratuito (exige una cuenta ajena) o mostrar solo la consola.
+- **Límite:** no envía correos (las alarmas no tienen `ALARMA_EMAIL`). El panel solo se abre desde la consola del laboratorio.
+- **Prueba:** `aws/test_panel_salud.sh` (AWS falso) y creación real con renderizado de gráficas el 13-nov. No se abrió el panel en el navegador de la consola.
+
 ## Activar el laboratorio en cada sesión (13-nov-2026)
 - **Problema:** cada sesión del Learner Lab (4 h) detiene las EC2 y la base, y reactivarlas eran varios pasos a mano (pegar credenciales, `encender`, esperar, verificar). Además, tras poner el HTTPS en el balanceador, la espera final de `provision.sh encender` consultaba `http://<balanceador>/salud/` sin seguir redirecciones y recibía un 301: habría dado por caída una aplicación que ya funcionaba.
 - **Decisión:** `aws/activar.sh` (credenciales del portapapeles, validadas antes de reemplazar las actuales; `encender`; espera a que los destinos del balanceador estén sanos; verificación por el dominio) y `encender` con `curl -L -k`. No recrea nada: detener y encender conserva las IDs de las instancias, así que los destinos del balanceador y las alarmas siguen valiendo; `recrear-web` las rompería.
 - **Qué no se automatiza:** las credenciales (las crea AWS Academy al pulsar Start Lab). Las alarmas huérfanas solo se avisan: reaplicarlas pregunta comando a comando en `endurecer.sh`.
-- **Prueba:** `aws/test_activar.sh` (AWS, `curl` y `pbpaste` falsos). Corrida real en solo lectura contra el laboratorio vivo el 13-nov (`--solo-verificar`): dos web sanas, dominio y raíz en 200. **No probado:** el arranque real desde «detenido» tras cerrar la sesión.
+- **Prueba:** `aws/test_activar.sh` (AWS, `curl` y `pbpaste` falsos). Corrida real en solo lectura contra el laboratorio vivo el 13-nov (`--solo-verificar`): dos web sanas, dominio y raíz en 200. **Primera sesión nueva real (13-nov, 15:39 Chile):** `activar.sh` pidió y guardó las credenciales y verificó; el laboratorio ya había encendido las EC2 y la base (CloudTrail: `StartInstances` por el usuario de sistema), así que `encender` no tuvo nada que arrancar. **Sigue sin probarse** `encender` sobre máquinas realmente detenidas.
 
 ## La salud no se redirige a HTTPS (8-nov-2026, ajustada el 13-nov)
 - **Problema:** con `DJANGO_HTTPS=1` y la redirección activa (`DJANGO_HTTPS_REDIRECT`, por defecto 1) Django redirige todo el HTTP a HTTPS. Un balanceador de carga revisa la salud por HTTP directo a cada instancia, sin `X-Forwarded-Proto`: recibiría un 301 y daría por caídas a todas las instancias.
@@ -584,6 +590,16 @@ Pedido de Eric: que las consultas al asistente se resuelvan solas como tickets, 
 
 - **Desplegado en AWS (13-nov-2026):** `recrear-web` rodante con `main` en `a9f3458`; dos cortes de unos 20 s (uno por web reemplazada), alarmas rehechas y `verificar.py --defensa --infra` sin fallas. Ver `aws/README.md`.
 
+## Orden visual y alcance del pulgar (13-nov-2026)
+
+Revisión de 38 pantallas reales en celular (390 px) y PC (1440 px), por rol. Eric pidió que la aplicación quede ordenada y fácil de entender, con la acción principal al alcance del pulgar.
+
+- **Una sola acción destacada por pantalla:** `.btn-sec` y `.btn-peligro` perdían por especificidad frente a `button:not(#mp-brick-container button)`, así que todo `<button class="btn-sec">` se pintaba como acción principal (el carrito mostraba cuatro botones azules). Se les dio el mismo `:not()`. En la ficha de prospecto, «Registrar» pasó a secundario para que la única acción destacada sea avanzar de etapa.
+- **Carrito en celular:** barra fija abajo con el total, la dirección de entrega y «Generar orden» (o «Pagar ahora» con Mercado Pago) a todo lo ancho. Es el mismo formulario del resumen (atributo `form`), no uno nuevo. Se esconde cuando el botón del resumen ya está a la vista, para no repetir la acción. En PC no cambia: el resumen ya queda fijo a la derecha.
+- **Áreas táctiles de 44 px** en pantallas angostas o táctiles: iconos de la cabecera, «Permisos», «Ingresar», los botones +/− de cantidad, «Menú» y las filas de los filtros. En PC con mouse se mantienen los tamaños anteriores.
+- **El diálogo de permisos ya no se abre solo:** tapaba la primera pantalla de quien recién entraba. Ahora hay una invitación de una línea dentro del panel de avisos y en la confirmación de un pedido recién generado, visible solo mientras las notificaciones sigan sin decidir; el diálogo se abre al tocarla o desde «Permisos».
+- **Migas de pan en las fichas de detalle** (`componentes/migas.html`): «Mis pedidos / Orden N.º 83», «CRM / Clientes / Hospital…», «Operación / Datos / Categorías / Aves». Van en el pedido y el comprobante del cliente, en cliente, prospecto, prospecto nuevo y requerimiento del CRM, y en producto, fila de Datos y las tres pantallas de cuentas de Operación. La última parte es la página actual, sin enlace; en el comprobante reemplazan al enlace «Volver al pedido». Se ocultan al imprimir.
+- **Qué se cede:** en una conexión sin HTTPS el diálogo ya no aparece solo para explicar que no se pueden pedir permisos; sigue disponible en «Permisos». Quedan pendientes, por riesgo a días de la defensa, la barra de navegación inferior en celular y bajar el menú del CRM de tres niveles a dos.
 ## Extras: detalle del camión en la Torre y aviso de ruptura de frío (13-nov-2026)
 - **Detalle del camión:** `/torre/pulso/` ahora trae por camión `temp`, `combustible`, `segundos` desde la última lectura y `a_bordo` (clientes con carga a bordo: viaje en curso, recepción sin resolver, sin canceladas). `a_bordo` respeta el alcance del usuario (el vendedor solo ve su cartera; despacho ve todo) y sale de una sola consulta. El panel lo pinta `static/js/torre.js` solo con `textContent`; las tarjetas son botones de 44 px para la lista y el marcador del mapa abre el mismo panel.
 - **Aviso al cliente:** el aviso es una `Interaccion` (llamada o correo) cuyo detalle empieza con «Aviso de ruptura de frío · orden N.º X». Con ese encabezado fijo la pantalla sabe qué órdenes ya se avisaron, sin migración. Registran admin y vendedor dentro de su cartera; gerencia solo lee y despacho no entra al registro. Ruta nueva: `POST /crm/alertas/<id>/avisar/`.

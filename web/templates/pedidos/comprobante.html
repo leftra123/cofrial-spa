@@ -2,7 +2,7 @@
 {% load static %}
 {% block titulo %}{{ doc }} | Cofrial SpA{% endblock %}
 {% block contenido %}
-<p class="volver"><a href="/pedidos/{{ orden.orden_id }}/#documentos">Volver al pedido N.º {{ orden.orden_id }}</a></p>
+{% with n=orden.orden_id|stringformat:"d" %}{% with ruta_orden="/pedidos/"|add:n|add:"/#documentos" titulo_orden="Orden N.º "|add:n %}{% include "componentes/migas.html" with a1="/pedidos/" t1="Mis pedidos" a2=ruta_orden t2=titulo_orden actual=doc %}{% endwith %}{% endwith %}
 <div class="comprobante-vista">
 <article class="comprobante-hoja">
   <header>

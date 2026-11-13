@@ -312,10 +312,12 @@ button.asistente-cerrar:not(#mp-brick-container button) {
 }
 button.asistente-cerrar:not(#mp-brick-container button):hover { background: rgba(255, 255, 255, .26); box-shadow: none; transform: none; }
 
-.btn-sec, button.btn-sec { background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); }
-.btn-sec:hover, button.btn-sec:hover { background: var(--fondo-2); border-color: var(--texto-3); box-shadow: none; }
-.btn-peligro, button.btn-peligro { background: var(--tarjeta); color: var(--alerta-fg); border-color: var(--alerta-borde); }
-.btn-peligro:hover, button.btn-peligro:hover { background: var(--alerta-bg); border-color: var(--alerta-fg); box-shadow: none; }
+/* Secundario y peligro: en un <button> necesitan el mismo :not() que el CTA primario; sin él, button:not(#mp-brick-container button)
+   gana por especificidad y todo <button class="btn-sec"> se pinta como acción principal. */
+.btn-sec, button.btn-sec:not(#mp-brick-container button) { background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); }
+.btn-sec:hover, button.btn-sec:not(#mp-brick-container button):hover { background: var(--fondo-2); border-color: var(--texto-3); box-shadow: none; }
+.btn-peligro, button.btn-peligro:not(#mp-brick-container button) { background: var(--tarjeta); color: var(--alerta-fg); border-color: var(--alerta-borde); }
+.btn-peligro:hover, button.btn-peligro:not(#mp-brick-container button):hover { background: var(--alerta-bg); border-color: var(--alerta-fg); box-shadow: none; }
 .btn-grande { padding: 13px 22px; font-size: 1rem; }
 .btn-bloque { width: 100%; }
 button.enlace { background: none; border: 0; color: var(--texto-2); padding: 4px 2px; font-weight: 500; font-size: .85rem; text-decoration: underline; text-underline-offset: 3px; box-shadow: none; }
@@ -496,7 +498,7 @@ td select { padding: 6px 2rem 6px 8px; max-width: 220px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
-@media print { .lateral, .barra-movil, .acciones, .tb, .t-pie { display: none; } .contenido { padding: 0; } body { background: #fff; } }
+@media print { .lateral, .barra-movil, .acciones, .tb, .t-pie, .migas, .volver { display: none; } .contenido { padding: 0; } body { background: #fff; } }
 
 [hidden] { display: none !important; }
 
@@ -970,6 +972,27 @@ button.nav-campana.sin-actualizar:not(#mp-brick-container button) .nav-campana-n
 .usar-ubicacion small { display: block; margin-top: 4px; color: var(--texto-3); }
 @media (max-width: 860px) { button.nav-campana:not(#mp-brick-container button) { padding: 12px 14px; } .nav-avisos .nav-despacho a { min-height: 44px; } }
 
+/* ---------- áreas táctiles de 44 px en pantallas táctiles o angostas ----------
+   Con el mismo :not() del CTA primario: sin él estas medidas pierden por especificidad (por eso el .tema-btn de 44 px de tienda.css no se aplicaba). */
+@media (max-width: 860px), (pointer: coarse) {
+  button.tema-btn:not(#mp-brick-container button), a.tema-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .cant button:not(#mp-brick-container button) { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .menu-btn { min-height: 44px; }
+  .permisos-sugerencia button.enlace:not(#mp-brick-container button) { min-height: 44px; }
+}
+
+/* ---------- sugerencia de notificaciones dentro del panel de avisos (permisos.js) ---------- */
+.permisos-sugerencia { margin: 0; padding: 10px 16px; font-size: .8125rem; line-height: 1.45; color: var(--texto-2); background: var(--fondo); border-bottom: 1px solid var(--borde); }
+.permisos-sugerencia[hidden], .nav-despacho[hidden] + .permisos-sugerencia { display: none; }
+.nav-avisos .permisos-sugerencia { margin: 2px 0 8px; padding: 10px 12px; border: 0; border-radius: 10px; }
+.permisos-sugerencia button.enlace:not(#mp-brick-container button) { color: var(--acento); font-weight: 600; font-size: inherit; }
+
+/* ---------- migas de pan (componentes/migas.html): dónde estás y cómo volver un nivel ---------- */
+.migas { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: 0 0 10px; font-size: .875rem; color: var(--texto-3); min-width: 0; }
+.migas a { color: var(--texto-2); text-decoration: underline; text-decoration-color: var(--borde-fuerte); text-underline-offset: 3px; }
+.migas a:hover { color: var(--acento); text-decoration-color: currentColor; }
+.migas-actual { color: var(--texto); font-weight: 600; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 860px), (pointer: coarse) { .migas a { display: inline-flex; align-items: center; min-height: 44px; } .migas { margin-bottom: 2px; } }
 /* ---------- semáforo de formularios (js/semaforo.js) ----------
    Una línea bajo cada campo: luz + texto. El color nunca va solo: cada estado tiene su icono y su texto.
    gris = sin tocar · rojo = falta o está malo · naranja = incompleto · verde = listo */

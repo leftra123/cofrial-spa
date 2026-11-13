@@ -1,6 +1,7 @@
 {% extends "operacion/base.html" %}
 {% block titulo %}Asignar clave | Cofrial SpA{% endblock %}
 {% block operacion %}
+{% include "componentes/migas.html" with a1="/operacion/" t1="Operación" a2="/operacion/cuentas/" t2="Usuarios" actual="Asignar clave" %}
 <div class="pagina-cab"><div><h1>Asignar clave</h1><p class="sub">Cuenta <b>{{ objetivo.username }}</b> · {{ rol }}{% if nombre %} · {{ nombre }}{% endif %}</p></div><div class="acciones"><a class="btn btn-sec" href="/operacion/cuentas/">Cancelar</a></div></div>
 <div class="tarjeta-ui" style="max-width:560px">
 {% if not objetivo.is_active %}<p class="aviso" role="note">Esta cuenta está inactiva (por ejemplo, una empresa que espera aprobación). Asignar una clave no la activa.</p>{% endif %}

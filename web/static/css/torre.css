@@ -196,3 +196,5 @@
 .torre-detalle-datos dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 .torre-a-bordo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .torre-detalle-pie { margin: 12px 0; }
+
+@media (prefers-reduced-motion: reduce) { .desactualizado .torre-lectura, .desactualizado .torre-rubrica, .desactualizado .torre-ahora .rejilla { transition: none; } }

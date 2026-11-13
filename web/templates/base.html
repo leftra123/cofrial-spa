@@ -24,7 +24,7 @@
   <aside class="lateral" id="lateral">
     <a class="marca" href="{{ inicio_url }}"><img class="marca-icono" src="{% static 'img/marca/icono-app.png' %}" alt="" width="32" height="32"><span>Cofrial SpA<small>Cadena de frío</small></span></a>
     {% if menu.crm %}<div class="nav-avisos"><button type="button" class="nav-campana" id="avisos-equipo-btn" aria-expanded="false" aria-controls="avisos-equipo-panel">{% icono "campana" %}<span>Avisos</span><span class="nav-campana-n" id="avisos-equipo-n" hidden></span></button>
-      <div class="nav-despacho" id="avisos-equipo-panel" role="region" aria-label="Avisos" hidden><p>Cargando avisos…</p></div></div>{% endif %}
+      <div class="nav-despacho" id="avisos-equipo-panel" role="region" aria-label="Avisos" hidden><p>Cargando avisos…</p></div><p class="permisos-sugerencia" data-permisos-sugerencia hidden>Recibe estos avisos aunque estés en otra pestaña. <button type="button" class="enlace" data-permisos-abrir>Activar notificaciones</button></p></div>{% endif %}
     <nav class="nav" aria-label="Principal">
       {% if not user.is_authenticated %}<a href="/" {% if ruta == "/" %}class="activo" aria-current="page"{% endif %}>{% icono "inicio" %}Inicio</a>{% endif %}
       {% if menu.tienda or not user.is_authenticated %}
@@ -81,7 +81,7 @@
 <script src="{% static 'js/estados.js' %}?v=ojo1"></script>
 <script src="{% static 'js/semaforo.js' %}?v=sem3"></script>
 {% block scripts %}{% endblock %}
-{% if menu.crm or menu.cliente %}<script src="{% static 'js/permisos.js' %}"></script>{% endif %}
+{% if menu.crm or menu.cliente %}<script src="{% static 'js/permisos.js' %}?v=contexto-v1"></script>{% endif %}
 {% if menu.flota %}<script src="{% static 'js/por-despachar.js' %}"></script>{% endif %}
 {% if menu.crm %}<script src="{% static 'js/avisos-equipo.js' %}"></script>{% endif %}
 <script src="{% static 'js/nav.js' %}"></script>

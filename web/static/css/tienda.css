@@ -169,7 +169,7 @@ body.t-nav-animando .tb-nav { pointer-events: auto; }
 .prod-comprar form { display: flex; gap: 8px; align-items: center; width: 100%; margin: 0; }
 .prod-comprar .btn, .prod-comprar .agregar { flex: 1; }
 .cant { display: inline-flex; align-items: center; border: 1px solid var(--borde-fuerte); border-radius: 10px; overflow: hidden; background: var(--entrada); flex: none; }
-.cant button { background: transparent; color: var(--texto); border: 0; padding: 0; width: 34px; height: 40px; border-radius: 0; font-size: 1.1rem; font-weight: 600; box-shadow: none; }
+.cant button { background: transparent; color: var(--texto); border: 0; padding: 0; width: 44px; height: 44px; border-radius: 0; font-size: 1.1rem; font-weight: 600; box-shadow: none; }
 .cant button:hover { background: var(--fondo-2); box-shadow: none; }
 .cant input { width: 40px; text-align: center; border: 0; margin: 0; padding: 8px 0; border-radius: 0; background: transparent; -moz-appearance: textfield; }
 .cant input:focus { box-shadow: inset 0 0 0 2px var(--foco); }
@@ -748,7 +748,8 @@ html.filtros-vivos .filtros noscript { display: none; }
 /* aviso de stock */
 .aviso-stock { margin: 8px 0 0; font-size: .85rem; color: var(--texto-2); }
 .aviso-stock label { display: block; font-weight: 500; margin-bottom: 4px; }
-.aviso-stock .aviso-fila { display: flex; gap: 6px; align-items: center; }
+.aviso-stock .aviso-fila { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }   /* wrap: en la tarjeta angosta del móvil «Avisarme» se salía del borde */
+.aviso-stock .aviso-fila button { flex: 1 1 auto; }
 .aviso-stock input[type=number] { width: 76px; }
 .aviso-stock.hecho { background: var(--acento-suave); border-radius: 8px; padding: 8px 10px; }
 
@@ -826,6 +827,8 @@ body:has(.asistente.abierto):has(.fab-carrito:not([hidden])) .toasts { bottom: m
 .asistente-panel[hidden] { display: none; }
 .asistente-cab { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 16px 16px 12px; background: linear-gradient(135deg, #0B2350, #143A7B); color: #fff; }
 .asistente-cab h2 { font-size: 1.02rem; color: #fff; margin-bottom: 4px; }
+.asistente-id { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.asistente-avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #fff; padding: 4px; box-sizing: border-box; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); object-fit: contain; }
 .asistente-aviso { margin: 0; font-size: .78rem; color: #DCE7FF; line-height: 1.4; }
 .asistente-cerrar { background: rgba(255, 255, 255, .14); border: 0; color: #fff; padding: 0; width: 32px; height: 32px; flex: none; justify-content: center; border-radius: 50%; box-shadow: none; }
 .asistente-cerrar:hover { background: rgba(255, 255, 255, .26); box-shadow: none; }
@@ -1434,8 +1437,9 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .md-lista dd { margin: 0; overflow-wrap: anywhere; }
 .md-eliminar { border-color: var(--alerta-borde); }
 .md-eliminar input[type=password] { width: 100%; max-width: 320px; }
-button.btn-peligro:not(#mp-brick-container button) { background: #B91C1C; border-color: #B91C1C; color: #fff; }
-button.btn-peligro:not(#mp-brick-container button):hover { background: #991B1B; border-color: #991B1B; }
+/* Rojo sólido solo para confirmar la eliminación de la cuenta; el resto de los btn-peligro (cancelar una orden) quedan con borde, para no competir con la acción principal. */
+.md-eliminar button.btn-peligro:not(#mp-brick-container button) { background: #B91C1C; border-color: #B91C1C; color: #fff; }
+.md-eliminar button.btn-peligro:not(#mp-brick-container button):hover { background: #991B1B; border-color: #991B1B; }
 .carrito-legal { margin-top: 10px; font-size: .8rem; }
 .carrito-legal a { text-decoration: underline; }
 .aviso-cookies { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 60; max-width: 720px; margin: 0 auto; display: flex; gap: 14px; align-items: center;
@@ -1560,10 +1564,7 @@ button.btn-peligro:not(#mp-brick-container button):hover { background: #991B1B; 
 @media (max-width: 860px) {
   .carro { grid-template-columns: minmax(0, 1fr); grid-template-areas: "lineas" "pasos" "resumen"; grid-template-rows: auto; }
   .carro > .resumen { grid-row: auto; position: static; }
-  .carro > .resumen .acciones-pago { }
-  /* zona del pulgar: Pagar queda pegado abajo mientras se ve el resumen */
-  .resumen .acciones-pago { position: sticky; bottom: 0; z-index: 5; margin: 0 -22px; padding: 12px 22px calc(12px + env(safe-area-inset-bottom)); background: var(--tarjeta); border-top: 1px solid var(--borde); }
-  .resumen .acciones-pago button { min-height: 48px; }
+  /* en celular la acción principal vive en la barra fija de abajo (.barra-orden); aquí el botón sigue en el resumen */
   .resumen .total { font-size: 1.3rem; }
 }
 @media (max-width: 520px) {
@@ -1574,3 +1575,32 @@ button.btn-peligro:not(#mp-brick-container button):hover { background: #991B1B; 
   .paso-carro .comprobante-opciones { grid-template-columns: 1fr; }
   .resumen .acciones-pago { margin: 0 -20px; padding-inline: 20px; }
 }
+
+/* ---------- áreas táctiles de la cabecera y los filtros (el resto está en cofrial.css) ---------- */
+@media (max-width: 860px), (pointer: coarse) {
+  .tb-cuenta button.enlace.tb-permisos:not(#mp-brick-container button) { min-height: 44px; padding: 0 6px; }
+  .tb-ingresar { min-height: 44px; display: inline-flex; align-items: center; }
+  .filtros label:not(#mp-brick-container label) { min-height: 44px; }
+}
+
+/* ---------- carrito en móvil: el total y la acción principal quedan fijos abajo, en la zona del pulgar (tienda.js) ---------- */
+.barra-orden { display: none; }
+@media (max-width: 860px) {
+  body:has(.barra-orden) { --barra-orden-alto: 112px; }      /* valor de respaldo sin JS; tienda.js pone la altura real, o 0 cuando la barra se esconde */
+  .barra-orden { display: grid; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--tarjeta); border-top: 1px solid var(--borde);
+    box-shadow: 0 -6px 20px rgba(11, 35, 80, .12); transition: transform .2s ease-out, visibility .2s; }
+  .barra-orden.oculta { transform: translateY(110%); visibility: hidden; }
+  .barra-orden-datos { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+  .barra-orden-total { flex: none; font-size: .8125rem; color: var(--texto-2); }
+  .barra-orden-total b { margin-left: 4px; font-size: 1.15rem; color: var(--texto); }
+  .barra-orden-dir { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8125rem; color: var(--texto-3); }
+  .barra-orden button { width: 100%; min-height: 48px; font-size: 1rem; }
+  body.tienda .dock-flotante, body.tienda .toasts { bottom: calc(18px + var(--barra-orden-alto, 0px)); }
+  body.tienda .aviso-cookies { bottom: calc(16px + var(--barra-orden-alto, 0px)); }   /* el aviso de cookies queda sobre la barra, no debajo */
+  body:has(.barra-orden) .t-pie { padding-bottom: var(--barra-orden-alto, 0px); }
+}
+@media (prefers-reduced-motion: reduce) { .barra-orden { transition: none; } }
+.confirmacion .conf-avisos { margin: 14px 0 0; padding: 0; background: none; border: 0; }
+
+.linea-info h3 a { color: var(--texto); }

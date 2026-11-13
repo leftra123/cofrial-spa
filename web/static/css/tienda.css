@@ -1425,13 +1425,6 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .legal-texto td { white-space: normal; vertical-align: top; }
 .legal-texto a { text-decoration: underline; text-underline-offset: 3px; }
 .legal-aviso { background: var(--pendiente-bg); color: var(--pendiente-fg); border-radius: 10px; padding: 12px 14px; margin: 0; }
-.mis-datos { display: grid; gap: 16px; max-width: 760px; }
-.mis-datos .tarjeta-ui { padding: 24px; }
-.mis-datos h2 { font-size: 1.15rem; margin: 0 0 10px; }
-.md-lista { display: grid; gap: 8px; margin: 0 0 8px; }
-.md-lista div { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
-.md-lista dt { color: var(--texto-2); }
-.md-lista dd { margin: 0; overflow-wrap: anywhere; }
 .md-eliminar { border-color: var(--alerta-borde); }
 .md-eliminar input[type=password] { width: 100%; max-width: 320px; }
 /* Rojo sólido solo para confirmar la eliminación de la cuenta; el resto de los btn-peligro (cancelar una orden) quedan con borde, para no competir con la acción principal. */

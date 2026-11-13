@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux14">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux15">
   {% block cabeza %}{% endblock %}
 </head>
 <body data-u="{{ user.pk|default:'' }}">
@@ -50,6 +50,7 @@
       {% if user.is_authenticated %}
         <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
         <div class="usuario-datos"><b>{{ user.username }}</b>{% if etiqueta_cuenta %}<small class="rol-cuenta">{{ etiqueta_cuenta }}</small>{% endif %}
+          <a class="enlace" href="/cuenta/mis-datos/"{% if "/cuenta/mis-datos/" in ruta %} aria-current="page"{% endif %}>Mis datos</a>
           <a class="enlace" href="/cuenta/clave/">Cambiar mi clave</a>
           {% if menu.crm or menu.cliente %}<button type="button" class="enlace" data-permisos-abrir>Permisos</button>{% endif %}
           <a class="enlace" href="/portada/">Portada pública</a>

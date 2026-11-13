@@ -6,8 +6,11 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 
-from clientes.models import AceptacionLegal, Cliente, Comuna, Direccion
+from datetime import date, datetime
+
+from clientes.models import AceptacionLegal, Cliente, Comuna, Direccion, SolicitudDerecho
 from cofrial import legal
 from pedidos.models import EstadoOrden, Orden
 
@@ -149,3 +152,88 @@ class MisDatos(SinTope):
         self.assertTrue(AceptacionLegal.objects.filter(usuario=u).exists())
         self.assertFalse(self.client.login(username="luis@correo.test", password=CLAVE))
         self.assertEqual(self.client.get("/cuenta/mis-datos/").status_code, 302)       # la sesión se cerró
+
+
+class SolicitudesDeDerechos(SinTope):
+    """Ley 21.719: rectificación, oposición y bloqueo (y la supresión del equipo) por solicitud, con número, plazo y respuesta."""
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+        for u in get_user_model().objects.filter(username__in=["ana@correo.test", "vendedora@cofrial.cl", "admin@cofrial.cl", "despacho@cofrial.cl"]):
+            u.set_password(CLAVE); u.save()
+
+    def entrar(self, usuario):
+        self.client.login(username=usuario, password=CLAVE)
+
+    def pedir(self, tipo="rectificacion", detalle="Mi teléfono correcto es +56 9 1234 5678."):
+        return self.client.post("/cuenta/mis-datos/solicitar/", {"tipo": tipo, "detalle": detalle})
+
+    def test_el_cliente_pide_una_rectificacion_y_ve_su_plazo(self):
+        self.entrar("ana@correo.test")
+        r = self.pedir()
+        self.assertRedirects(r, "/cuenta/mis-datos/#md-solicitudes", fetch_redirect_response=False)
+        x = SolicitudDerecho.objects.get(usuario__username="ana@correo.test")
+        self.assertEqual((x.tipo, x.estado), ("rectificacion", "recibida"))
+        self.assertEqual((x.vence_el - x.creada_en.date()).days, 30)
+        r = self.client.get("/cuenta/mis-datos/")
+        self.assertContains(r, f"N.º {x.solicitud_id} · Rectificación")
+        self.assertContains(r, x.vence_el.strftime("%d/%m/%Y"))
+
+    def test_no_se_duplica_ni_acepta_un_tipo_ajeno_o_un_texto_vacio(self):
+        self.entrar("ana@correo.test")
+        self.pedir(); self.pedir()                                          # doble clic
+        self.pedir(tipo="supresion")                                        # el cliente la resuelve con el botón, no por solicitud
+        self.pedir(tipo="oposicion", detalle="corto")
+        self.assertEqual(SolicitudDerecho.objects.count(), 1)
+
+    def test_el_equipo_tiene_mis_datos_en_el_menu_lateral_y_puede_pedir_la_supresion(self):
+        self.entrar("vendedora@cofrial.cl")
+        r = self.client.get("/cuenta/mis-datos/")
+        self.assertTemplateUsed(r, "cuenta/mis_datos_equipo.html")
+        self.assertContains(r, 'href="/cuenta/mis-datos/" aria-current="page"')
+        self.assertContains(r, "María Paz Soto")
+        self.assertNotContains(r, 'action="/cuenta/mis-datos/eliminar/"')
+        self.pedir(tipo="supresion", detalle="Dejé la empresa: borren mi ficha de vendedora.")
+        self.assertTrue(SolicitudDerecho.objects.filter(usuario__username="vendedora@cofrial.cl", tipo="supresion").exists())
+        d = json.loads(self.client.get("/cuenta/mis-datos/descargar/").content)
+        self.assertEqual(d["cuenta"]["rol"], "vendedor")
+        self.assertEqual(d["ficha_de_vendedor"]["nombre"], "María Paz Soto")
+        self.assertEqual(d["solicitudes_sobre_mis_datos"][0]["tipo"], "Supresión")
+
+    def test_el_administrador_responde_y_el_titular_ve_la_respuesta(self):
+        self.entrar("ana@correo.test"); self.pedir(); self.client.logout()
+        x = SolicitudDerecho.objects.get()
+        self.entrar("admin@cofrial.cl")
+        self.assertContains(self.client.get("/operacion/privacidad/"), f"N.º {x.solicitud_id} · Rectificación")
+        aviso = self.client.get("/api/avisos-equipo/").json()["avisos"]
+        self.assertIn("datos_personales", [a["id"] for a in aviso])
+        self.client.post(f"/operacion/privacidad/{x.pk}/responder/", {"respuesta": "Listo: actualizamos tu teléfono."})
+        x.refresh_from_db()
+        self.assertEqual((x.estado, x.atendida_por.username), ("respondida", "admin@cofrial.cl"))
+        self.client.logout(); self.entrar("ana@correo.test")
+        self.assertContains(self.client.get("/cuenta/mis-datos/"), "Listo: actualizamos tu teléfono.")
+
+    def test_la_prorroga_es_una_sola_vez_y_no_aplica_al_bloqueo(self):
+        self.entrar("ana@correo.test"); self.pedir(); self.pedir(tipo="bloqueo", detalle="Suspendan el uso mientras corrigen mi teléfono."); self.client.logout()
+        rect, bloq = SolicitudDerecho.objects.get(tipo="rectificacion"), SolicitudDerecho.objects.get(tipo="bloqueo")
+        self.entrar("admin@cofrial.cl")
+        self.client.post(f"/operacion/privacidad/{rect.pk}/prorrogar/"); self.client.post(f"/operacion/privacidad/{rect.pk}/prorrogar/")
+        self.client.post(f"/operacion/privacidad/{bloq.pk}/prorrogar/")
+        rect.refresh_from_db(); bloq.refresh_from_db()
+        self.assertEqual((rect.vence_el - rect.creada_en.date()).days, 60)
+        self.assertFalse(bloq.prorrogada)
+
+    def test_otros_roles_no_ven_ni_responden_solicitudes(self):
+        self.entrar("ana@correo.test"); self.pedir(); self.client.logout()
+        x = SolicitudDerecho.objects.get()
+        for u in ("vendedora@cofrial.cl", "despacho@cofrial.cl"):
+            self.entrar(u)
+            self.assertEqual(self.client.get("/operacion/privacidad/").status_code, 403)
+            self.assertEqual(self.client.post(f"/operacion/privacidad/{x.pk}/responder/", {"respuesta": "No debería poder."}).status_code, 403)
+            self.client.logout()
+        x.refresh_from_db()
+        self.assertEqual(x.estado, "recibida")
+
+    def test_el_bloqueo_vence_en_dos_dias_habiles(self):
+        x = SolicitudDerecho(tipo="bloqueo", creada_en=timezone.make_aware(datetime(2026, 11, 20, 10)))     # viernes
+        self.assertEqual(x.vence_el, date(2026, 11, 24))                                                   # martes: salta el fin de semana

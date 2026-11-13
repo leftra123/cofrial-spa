@@ -60,4 +60,10 @@ def avisos_de(usuario, rol):
         n = documentos.cuantas_facturas_vencidas(clientes)
         if n:
             avisos.append(_aviso("vencidas", n, "1 factura vencida", "{n} facturas vencidas", "/crm/cobranza/"))
+    if rol == "admin":
+        from clientes.models import SolicitudDerecho
+        n = SolicitudDerecho.objects.filter(estado="recibida").count()
+        if n:
+            avisos.append(_aviso("datos_personales", n, "1 solicitud sobre datos personales por responder",
+                                 "{n} solicitudes sobre datos personales por responder", "/operacion/privacidad/"))
     return avisos

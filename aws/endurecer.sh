@@ -57,7 +57,7 @@ ARN=$(q sts get-caller-identity --query Arn 2>/dev/null) || { echo "Credenciales
 echo "Identidad: $ARN  ·  región $REGION  ·  $([ "$APLICAR" = 1 ] && echo 'MODO APLICAR (pregunta antes de cada comando)' || echo 'vista previa (no cambia nada)')"
 
 # ---------------------------------------------------------------- hechos de la instalación (solo lectura)
-DOMINIO="${DOMINIO_HTTPS:-$(sed -n 's/^DOMINIO_HTTPS=//p' "$ESTADO/secretos.env" 2>/dev/null | tail -1)}"
+DOMINIO="${DOMINIO_HTTPS:-$({ sed -n 's/^DOMINIO_HTTPS=//p' "$ESTADO/secretos.env" 2>/dev/null || true; } | tail -1)}"   # sin el archivo el script sigue (con pipefail se cortaba sin aviso)
 rds() { q rds describe-db-instances --db-instance-identifier "${P}-db" --query "DBInstances[0].$1" 2>/dev/null || echo None; }
 sg_id() { q ec2 describe-security-groups --filters "Name=group-name,Values=${P}-sg-$1" --query 'SecurityGroups[0].GroupId' 2>/dev/null || echo None; }
 ec2_id() { q ec2 describe-instances --filters "Name=tag:Name,Values=$1" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query 'Reservations[0].Instances[0].InstanceId' 2>/dev/null || echo None; }

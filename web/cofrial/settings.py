@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "pedidos",
     "flota",
     "crm",
+    "salud",
 ]
 
 MIDDLEWARE = [

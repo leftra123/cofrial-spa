@@ -91,6 +91,27 @@ services:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
 
+  # Vigilante de salud: cada minuto revisa web, base, IoT, Grafana, IA y pagos y guarda el resultado (alimenta /salud/). Cuando el laboratorio se apaga
+  # no hay quien revise: esas horas quedan como «sin registros». Los chequeos de IA y pagos solo listan la cuenta: no gastan cuota ni cobran.
+  vigilante:
+    build: ./web
+    command: sh -c "sleep 45; exec python manage.py vigilar --bucle"
+    init: true
+    environment:
+      <<: *bd
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
+      DJANGO_DEBUG: "0"
+      SALUD_URL_WEB: http://web:8000/salud/
+      SALUD_URL_PUBLICA: ${SALUD_URL_PUBLICA:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
+    depends_on: [web]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
   # Despacho sin personas (flota/autodespacho.py). Apagado por defecto: queda dormido y no gasta nada hasta que DESPACHO_AUTO=1.
   # Servicio propio y no un paso del arranque: debe correr aunque nadie abra el panel, y gunicorn no lo espera (docs/decisiones.md).
   despachador:

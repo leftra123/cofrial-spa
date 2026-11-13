@@ -184,6 +184,44 @@ window.CofrialTorre = (function () {
       if (m.despl[0] !== dx || m.despl[1] !== dy) m.desplazar([dx, dy]);
     });
   }
+  /* Panel de detalle: el camión elegido (en el mapa o en la lista) con su última lectura y los clientes a bordo. Todo entra como texto. */
+  var camionesVivos = [], elegido = null;
+  function fila(rotulo, valor) { var d = el("div"); d.appendChild(el("dt", "", rotulo)); d.appendChild(valor instanceof Node ? valor : el("dd", "", valor)); return d; }
+  function pintarDetalle() {
+    var caja = $("torre-detalle"), lista = $("torre-lista-camiones");
+    var c = camionesVivos.filter(function (x) { return x.id === elegido; })[0];
+    if (!c) elegido = null;
+    lista.replaceChildren.apply(lista, camionesVivos.map(function (x) {
+      var li = el("li"), b = el("button", "torre-camion-btn" + (x.id === elegido ? " activo" : ""), x.id);
+      b.type = "button"; b.setAttribute("aria-pressed", x.id === elegido ? "true" : "false");
+      b.appendChild(el("span", x.alerta ? "torre-popup-alerta" : "frio", x.alerta ? " · ruptura de frío" : " · en ruta"));
+      b.addEventListener("click", function () { elegir(x.id); });
+      li.appendChild(b); return li;
+    }));
+    if (!c) { caja.hidden = true; caja.replaceChildren(); return; }
+    caja.hidden = false;
+    var t = el("h3", "", "Camión " + c.id), dl = el("dl", "torre-detalle-datos");
+    dl.appendChild(fila("Estado", el("dd", c.alerta ? "torre-popup-alerta" : "", c.alerta ? "Con ruptura de frío" : "En ruta")));
+    dl.appendChild(fila("Temperatura", c.temp.toLocaleString("es-CL") + " °C"));
+    dl.appendChild(fila("Combustible", c.combustible + " %"));
+    dl.appendChild(fila("Última lectura", c.segundos < 90 ? "hace " + c.segundos + " s" : "hace " + Math.round(c.segundos / 60) + " min"));
+    var ul = el("ul", "torre-a-bordo");
+    if (!c.a_bordo.length) ul.appendChild(el("li", "frio", "Ningún pedido a bordo que puedas ver."));
+    c.a_bordo.forEach(function (o) { var li = el("li"); li.appendChild(enlace(o.url, o.nombre)); li.appendChild(el("span", "frio", " · orden N.º " + o.orden)); ul.appendChild(li); });
+    var cierre = el("button", "btn btn-sec", "Cerrar detalle"); cierre.type = "button";
+    cierre.addEventListener("click", function () { elegir(null); });
+    var pie = el("p", "torre-detalle-pie");
+    pie.appendChild(enlace("/flota/", "Ver la flota en vivo"));
+    if (c.alerta) { pie.appendChild(document.createTextNode(" · ")); pie.appendChild(enlace("/crm/alertas/", "Avisar a los clientes")); }
+    caja.replaceChildren(t, dl, el("h4", "", "Clientes a bordo"), ul, pie, cierre);
+  }
+  function elegir(id) {
+    elegido = id === elegido ? null : id;
+    pintarDetalle();
+    var m = elegido && marcasCamion[elegido];
+    if (m && mapa) mapa.camara({centro: m.latlon()});
+  }
+
   function pintarCamiones(lista) {
     if (!mapa) return;
     var vivos = {};
@@ -195,6 +233,7 @@ window.CofrialTorre = (function () {
         m = mapa.camion([c.lat, c.long], {alerta: c.alerta, etiqueta: id, titulo: id, popup: el("div")});
         m.el.style.zIndex = Z_CAMION;
         marcasCamion[id] = m;
+        m.el.addEventListener("click", function () { elegir(id); });
       } else {
         m.animarA([c.lat, c.long]);
         m.alerta(c.alerta);
@@ -219,6 +258,7 @@ window.CofrialTorre = (function () {
         return li;
       }));
     });
+    camionesVivos = p.camiones; pintarDetalle();
     var alerta = p.camiones.filter(function (c) { return c.alerta; }).length, ruta = p.camiones.length - alerta;
     $("torre-camiones").textContent = !p.camiones.length ? "Ninguno en ruta ni con alerta." :
       ruta + " en ruta" + (alerta ? ", " + alerta + " con ruptura de frío" : ", ninguno con ruptura de frío") + ".";

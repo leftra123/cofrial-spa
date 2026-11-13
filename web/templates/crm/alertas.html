@@ -1,9 +1,18 @@
 {% extends "crm/base.html" %}
 {% block titulo %}Alertas de frío | Cofrial SpA{% endblock %}
 {% block crm %}
-<div class="pagina-cab"><div><h1>Pedidos afectados por una ruptura de frío</h1><p class="sub">Órdenes cuyo camión reportó temperatura fuera de rango durante el viaje.</p></div></div>
-<div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Cliente</th><th>Camión</th><th>Estado</th><th>Lecturas con alerta</th></tr></thead><tbody>
-{% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td><td>{{ o.direccion.cliente.nombre }}</td><td>{{ o.despacho.camion }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td><td><span class="alerta">{{ o.alertas_frio }}</span></td></tr>
-{% empty %}{% if menu.flota %}{% include "componentes/vacio_estado.html" with cols=5 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." url="/flota/" accion="Ver la flota en vivo" %}{% else %}{% include "componentes/vacio_estado.html" with cols=5 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." %}{% endif %}{% endfor %}
+<div class="pagina-cab"><div><h1>Pedidos afectados por una ruptura de frío</h1><p class="sub">Órdenes cuyo camión reportó temperatura fuera de rango durante el viaje. Avisa al cliente y deja constancia: el aviso queda en su historial.</p></div></div>
+<div class="tabla-caja"><table><thead><tr><th>Orden</th><th>Cliente y contacto</th><th>Camión</th><th>Estado</th><th>Alerta</th><th>Aviso al cliente</th></tr></thead><tbody>
+{% for o in ordenes %}<tr><td class="id-orden">N.º {{ o.orden_id }}</td>
+<td><a href="/crm/clientes/{{ o.direccion.cliente.cliente_id }}/">{{ o.direccion.cliente.nombre }}</a><br><span class="frio">{% if o.direccion.cliente.telefono %}<a href="tel:{{ o.direccion.cliente.telefono }}">{{ o.direccion.cliente.telefono }}</a> · {% endif %}<a href="mailto:{{ o.direccion.cliente.email }}">{{ o.direccion.cliente.email }}</a></span></td>
+<td>{{ o.despacho.camion }}</td><td>{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</td>
+<td><span class="alerta">{{ o.alertas_frio }} lectura{{ o.alertas_frio|pluralize }}</span><br><span class="frio">máx. {{ o.temp_maxima|floatformat:1 }} °C · desde {{ o.primera_alerta|date:"d/m H:i" }}</span></td>
+<td>{% if o.aviso %}<span class="chip entregado">Avisado</span><br><span class="frio">{{ o.aviso.tipo }} · {{ o.aviso.registrada_en|date:"d/m H:i" }} · {{ o.aviso.vendedor }}</span>
+{% elif puede_editar %}<form class="en-linea" method="post" action="/crm/alertas/{{ o.orden_id }}/avisar/" data-carga>{% csrf_token %}
+  <select name="tipo" aria-label="Cómo avisaste a {{ o.direccion.cliente.nombre }}"><option>llamada</option><option>correo</option></select>
+  <input name="detalle" maxlength="300" placeholder="Qué le dijiste (opcional)" aria-label="Detalle del aviso" size="26">
+  <button data-cargando="Registrando…">Registrar aviso</button></form>
+{% else %}<span class="chip pendiente">Sin avisar</span>{% endif %}</td></tr>
+{% empty %}{% if menu.flota %}{% include "componentes/vacio_estado.html" with cols=6 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." url="/flota/" accion="Ver la flota en vivo" %}{% else %}{% include "componentes/vacio_estado.html" with cols=6 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." %}{% endif %}{% endfor %}
 </tbody></table></div>
 {% endblock %}

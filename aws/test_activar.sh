@@ -7,6 +7,7 @@ set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin" "$TMP/st" "$TMP/home/.aws" "$TMP/estado"
+: > "$TMP/estado/cofrial-key.pem"      # la llave SSH (falsa) que busca --clave-unica
 fallo() { echo "FALLA: $*"; exit 1; }
 
 # aws falso: las credenciales «buenas» son las que traen aws_session_token=bueno; «runserver» imita el rol de la terminal del laboratorio.
@@ -15,6 +16,11 @@ cat > "$TMP/bin/aws" <<'FAKE'
 A="$*"; F="${AWS_SHARED_CREDENTIALS_FILE:-/nada}"; ST="$AWS_ST"
 tok() { grep -h '^aws_session_token' "$F" 2>/dev/null | head -1 | sed 's/.*= *//'; }
 case "$A" in
+  "ec2 describe-instances"*"Values=cofrial-ec2-web "*"Instances[0].[InstanceId"*) printf 'i-web\t1.1.1.1\n';;
+  "ec2 get-console-output"*) if [ -f "$ST/sin-huella" ]; then echo "(sin huella)"; else printf 'x\nssh-ed25519 AAAAFAKE root@ip\n'; fi;;
+  "ec2 describe-security-groups"*) echo sg-web;;
+  "ec2 authorize-security-group-ingress"*) touch "$ST/ssh-abierto"; echo "$A" >> "$ST/sg-llamadas";;
+  "ec2 revoke-security-group-ingress"*) echo "$A" >> "$ST/sg-llamadas";;
   "sts get-caller-identity"*) case "$(tok)" in bueno) echo "arn:aws:sts::1:assumed-role/LabRole/u";; runserver) echo "arn:aws:sts::1:assumed-role/runserver/u";; *) exit 255;; esac;;
   "ec2 describe-vpcs"*) [ "$(tok)" = bueno ] && echo vpc-1 || exit 255;;
   "elbv2 describe-target-groups"*) echo arn:tg;;
@@ -27,9 +33,23 @@ case "$A" in
   *) echo "aws falso: no sé qué hacer con: $A" >&2; exit 99;;
 esac
 FAKE
+cat > "$TMP/bin/ssh" <<'FAKE'
+#!/usr/bin/env bash
+# ssh falso: anota los argumentos y la entrada estándar; «true» es la prueba de conexión; el comando real imprime lo que imprimiría cambiar_clave_demo.
+echo "$*" >> "$AWS_ST/ssh-args"
+for a in "$@"; do case "$a" in UserKnownHostsFile=*) cp "${a#UserKnownHostsFile=}" "$AWS_ST/known_hosts" 2>/dev/null || true;; esac; done
+ultimo="${@: -1}"
+if [ "$ultimo" = true ]; then
+  if [ -f "$AWS_ST/ssh-bloqueado" ] && [ ! -f "$AWS_ST/ssh-abierto" ]; then echo "ssh: connect to host: Operation timed out" >&2; exit 255; fi
+  exit 0
+fi
+cat > "$AWS_ST/ssh-stdin"
+echo "La misma clave quedó en 3 usuario(s) activo(s), 2 de ellos del equipo o administración."
+FAKE
 cat > "$TMP/bin/curl" <<'FAKE'
 #!/usr/bin/env bash
 for a in "$@"; do u="$a"; done
+case "$u" in *checkip*) echo -n 203.0.113.9; exit 0;; esac
 if [ -f "$AWS_ST/curl-falla" ] && echo "$u" | grep -q "$(cat "$AWS_ST/curl-falla")"; then echo -n 500; else echo -n 200; fi
 FAKE
 cat > "$TMP/bin/pbpaste" <<'FAKE'
@@ -48,11 +68,11 @@ reset() {
   rm -f "$TMP/st/"* "$TMP/home/.aws/"*; echo "healthy healthy" > "$TMP/st/targets"; printf 'i-web\ti-webb\ti-iot\n' > "$TMP/st/alarmas-ids"
   printf '%s' "$1" > "$TMP/cred"; chmod 600 "$TMP/cred"
 }
-correr() {  # correr [opciones]: guarda la salida en $SAL y el código en $RC
+correr() {  # correr [opciones]: guarda la salida en $SAL y el código en $RC (la entrada estándar es $ENTRADA, vacía por defecto)
   set +e
   SAL="$(env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN PATH="$TMP/bin:$PATH" HOME="$TMP/home" AWS_ST="$TMP/st" AWS_SHARED_CREDENTIALS_FILE="$TMP/cred" \
     PROVISION="$TMP/provision.sh" COFRIAL_ESTADO="$TMP/estado" DOMINIO_HTTPS=www.cofrial.test ESPERA_SEG=0 INTERVALO=0 PB_ARCHIVO="$TMP/portapapeles" \
-    bash "$AQUI/activar.sh" "$@" 2>&1 </dev/null)"; RC=$?
+    bash "$AQUI/activar.sh" "$@" 2>&1 <<< "${ENTRADA-}")"; RC=$?
   set -e
 }
 sin_secretos() { echo "$SAL" | grep -q "SECRETO" && fallo "$1: la salida imprimió una clave"; return 0; }
@@ -126,4 +146,46 @@ echo "ok: --pegar fuerza leer el portapapeles"
 reset "$BUENAS"; correr --nada
 [ "$RC" = 2 ] || fallo "11: una opción desconocida debía salir 2 y salió $RC"
 echo "ok: opción desconocida -> código 2"
+# 12) --clave-unica: la clave viaja por la entrada estándar de ssh, con la huella verificada, y no se imprime ni queda en argumentos
+reset "$BUENAS"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 0 ] || fallo "12: --clave-unica debía salir 0 y salió $RC: $SAL"
+grep -q "clave-simple-77" "$TMP/st/ssh-stdin" || fallo "12: la clave no llegó por la entrada estándar de ssh"
+if grep -q "clave-simple-77" "$TMP/st/ssh-args"; then fallo "12: la clave apareció en los argumentos de ssh"; fi
+if echo "$SAL" | grep -q "clave-simple-77"; then fallo "12: la clave se imprimió en la salida"; fi
+grep -q "ssh-ed25519 AAAAFAKE" "$TMP/st/known_hosts" && grep -q "^1.1.1.1 " "$TMP/st/known_hosts" || fallo "12: no se usó la huella de la consola de EC2 para esa IP"
+grep -q "StrictHostKeyChecking=yes" "$TMP/st/ssh-args" || fallo "12: la comprobación de la huella debía quedar activa"
+grep -q -- "--todos-los-activos" "$TMP/st/ssh-args" && grep -q -- "--clave-stdin" "$TMP/st/ssh-args" || fallo "12: el comando remoto no usó --clave-stdin --todos-los-activos"
+echo "$SAL" | grep -q "la misma clave quedó en todos los usuarios activos" || fallo "12: faltó el resultado: $SAL"
+echo "ok: --clave-unica -> clave por stdin de ssh, huella verificada, sin imprimirla ni dejarla en argumentos"
+
+# 13) clave demasiado corta: no se conecta a nada
+reset "$BUENAS"; ENTRADA="abc" correr --clave-unica
+[ "$RC" = 1 ] && [ ! -f "$TMP/st/ssh-args" ] && echo "$SAL" | grep -q "al menos 4 caracteres" || fallo "13: una clave corta debía rechazarse sin llamar a ssh: $RC $SAL"
+echo "ok: clave corta -> rechazada antes de conectarse"
+
+# 14) sin la huella de la máquina no se conecta (no hay alternativa insegura)
+reset "$BUENAS"; touch "$TMP/st/sin-huella"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 1 ] && [ ! -f "$TMP/st/ssh-args" ] && echo "$SAL" | grep -q "sin verificarla" || fallo "14: sin huella debía negarse a conectar: $RC $SAL"
+echo "ok: sin huella verificable -> no se conecta"
+
+# 15) puerto 22 cerrado para tu IP sin --abrir-ssh: avisa el comando, no toca la seguridad ni envía la clave
+reset "$BUENAS"; touch "$TMP/st/ssh-bloqueado"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 1 ] || fallo "15: con el 22 cerrado debía salir 1 y salió $RC"
+[ ! -f "$TMP/st/sg-llamadas" ] || fallo "15: no debía tocar el grupo de seguridad sin consentimiento"
+[ ! -f "$TMP/st/ssh-stdin" ] || fallo "15: no debía enviar la clave si no hay conexión"
+echo "$SAL" | grep -q "authorize-security-group-ingress" && echo "$SAL" | grep -q "203.0.113.9/32" || fallo "15: faltó el comando para abrir el puerto a mano: $SAL"
+echo "ok: 22 cerrado -> explica cómo abrirlo, sin tocar la seguridad ni enviar la clave"
+
+# 16) con --abrir-ssh: abre solo tu IP, usa la conexión y lo cierra al terminar
+reset "$BUENAS"; touch "$TMP/st/ssh-bloqueado"; ENTRADA="clave-simple-77" INTERVALO_SSH=0 correr --clave-unica --abrir-ssh
+[ "$RC" = 0 ] || fallo "16: debía salir 0 y salió $RC: $SAL"
+grep -q "authorize-security-group-ingress --group-id sg-web --protocol tcp --port 22 --cidr 203.0.113.9/32" "$TMP/st/sg-llamadas" || fallo "16: no abrió el 22 solo para la IP"
+grep -q "revoke-security-group-ingress --group-id sg-web --protocol tcp --port 22 --cidr 203.0.113.9/32" "$TMP/st/sg-llamadas" || fallo "16: no cerró el 22 al terminar"
+grep -q "clave-simple-77" "$TMP/st/ssh-stdin" || fallo "16: la clave no llegó"
+echo "ok: --abrir-ssh -> abre solo tu IP, cambia la clave y vuelve a cerrar"
+
+# 17) sin la opción y sin terminal no pregunta ni cambia ninguna clave
+reset "$BUENAS"; correr
+[ "$RC" = 0 ] && [ ! -f "$TMP/st/ssh-args" ] || fallo "17: por defecto no debía conectarse a nada"
+echo "ok: sin --clave-unica y sin terminal no toca ninguna clave"
 echo "TODO OK"

@@ -10,8 +10,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux14">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux20">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux15">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux22">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -90,7 +90,8 @@
 {% endwith %}
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
-<script src="{% static 'js/estados.js' %}"></script>
+<script src="{% static 'js/estados.js' %}?v=ojo1"></script>
+<script src="{% static 'js/semaforo.js' %}?v=sem3"></script>
 {% if user.is_authenticated %}<dialog id="salir-dialogo" class="dialogo salir-dialogo" aria-labelledby="salir-t" aria-describedby="salir-txt">
   <form method="post" action="/cuenta/salir/">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/">
     <h2 id="salir-t">¿Salir de la cuenta?</h2>
@@ -98,7 +99,7 @@
     <div class="acciones"><button type="button" class="btn-sec" data-salir-cancelar>Cancelar</button><button type="submit" class="btn">Confirmar</button></div>
   </form>
 </dialog>{% endif %}
-<script src="{% static 'js/tienda.js' %}?v=barra-orden-v1"></script>
+<script src="{% static 'js/tienda.js' %}?v=barra-orden-cant-nota-v1"></script>
 {% if menu.crm or menu.cliente %}{% include "componentes/permisos.html" %}<script src="{% static 'js/permisos.js' %}?v=contexto-v1"></script>{% endif %}
 {% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-cof07"></script><script src="{% static 'js/entrega.js' %}?v=lle04"></script><script src="{% static 'js/campana.js' %}?v=lle03d"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>

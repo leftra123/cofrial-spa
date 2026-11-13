@@ -11,7 +11,7 @@
     producto: ["¿Cuánto cuesta este producto?", "¿Hay stock?", "¿A qué temperatura se conserva?"],
     pedido: ["¿En qué estado está este pedido?", "¿Cuándo llega?", "¿La temperatura va bien?"],
     carrito: ["¿Cuál es el estado de mi último pedido?", "¿Qué hago si algo no tiene stock?"],
-    catalogo: ["¿Cuánto cuesta el lomo vetado?", "¿Qué productos están sin stock?", "¿Cuál es el estado de mi último pedido?"]
+    catalogo: ["¿Cuánto cuesta el lomo vetado?", "Agrega 2 lomos vetados al carrito", "¿Qué productos están sin stock?"]
   };
 
   function burbuja(texto, quien) {
@@ -21,7 +21,7 @@
   function abrir() {
     panel.hidden = false; btn.setAttribute("aria-expanded", "true"); raiz.classList.add("abierto");
     if (!saludado) {
-      saludado = true; burbuja("Hola, soy el asistente de IA de Cofrial. Te ayudo con precios, stock, conservación de productos y el estado de tus pedidos.", "bot");
+      saludado = true; burbuja("Hola, soy el asistente de IA de Cofrial. Conozco todo el inventario: te ayudo con precios, stock y el estado de tus pedidos, y puedo agregar productos a tu carrito. Si algo no lo puedo resolver, lo derivo a una persona.", "bot");
       (SUGERENCIAS[raiz.dataset.pagina] || SUGERENCIAS.catalogo).forEach(function (t) {
         var b = document.createElement("button"); b.type = "button"; b.className = "as-chip"; b.textContent = t;
         b.addEventListener("click", function () { preguntar(t); }); sug.appendChild(b);
@@ -38,6 +38,9 @@
     if (!lista || !lista.length) return;
     var caja = document.createElement("div"); caja.className = "as-acciones";
     lista.forEach(function (a) {
+      if (a.tipo === "carrito" || a.tipo === "ingresar") {                           // enlaces: el servidor ya agregó al carrito, o pide ingresar
+        var l = document.createElement("a"); l.className = "as-accion"; l.href = a.url; l.textContent = a.etiqueta; caja.appendChild(l); return;
+      }
       if (a.tipo !== "avisar") return;
       var b = document.createElement("button"); b.type = "button"; b.className = "as-accion"; b.textContent = a.etiqueta;
       b.addEventListener("click", function () {
@@ -53,6 +56,20 @@
     if (caja.children.length) { log.appendChild(caja); log.scrollTop = log.scrollHeight; }
   }
 
+  /* cada consulta de un cliente es un ticket: se avisa cuál es y si la resolvió la IA o la verá una persona */
+  function ticket(t) {
+    if (!t) return;
+    var n = document.createElement("a"); n.className = "as-ticket"; n.href = "/soporte/";
+    n.textContent = "Ticket N.º " + t.numero + " · " + (t.estado === "resuelta" ? "resuelto por la IA" : "derivado a una persona");
+    log.appendChild(n); log.scrollTop = log.scrollHeight;
+  }
+  /* el servidor agregó al carrito: se actualiza el número de la barra sin recargar */
+  function contador(n) {
+    if (typeof n !== "number") return;
+    document.querySelectorAll("[data-carrito-n]").forEach(function (e) { e.textContent = n; e.hidden = !n; });
+    var fab = document.getElementById("fab-carrito"); if (fab && !/^\/carrito\/?/.test(location.pathname)) fab.hidden = !n;
+  }
+
   function preguntar(texto) {
     texto = (texto || "").trim(); if (!texto || ocupado) return;
     ocupado = true; entrada.value = ""; entrada.disabled = true; enviar.disabled = true; sug.hidden = true;
@@ -66,7 +83,7 @@
       headers: {"Content-Type": "application/json", "X-CSRFToken": token},
       body: JSON.stringify({mensaje: texto, producto_id: raiz.dataset.producto || null, orden_id: raiz.dataset.orden || null})})
       .then(function (r) { return r.json().catch(function () { return {respuesta: "No pude leer la respuesta del asistente."}; }); })
-      .then(function (d) { fin(); burbuja(d.respuesta || "No tengo una respuesta ahora.", "bot"); acciones(d.acciones); })
+      .then(function (d) { fin(); burbuja(d.respuesta || "No tengo una respuesta ahora.", "bot"); ticket(d.ticket); contador(d.carrito_n); acciones(d.acciones); })
       .catch(function () { fin(); burbuja("No pude conectar con el asistente. Revisa tu conexión e inténtalo de nuevo.", "bot"); });
     function fin() {
       clearTimeout(aparece); clearTimeout(corte); if (pensando) pensando.remove();

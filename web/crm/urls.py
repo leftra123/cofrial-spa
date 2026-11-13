@@ -30,4 +30,5 @@ urlpatterns = [
     path("ia/", views.ia_panel, name="crm_ia"),
     path("demanda/", views.demanda, name="crm_demanda"),
     path("alertas/", views.alertas, name="crm_alertas"),
+    path("alertas/<int:orden_id>/avisar/", views.alerta_avisar, name="crm_alerta_avisar"),
 ]

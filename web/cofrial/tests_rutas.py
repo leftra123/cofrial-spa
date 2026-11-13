@@ -51,6 +51,7 @@ ESPERADO = {
     '/crm/ia/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
     '/crm/demanda/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/crm/alertas/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
+    '/crm/alertas/999999/avisar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/alertas/ →/crm/alertas/ 403 →/crm/alertas/'),
     '/flota/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/sugerencias/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/api/avisos-equipo/': ('403 403 403 200 200 200 200', '405 405 405 405 405 405 405'),      # avisos del menú interno; los clientes usan /api/avisos/

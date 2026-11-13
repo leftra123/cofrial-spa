@@ -993,3 +993,45 @@ button.nav-campana.sin-actualizar:not(#mp-brick-container button) .nav-campana-n
 .migas a:hover { color: var(--acento); text-decoration-color: currentColor; }
 .migas-actual { color: var(--texto); font-weight: 600; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 860px), (pointer: coarse) { .migas a { display: inline-flex; align-items: center; min-height: 44px; } .migas { margin-bottom: 2px; } }
+/* ---------- semáforo de formularios (js/semaforo.js) ----------
+   Una línea bajo cada campo: luz + texto. El color nunca va solo: cada estado tiene su icono y su texto.
+   gris = sin tocar · rojo = falta o está malo · naranja = incompleto · verde = listo */
+:root { --sem-rojo: #DC2626; --sem-naranja: #F59E0B; --sem-naranja-borde: #D97706; --sem-verde: #16A34A; }
+.sem { display: flex; align-items: center; gap: 7px; min-height: 20px; margin: 5px 0 0; font-size: .82rem; font-weight: 600; line-height: 1.3; color: var(--texto-3); }
+.sem-luz { flex: none; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--borde-fuerte); }
+.sem-luz svg { width: 11px; height: 11px; fill: none; stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+.sem[data-estado="rojo"] { color: var(--alerta-fg); }
+.sem[data-estado="rojo"] .sem-luz { background: var(--sem-rojo); border-color: var(--sem-rojo); }
+.sem[data-estado="naranja"] { color: var(--pendiente-fg); }
+.sem[data-estado="naranja"] .sem-luz { background: var(--sem-naranja); border-color: var(--sem-naranja); }
+.sem[data-estado="naranja"] .sem-luz svg { stroke: #3B2A0A; stroke-width: 4.2; }
+.sem[data-estado="verde"] { color: var(--entregado-fg); }
+.sem[data-estado="verde"] .sem-luz { background: var(--sem-verde); border-color: var(--sem-verde); }
+.sem[hidden], .sem.sem-apagada:not(.sem-resumen) { display: none; }
+/* el borde del campo acompaña a su luz (misma especificidad que las reglas de foco de arriba, por eso repite el :not) */
+input[data-sem="rojo"]:not(#mp-brick-container input), select[data-sem="rojo"]:not(#mp-brick-container select), textarea[data-sem="rojo"]:not(#mp-brick-container textarea) { border-color: var(--sem-rojo); }
+input[data-sem="naranja"]:not(#mp-brick-container input), select[data-sem="naranja"]:not(#mp-brick-container select), textarea[data-sem="naranja"]:not(#mp-brick-container textarea) { border-color: var(--sem-naranja-borde); }
+input[data-sem="verde"]:not(#mp-brick-container input), select[data-sem="verde"]:not(#mp-brick-container select), textarea[data-sem="verde"]:not(#mp-brick-container textarea) { border-color: var(--sem-verde); }
+/* contador junto al botón de enviar */
+.sem-resumen { margin: 18px 0 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: var(--radio-sm); background: var(--fondo); font-size: .88rem; }
+.sem-resumen[data-estado="rojo"] { border-color: var(--alerta-borde); background: var(--alerta-bg); }
+.sem-resumen[data-estado="verde"] { border-color: var(--sem-verde); }
+.sem-resumen + button, .sem-resumen + p { margin-top: 12px; }
+/* formularios de una fila (tablas y fichas): una sola línea bajo la fila, la del campo que se está llenando */
+.sem-fila { flex: 1 0 100%; width: 100%; margin-top: 6px; }
+
+
+/* ---------- ver la clave (js/estados.js): un ojo dentro del campo, a la derecha ---------- */
+.clave-caja { position: relative; display: inline-block; max-width: 100%; vertical-align: middle; }
+.clave-caja.ancha { display: block; width: 100%; }
+.clave-caja > input:not(#mp-brick-container input) { display: block; width: 100%; max-width: none; padding-right: 46px; }
+.clave-caja > button.clave-ojo:not(#mp-brick-container button) {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%); display: grid; place-items: center;
+  width: 36px; height: 36px; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--texto-3); box-shadow: none;
+}
+.clave-caja > button.clave-ojo:not(#mp-brick-container button):hover { background: var(--fondo-2); color: var(--texto); box-shadow: none; }
+.clave-ojo svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.clave-ojo .tachado { display: none; }
+.clave-ojo.viendo .tachado { display: inline; }
+.clave-ojo.viendo { color: var(--texto); }
+@media (pointer: coarse) { .clave-caja > button.clave-ojo:not(#mp-brick-container button) { width: 44px; height: 44px; right: 0; } }

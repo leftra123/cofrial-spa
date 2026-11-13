@@ -1,8 +1,10 @@
-<fieldset class="quien-recibe">
+<fieldset class="quien-recibe campo">
   <legend>¿Quién recibe el pedido?</legend>
-  <label for="recibe">Elige de la lista</label>
-  <select name="recibe" id="recibe"><option value="">{% if pide_oc %}Titular de la cuenta{% else %}Yo{% endif %} ({{ cliente.nombre }})</option>{% for n in recibe_opciones %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select>
-  <label for="recibe_nuevo">O escribe un nombre nuevo</label>
-  <input name="recibe_nuevo" id="recibe_nuevo" maxlength="{{ recibe_maximo }}" autocomplete="off" placeholder="Ej.: María Soto" aria-describedby="ayuda-recibe">
-  <p class="ayuda" id="ayuda-recibe">Si escribes un nombre, vale ese. Lo ve quien prepara y entrega tu pedido; no se envía a servicios externos. Hasta {{ recibe_maximo }} letras; la lista se arma con quienes ya elegiste antes.</p>
+  <div class="recibe-fila">
+    <div><label for="recibe">Elige de la lista</label>
+    <select name="recibe" id="recibe" form="checkout-form"><option value="">{% if pide_oc %}Titular de la cuenta{% else %}Yo{% endif %} ({{ cliente.nombre }})</option>{% for n in recibe_opciones %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></div>
+    <div><label for="recibe_nuevo">O escribe un nombre</label>
+    <input name="recibe_nuevo" id="recibe_nuevo" form="checkout-form" maxlength="{{ recibe_maximo }}" autocomplete="off" placeholder="Ej.: María Soto" aria-describedby="ayuda-recibe"></div>
+  </div>
+  <p class="ayuda" id="ayuda-recibe">Si escribes un nombre, vale ese. Lo ve quien prepara y entrega el pedido; no sale a servicios externos. Hasta {{ recibe_maximo }} letras.</p>
 </fieldset>

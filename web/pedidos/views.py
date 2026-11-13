@@ -55,8 +55,12 @@ def _respuesta_json(request, cliente):
 @solo_clientes
 def agregar(request, cliente):
     try:
+        antes = s.rangos_en_carrito(cliente)
         s.agregar(cliente, entradas.entero(request.POST.get("producto", 0)), entradas.entero(request.POST.get("cantidad", 1)))
         messages.success(request, "Producto agregado al carrito.")
+        despues = s.rangos_en_carrito(cliente)
+        if len(despues) > max(1, len(antes)):                      # recién ahora mezcla rangos: se avisa una vez, no en cada producto
+            messages.info(request, s.aviso_de_rangos(despues))
     except (s.ErrorDeNegocio, ValueError) as e:
         _mostrar_errores(request, e) if isinstance(e, s.ErrorDeNegocio) else messages.error(request, "Cantidad no válida.")
     if request.headers.get("X-Requested-With") == "fetch":         # mejora progresiva: la tienda agrega sin recargar; sin JavaScript sigue la redirección de siempre
@@ -79,7 +83,7 @@ def ver_carrito(request, cliente):
     ctx = {
         "filas": filas, "total": total, "cliente": cliente, "sin_stock": sin_stock,
         "direcciones": cliente.direccion_set.select_related("comuna"), "comunas": Comuna.objects.order_by("nombre"),
-        "pide_oc": cliente.tipo_cliente.codigo == "B2B",
+        "pide_oc": cliente.tipo_cliente.codigo == "B2B", "aviso_rangos": s.aviso_de_rangos(s.rangos_en_carrito(cliente)),
         "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
         "mp_brick": mp_brick,
         "monto_mp": monto_mp,

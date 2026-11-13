@@ -29,8 +29,24 @@
     </article>
   {% endfor %}
   </div>
+  <div class="pasos-compra checkout-mp">
+    <section class="paso-carro" aria-labelledby="p-entrega">
+      <h2 id="p-entrega"><span class="paso-n" aria-hidden="true">1</span>Entrega</h2>
+      <div class="entrega-campos">
+        <div class="campo"><label for="direccion">Dirección de entrega</label>
+          <select name="direccion" id="direccion" form="checkout-form">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+          <details class="acc-doc"{% if not direcciones %} open{% endif %}><summary>Agregar otra dirección</summary>{% include "pedidos/_direccion_nueva.html" with accion="/carrito/direccion/" con_ubicacion=True %}</details></div>
+        {% include "pedidos/_quien_recibe.html" %}
+      </div>
+    </section>
+    <section class="paso-carro" aria-labelledby="p-doc">
+      <h2 id="p-doc"><span class="paso-n" aria-hidden="true">2</span>Documento de venta</h2>
+      {% include "pedidos/_comprobante.html" %}
+      {% if pide_oc %}<div class="campo campo-oc"><label for="numero_oc">Número de orden de compra <small>(opcional ahora)</small></label><input name="numero_oc" id="numero_oc" form="checkout-form" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si no la tienes, déjalo vacío: usaremos una referencia propia (WEB-año-número) y el pedido quedará «OC pendiente» hasta que la agregues desde su detalle.</p></div>{% endif %}
+    </section>
+  </div>
   <aside class="resumen" aria-labelledby="res-t">
-    <h2 id="res-t">Resumen del pedido</h2>
+    <h2 id="res-t"><span class="paso-n" aria-hidden="true">3</span>Resumen y pago</h2>
     {% regroup filas|dictsort:"producto.categoria.rango_temperatura.nombre" by producto.categoria.rango_temperatura.nombre as rangos %}
     <ul class="camaras" aria-label="Rangos de conservación de su pedido">
       {% for g in rangos %}{% with r=g.list.0.producto.categoria.rango_temperatura %}<li class="camara {% if r.nombre == "Congelado" %}cong{% else %}ref{% endif %}"><span class="cam-marca" aria-hidden="true"></span><span><b>{{ r.nombre }}</b> {{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C</span><span class="cam-n">{{ g.list|length }} producto{{ g.list|length|pluralize }}</span></li>{% endwith %}{% endfor %}
@@ -42,33 +58,20 @@
       <div class="total"><dt>Total con IVA</dt><dd>{{ total|con_iva }}</dd></div>
     {% else %}<div class="total"><dt>Total (IVA incluido)</dt><dd>{{ total|clp }}</dd></div>{% endif %}
     </dl>
-    {% if mp_brick %}
-    <form class="checkout-mp" data-checkout="mp-modal-v4" method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
-      <label for="direccion">Dirección de entrega</label>
-      <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
-      {% include "pedidos/_quien_recibe.html" %}
-      {% include "pedidos/_comprobante.html" %}
-      {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
-      <p class="ayuda" id="ayuda-pago">Paga ahora con Mercado Pago (modo prueba) o genera la orden y págala a 30 días. Si la tarjeta no resulta, puedes reintentar: el pedido se crea solo cuando el pago queda aprobado.</p>
+    <form id="checkout-form" class="checkout-mp acciones-pago"{% if mp_brick %} data-checkout="mp-modal-v4"{% endif %} method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
+      {% if mp_brick %}
       <button type="button" class="confirmar" id="mp-mostrar-pago" aria-haspopup="dialog" aria-controls="mp-pago-modal"{% if sin_stock %} disabled{% endif %}>Pagar ahora · {% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}</button>
-      <button class="btn-sec generar-orden" data-cargando="Generando orden…" aria-describedby="ayuda-plazo"{% if sin_stock %} disabled{% endif %}>Generar orden</button>
-      <p class="ayuda" id="ayuda-plazo">{% if pide_oc %}La orden queda en Mis pedidos. Pagas a {{ cliente.tipo_cliente.dias_credito }} días y descargas la factura después de la entrega, como siempre.{% else %}La orden queda en Mis pedidos. Pagas a 30 días y descargas la boleta o la factura desde el pedido.{% endif %}</p>
+      <button class="btn-sec generar-orden" data-cargando="Generando orden…" aria-describedby="ayuda-plazo"{% if sin_stock %} disabled{% endif %}>Generar orden y pagar a {% if pide_oc %}{{ cliente.tipo_cliente.dias_credito }}{% else %}30{% endif %} días</button>
+      <p class="ayuda" id="ayuda-plazo">{% if pide_oc %}Descargas la factura desde «Mis pedidos» después de la entrega.{% else %}Queda en «Mis pedidos»; ahí descargas la boleta o la factura.{% endif %} Pago con tarjeta en modo prueba; si no resulta, reintentas y el pedido se crea solo al aprobarse.</p>
       <p class="ayuda mp-inline-error" id="mp-inline-error" hidden role="alert"></p>
+      {% else %}
+      <button class="confirmar" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>Generar orden</button>
+      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y la factura se emite después de la entrega.{% else %}Queda en «Mis pedidos». Pagas a 30 días y descargas la boleta o la factura desde el pedido.{% endif %}</p>
+      {% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock para continuar.</p>{% endif %}
+      {% endif %}
     </form>
-    {% else %}
-    <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
-      <label for="direccion">Dirección de entrega</label>
-      <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
-      {% include "pedidos/_quien_recibe.html" %}
-      {% include "pedidos/_comprobante.html" %}
-      {% if pide_oc %}<label for="numero_oc">Número de orden de compra (opcional ahora)</label><input name="numero_oc" id="numero_oc" maxlength="30" placeholder="Ej.: OC-2026-0457" autocomplete="off" aria-describedby="ayuda-oc"><p class="ayuda" id="ayuda-oc">Si todavía no la tienes, déjalo vacío: generaremos una referencia propia (WEB-año-número) y tu pedido quedará como «OC pendiente» hasta que la agregues desde el detalle del pedido.</p>{% endif %}
-      <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y te emitimos la factura después de la entrega. La descargas desde el pedido.{% else %}La orden queda en Mis pedidos. Pagas a 30 días y descargas la boleta o la factura desde el pedido.{% endif %}</p>
-      <button class="confirmar" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>Generar orden</button>{% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock de arriba para continuar.</p>{% endif %}
-    </form>
-    {% endif %}
-    <details class="acc-doc"{% if not direcciones %} open{% endif %}><summary>Agregar otra dirección</summary>{% include "pedidos/_direccion_nueva.html" with accion="/carrito/direccion/" con_ubicacion=True %}</details>
-    <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Podrá seguir la entrega en vivo desde "Mis pedidos"</p>
-    <p class="ayuda carrito-legal">Al generar la orden aceptas los <a href="/legal/terminos/">términos y condiciones</a>. Por ser alimentos perecibles en cadena de frío, no aplica el derecho de retracto; lo que llegue en mal estado lo rechazas al recibir y no se cobra (<a href="/legal/devoluciones/">devoluciones</a>).</p>
+    <p class="seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Sigues la entrega en vivo desde «Mis pedidos»</p>
+    <p class="ayuda carrito-legal">Al generar la orden aceptas los <a href="/legal/terminos/">términos</a>. Por ser alimentos en cadena de frío no aplica retracto; lo que llegue en mal estado lo rechazas al recibir y no se cobra (<a href="/legal/devoluciones/">devoluciones</a>).</p>
   </aside>
 </div>
 {% else %}

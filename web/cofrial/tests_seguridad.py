@@ -786,6 +786,15 @@ class CaidasControladasTests(BaseSeguridad):
         with mock.patch("django.db.backends.utils.CursorWrapper.execute", side_effect=OperationalError("down")):
             self.assertEqual(self.anonimo().get("/salud/").status_code, 200)
 
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_con_https_obligatorio_la_salud_responde_por_http_para_el_balanceador(self):
+        """El balanceador consulta cada instancia por HTTP sin X-Forwarded-Proto: un 301 la marcaría caída. El resto sí redirige."""
+        for ruta in ("/health", "/salud/", "/salud/bd/"):
+            self.assertEqual(self.anonimo().get(ruta).status_code, 200, ruta)
+        r = self.anonimo().get("/catalogo/")
+        self.assertEqual(r.status_code, 301)
+        self.assertTrue(r["Location"].startswith("https://"))
+
     def test_la_salud_con_base_avisa_503_si_no_la_alcanza(self):
         self.assertEqual(self.anonimo().get("/salud/bd/").json(), {"estado": "ok"})
         with mock.patch("django.db.backends.utils.CursorWrapper.execute", side_effect=OperationalError("down")):

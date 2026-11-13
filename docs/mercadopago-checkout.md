@@ -25,7 +25,7 @@ Agregar `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY` y `MERCADOPAGO_PAYE
 ## Flujo
 
 1. Particular o empresa abre el carrito (resumen con total y dirección).
-2. **Pagar ahora** abre el modal con skeleton y luego Card Payment Brick. Si la tarjeta no resulta, el modal deja reintentar y no crea el pedido.
+2. **Pagar ahora** abre el modal con **«Confirma tu compra»** (total, documento, dirección, quién recibe). **Confirmar y pagar** sigue al Card Payment Brick; **Cancelar compra** (o Esc, o un clic fuera) cierra sin cobrar y el carrito avisa, con un mensaje neutro, que no se cobró nada. El formulario de tarjeta se monta solo al confirmar. En el formulario, Esc o la × preguntan «¿Cancelar la compra?» antes de cerrar. Si la tarjeta no resulta, el modal deja reintentar y no crea el pedido.
 3. **Generar orden**, debajo, crea el pedido a 30 días sin pasar por Mercado Pago.
 4. `onSubmit` del Brick → `POST /carrito/mp/pagar/` con `formData` de MP.
 5. Backend valida carrito, crea `CheckoutPago`, llama `POST /v1/payments`.

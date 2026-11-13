@@ -123,6 +123,10 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
 }
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+# El balanceador revisa /health (y /salud/ las instalaciones anteriores) por HTTP directo a cada instancia, sin X-Forwarded-Proto: sin esta
+# exención, con DJANGO_HTTPS=1 y la redirección activa recibiría un 301 y daría por caídas a todas las instancias. Solo estas rutas (sin datos)
+# quedan fuera de la redirección; el patrón se compara con la ruta sin la barra inicial.
+SECURE_REDIRECT_EXEMPT = [r"^health$", r"^salud/$", r"^salud/bd/$"]
 # Detrás de HTTPS (DJANGO_HTTPS=1): cookies solo por canal seguro, HSTS y redirección. Apagado por defecto porque la demo en EC2 puede ir por HTTP.
 if entorno("DJANGO_HTTPS", "0") == "1":
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True

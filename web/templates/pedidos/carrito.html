@@ -150,7 +150,7 @@
 {% endblock %}{% endif %}
 {% block scripts %}{% load static %}{% if mp_brick %}{{ mp_brick_cfg|json_script:"mp-brick-cfg" }}
 <script src="https://sdk.mercadopago.com/js/v2"></script>
-<script src="{% static 'js/mp-brick.js' %}?v=mp-skel-tema-v2"></script>
+<script src="{% static 'js/mp-brick.js' %}?v=mp-confirmar-v1"></script>
 <script>
 (function () {
   function arrancar() {

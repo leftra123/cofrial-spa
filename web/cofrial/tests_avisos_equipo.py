@@ -213,7 +213,7 @@ class CostoTests(Base):
         with patch("crm.ia.redactar") as redactar, CaptureQueriesContext(connection) as consultas:
             self.assertEqual(c.get(URL).status_code, 200)
         redactar.assert_not_called()
-        self.assertLessEqual(len(consultas), 15, [q["sql"][:120] for q in consultas])     # medido: unos 5 ms en total
+        self.assertLessEqual(len(consultas), 16, [q["sql"][:120] for q in consultas])     # medido: unos 5 ms; la 16.ª cuenta las solicitudes de datos personales (solo admin)
 
     def test_el_costo_no_crece_con_los_pedidos(self):
         self.viaje_con_ruptura()

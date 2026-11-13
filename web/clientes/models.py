@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from catalogo.models import ListaPrecio
 
@@ -127,3 +130,58 @@ class AceptacionLegal(models.Model):
 
     def __str__(self):
         return f"{self.usuario} aceptó la versión {self.version} el {self.aceptado_en:%d/%m/%Y %H:%M}"
+
+
+def _sumar_dias_habiles(fecha, n):
+    """Lunes a viernes; no descuenta feriados (el prototipo no tiene un calendario de feriados)."""
+    while n > 0:
+        fecha += timedelta(days=1)
+        if fecha.weekday() < 5:
+            n -= 1
+    return fecha
+
+
+class SolicitudDerecho(models.Model):
+    """Una solicitud del titular para ejercer sus derechos sobre sus datos personales (Ley 21.719): rectificación, oposición,
+    bloqueo y los demás que no se resuelven solos en «Mis datos». Deja constancia de qué pidió, cuándo, el plazo legal y la respuesta.
+    El plazo no se guarda: se calcula de la fecha de recepción, el tipo y la prórroga (así no queda un dato derivado en la tabla, 3FN)."""
+    TIPOS = [("acceso", "Acceso"), ("rectificacion", "Rectificación"), ("supresion", "Supresión"), ("oposicion", "Oposición"),
+             ("portabilidad", "Portabilidad"), ("bloqueo", "Bloqueo temporal")]
+    ESTADOS = [("recibida", "Recibida"), ("respondida", "Respondida")]
+    DIAS_CORRIDOS = 30          # plazo general de respuesta, prorrogable una vez por otros 30
+    DIAS_HABILES_BLOQUEO = 2    # el bloqueo temporal se resuelve antes
+
+    solicitud_id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="solicitudes_derecho")
+    tipo = models.CharField(max_length=15, choices=TIPOS)
+    detalle = models.TextField(max_length=2000)
+    estado = models.CharField(max_length=10, choices=ESTADOS, default="recibida")
+    prorrogada = models.BooleanField(default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    respuesta = models.TextField(max_length=2000, blank=True)
+    respondida_en = models.DateTimeField(null=True, blank=True)
+    atendida_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        db_table = "solicitud_derecho"
+        ordering = ["-creada_en"]
+        verbose_name = "solicitud de derechos sobre datos"
+        verbose_name_plural = "solicitudes de derechos sobre datos"
+
+    def __str__(self):
+        return f"Solicitud N.º {self.solicitud_id} ({self.get_tipo_display()})"
+
+    @property
+    def vence_el(self):
+        recibida = timezone.localtime(self.creada_en).date()
+        if self.tipo == "bloqueo":
+            return _sumar_dias_habiles(recibida, self.DIAS_HABILES_BLOQUEO)
+        return recibida + timedelta(days=self.DIAS_CORRIDOS * (2 if self.prorrogada else 1))
+
+    @property
+    def vencida(self):
+        return self.estado == "recibida" and timezone.localdate() > self.vence_el
+
+    @property
+    def puede_prorrogarse(self):
+        return self.estado == "recibida" and not self.prorrogada and self.tipo != "bloqueo"

@@ -6,12 +6,13 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
 from catalogo.models import Producto
 from clientes import cuentas
-from clientes.models import Cliente
+from clientes.models import Cliente, SolicitudDerecho
 from crm import servicios as crm
 from pedidos import servicios as pedidos
 from pedidos.models import EstadoOrden, Orden
@@ -276,3 +277,41 @@ def cliente_cuenta(request, pk):
             messages.success(request, f"Cuenta {u.username} creada para {cliente.nombre}. Ya puede ingresar al portal.")
             return redirect(ficha)
     return render(request, "operacion/cliente_cuenta.html", {"form": form, "c": cliente})
+
+
+# ---------- solicitudes de derechos sobre datos personales (Ley 21.719) ----------
+@solo_admin
+def privacidad(request):
+    """Las que esperan respuesta van primero, por fecha de vencimiento; luego las últimas respondidas."""
+    pendientes = sorted(SolicitudDerecho.objects.filter(estado="recibida").select_related("usuario"), key=lambda x: (x.vence_el, x.creada_en))    # con el mismo plazo, la más antigua primero
+    respondidas = SolicitudDerecho.objects.filter(estado="respondida").select_related("usuario", "atendida_por")[:30]
+    return render(request, "operacion/privacidad.html", {"pendientes": pendientes, "respondidas": respondidas})
+
+
+@require_POST
+@solo_admin
+def privacidad_responder(request, pk):
+    x = get_object_or_404(SolicitudDerecho, pk=pk, estado="recibida")
+    respuesta = request.POST.get("respuesta", "").strip()
+    if not 10 <= len(respuesta) <= 2000:
+        messages.error(request, f"Solicitud N.º {pk}: escribe la respuesta para el titular (entre 10 y 2000 caracteres).")
+        return redirect(f"/operacion/privacidad/#s{pk}")
+    x.respuesta, x.estado, x.respondida_en, x.atendida_por = respuesta, "respondida", timezone.now(), request.user
+    x.save(update_fields=["respuesta", "estado", "respondida_en", "atendida_por"])
+    log.info("Solicitud de datos %s respondida por %s", pk, request.user.username)
+    messages.success(request, f"Solicitud N.º {pk} respondida. El titular la ve en «Mis datos».")
+    return redirect("/operacion/privacidad/")
+
+
+@require_POST
+@solo_admin
+def privacidad_prorrogar(request, pk):
+    x = get_object_or_404(SolicitudDerecho, pk=pk)
+    if not x.puede_prorrogarse:
+        messages.error(request, f"La solicitud N.º {pk} no se puede prorrogar: el plazo se extiende una sola vez y no aplica al bloqueo.")
+    else:
+        x.prorrogada = True
+        x.save(update_fields=["prorrogada"])
+        log.info("Solicitud de datos %s prorrogada por %s", pk, request.user.username)
+        messages.success(request, f"Plazo de la solicitud N.º {pk} extendido hasta el {x.vence_el:%d/%m/%Y}. El titular ve la nueva fecha en «Mis datos».")
+    return redirect(f"/operacion/privacidad/#s{pk}")

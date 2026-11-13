@@ -14,7 +14,7 @@
       <div><dt>Teléfono</dt><dd>{{ cliente.telefono|default:"No indicado" }}</dd></div>
       <div><dt>Términos aceptados</dt><dd>{% if aceptacion %}Versión {{ aceptacion.version }}, el {{ aceptacion.aceptado_en|date:"d/m/Y H:i" }}{% else %}Cuenta creada antes del registro de aceptación{% endif %}</dd></div>
     </dl>
-    <p class="ayuda">Para corregir un dato escríbenos en <a href="/soporte/">Soporte</a>.</p>
+    <p class="ayuda">¿Algún dato está mal? Pide corregirlo en <a href="#md-solicitar">Pedir otro cambio sobre tus datos</a>.</p>
   </section>
 
   <section class="tarjeta-ui" aria-labelledby="md-descargar">
@@ -22,6 +22,8 @@
     <p>Un archivo JSON con tu cuenta, direcciones, pedidos, consultas, avisos de stock y los términos que aceptaste. Lo puedes abrir con cualquier editor de texto o llevar a otro servicio.</p>
     <p><a class="btn" href="/cuenta/mis-datos/descargar/" download>Descargar mis datos</a></p>
   </section>
+
+  {% include "cuenta/_solicitudes.html" %}
 
   <section class="tarjeta-ui md-eliminar" aria-labelledby="md-eliminar">
     <h2 id="md-eliminar">Eliminar mi cuenta</h2>

@@ -108,3 +108,22 @@ class Direccion(models.Model):
 
     def __str__(self):
         return f"{self.calle_numero}, {self.comuna}"
+
+
+class AceptacionLegal(models.Model):
+    """Prueba de que una cuenta aceptó los términos y condiciones y la política de privacidad: quién, cuándo, qué versión y desde qué IP.
+    Eliminar la cuenta desde «Mis datos» no borra el usuario (lo desactiva), así que la constancia queda. Solo desaparece con el
+    usuario cuando este se borra de verdad, como al rechazar una solicitud de empresa que nunca operó. Versiones: cofrial/legal.py."""
+    aceptacion_id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    version = models.CharField(max_length=20)
+    aceptado_en = models.DateTimeField(auto_now_add=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        db_table = "aceptacion_legal"
+        verbose_name = "aceptación de términos"
+        verbose_name_plural = "aceptaciones de términos"
+
+    def __str__(self):
+        return f"{self.usuario} aceptó la versión {self.version} el {self.aceptado_en:%d/%m/%Y %H:%M}"

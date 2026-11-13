@@ -114,7 +114,9 @@ if [ "${1:-}" = "estado" ] || [ "${1:-}" = "encender" ]; then
     aws ec2 wait instance-running --instance-ids $IDS_ENCENDER
     echo "$IP_WEB" > "$ESTADO/ip.txt"
     log "Esperando a que la aplicación responda en http://$IP_WEB (hasta 10 minutos)"
-    for i in $(seq 1 40); do curl -s -m 5 "http://$IP_WEB/salud/" | grep -q ok && { echo "  La aplicación responde. Verifica todo con: python3 aws/verificar.py"; exit 0; }; sleep 15; done
+    # -L -k: con certificado de confianza el 80 del balanceador redirige (301) al 443, y ese certificado es del dominio, no del DNS del balanceador.
+    # Sin seguir la redirección este chequeo nunca veía «ok» y daba por caída una aplicación que ya funcionaba.
+    for i in $(seq 1 40); do curl -sLk -m 5 "http://$IP_WEB/salud/" | grep -q ok && { echo "  La aplicación responde. Verifica todo con: python3 aws/verificar.py"; exit 0; }; sleep 15; done
     echo "  La aplicación aún no responde; espera unos minutos y repite: bash aws/provision.sh estado"
   fi
   exit 0

@@ -889,3 +889,16 @@ Nota. Elaboración propia. La escribe `/demo/` y la leen los contenedores del si
 | nombre | varchar(40) | No | UNIQUE; Hospital, Supermercado, Feria o Institucional |
 
 Nota. Elaboración propia. La referencia `cliente.segmento_id` es nula para los clientes B2C y los B2B sin asignar; se edita en `/admin/`, sin formularios nuevos. No se reutilizó `cliente.giro`, que es texto libre para la factura. Está en 3FN: el nombre del segmento depende solo de la clave y el cliente solo guarda la referencia. El nivel del cliente en el embudo no se guarda en ninguna tabla: se calcula (ver `04d-crm.md`). La migración solo agrega una tabla y una columna anulable, así que el código anterior sigue funcionando sobre la base migrada. El MER de la Figura 1 corresponde al diseño de referencia y no incluye esta extensión.
+
+**Tabla D32**
+*Diccionario físico de aceptacion_legal*
+
+| Campo | Tipo | Nulo | Clave y función |
+|---|---|---|---|
+| aceptacion_id | integer autogenerado | No | PK |
+| usuario_id | integer | No | FK auth_user (CASCADE): cuenta que aceptó |
+| version | varchar(20) | No | Versión de los términos y la política de privacidad que vio, como fecha (2026-11-13) |
+| aceptado_en | timestamptz | No | Momento de la aceptación |
+| ip | inet | Sí | Dirección IP desde la que aceptó |
+
+Nota. Elaboración propia. Se escribe al crear una cuenta B2C o B2B, que exige marcar una casilla que parte sin marcar. Es la constancia del consentimiento: eliminar la cuenta desde «Mis datos» desactiva el usuario y no la borra; solo desaparece si el usuario se borra de verdad, como al rechazar una solicitud de empresa que nunca operó. Está en 3FN: cada atributo depende solo de la aceptación, y la versión es un valor, no una referencia a otra tabla, porque el texto vive en las plantillas.

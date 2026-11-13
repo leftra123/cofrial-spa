@@ -1,0 +1,16 @@
+{% extends "tienda/base.html" %}
+{% block titulo %}{{ titulo_legal }} | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab"><div><h1>{{ titulo_legal }}</h1><p class="sub">Versión del {{ version|slice:"8:10" }}-{{ version|slice:"5:7" }}-{{ version|slice:"0:4" }} · Prototipo académico INACAP Temuco con datos ficticios</p></div></div>
+{% endblock %}
+{% block contenido %}
+<div class="legal">
+  <nav class="legal-indice" aria-label="Información legal">
+    <ul>{% for clave, nombre in paginas_legales.items %}<li><a href="/legal/{{ clave }}/"{% if nombre == titulo_legal %} aria-current="page"{% endif %}>{{ nombre }}</a></li>{% endfor %}</ul>
+  </nav>
+  <article class="legal-texto tarjeta-ui">
+    <p class="legal-aviso">Este sitio es un prototipo académico que moderniza a Cofrial SpA como caso de estudio. Los productos, pedidos, pagos y documentos tributarios son simulados, y los datos de las cuentas de demostración son ficticios. No ingreses datos reales de tarjetas ni datos sensibles.</p>
+    {% block texto %}{% endblock %}
+  </article>
+</div>
+{% endblock %}

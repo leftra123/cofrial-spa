@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux15">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux16">
   {% block cabeza %}{% endblock %}
 </head>
 <body data-u="{{ user.pk|default:'' }}">
@@ -79,7 +79,8 @@
 {% if menu.crm or menu.cliente %}{% include "componentes/permisos.html" %}{% endif %}
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
-<script src="{% static 'js/estados.js' %}"></script>
+<script src="{% static 'js/estados.js' %}?v=ojo1"></script>
+<script src="{% static 'js/semaforo.js' %}?v=sem3"></script>
 {% block scripts %}{% endblock %}
 {% if menu.crm or menu.cliente %}<script src="{% static 'js/permisos.js' %}?v=contexto-v1"></script>{% endif %}
 {% if menu.flota %}<script src="{% static 'js/por-despachar.js' %}"></script>{% endif %}

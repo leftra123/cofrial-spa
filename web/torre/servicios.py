@@ -73,10 +73,29 @@ def _ahora(vigentes, alertas):
     }
 
 
-def _camiones(vigentes, alertas):
+def _a_bordo(usuario, camiones):
+    """{camion_id: [{nombre, url, orden}]}: clientes cuya carga va en el camión (viaje en curso, recepción sin resolver), dentro del alcance del usuario.
+    Una sola consulta, sea cual sea la cantidad de camiones."""
+    base = Orden.objects.filter(despacho__camion_id__in=camiones, despacho__salida_en__isnull=False, despacho__regreso_en__isnull=True) \
+        .exclude(estado_orden__nombre__in=RECEPCION_CERRADA + ("Cancelada",)).select_related("direccion__cliente", "despacho")
+    if crm.rol(usuario) != "despachador":
+        base = base.filter(direccion__cliente_id__in=crm.clientes_visibles(usuario).values_list("pk", flat=True))
+    por_camion = {}
+    for o in base.order_by("orden_id"):
+        c = o.direccion.cliente
+        por_camion.setdefault(o.despacho.camion_id, []).append({"nombre": c.nombre, "url": f"/crm/clientes/{c.pk}/", "orden": o.orden_id})
+    return por_camion
+
+
+def _camiones(vigentes, alertas, usuario):
     en_viaje = set(Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).values_list("camion_id", flat=True))
-    return [{"id": cid, "lat": t.lat, "long": t.long, "alerta": cid in alertas}
-            for cid, t in sorted(vigentes.items()) if cid in en_viaje or cid in alertas]
+    activos = [cid for cid in sorted(vigentes) if cid in en_viaje or cid in alertas]
+    a_bordo = _a_bordo(usuario, activos)
+    ahora = timezone.now()
+    return [{"id": cid, "lat": vigentes[cid].lat, "long": vigentes[cid].long, "alerta": cid in alertas,
+             "temp": round(vigentes[cid].temp_camara, 1), "combustible": vigentes[cid].combustible_pct,
+             "segundos": max(0, int((ahora - vigentes[cid].registrado_en).total_seconds())),
+             "a_bordo": a_bordo.get(cid, [])} for cid in activos]
 
 
 def _direcciones(cliente_ids):
@@ -118,7 +137,7 @@ def datos_negocio(usuario, vigentes=None):
     ahora = timezone.now()
     vigentes = vigente.ultimas_vigentes() if vigentes is None else vigentes
     alertas = {cid for cid, t in vigentes.items() if t.alerta_ruptura_frio}
-    return {"camiones": _camiones(vigentes, alertas),
+    return {"camiones": _camiones(vigentes, alertas, usuario),
             "clientes_mapa": _clientes_mapa(usuario, ahora),
             "frecuentes": _frecuentes(usuario, ahora),
             "embudo": crm.embudo_por_niveles(usuario),

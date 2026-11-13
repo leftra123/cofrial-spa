@@ -147,8 +147,18 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
 - Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.
 
+## 2026-11-13: el asistente de IA crea tickets y agrega al carrito
+- Cada consulta de un cliente al asistente queda como ticket. La IA resuelve sola lo que puede (ticket «Resuelto por la IA») y deriva a una persona lo que no (reclamos, facturas, cuando falla o no tiene el dato); el cliente ve el N.º y el estado en Soporte, y el CRM cuenta resueltas y derivadas.
+- El asistente conoce todo el catálogo (SKU, stock y precio de su perfil). Si el cliente pide agregar algo, lo agrega a su carrito; el servidor valida stock y límites y escribe la confirmación. No crea pedidos ni cobra.
+- Detalle y pendientes en `docs/decisiones.md`.
+
 ## 2026-11-13: la página de estado ahora es real
 - `/salud/` mostraba solo «ok» y no guardaba nada. Ahora el servicio `vigilante` revisa cada minuto web, base, IoT, Grafana y la dirección pública, y cada 5 minutos Gemini, Groq y Mercado Pago (solo listan la cuenta: sin gasto de cuota ni cobros). Cada revisión queda en la tabla `chequeo_servicio` con su hora.
 - La página muestra barras de 90 días y de 24 horas, la disponibilidad y qué pasó en los últimos 7 días. Cuando el laboratorio está apagado nadie revisa: esas horas aparecen en gris como «sin registros», sin contarse como caída ni como éxito. El historial parte del día en que se enciende el monitor.
 - Sin cambios para el balanceador: `/salud/` sigue respondiendo `{"estado": "ok"}` a quien no es un navegador. Detalle en `docs/decisiones.md`.
 - Pendiente en AWS: reconstruir la web primaria (`recrear-web`) para que nazca el servicio `vigilante` y se cree la tabla; opcional, definir `SALUD_URL_PUBLICA=https://www.cofrialspa.shop` para vigilar también el balanceador.
+
+## 2026-11-13: extras de la Torre y de las alertas de frío
+- Torre de control: al tocar un camión (en el mapa o en la lista) se abre un panel de detalle con su estado, temperatura, combustible, antigüedad de la última lectura y los clientes a bordo, con enlace a su ficha. Si hay ruptura de frío ofrece ir a avisar a los clientes. Cada cliente a bordo se limita al alcance del usuario y la consulta es una sola, sin importar cuántos camiones haya.
+- CRM, alertas de frío: la lista muestra contacto del cliente (teléfono y correo), temperatura máxima y hora de la primera lectura, y el vendedor o administrador registra el aviso. Queda en el historial del cliente y la orden pasa a «Avisado».
+- Pendiente (necesita AWS encendido): probar una restauración de RDS a un punto en el tiempo y agregar la revisión de respaldos a `aws/verificar.py --infra`.

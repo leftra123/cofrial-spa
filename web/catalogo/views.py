@@ -3,7 +3,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,6 +18,8 @@ from . import avisos
 from .models import AvisoStock, Categoria, PrecioProducto, Producto, RangoTemperatura
 
 STOCK_BAJO = 20      # por debajo se avisa «Quedan pocas unidades»
+COMPRA_MINIMA = 1    # no hay mínimo por producto en el modelo: se compra desde una unidad de venta (la misma regla de pedidos.servicios._validar_cantidad)
+JUNTOS_MINIMO = 2    # pedidos en común para decir que dos productos «suelen pedirse juntos»: una sola coincidencia no es costumbre
 
 
 def lista_del_visitante(request):
@@ -35,12 +37,19 @@ def _precios(perfil):
     return dict(PrecioProducto.objects.filter(lista_precio=perfil.lista_precio).values_list("producto_id", "precio_clp"))
 
 
+def en_unidades(p, cantidad):
+    """«91 cajas», «1 unidad», «12 kg»: la cantidad con el formato de venta del producto."""
+    nombre = {"caja": ("caja", "cajas"), "un": ("unidad", "unidades")}.get(p.unidad_medida, (p.unidad_medida, p.unidad_medida))
+    return f"{cantidad} {nombre[0] if cantidad == 1 else nombre[1]}"
+
+
 def _estado_stock(p):
+    """El número va siempre a la vista: quien compra para una institución necesita saber si alcanza antes de elegir la cantidad."""
     if p.stock_disponible <= 0:
         return "nada", "Sin stock"
     if p.stock_disponible <= STOCK_BAJO:
-        return "poco", f"Quedan {p.stock_disponible}"
-    return "ok", "En stock"
+        return "poco", f"Quedan {en_unidades(p, p.stock_disponible)}"
+    return "ok", f"{en_unidades(p, p.stock_disponible)} en stock"
 
 
 @lru_cache(maxsize=1)
@@ -74,7 +83,9 @@ def _fila(p, precios):
     clase, texto = _estado_stock(p)
     propia = _propia(p.sku)
     credito = {"propia": True} if propia else _creditos().get(p.sku)
+    maximo = min(p.stock_disponible, settings.CANTIDAD_MAXIMA_POR_LINEA)
     return {"p": p, "precio": precios.get(p.producto_id), "stock_clase": clase, "stock_texto": texto,
+            "minimo": COMPRA_MINIMA, "minimo_texto": en_unidades(p, COMPRA_MINIMA), "maximo": maximo, "maximo_texto": en_unidades(p, maximo),
             "foto": propia or (f"productos/{p.sku}.jpg" if credito else None), "credito": credito,
             "ilustracion_ia": f"productos/ia/{p.sku}.svg" if p.sku in _ilustraciones_ia() and not credito else None,
             "modelo_ia": _ilustraciones_ia().get(p.sku, {}).get("modelo")}
@@ -109,13 +120,28 @@ def listado(request):
         "filtrado": bool(q or cat or temp or solo_stock)})
 
 
+def suelen_pedirse_con(p, limite=4):
+    """Productos activos que más se repiten en los pedidos que llevan `p`, del más frecuente al menos. No cuentan los pedidos cancelados
+    ni las coincidencias únicas. Un pedido lleva un solo rango de temperatura (RN-09), así que casi siempre son del mismo rango que `p`."""
+    from pedidos.models import OrdenItem                 # catalogo no depende de pedidos al importar: pedidos sí importa catalogo
+    ids = list(OrdenItem.objects.filter(orden__ordenitem__producto=p, producto__activo=True).exclude(producto=p)
+               .exclude(orden__estado_orden__nombre="Cancelada").values("producto").annotate(n=Count("orden", distinct=True))
+               .filter(n__gte=JUNTOS_MINIMO).order_by("-n", "producto").values_list("producto", flat=True)[:limite])
+    por_id = Producto.objects.select_related("categoria__rango_temperatura").in_bulk(ids)
+    return [por_id[i] for i in ids]
+
+
 def detalle(request, producto_id):
     p = get_object_or_404(Producto.objects.select_related("categoria__rango_temperatura"), pk=producto_id, activo=True)
     perfil = lista_del_visitante(request)
     fila = _fila(p, _precios(perfil))
-    similares = [_fila(s, _precios(perfil)) for s in Producto.objects.filter(activo=True, categoria=p.categoria).exclude(pk=p.pk).order_by("nombre")[:4]]
+    precios = _precios(perfil)
+    juntos = [_fila(s, precios) for s in suelen_pedirse_con(p)]
+    ya = [f["p"].pk for f in juntos]
+    similares = [_fila(s, precios) for s in Producto.objects.filter(activo=True, categoria=p.categoria).exclude(pk=p.pk).exclude(pk__in=ya)
+                 .select_related("categoria__rango_temperatura").order_by("nombre")[:4]]
     cliente = _cliente(request)
-    return render(request, "catalogo/detalle.html", {"fila": fila, "perfil": perfil, "similares": similares,
+    return render(request, "catalogo/detalle.html", {"fila": fila, "perfil": perfil, "similares": similares, "juntos": juntos,
                                                      "con_aviso": avisos.minimos_pendientes(cliente) if cliente else {}})
 
 

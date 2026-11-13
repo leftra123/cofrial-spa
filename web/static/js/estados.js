@@ -5,6 +5,7 @@
    - [data-confirmar="texto"] en un botón: acción destructiva en dos pasos (el primer toque pide confirmar, el segundo envía).
    - [data-enter-avanza] en un <form>: Enter (o «Siguiente» del teclado del celular) pasa al campo que falta; con el campo vacío, o sin nada más que llenar, envía y el navegador avisa.
    - vivo(elemento, opciones): indicador de conexión de los paneles que se refrescan solos (conectando, en vivo, reintentando, sin conexión).
+   - Todo <input type="password"> lleva un botón con un ojo para ver u ocultar lo escrito; al enviar vuelve a quedar oculto.
    - anunciar(texto): lo dice a los lectores de pantalla.
    - tiempo(x): prende o apaga el aviso de tiempo acelerado sin recargar (lo llaman los paneles que se refrescan solos). */
 (function () {
@@ -117,6 +118,40 @@
       estado: function () { return estado; }
     };
   }
+
+  /* ---------- ver la clave ----------
+     El campo se envuelve en una caja para poner el botón encima, a la derecha. La caja copia el ancho que tenía el campo (a todo el ancho o al
+     de su texto), porque varias reglas de estilo apuntan al campo como hijo directo del formulario y dejarían de aplicarle. */
+  var OJO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path class="tachado" d="M4 4l16 16"/></svg>';
+  function conOjo(i) {
+    if (i.dataset.ojo || !i.parentElement || (i.closest && i.closest("#mp-brick-container"))) return;
+    i.dataset.ojo = "1";
+    var enfocado = document.activeElement === i, cs = getComputedStyle(i), padre = i.parentElement, ps = getComputedStyle(padre);
+    var libre = padre.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight);
+    var ancha = cs.display === "block" || (i.offsetWidth > 0 && i.offsetWidth >= libre - 4);
+    var caja = document.createElement("span"), b = document.createElement("button");
+    caja.className = "clave-caja" + (ancha ? " ancha" : "");
+    if (ancha && cs.maxWidth !== "none") caja.style.maxWidth = cs.maxWidth;
+    b.type = "button"; b.className = "clave-ojo"; b.innerHTML = OJO;
+    b.setAttribute("aria-label", "Mostrar la clave"); b.setAttribute("aria-pressed", "false");
+    padre.insertBefore(caja, i); caja.appendChild(i); caja.appendChild(b);
+    if (enfocado) i.focus();                             // mover el campo le quita el foco
+    b.addEventListener("click", function () {
+      var ver = i.type === "password";
+      i.type = ver ? "text" : "password"; b.classList.toggle("viendo", ver);
+      b.setAttribute("aria-pressed", ver ? "true" : "false"); b.setAttribute("aria-label", ver ? "Ocultar la clave" : "Mostrar la clave");
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("input[type=password]"), conOjo);
+  document.addEventListener("focusin", function (e) {    // campos que aparecen después (pantallas que cambian sin recargar)
+    if (e.target && e.target.tagName === "INPUT" && e.target.type === "password") conOjo(e.target);
+  });
+  document.addEventListener("submit", function (e) {     // nunca se envía ni se guarda en el navegador como texto a la vista
+    Array.prototype.forEach.call(e.target.querySelectorAll ? e.target.querySelectorAll(".clave-caja > input[type=text]") : [], function (i) {
+      i.type = "password"; var b = i.parentElement.querySelector(".clave-ojo");
+      if (b) { b.classList.remove("viendo"); b.setAttribute("aria-pressed", "false"); b.setAttribute("aria-label", "Mostrar la clave"); }
+    });
+  });
 
   /* ---------- errores de un formulario ---------- */
   var resumen = document.getElementById("resumen-errores");

@@ -47,6 +47,23 @@ def lineas_en_carrito(cliente):
     return CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto").count()
 
 
+def rangos_en_carrito(cliente):
+    """Nombres de los rangos de temperatura («Congelado», «Refrigerado») de lo que hay en el carrito abierto, en orden alfabético."""
+    return sorted(set(CarritoItem.objects.filter(carrito__cliente=cliente, carrito__estado="abierto")
+                      .values_list("producto__categoria__rango_temperatura__nombre", flat=True)))
+
+
+def aviso_de_rangos(rangos):
+    """Lo que el cliente debe saber cuando su compra lleva más de un rango (RN-09): se separa en un pedido por rango y pueden llegar
+    en camiones y a horas distintas. Texto vacío si lleva uno solo."""
+    if len(rangos) < 2:
+        return ""
+    nombres = [r.lower() + "s" for r in rangos]
+    lista = ", ".join(nombres[:-1]) + " y " + nombres[-1]
+    return (f"Tu compra lleva {lista}. Como viajan a temperaturas distintas, la separamos en {len(rangos)} pedidos: "
+            "pueden llegar en camiones distintos y a horas distintas.")
+
+
 def _validar_cantidad(cantidad):
     if cantidad < 1:
         raise ErrorDeNegocio("La cantidad debe ser al menos 1.")

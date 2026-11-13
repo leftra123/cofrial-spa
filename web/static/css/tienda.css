@@ -841,6 +841,8 @@ body:has(.asistente.abierto):has(.fab-carrito:not([hidden])) .toasts { bottom: m
 @keyframes as-latido { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
 .as-acciones { align-self: flex-start; }
 .as-accion { background: var(--lima); color: var(--lima-fg); border-color: var(--lima); padding: 8px 14px; font-size: .88rem; }
+a.as-accion { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--lima); border-radius: 10px; font-weight: 600; text-decoration: none; }
+.as-ticket { align-self: flex-start; font-size: .78rem; color: var(--texto-3); text-decoration: underline; margin: -2px 0 2px 4px; }
 .as-accion:hover { background: #CDEE63; border-color: #CDEE63; box-shadow: none; }
 .asistente-sug { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
 .asistente-sug[hidden] { display: none; }
@@ -1021,7 +1023,6 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 .det-compra { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px; padding: 20px; }
 .det-compra .btn, .det-compra .agregar { min-height: 52px; padding: 0 24px; }
 .det-garantias { margin-top: 20px; }
-.seccion-similares h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); letter-spacing: -.03em; }
 @media (max-width: 860px) { .det { grid-template-columns: 1fr; } .det dl { grid-template-columns: 130px 1fr; } }
 
 /* ---------- carrito y confirmación (dirección «Termómetro») ---------- */
@@ -1081,7 +1082,7 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 :root[data-tema="oscuro"] .camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde-fuerte) 60%, #2E5AA8 60%); } :root[data-tema="oscuro"] .camara.cong .cam-marca { background: linear-gradient(90deg, #2E5AA8 28%, var(--borde-fuerte) 28%); }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde-fuerte) 60%, #2E5AA8 60%); } :root:not([data-tema="claro"]) .camara.cong .cam-marca { background: linear-gradient(90deg, #2E5AA8 28%, var(--borde-fuerte) 28%); } }
 .cam-n { font-size: .82rem; color: var(--texto-3); }
-.camaras-nota { margin: 0 0 14px; font-size: .84rem; color: var(--texto-2); }
+.camaras-nota { margin: 0 0 14px; font-size: .88rem; color: var(--texto); }
 .grafico { position: relative; }
 .spark { height: 190px; }
 .spark-vacio { height: 190px; }
@@ -1445,6 +1446,125 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
   .legal-texto { padding: 18px; }
   .md-lista div { grid-template-columns: 1fr; gap: 0; }
   .aviso-cookies { flex-direction: column; align-items: stretch; }
+
+/* ---------- cantidad: compra mínima y tope de stock, junto al selector ---------- */
+.cant-nota { display: block; margin: 0; font-size: .8rem; color: var(--texto-3); }
+.cant-nota.tope { color: var(--pendiente-fg); font-weight: 600; }
+.det-compra .cant-nota { font-size: .88rem; color: var(--texto-2); }
+.det-compra .cant-nota.tope { color: var(--pendiente-fg); }
+
+/* ---------- ficha: relacionados en tarjetas compactas (foto chica a la izquierda) ----------
+   Van fuera de `.productos`, que en el catálogo agrupado es un bloque y dejaba cada tarjeta a todo el ancho con la foto cuadrada gigante. */
+.relacionados { margin-top: 40px; }
+.relacionados h2 { font-size: 1.25rem; letter-spacing: -.02em; margin: 0 0 14px; }
+.tira { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.tira .prod { flex-direction: row; }
+.tira .prod:hover { transform: none; }
+.tira .prod-img { flex: none; width: 108px; background: var(--fondo-2); }
+.tira .prod-img .foto, .tira .prod-img .ilus { width: 100%; height: 100%; min-height: 108px; object-fit: cover; padding: 0; }
+.tira .prod-img .foto.ia { object-fit: contain; padding: 8px; }
+:root[data-tema="oscuro"] .tira .prod-img { background: #E9EEF5; }      /* mismo fondo claro que las fotos del catálogo en modo oscuro */
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tira .prod-img { background: #E9EEF5; } }
+.tira .prod-badges, .tira .prod-sku, .tira .cant, .tira .cant-nota, .tira .aviso-stock, .tira .ayuda-ingreso { display: none; }
+.tira .prod-cuerpo { padding: 12px 14px; gap: 4px; min-width: 0; }
+.tira .prod-cuerpo h3 { font-size: .94rem; }
+.tira .prod-precio { font-size: 1.05rem; margin-top: 2px; padding-top: 0; }
+.tira .prod-comprar { min-height: 0; margin-top: 6px; }
+.tira .prod-comprar form { width: auto; }
+.tira .prod-comprar .btn, .tira .prod-comprar .agregar { flex: none; width: auto; padding: 8px 14px; font-size: .86rem; }
+@media (max-width: 640px) {
+  .tira { grid-template-columns: 1fr; }
+  .tira .prod-comprar .btn, .tira .prod-comprar .agregar { min-height: 44px; }
+}
+
+/* ---------- portada: mejor uso de la pantalla ----------
+   «Cómo desea comprar» era una franja de borde a borde, pero los contenedores de la página la recortan justo donde empieza el texto: el
+   primer bloque quedaba pegado al borde y el segundo no. Ahora es una tarjeta contenida, con el mismo margen en los dos bloques y el texto
+   usando el ancho de su columna. El encabezado baja de alto para que esos dos accesos se vean sin desplazarse en un notebook. */
+.portada-perfiles { margin: 20px 0 0; border: 1px solid var(--borde); border-radius: var(--radio); }
+.portada-perfiles .interior { max-width: none; padding: 0; }
+.perfil, .perfil + .perfil { padding: 28px; }
+.perfil p { max-width: 58ch; margin-bottom: 20px; }
+.perfil .acciones { gap: 10px; }
+@media (min-width: 861px) {
+  .portada-hero { min-height: clamp(360px, 38vw, 450px); }
+  .portada-hero .hero-txt { padding: clamp(32px, 4.4vw, 52px) clamp(24px, 5vw, 56px); }
+  .portada-hero h1 { font-size: clamp(2.1rem, 4.2vw, 3.1rem); max-width: 19ch; }
+  .portada-hero .baja { margin-bottom: 22px; }
+}
+@media (max-width: 860px) {
+  .portada-perfiles .interior { padding: 0; }
+  .perfil, .perfil + .perfil { padding: 24px 20px; }
+}
+
+}
+
+/* ---------- carrito en pasos: productos, 1 Entrega, 2 Documento a la izquierda; 3 Resumen y pago fijo a la derecha ---------- */
+.carro { grid-template-areas: "lineas resumen" "pasos resumen"; grid-template-rows: auto 1fr; align-items: start; row-gap: 20px; }
+.carro > .carro-lineas { grid-area: lineas; }
+.carro > .pasos-compra { grid-area: pasos; display: grid; gap: 16px; min-width: 0; }
+.carro > .resumen { grid-area: resumen; grid-row: 1 / span 2; padding: 22px; }
+.paso-carro { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.paso-carro h2, .resumen h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 1.05rem; letter-spacing: -.01em; }
+.paso-n { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--lima); color: var(--lima-fg); font-size: .82rem; font-weight: 750; }
+.pasos-compra label { display: block; margin: 0 0 4px; font-size: .86rem; color: var(--texto-2); font-weight: 600; }
+.pasos-compra select, .pasos-compra input:not([type=hidden]):not([type=radio]) { width: 100%; max-width: none; margin: 0; }
+.entrega-campos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 16px; align-items: start; }
+.entrega-campos .quien-recibe { margin: 0; gap: 0; }
+.entrega-campos .quien-recibe legend { font-size: .86rem; color: var(--texto-2); font-weight: 600; margin-bottom: 4px; float: left; width: 100%; }
+.recibe-fila { clear: both; display: grid; gap: 10px; }
+.entrega-campos .ayuda { grid-column: 1 / -1; margin: 8px 0 0; }
+.entrega-campos .quien-recibe .ayuda { margin-top: 6px; }
+.paso-carro .acc-doc { margin-top: 12px; }
+.paso-carro .acc-doc summary { padding: 6px 0; min-height: 32px; }
+.paso-carro .comprobante { margin: 0; }
+.paso-carro .comprobante-opciones { gap: 12px; }
+.paso-carro label.comprobante-opcion:not(#mp-brick-container label) { flex-direction: row; text-align: left; gap: 12px; padding: 12px 40px 12px 14px; margin: 0; font-size: .95rem; }
+.paso-carro .comprobante-opcion > .comprobante-nombre, .paso-carro .comprobante-opcion > .comprobante-nota { width: auto; }
+.paso-carro .comprobante-ico { margin: 0; flex: none; }
+.paso-carro .comprobante-opcion .comprobante-nombre::after { content: none; }
+.paso-carro .comprobante-opcion { flex-wrap: wrap; }
+.pasos-compra .comprobante-opcion input { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; margin: 0; opacity: 0; cursor: pointer; }
+.pasos-compra .comprobante-opcion input:focus { outline: none; }
+.pasos-compra .comprobante-opcion:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+.paso-carro .comprobante-detalle { margin: 10px 0 0; }
+.campo-oc { margin-top: 14px; }
+.campo-oc .ayuda { margin: 6px 0 0; }
+/* resumen: total, acciones y letra chica compactos */
+.resumen .camaras { margin-bottom: 4px; }
+.resumen dl { margin-bottom: 8px; }
+.resumen .acciones-pago { display: grid; gap: 8px; margin: 0; }
+.resumen .acciones-pago button.confirmar { margin: 6px 0 0; width: 100%; }
+.resumen .acciones-pago .generar-orden:not(#mp-brick-container button) { width: 100%; min-height: 48px; margin: 0; background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); box-shadow: none; }
+.resumen .acciones-pago .generar-orden:not(#mp-brick-container button):hover { background: var(--fondo-2); border-color: var(--texto-3); }
+.resumen .acciones-pago .ayuda { margin: 0; font-size: .8rem; }
+.resumen .seguro { margin-top: 12px; }
+.resumen .carrito-legal { margin: 8px 0 0; font-size: .76rem; }
+.mp-inline-error { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.4; color: var(--alerta-fg); background: var(--alerta-bg); border: 1px solid var(--alerta-borde); }
+.mp-inline-error--info { color: var(--texto); background: transparent; border-color: var(--borde-fuerte); }
+.mp-inline-error[hidden] { display: none !important; }
+/* línea de producto en una sola fila: foto · nombre · cantidad · total */
+.linea { grid-template-columns: 72px minmax(0, 1fr) auto auto; grid-template-areas: "img info form total"; gap: 8px 18px; padding: 14px 0; }
+.linea-img { grid-area: img; width: 72px; height: 72px; }
+.linea-info { grid-area: info; }
+.linea-form { grid-area: form; grid-column: auto; }
+.linea-total { grid-area: total; min-width: 5.5rem; font-size: 1.15rem; }
+.linea-form .btn-sec { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); padding: 0; border: 0; white-space: nowrap; }
+.linea-form .btn-sec:focus { position: static; width: auto; height: auto; clip-path: none; padding: 8px 12px; }
+@media (max-width: 1000px) { .entrega-campos { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .carro { grid-template-columns: minmax(0, 1fr); grid-template-areas: "lineas" "pasos" "resumen"; grid-template-rows: auto; }
+  .carro > .resumen { grid-row: auto; position: static; }
+  /* en celular la acción principal vive en la barra fija de abajo (.barra-orden); aquí el botón sigue en el resumen */
+  .resumen .total { font-size: 1.3rem; }
+}
+@media (max-width: 520px) {
+  .linea { grid-template-columns: 64px minmax(0, 1fr) auto; grid-template-areas: "img info info" "img form total"; }
+  .linea-img { width: 64px; height: 64px; }
+  .linea-total { grid-column: auto; text-align: right; }
+  .paso-carro { padding: 16px; }
+  .paso-carro .comprobante-opciones { grid-template-columns: 1fr; }
+  .resumen .acciones-pago { margin: 0 -20px; padding-inline: 20px; }
 }
 
 /* ---------- áreas táctiles de la cabecera y los filtros (el resto está en cofrial.css) ---------- */

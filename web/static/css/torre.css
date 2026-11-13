@@ -182,3 +182,17 @@
   .torre-fila { padding: 14px 14px 14px 18px; gap: 10px; }
   .torre-lado li { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- Detalle del camión elegido ---------- */
+.torre-lista-camiones { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; max-height: 190px; overflow: auto; }
+.torre-camion-btn { width: 100%; min-height: 44px; text-align: left; padding: 8px 12px; border: 1px solid var(--borde); border-radius: var(--radio-sm); background: var(--tarjeta); color: var(--texto); font: inherit; font-weight: 600; cursor: pointer; }
+.torre-camion-btn.activo { border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento); }
+.torre-detalle { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde); }
+.torre-detalle h3, .torre-detalle h4 { margin: 0 0 6px; }
+.torre-detalle h4 { margin-top: 12px; font-size: .9rem; color: var(--texto-2); }
+.torre-detalle-datos { margin: 0; display: grid; gap: 4px; }
+.torre-detalle-datos div { display: flex; justify-content: space-between; gap: 10px; }
+.torre-detalle-datos dt { color: var(--texto-2); }
+.torre-detalle-datos dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.torre-a-bordo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.torre-detalle-pie { margin: 12px 0; }

@@ -349,6 +349,17 @@ def alertas(request):
     return render(request, "crm/alertas.html", _contexto(request, ordenes=s.ordenes_afectadas(request.user)))
 
 
+@require_POST
+@con_rol(*COMERCIAL)
+def alerta_avisar(request, orden_id):
+    try:
+        s.avisar_alerta_frio(request.user, orden_id, request.POST.get("tipo", ""), request.POST.get("detalle", ""))
+        messages.success(request, "Aviso registrado en el historial del cliente.")
+    except ERRORES as e:
+        _avisar(request, e)
+    return redirect("crm_alertas")
+
+
 @con_rol(*TODOS)
 def demanda(request):
     """Productos que los clientes esperan (avisos de stock pendientes): oportunidad de venta y guía para reponer."""

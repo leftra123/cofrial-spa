@@ -71,6 +71,12 @@
       if (letras < 2 || /[^\p{L} .'’-]/u.test(n)) return "Escribe el nombre de quien recibe solo con letras (puedes usar espacios, punto, guion o apóstrofo).";
       return "";
     }
+    /* Boleta o factura: el público elige con un radio; la institución lleva el campo oculto con «factura». Leer solo el radio marcado
+       mostraba «Boleta» a una institución y el servidor rechazaba el pago («Las instituciones reciben factura después de la entrega»). */
+    function comprobanteElegido() {
+      var campo = document.querySelector('.checkout-mp input[name="comprobante"]:checked') || document.querySelector('.checkout-mp input[type="hidden"][name="comprobante"]');
+      return campo && campo.value === "factura" ? "factura" : "boleta";
+    }
     var errEl = document.getElementById("mp-brick-error");
     var estadoBox = document.getElementById("mp-modal-estado");
     var estadoTit = document.getElementById("mp-modal-estado-t");
@@ -358,7 +364,7 @@
           direccion: direccion.value,
           recibe: valorRecibe(),
           formData: formData,
-          comprobante: (document.querySelector('.checkout-mp input[name="comprobante"]:checked') || {}).value || "boleta",
+          comprobante: comprobanteElegido(),
           giro: (document.querySelector('.checkout-mp input[name="giro"]') || {}).value || "",
         }),
       })
@@ -465,6 +471,8 @@
 
     function cerrarModal() {
       if (cerrando) return;
+      /* En «Confirma tu compra» todavía no hay nada que perder: Esc o un clic fuera equivalen a «Cancelar compra». */
+      if (estadoBox && !estadoBox.hidden && estadoBox.classList.contains("mp-modal__estado--conf")) { volverAlCarritoDesdeModal(); return; }
       if (estadoBox && !estadoBox.hidden && estadoBox.classList.contains("mp-modal__estado--accion")) return;
       if (estadoBox && !estadoBox.hidden && estadoBox.classList.contains("mp-modal__estado--carga")) {
         mostrarDecision("off", "Pago en curso", "Si vuelves al carrito, revisa Mis pedidos por si el cargo se registró.", {
@@ -491,28 +499,15 @@
 
     function abrirPago() {
       if (!direccion || !direccion.value) {
-        var msg = "Elige una dirección de entrega antes de pagar.";
-        var inline = document.getElementById("mp-inline-error");
-        if (inline) {
-          inline.textContent = msg;
-          inline.hidden = false;
-        }
+        avisarCarrito("Elige una dirección de entrega antes de pagar.");
         direccion && direccion.focus();
         return;
       }
-      var inline = document.getElementById("mp-inline-error");
       var errNombre = errorRecibe();
       if (errNombre) {
-        if (inline) {
-          inline.textContent = errNombre;
-          inline.hidden = false;
-        }
+        avisarCarrito(errNombre);
         (recibeNuevo || recibeLista) && (recibeNuevo || recibeLista).focus();
         return;
-      }
-      if (inline) {
-        inline.hidden = true;
-        inline.textContent = "";
       }
       mostrarError("");
       avisarCarrito("");
@@ -521,7 +516,6 @@
       document.body.classList.add("mp-modal-abierto");
       mostrar.disabled = true;
       animarEntrada();
-      montarBrick();
       confirmarCompra();
     }
 
@@ -529,8 +523,7 @@
        «Cancelar compra» cierra sin cobrar y lo dice en el carrito, para que no se confunda con seguir. */
     function confirmarCompra() {
       var op = direccion.options[direccion.selectedIndex];
-      var marca = document.querySelector('.checkout-mp input[name="comprobante"]:checked');
-      var doc = marca && marca.value === "factura" ? "Factura" : "Boleta";
+      var doc = comprobanteElegido() === "factura" ? "Factura" : "Boleta";
       var total = "$" + Math.round(Number(cfg.amount)).toLocaleString("es-CL");
       var quien = valorRecibe();
       var subt = "Total " + total + " (IVA incluido) · " + doc + " · Entrega en " + (op ? op.text : "") + (quien ? " · Recibe " + quien : "") + ". Aún no se cobra nada.";
@@ -541,6 +534,7 @@
         neutro: true,
         onRetry: function () {
           ocultarEstado();
+          montarBrick();   // el formulario de tarjeta no existe hasta aquí: no queda enfocable detrás de la confirmación ni se inicializa si se cancela
           var cerrar = modal.querySelector(".mp-modal__cerrar");
           if (cerrar) cerrar.focus();
         },

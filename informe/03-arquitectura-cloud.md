@@ -107,6 +107,14 @@
 
 **Qué se cede y cómo se mitiga.** Los respaldos automáticos se eliminan junto con la instancia, salvo que se pida retenerlos, mientras que los snapshots manuales no se ven afectados (Amazon Web Services, s.f.); por eso se toma uno antes de cualquier borrado. Tampoco hay copia en otra región; en producción se agregaría una copia entre regiones.
 
+### 8. Endurecimiento (11 de noviembre de 2026)
+
+**Hecho en el código.** La aplicación envía una política de seguridad de contenido (CSP) en cada respuesta, marca las cookies de sesión como `HttpOnly` y `SameSite=Lax`, y como `Secure` cuando todo el tráfico llega por HTTPS; respeta `X-Forwarded-Proto` del balanceador y anuncia HSTS. Se agregó `/health`, que responde 200 solo si la aplicación alcanza la base de datos. Los contenedores tienen tope de memoria y CPU y rotación de registros.
+
+**Hecho en AWS el 12 de noviembre de 2026.** El sitio se publica en `https://www.cofrialspa.shop`, un dominio propio que apunta al balanceador. El certificado lo emite AWS Certificate Manager con validación por DNS y se renueva solo; el puerto 80 redirige al 443. Las EC2 web ya no aceptan tráfico directo de internet: solo el del balanceador. La base tiene protección contra borrado, respaldos automáticos de 7 días y copia de etiquetas en sus snapshots, además de ser Multi-AZ y privada. El balanceador descarta cabeceras HTTP mal formadas y hay ocho alarmas de CloudWatch (CPU de las tres EC2 y de la base, conexiones y espacio de la base, destinos no sanos y errores 5xx del balanceador). Cada comando se mostró antes de ejecutarlo con `aws/endurecer.sh`.
+
+**Preparado y sin aplicar en AWS.** El chequeo del balanceador sobre `/health`, las cookies `Secure` con HSTS y los topes de los contenedores esperan que las EC2 reciban el código nuevo; la copia de las claves en Parameter Store tampoco se aplicó. El cifrado en reposo de la base no está activo y exige restaurarla desde una copia cifrada.
+
 ### Limitaciones declaradas del prototipo
 
 **Tabla 2**
@@ -115,7 +123,7 @@
 | Limitación | Causa | Mitigación en el prototipo | En producción |
 |---|---|---|---|
 | Disponibilidad limitada a una región | El laboratorio solo ofrece us-east-1 y us-west-2 | Dos zonas: ALB, dos web y RDS Multi-AZ | Réplica o copia entre regiones y DNS con conmutación |
-| Tráfico sin cifrar | Sin dominio no hay certificado | Datos ficticios y declararlo en la defensa | Dominio, certificado y HTTPS |
+| Cookies `Secure` y HSTS aún sin activar | Llegan con el próximo despliegue de las web | Todo el tráfico entra por el balanceador, que redirige a HTTPS con certificado de ACM | HSTS de un año y cookies `Secure` siempre |
 | Permisos amplios | Solo se puede usar `LabRole` | Security Groups estrictos | Un rol por servicio con permisos mínimos |
 | Nodo IoT en subred pública | Sin NAT para ahorrar créditos | `sg-iot` sin entradas | Subred privada con salida controlada |
 | Telemetría y pedidos en la misma base | Una sola instancia RDS | Índices y retención de datos | Base de series de tiempo separada |

@@ -137,6 +137,7 @@ ESPERADO = {
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/salud/bd/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
+    '/health': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),          # chequeo del balanceador: igual que /salud/bd/
     '/admin/': ('L L L L L L L', 'L L L L L L L'),       # el administrador de empresa no entra a /admin/ de Django
 }
 

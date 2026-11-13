@@ -87,7 +87,7 @@ Cuatro commits chicos en esta rama. Las correcciones de JavaScript y de plantill
 | A-05 | Al recuperar la clave, el error «demasiado común» sale bajo el campo de confirmación | Muy baja | Solo la etiqueta |
 | A-06 | Dos clics seguidos en «Agregar» del mismo producto suman una unidad: el botón se bloquea mientras llega la respuesta | Decisión | Evita duplicar con el doble clic. Quien quiera dos usa el selector de cantidad |
 | A-07 | «Llega entre 23:40 y 00:00» con salida a las 23:45 | Solo con la demo rápida | La ventana de llegada se calcula con la velocidad de la web (50 km/h) y el simulador va a 120. No pasa con `VELOCIDAD_MEDIA_KMH=50` |
-| A-08 | La consola del navegador registra un 404 de `/api/pedidos/N/ruta/` en pedidos ya entregados | Muy baja | La pantalla explica «El mapa en vivo ya no está disponible» |
+| A-08 | La consola del navegador registra un 404 de `/api/pedidos/N/ruta/` en pedidos ya entregados | Resuelto (LLE-01) | El pedido cerrado no monta el mapa ni pide la ruta |
 | A-09 | El botón «Precargar datos de ejemplo» pone siempre la misma clave, que está escrita en `web/static/js/precarga.js` (público) | Decisión documentada (`docs/decisiones.md`) | Quien se registre así tiene una clave conocida. `REGISTRO_PRECARGA=0` lo oculta; conviene apagarlo si el sitio queda abierto después de la defensa |
 
 ## Suite

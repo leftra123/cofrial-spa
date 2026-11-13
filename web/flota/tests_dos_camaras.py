@@ -207,3 +207,14 @@ class FallaPorCamaraTests(Base):
         self.lectura(d.camion, 2, -21.0, False)
         Orden.objects.filter(pk=o["Refrigerado"].pk).update(despacho=None)
         self.assertEqual(torre.pedido_trazado()["temp_camara"], -21.0)
+
+
+class MapaDelPanelTests(Base):
+    def test_el_mapa_recibe_la_temperatura_de_las_dos_camaras(self):
+        camion = Camion.objects.filter(rango_secundario__isnull=False).first()
+        self.lectura(camion, 1, 2.0, False)
+        self.lectura(camion, 2, -12.0, True)
+        self.assertTrue(self.client.login(username="admin@cofrial.cl", password=CLAVE))
+        fila = next(c for c in self.client.get("/flota/").context["mapa"]["camiones"] if c["id"] == camion.camion_id)
+        self.assertEqual(fila["temps"], [2.0, -12.0])
+        self.assertEqual(fila["temp"], -12.0)            # la cámara en alerta es la que manda en el resto de la página

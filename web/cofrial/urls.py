@@ -22,7 +22,9 @@ def salud(request):
 
 
 def salud_bd(request):
-    """Además de estar viva, la aplicación alcanza la base de datos (503 si no). Para ver la caída controlada sin abrir una pantalla."""
+    """Además de estar viva, la aplicación alcanza la base de datos (503 si no). Para ver la caída controlada sin abrir una pantalla.
+    Es también el chequeo del balanceador (/health): una web que perdió la base sale de rotación. Si la base cae para las dos web a la vez
+    (conmutación de RDS), el ALB no tiene a quién preferir y sigue repartiendo entre ambas, que responden el 503 propio hasta que vuelve."""
     from django.db import DatabaseError
     try:
         with connection.cursor() as c:
@@ -70,5 +72,6 @@ urlpatterns = [
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
     path("salud/", salud),
     path("salud/bd/", salud_bd),
+    path("health", salud_bd),            # nombre convencional para el chequeo del ALB; sin barra final, tal como lo pide el balanceador
     path(settings.ADMIN_URL, admin.site.urls),
 ]

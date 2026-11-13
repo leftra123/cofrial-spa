@@ -2,7 +2,8 @@
 
    API (las coordenadas siempre son [lat, lon]; el zoom es el de MapLibre, uno menos que Leaflet para la misma escala):
 
-   var m = CofrialMapa.crear("id-del-div", [lat, lon], zoom, {inclinable: false, inclinacion: 0, rumbo: 0, pixelRatioMax: 2});
+   var m = CofrialMapa.crear("id-del-div", [lat, lon], zoom, {inclinable: false, inclinacion: 0, rumbo: 0, pixelRatioMax: 2, ruedaConPagina: false});
+     ruedaConPagina: quien viene bajando por la página sigue bajando aunque el cursor pase sobre el mapa; la rueda hace zoom recién tras una pausa o si empezó sobre el mapa.
      m.nativo               el maplibregl.Map, para lo que esta API no cubra (null si no hay WebGL)
      m.disponible           false si el navegador no puede dibujar el mapa: todo sigue respondiendo sin efecto y el div muestra el aviso .mapa-vacio
      m.contenedor           el div del mapa
@@ -15,6 +16,7 @@
      m.al("estilo", fn)     ahora si ya hay estilo y cada vez que cambia: las capas propias se agregan aquí, porque cambiar de estilo las borra
      m.al(evento, fn)       cualquier otro evento de maplibregl.Map (moveend, zoomend…)
      m.ordenarCamiones()    pide volver a repartir los camiones
+     m.enPantalla(pos, margen = 0)   true si el punto cae dentro del mapa visible, con un margen en píxeles
 
    Dibujo: m tiene estos métodos, y m.grupo({zoomMin, zoomMax}) entrega un conjunto con los mismos para borrarlo u ocultarlo de una vez (g.limpiar(), g.mostrar(bool)).
    Con zoomMin / zoomMax el grupo solo se ve en ese rango: así el detalle aparece al acercar con la rueda.
@@ -24,10 +26,12 @@
      m.parada(pos, numero, color, {titulo, popup})
      m.destino(pos, {titulo, popup})
      m.base(pos, {titulo, popup, etiqueta})
-     m.puntos([{pos, numero, color, radio, offset: [x, y], popup}], {color, radio, zoomMin, zoomMax})   capa del mapa, no DOM; offset en píxeles, igual con cualquier zoom
+     m.puntos([{pos, numero, forma, color, radio, offset: [x, y], popup}], {color, radio, zoomMin, zoomMax})   capa del mapa, no DOM; offset en píxeles, igual con cualquier zoom
+     m.etiquetas([{pos, texto, offset, grupo}], {zoomMin, zoomMax})             texto en una capa (dibujado en un canvas, nunca como HTML); las que chocan se ocultan
      m.marcador(pos, {html, clase, ancho, alto, ancla, altoPopup, offset, titulo, popup})
      m.ruta(linea, {color, ancho, aproximada, flujo, gradiente: [desde, hasta], zoomMin, zoomMax})
-     m.recorridos({base: [lat, lon], alElegir: fn(viaje, tramo)})               ida y vuelta de uno o varios viajes, en capas compartidas
+     m.recorridos({base: [lat, lon], alElegir: fn(viaje, tramo), marcasDesde, flechasDesde})   ida y vuelta de uno o varios viajes, en capas compartidas;
+                            marcasDesde y flechasDesde: zoom desde el que salen las marcas S y R de la base y las flechas (por defecto, siempre)
    popup acepta un texto, una lista de textos (una línea cada uno, siempre como texto plano) o un nodo del DOM.
 
    Cada marcador responde a: .mover(pos) .animarA(pos, ms = 4600) .latlon() .popup(contenido) .etiqueta(texto) .desplazar([x, y]) .quitar()
@@ -35,7 +39,8 @@
    Cada ruta responde a: .actualizar(linea, {aproximada}) .quitar() .mostrar(bool). Se dibuja con un halo difuso y una línea central,
    punteada si es aproximada. flujo agrega una línea que avanza; es opcional porque obliga a redibujar el mapa unas 8 veces por segundo mientras
    esté en pantalla, y se detiene con la pestaña oculta, con el mapa fuera de la vista y con prefers-reduced-motion.
-   m.puntos responde a: .actualizar(lista) .enfocar(grupo) .quitar() .mostrar(bool). Cada punto puede llevar borde (color del aro) y grupo (a quién pertenece).
+   m.puntos responde a: .actualizar(lista) .enfocar(grupo) .quitar() .mostrar(bool). Cada punto puede llevar borde (color del aro), grupo (a quién pertenece) y forma (el dibujo interior de un estado).
+   m.etiquetas responde a lo mismo.
    m.recorridos responde a: .poner([{id, ruta, fase} o {id, ida, vuelta, aproximada}]) .ver("ida" | "vuelta", bool) .enfocar(id) .fase(id, "ida" | "vuelta") .sacar(id) .quitar().
    Ida: línea continua azul. Vuelta: línea a trazos ámbar. Ambas con flechas y corridas a la derecha de su sentido, para que se lean aunque usen la misma calle.
    Es un par apto para daltonismo y no depende solo del color. Una ruta aproximada va a puntos. Con varios camiones, .enfocar atenúa los demás viajes.
@@ -43,6 +48,8 @@
 
    Sueltas, sin mapa: CofrialMapa.pin / camion / destino / base entregan {html, clase, ancho, alto, …} (las leyendas usan .html); CofrialMapa.PALETA,
    CofrialMapa.COLOR_RUTA, COLOR_IDA y COLOR_VUELTA son los colores para fondo de noche; ruta, rutaGuardada y texto no dependen del mapa.
+   CofrialMapa.NIVELES da el zoom de cada nivel de detalle {ciudad, calle}. CofrialMapa.ESTADOS son los estados de un camión {color, borde, forma, texto}; estadoDe(situacion, alerta, sinSenal) elige uno, puntoEstado(pos, estado, {radio, grupo, popup}) arma su punto
+   para m.puntos y estadoSVG(estado) su muestra para leyendas. puntoParada(m, pos, numero, total, {grupo, offset, popup}) es la parada numerada, igual en todos los mapas.
    filaParada y popupTexto arman filas y popups con datos del cliente como texto, nunca como HTML.
 
    Respaldo: el mapa parte con un estilo local (fondo azul noche, sin pedir nada a la red) y cambia al de OpenFreeMap cuando llega. Si no llega, se queda
@@ -64,6 +71,37 @@ window.CofrialMapa = (function () {
   /* Azul y ámbar: se distinguen con los tres tipos de daltonismo y tienen contraste alto sobre el azul noche. El rojo queda para las alertas. */
   var COLOR_IDA = "#56B4E9", COLOR_VUELTA = "#FFB000", COLOR_RUTA = COLOR_IDA;
   var PALETA = [COLOR_IDA, "#BDE63A", "#C084FC", "#FB923C"];
+  /* Estados de un camión: mismo azul y ámbar que la ida y la vuelta, lima de la marca, y rojo solo para la ruptura de frío. La forma interior dice lo mismo que el color. */
+  var ESTADOS = {
+    en_ruta: {color: COLOR_IDA, forma: "ida", texto: "En ruta"},
+    en_la_puerta: {color: PALETA[1], forma: "puerta", texto: "En la puerta del cliente"},
+    volviendo: {color: COLOR_VUELTA, forma: "vuelta", texto: "Volviendo a la base"},
+    en_base: {color: "#94A3B8", forma: "base", texto: "En base"},
+    alerta: {color: "#FF6B6B", forma: "alerta", texto: "Ruptura de frío"},
+    sin_senal: {color: "#0B1A33", borde: "#CBD5E1", forma: "sin_senal", tinta: "#CBD5E1", texto: "Sin señal"}
+  };
+  /* Dibujo interior de cada estado, en un cuadro de 24 con el círculo de radio 10 al centro. Lo comparten el punto del mapa (canvas) y la leyenda (SVG). */
+  var FORMAS = {
+    ida: "M9 6.5 18 12 9 17.5z",
+    vuelta: "M15 6.5 6 12 15 17.5z",
+    puerta: "M7.5 7.5h9v9h-9z",
+    base: "M12 5.5 19 12h-2.2v6.5H7.2V12H5z",
+    alerta: "M10.4 4.5h3.2v9.5h-3.2zM10.4 16h3.2v3.4h-3.2z",
+    sin_senal: "M16.8 5.4l1.8 1.8L7.2 18.6l-1.8-1.8z"
+  };
+  /* Desde qué zoom se ve cada nivel de detalle en los mapas de la operación: la ciudad de Temuco entera cabe desde 11, y una cuadra se distingue desde 14,5. */
+  var NIVELES = {ciudad: 11, calle: 14.5};
+  function estadoDe(situacion, alerta, sinSenal) { return alerta ? "alerta" : sinSenal ? "sin_senal" : ESTADOS[situacion] ? situacion : "en_ruta"; }
+  function puntoEstado(pos, estado, op) {
+    op = op || {};
+    var e = ESTADOS[estado] || ESTADOS.en_ruta;
+    return {pos: pos, color: e.color, borde: e.borde, forma: e.forma, radio: op.radio || (estado === "alerta" ? 11 : 8), grupo: op.grupo, popup: op.popup, offset: op.offset};
+  }
+  function estadoSVG(estado) {
+    var e = ESTADOS[estado] || ESTADOS.en_ruta;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="' + e.color + '" stroke="' + (e.borde || "#FFFFFF") + '" stroke-width="1.5"/><path d="' + FORMAS[e.forma] + '" fill="' + (e.tinta || NOCHE.tierra) + '"/></svg>';
+  }
+
   var NOCHE = {tierra: "#0B1A33", residencial: "#0E2040", verde: "#0D2632", agua: "#123052", edificio: "#10223F", edificioBorde: "#152C4B",
                calle: "#172D4C", avenida: "#1E3A60", avenidaBorde: "#264873", autopista: "#284A78", autopistaBorde: "#335A8E", linea: "#1E3A60",
                etiqueta: "#B4C6DF", etiquetaCalle: "#8BA3C4", etiquetaAgua: "#6E9CCB", halo: "#0B1A33"};
@@ -226,6 +264,7 @@ window.CofrialMapa = (function () {
   Marcador.prototype.dibujar = function (pos) {
     this.dibujada = pos;
     if (this.mk) this.mk.setLngLat(lngLat(pos));
+    if (this.alDeslizar) this.alDeslizar(pos);
   };
   Marcador.prototype.mover = function (pos) {
     this.anim = null; this.pos = pos.slice();
@@ -366,14 +405,21 @@ window.CofrialMapa = (function () {
 
   /* ---------- puntos en capa ---------- */
   /* El círculo se dibuja en un canvas y entra al mapa como imagen: el número no depende de las fuentes de OpenFreeMap, así que también sale en el respaldo local. */
-  function iconoPunto(n, color, radio, numero, borde) {
-    var nombre = "cofrial-punto-" + color + "-" + radio + "-" + (numero == null ? "" : numero) + "-" + (borde || "");
+  function iconoPunto(n, color, radio, numero, borde, forma) {
+    var nombre = "cofrial-punto-" + color + "-" + radio + "-" + (numero == null ? "" : numero) + "-" + (borde || "") + "-" + (forma || "");
     if (n.hasImage(nombre)) return nombre;
     var escala = 2, lado = (radio * 2 + 4) * escala, lienzo = document.createElement("canvas"), c = lienzo.getContext("2d");
     lienzo.width = lienzo.height = lado;
     c.beginPath(); c.arc(lado / 2, lado / 2, radio * escala, 0, Math.PI * 2);
     c.fillStyle = color; c.fill();
-    c.lineWidth = (borde ? 3 : numero == null ? 1 : 2) * escala; c.strokeStyle = borde || "#FFFFFF"; c.stroke();
+    c.lineWidth = (forma ? 1.5 : borde ? 3 : numero == null ? 1 : 2) * escala; c.strokeStyle = borde || "#FFFFFF"; c.stroke();
+    if (forma) {
+      c.save();
+      c.translate(lado / 2, lado / 2); c.scale(radio * escala / 10, radio * escala / 10); c.translate(-12, -12);
+      c.fillStyle = forma === "sin_senal" ? ESTADOS.sin_senal.tinta : NOCHE.tierra;
+      c.fill(new Path2D(FORMAS[forma]));
+      c.restore();
+    }
     if (numero != null) {
       c.fillStyle = NOCHE.tierra; c.font = "700 " + Math.round(radio * escala) + "px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
       c.fillText(String(numero), lado / 2, lado / 2 + escala / 2);
@@ -393,7 +439,7 @@ window.CofrialMapa = (function () {
   Puntos.prototype.datos = function () {
     var n = this.mapa.nativo, yo = this;
     return {type: "FeatureCollection", features: this.lista.map(function (p, i) {
-      return {type: "Feature", properties: {i: i, img: iconoPunto(n, p.color || yo.color, yo.radioDe(p), p.numero, p.borde), off: p.offset || [0, 0], grupo: p.grupo == null ? "" : String(p.grupo)},
+      return {type: "Feature", properties: {i: i, img: iconoPunto(n, p.color || yo.color, yo.radioDe(p), p.numero, p.borde, p.forma), off: p.offset || [0, 0], grupo: p.grupo == null ? "" : String(p.grupo)},
               geometry: {type: "Point", coordinates: lngLat(p.pos)}};
     })};
   };
@@ -442,6 +488,44 @@ window.CofrialMapa = (function () {
     return this;
   };
 
+  /* ---------- etiquetas en capa ---------- */
+  /* Texto dibujado en un canvas: no depende de las fuentes de OpenFreeMap, así que también sale en el respaldo local, y un nombre escrito por un cliente nunca se interpreta como HTML. */
+  var LARGO_ETIQUETA = 28;
+  function iconoEtiqueta(n, texto) {
+    var nombre = "cofrial-etq-" + texto;
+    if (n.hasImage(nombre)) return nombre;
+    var escala = 2, alto = 20 * escala, relleno = 7 * escala, lienzo = document.createElement("canvas"), c = lienzo.getContext("2d"), fuente = "600 " + 12 * escala + "px system-ui, sans-serif";
+    c.font = fuente;
+    lienzo.width = Math.ceil(c.measureText(texto).width) + relleno * 2; lienzo.height = alto;
+    c = lienzo.getContext("2d");                                               // cambiar el tamaño del lienzo reinicia el contexto
+    c.font = fuente; c.textBaseline = "middle";
+    c.beginPath(); if (c.roundRect) c.roundRect(escala, escala, lienzo.width - 2 * escala, alto - 2 * escala, 6 * escala); else c.rect(escala, escala, lienzo.width - 2 * escala, alto - 2 * escala);
+    c.fillStyle = "rgba(11, 26, 51, .92)"; c.fill();
+    c.lineWidth = escala; c.strokeStyle = "rgba(255, 255, 255, .28)"; c.stroke();
+    c.fillStyle = "#E7EFFA"; c.fillText(texto, relleno, alto / 2 + escala / 2);
+    n.addImage(nombre, c.getImageData(0, 0, lienzo.width, alto), {pixelRatio: escala});
+    return nombre;
+  }
+  function Etiquetas(grupo, lista, op) { Puntos.call(this, grupo, lista, op); }
+  Etiquetas.prototype = Object.create(Puntos.prototype);
+  Etiquetas.prototype.datos = function () {
+    var n = this.mapa.nativo;
+    return {type: "FeatureCollection", features: this.lista.map(function (p, i) {
+      var t = String(p.texto == null ? "" : p.texto);
+      if (t.length > LARGO_ETIQUETA) t = t.slice(0, LARGO_ETIQUETA - 1).trim() + "…";
+      return {type: "Feature", properties: {i: i, img: iconoEtiqueta(n, t), off: p.offset || [0, 0], grupo: p.grupo == null ? "" : String(p.grupo)}, geometry: {type: "Point", coordinates: lngLat(p.pos)}};
+    })};
+  };
+  Etiquetas.prototype.pintar = function () {
+    var n = this.mapa.nativo;
+    if (!n || !this.mapa.estiloListo || n.getSource(this.id)) return;
+    n.addSource(this.id, {type: "geojson", data: this.datos()});
+    n.addLayer(Object.assign({id: this.id, type: "symbol", source: this.id, layout: {
+      visibility: this.visible ? "visible" : "none", "icon-image": ["get", "img"], "icon-anchor": "left", "icon-offset": ["get", "off"],
+      "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport"}, paint: {"icon-opacity": this.opacidad()}}, rangoZoom(this)));
+  };
+  Etiquetas.prototype.enPixel = function () { return null; };                  // el toque es de la parada, no de su nombre
+
   /* ---------- ida y vuelta ---------- */
   /* La ruta guardada es una sola línea base -> paradas -> base. La ida termina en la última parada; desde ahí es la vuelta. */
   function partirRuta(r) {
@@ -482,7 +566,9 @@ window.CofrialMapa = (function () {
     this.ver_ = {ida: true, vuelta: true}; this.visible = grupo.activo(); this.alElegir = op.alElegir || null; this.base = op.base || null;
     grupo.items.push(this);
     this.mapa.rutas.push(this);
-    this.marcas = this.base ? {ida: grupo.puntos([]), vuelta: grupo.puntos([])} : null;      // después de las líneas, para quedar sobre ellas
+    this.flechasDesde = op.flechasDesde;
+    var rangoMarcas = op.marcasDesde == null ? {} : {zoomMin: op.marcasDesde};
+    this.marcas = this.base ? {ida: grupo.puntos([], rangoMarcas), vuelta: grupo.puntos([], rangoMarcas)} : null;      // después de las líneas, para quedar sobre ellas
     this.pintar();
     if (this.alElegir && this.mapa.nativo) this.escuchar();
   }
@@ -513,7 +599,7 @@ window.CofrialMapa = (function () {
       n.addLayer({id: id + "-centro", type: "line", source: id, filter: ["==", ["get", "aprox"], false], layout: {visibility: ver, "line-cap": esVuelta ? "butt" : "round", "line-join": "round"}, paint: centro}, antes);
       n.addLayer({id: id + "-aprox", type: "line", source: id, filter: ["==", ["get", "aprox"], true], layout: {visibility: ver, "line-cap": "round", "line-join": "round"},
                   paint: {"line-color": color, "line-width": ANCHO_LINEA, "line-offset": DESPLAZA, "line-opacity": yo.opacidad(1, .45), "line-dasharray": [.1, 2]}}, antes);
-      n.addLayer({id: id + "-flechas", type: "symbol", source: id, layout: {visibility: ver, "symbol-placement": "line", "symbol-spacing": 90, "icon-image": iconoFlecha(n, t, color), "icon-offset": DESPLAZA_FLECHA,
+      n.addLayer({id: id + "-flechas", type: "symbol", source: id, minzoom: yo.flechasDesde == null ? 0 : yo.flechasDesde, layout: {visibility: ver, "symbol-placement": "line", "symbol-spacing": 90, "icon-image": iconoFlecha(n, t, color), "icon-offset": DESPLAZA_FLECHA,
                   "icon-rotation-alignment": "map", "icon-pitch-alignment": "map", "icon-allow-overlap": true, "icon-ignore-placement": true}, paint: {"icon-opacity": yo.opacidad(1, .45)}}, antes);
     });
   };
@@ -614,6 +700,7 @@ window.CofrialMapa = (function () {
   Grupo.prototype.destino = function (pos, op) { return new Marcador(this, pos, destino(), op); };
   Grupo.prototype.base = function (pos, op) { return new Marcador(this, pos, base(op && op.etiqueta), op); };
   Grupo.prototype.puntos = function (lista, op) { return new Puntos(this, lista, op); };
+  Grupo.prototype.etiquetas = function (lista, op) { return new Etiquetas(this, lista, op); };
   Grupo.prototype.ruta = function (linea, op) { return new Ruta(this, linea, op); };
   Grupo.prototype.recorridos = function (op) { return new Recorridos(this, op); };
   Grupo.prototype.limpiar = function () {
@@ -648,6 +735,7 @@ window.CofrialMapa = (function () {
     if (!this.nativo) { this.avisoSinMapa(); return; }
     this.disponible = true;
     this.preparar(!!op.inclinable);
+    if (op.ruedaConPagina) this.cuidarRueda();
   }
   Mapa.prototype.avisoSinMapa = function () {
     this.contenedor.setAttribute("data-mapa-base", "ninguno");
@@ -690,6 +778,14 @@ window.CofrialMapa = (function () {
       yo.marcarBase("openfreemap");
     }, function () { yo.avisoBase(true); });
   };
+  /* La rueda sobre el mapa hace zoom; fuera de él, baja la página. Sin esto, quien baja por la página queda atrapado al pasar el cursor sobre el mapa:
+     mientras la página venga moviéndose, el mapa no recibe la rueda y la página sigue. Tras una pausa breve, la rueda vuelve a ser del mapa. */
+  Mapa.prototype.cuidarRueda = function () {
+    var c = this.contenedor, ultima = -1e9, PAUSA_MS = 350;
+    this.nativo.scrollZoom.setWheelZoomRate(1 / 90);                           // MapLibre avanza muy poco por muesca: de la región a la calle serían más de 50
+    window.addEventListener("wheel", function (e) { if (!c.contains(e.target)) ultima = e.timeStamp; }, {passive: true, capture: true});
+    c.addEventListener("wheel", function (e) { if (e.timeStamp - ultima < PAUSA_MS) { ultima = e.timeStamp; e.stopPropagation(); } }, {passive: true, capture: true});
+  };
   Mapa.prototype.marcarBase = function (nombre) {
     this.baseActual = nombre;
     this.contenedor.setAttribute("data-mapa-base", nombre);
@@ -717,6 +813,11 @@ window.CofrialMapa = (function () {
     return null;
   };
   Mapa.prototype.zoom = function () { return this.nativo ? this.nativo.getZoom() : null; };
+  Mapa.prototype.enPantalla = function (pos, margen) {
+    if (!this.nativo) return false;
+    var p = this.nativo.project(lngLat(pos)), lienzo = this.nativo.getContainer(), g = margen || 0;
+    return p.x >= -g && p.y >= -g && p.x <= lienzo.clientWidth + g && p.y <= lienzo.clientHeight + g;
+  };
   Mapa.prototype.grupo = function (op) { return new Grupo(this, op); };
   /* Solo actúa al cruzar un límite: durante el zoom no se toca nada del DOM. */
   Mapa.prototype.revisarZoom = function () {
@@ -815,10 +916,15 @@ window.CofrialMapa = (function () {
     });
     this.oyentes.camiones.forEach(function (fn) { fn(); });
   };
-  ["marcador", "camion", "parada", "destino", "base", "puntos", "ruta", "recorridos"].forEach(function (nombre) {
+  ["marcador", "camion", "parada", "destino", "base", "puntos", "etiquetas", "ruta", "recorridos"].forEach(function (nombre) {
     Mapa.prototype[nombre] = function () { return this.raiz[nombre].apply(this.raiz, arguments); };
   });
 
+  /* Parada numerada de un recorrido: azul de la ida, y con aro ámbar la última, desde donde el camión vuelve. Más chica en una pantalla angosta. */
+  function puntoParada(m, pos, numero, total, op) {
+    op = op || {};
+    return {pos: pos, numero: numero, color: COLOR_IDA, borde: numero === total ? COLOR_VUELTA : null, radio: m.contenedor.clientWidth < 500 ? 11 : 14, grupo: op.grupo, offset: op.offset, popup: op.popup};
+  }
 
   function crear(id, centro, zoom, opciones) { return new Mapa(id, centro, zoom, opciones); }
 
@@ -876,5 +982,6 @@ window.CofrialMapa = (function () {
   }
 
   return {crear: crear, pin: pin, camion: camion, destino: destino, base: base, ruta: ruta, rutaGuardada: rutaGuardada, texto: texto, PALETA: PALETA, COLOR_RUTA: COLOR_RUTA, COLOR_IDA: COLOR_IDA, COLOR_VUELTA: COLOR_VUELTA,
-          partirRuta: partirRuta, largoKm: largoKm, filaParada: filaParada, popupTexto: popupTexto};
+          partirRuta: partirRuta, largoKm: largoKm, filaParada: filaParada, popupTexto: popupTexto,
+          NIVELES: NIVELES, ESTADOS: ESTADOS, estadoDe: estadoDe, puntoEstado: puntoEstado, estadoSVG: estadoSVG, puntoParada: puntoParada};
 })();

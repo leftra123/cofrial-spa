@@ -65,36 +65,57 @@
      Con «algo falló» indica por producto cuántas unidades rechaza y por qué (RN-23): lo aceptado queda entregado y el aviso llega a ventas como reclamo
      (lo crea el servidor); si rechaza todo, el botón y el resumen lo dicen antes de enviar. Misma lógica para la página y el diálogo. */
   function ligarRevision(form, ordenId, alEmpezar, alTerminar) {
-    var radios = form.querySelectorAll("input[name=resultado]"), falla = form.querySelector(".revision-falla"), area = form.querySelector("textarea"),
-        tipo = form.querySelector("select[name=tipo_problema]"), err = form.querySelector(".entrega-error"), boton = form.querySelector("button:not([type=button])"),
-        filas = Array.prototype.slice.call(form.querySelectorAll(".revision-linea")), caja = form.querySelector(".revision-tipo"), resumen = form.querySelector(".revision-resumen"),
-        textoBoton = boton.textContent;
+    var radios = form.querySelectorAll("input[name=resultado]"), falla = form.querySelector(".revision-falla"), area = falla.querySelector("textarea"),
+        tipo = form.querySelector("select[name=tipo_problema]"), err = form.querySelector(".entrega-error"), boton = form.querySelector('button[value="aceptar"]'),
+        botonNo = form.querySelector('button[value="no_recibido"]'), bloqueNo = form.querySelector(".revision-no"), motivoNo = bloqueNo ? bloqueNo.querySelector("textarea") : null,
+        filas = Array.prototype.slice.call(form.querySelectorAll(".revision-linea")), caja = form.querySelector(".revision-tipo"), resumen = form.querySelector(".revision-resumen");
     form.noValidate = true;       // con JavaScript valida este código: el navegador se trabaría en silencio con un número inválido en el bloque ya oculto
+    if (motivoNo) contadorDe(motivoNo, bloqueNo.querySelector(".entrega-cuenta-car"));
     function pedidas(f) { return parseInt(f.dataset.cantidad, 10); }
     function campo(f) { return f.querySelector("input"); }
     function selector(f) { return f.querySelector("select"); }
     function numero(f) { var v = campo(f).value.trim(); return /^[0-9]+$/.test(v) ? parseInt(v, 10) : (v === "" ? 0 : -1); }   // -1: no es un número válido; el servidor también lo revisa
+    function eligio() { var r = form.querySelector("input[name=resultado]:checked"); return r ? r.value : ""; }
     function pintarLineas() {
-      var total = 0, rechazadas = 0;
+      var total = 0, rechazadas = 0, r = eligio();
       filas.forEach(function (f) { var n = numero(f); total += pedidas(f); rechazadas += Math.max(n, 0); f.querySelector(".revision-linea-motivo").hidden = n < 1; });
       caja.hidden = rechazadas > 0;
       var todo = rechazadas > 0 && rechazadas >= total;
       resumen.textContent = !rechazadas ? "" : todo ? "Rechazas todo el pedido: no recibes ningún producto y queda «Rechazada en recepción»." : "Recibes " + (total - rechazadas) + " de " + total + " unidades y rechazas " + rechazadas + ".";
       resumen.classList.toggle("todo", todo);
-      if (!boton.disabled) boton.textContent = eligio() !== "falla" || !rechazadas ? textoBoton : todo ? "Rechazar todo el pedido" : "Recibir solo lo aceptado";
+      if (boton && !boton.disabled) boton.textContent = r === "no" ? "No recibiré mi pedido" : r !== "falla" ? "Recibí mi pedido" : !rechazadas ? "Avisar que algo falló" : todo ? "Rechazar todo el pedido" : "Recibir solo lo aceptado";
+      if (botonNo) botonNo.hidden = r === "no";          // el botón principal ya dice lo mismo: no se repite
     }
-    function eligio() { var r = form.querySelector("input[name=resultado]:checked"); return r ? r.value : ""; }
-    function mostrar() { var f = eligio() === "falla"; falla.hidden = !f; pintarLineas(); if (f) (filas.length ? campo(filas[0]) : area).focus(); }
+    function mostrar() {
+      var r = eligio(); falla.hidden = r !== "falla"; if (bloqueNo) bloqueNo.hidden = r !== "no"; pintarLineas();
+      if (r === "no" && motivoNo) motivoNo.focus(); else if (r === "falla") (filas.length ? campo(filas[0]) : area).focus();
+    }
     function error(m, campo) { err.textContent = m; err.hidden = false; if (campo) { campo.setAttribute("aria-invalid", "true"); campo.focus(); } }
-    function limpiar() { err.hidden = true; area.removeAttribute("aria-invalid"); filas.forEach(function (f) { campo(f).removeAttribute("aria-invalid"); selector(f).removeAttribute("aria-invalid"); }); }
+    function limpiar() {
+      err.hidden = true; area.removeAttribute("aria-invalid"); if (motivoNo) motivoNo.removeAttribute("aria-invalid");
+      filas.forEach(function (f) { campo(f).removeAttribute("aria-invalid"); selector(f).removeAttribute("aria-invalid"); });
+    }
+    function listo(fin, d) { if (d.ok) fin(d.mensaje && d.mensaje.indexOf("no pudiste") >= 0 ? "Enviado" : "Confirmado", 3000); else { fin(); error(d.mensaje); } if (alTerminar) alTerminar(d); }
+    function enviarNo() {
+      var m = validar(motivoNo ? motivoNo.value : "");
+      if (m) { if (bloqueNo) bloqueNo.hidden = false; error(m, motivoNo); return; }
+      limpiar(); if (alEmpezar) alEmpezar(); var fin = ocupar(boton && boton.textContent === "No recibiré mi pedido" ? boton : botonNo, "Enviando…");
+      enviar(ordenId, "no_recibido", motivoNo.value.trim()).then(function (d) { listo(fin, d); });
+    }
     for (var i = 0; i < radios.length; i++) radios[i].addEventListener("change", function () { limpiar(); mostrar(); });
     area.addEventListener("input", function () { if (!err.hidden && !validar(area.value)) limpiar(); });
+    if (motivoNo) motivoNo.addEventListener("input", function () { if (!err.hidden && !validar(motivoNo.value)) limpiar(); });
     filas.forEach(function (f) { campo(f).addEventListener("input", function () { limpiar(); pintarLineas(); }); selector(f).addEventListener("change", limpiar); });
     pintarLineas();
     falla.hidden = eligio() !== "falla";                  // sin JavaScript el bloque queda a la vista y el servidor decide; con JavaScript aparece solo si algo falló
+    if (bloqueNo) bloqueNo.hidden = eligio() !== "no";
     form.addEventListener("submit", function (e) {
-      e.preventDefault(); var r = eligio();
-      if (!r) { error("Elige si todo llegó bien o si algo falló.", radios[0]); return; }
+      e.preventDefault(); var r = eligio(), pulsoNo = e.submitter && e.submitter.value === "no_recibido";
+      if (pulsoNo || r === "no") {
+        var radioNo = form.querySelector('input[name=resultado][value="no"]'); if (radioNo && !radioNo.checked) { radioNo.checked = true; mostrar(); }
+        enviarNo(); return;
+      }
+      if (r !== "bien" && r !== "falla") { error("Elige si todo llegó bien, si algo falló o si no recibirás el pedido.", radios[0]); return; }
       var datos = {resultado: r};
       if (r === "falla") {
         var rechazo = 0, otro = false;
@@ -109,10 +130,7 @@
         datos.tipo_problema = tipo.value; datos.problema = area.value.trim();
       }
       limpiar(); if (alEmpezar) alEmpezar(); var fin = ocupar(boton, "Confirmando…");
-      enviar(ordenId, "aceptar", datos).then(function (d) {
-        if (d.ok) fin("Confirmado", 3000); else { fin(); error(d.mensaje); }
-        if (alTerminar) alTerminar(d);
-      });
+      enviar(ordenId, "aceptar", datos).then(function (d) { listo(fin, d); });
     });
   }
 
@@ -120,13 +138,11 @@
   function iniciar(raiz) {
     if (!raiz || !window.fetch) return;
     var ordenId = (raiz.dataset.url.match(/pedidos\/(\d+)/) || [])[1];
-    var aceptar = raiz.querySelector('form[data-accion="aceptar"]'), no = raiz.querySelector('form[data-accion="no_recibido"]'), det = raiz.querySelector("details"),
+    var aceptar = raiz.querySelector('form[data-accion="aceptar"]'),
         resta = document.getElementById("entrega-resta"), barra = document.getElementById("entrega-barra"), seccion = raiz.closest(".estado-pedido");
     var total = null, fin = null, anuncio = document.getElementById("entrega-anuncio");
     function ocupado(si) { if (seccion) seccion.classList.toggle("cargando", si); }
     ligarRevision(aceptar, ordenId, function () { ocupado(true); }, function (d) { ocupado(false); if (!d.ok) anunciar(d.mensaje); termino(ordenId, d); });
-    ligarFormularioNo(no, ordenId, function (d) { ocupado(false); termino(ordenId, d); });
-    det.addEventListener("toggle", function () { if (det.open) no.querySelector("textarea").focus(); });
     /* cuenta regresiva suave: no hay números que cambien cada segundo; la barra se vacía despacio y el texto se redondea */
     function texto(s) { return s <= 15 ? "en unos segundos" : s < 60 ? "en menos de un minuto" : "en unos " + Math.ceil(s / 60) + " minutos"; }
     function pintarResta(s) {
@@ -184,7 +200,7 @@
         form.appendChild(pt);
       }
       var fs = el("fieldset", {"class": "revision-resultado"}); fs.appendChild(el("legend", {}, "¿Llegó todo bien?"));
-      [["bien", "Sí, todo llegó bien"], ["falla", "No, algo falló"]].forEach(function (o) {
+      [["bien", "Sí, todo llegó bien"], ["falla", "No, algo falló"], ["no", "No recibiré mi pedido"]].forEach(function (o) {
         var lb = el("label"), rd = el("input", {type: "radio", name: "resultado", value: o[0]}); lb.appendChild(rd); lb.appendChild(document.createTextNode(" " + o[1])); fs.appendChild(lb);
       });
       form.appendChild(fs);
@@ -208,8 +224,17 @@
       fl.appendChild(el("textarea", {id: "rv-problema", name: "problema", rows: "3", maxlength: String(MAX), "aria-describedby": "rv-error"}));
       fl.appendChild(el("p", {"class": "frio"}, rev.efecto + " Ventas recibe tu aviso como reclamo y te contacta."));
       form.appendChild(fl);
+      var bn = el("div", {"class": "revision-no", hidden: ""});
+      bn.appendChild(el("label", {"for": "rv-motivo"}, "Cuéntanos por qué no lo recibes"));
+      bn.appendChild(el("textarea", {id: "rv-motivo", name: "motivo", rows: "3", maxlength: String(MAX), placeholder: "Por ejemplo: no había nadie en la casa, la dirección no coincide…", "aria-describedby": "rv-error"}));
+      var pie = el("div", {"class": "entrega-pie"});
+      pie.appendChild(el("span", {"class": "frio"}, "Mínimo " + MIN + " y máximo " + MAX + " caracteres. Queda como entrega no concretada y ventas te contacta para reprogramar."));
+      pie.appendChild(el("span", {"class": "entrega-cuenta-car", "aria-hidden": "true"}, "0 / " + MAX));
+      bn.appendChild(pie); form.appendChild(bn);
       form.appendChild(el("p", {"class": "entrega-error", id: "rv-error", role: "alert", hidden: ""}));
-      var ac = el("div", {"class": "acciones"}); ac.appendChild(el("button", {"class": "btn"}, "Recibí mi pedido"));
+      var ac = el("div", {"class": "acciones entrega-resp"});
+      ac.appendChild(el("button", {"class": "btn", name: "accion", value: "aceptar"}, "Recibí mi pedido"));
+      ac.appendChild(el("button", {"class": "btn btn-sec", name: "accion", value: "no_recibido"}, "No recibiré mi pedido"));
       var cerrar = el("button", {type: "button", "class": "btn-sec", title: "Cierra esta ventana sin responder: el pedido sigue pendiente de confirmar"}, "Volver sin responder"); cerrar.addEventListener("click", function () { dlg.close(); }); ac.appendChild(cerrar);
       form.appendChild(ac); dlg.appendChild(form); document.body.appendChild(dlg);
       ligarRevision(form, ordenId, null, function (r) { if (r.ok) { dlg.close(); termino(ordenId, r); } else termino(ordenId, r); });

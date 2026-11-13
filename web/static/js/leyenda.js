@@ -21,6 +21,7 @@ window.CofrialLeyenda = (function () {
       regreso: [circulo(M.COLOR_VUELTA, "R"), "Regreso"],
       ruta: [muestra(M.COLOR_IDA, false), "Camino a tu dirección"]
     };
+    Object.keys(M.ESTADOS).forEach(function (e) { defs["estado_" + e] = [M.estadoSVG(e), M.ESTADOS[e].texto]; });     // los puntos por estado de la flota
     ul.innerHTML = items.map(function (k) { return '<li><span class="ley-ico" aria-hidden="true">' + defs[k][0] + "</span>" + defs[k][1] + "</li>"; }).join("");
   }
   /* Botones que son a la vez leyenda y filtro de cada tramo, y selector de camión si hay más de un viaje. op: {camiones: [{id, texto}], alElegir: fn(id)}.

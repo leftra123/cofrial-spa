@@ -1,12 +1,12 @@
 # Mercado Pago — Payment Brick (modo prueba)
 
-Integración del canal **B2C** con **Card Payment Brick** en un **modal centrado** (560px) en el carrito (`/carrito/`). El cliente paga sin salir de la tienda Cofrial. El canal **B2B** no usa pasarela.
+Integración de **Card Payment Brick** en un **modal centrado** (560px) en el carrito (`/carrito/`). En la demostración lo usan el particular y la empresa. Quien no paga ahora puede **Generar orden** y pagarla a 30 días.
 
 ## Objetivo
 
 - Formulario de tarjeta MP en modal (ancho fijo ~560px, skeleton mientras carga el SDK).
 - La **orden, stock y boleta** se crean cuando el pago queda **`approved`** (POST `/v1/payments` con el token del Brick).
-- Sin credenciales MP → **Webpay simulado** al confirmar el carrito (CI).
+- Sin credenciales MP → **Generar orden** a 30 días (el particular descarga el documento al momento; la empresa, la factura después de la entrega).
 
 ## Variables de entorno
 
@@ -24,11 +24,12 @@ Agregar `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY` y `MERCADOPAGO_PAYE
 
 ## Flujo
 
-1. Cliente B2C abre el carrito (resumen con total y dirección) y elige boleta o factura.
-2. Pulsa **Continuar al pago** → el modal abre con **«Confirma tu compra»** (total, documento, dirección, quién recibe). **Confirmar y pagar** sigue al Card Payment Brick; **Cancelar compra** cierra sin cobrar y el carrito avisa que no se cobró nada.
-3. `onSubmit` → `POST /carrito/mp/pagar/` con `formData` de MP.
-4. Backend valida carrito, crea `CheckoutPago`, llama `POST /v1/payments`.
-5. Si `approved` → `generar_ordenes` + boletas → redirect al pedido.
+1. Particular o empresa abre el carrito (resumen con total y dirección).
+2. **Pagar ahora** abre el modal con **«Confirma tu compra»** (total, documento, dirección, quién recibe). **Confirmar y pagar** sigue al Card Payment Brick; **Cancelar compra** (o Esc, o un clic fuera) cierra sin cobrar y el carrito avisa, con un mensaje neutro, que no se cobró nada. El formulario de tarjeta se monta solo al confirmar. En el formulario, Esc o la × preguntan «¿Cancelar la compra?» antes de cerrar. Si la tarjeta no resulta, el modal deja reintentar y no crea el pedido.
+3. **Generar orden**, debajo, crea el pedido a 30 días sin pasar por Mercado Pago.
+4. `onSubmit` del Brick → `POST /carrito/mp/pagar/` con `formData` de MP.
+5. Backend valida carrito, crea `CheckoutPago`, llama `POST /v1/payments`.
+6. Si `approved` → `generar_ordenes` + documento pagado → redirect al pedido.
 
 Webhook (`/carrito/mp/webhook/`) y URLs de vuelta siguen disponibles para pagos pendientes en producción.
 
@@ -57,7 +58,7 @@ El servicio `web` **copia el código al construir la imagen**. Si cambias planti
 docker compose build web && docker compose up -d web
 ```
 
-En Chrome: recarga forzada (**Ctrl+Shift+R** o Cmd+Shift+R). Comprueba que el botón diga **«Continuar al pago · $…»** (no «Pagar … con Mercado Pago» ni modal «Confirmar compra y pago»).
+En Chrome: recarga forzada (**Ctrl+Shift+R** o Cmd+Shift+R). Comprueba que el botón diga **«Pagar ahora · $…»** y, debajo, **«Generar orden»**.
 
 Para no reconstruir en cada cambio, usa `docker-compose.override.example.yml` → `docker-compose.override.yml` (monta `./web` en vivo).
 

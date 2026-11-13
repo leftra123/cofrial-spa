@@ -1475,6 +1475,7 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
   .barra-orden-dir { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8125rem; color: var(--texto-3); }
   .barra-orden button { width: 100%; min-height: 48px; font-size: 1rem; }
   body.tienda .dock-flotante, body.tienda .toasts { bottom: calc(18px + var(--barra-orden-alto, 0px)); }
+  body.tienda .aviso-cookies { bottom: calc(16px + var(--barra-orden-alto, 0px)); }   /* el aviso de cookies queda sobre la barra, no debajo */
   body:has(.barra-orden) .t-pie { padding-bottom: var(--barra-orden-alto, 0px); }
 }
 @media (prefers-reduced-motion: reduce) { .barra-orden { transition: none; } }

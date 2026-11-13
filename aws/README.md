@@ -7,7 +7,7 @@ Guía para levantar el ecosistema en el Learner Lab: **EC2 web** (aplicación + 
 | Recurso | Dónde | Qué corre |
 |---|---|---|
 | Application Load Balancer (`cofrial-alb`) | Subredes públicas de las zonas A y B | Único punto de entrada: 80 (redirige a 443 con certificado de confianza) y 443; chequeo `/salud/` (pasa a `/health`, que prueba la base, con `endurecer.sh salud`; las instalaciones nuevas ya nacen con él); afinidad por cookie |
-| EC2 web ×2 (`t3.small`) | Una por zona (`cofrial-ec2-web` primaria, `cofrial-ec2-web-b` secundaria) | `aws/docker-compose.web.yml`: Django (puerto 80, solo desde el ALB), Grafana (solo red interna, se abre en `/bi/`) y los servicios `podador` y `despachador` (solo en la primaria; este último apagado salvo `DESPACHO_AUTO=1`) |
+| EC2 web ×2 (`t3.small`) | Una por zona (`cofrial-ec2-web` primaria, `cofrial-ec2-web-b` secundaria) | `aws/docker-compose.web.yml`: Django (puerto 80, solo desde el ALB), Grafana (solo red interna, se abre en `/bi/`) y los servicios `podador`, `vigilante` (revisa cada minuto web, base, IoT, Grafana, IA y pagos y alimenta `/salud/`) y `despachador` (solo en la primaria; este último apagado salvo `DESPACHO_AUTO=1`) |
 | EC2 IoT (`t3.micro`) | Subred pública o privada con salida | `aws/docker-compose.iot.yml`: 5 contenedores que simulan 50 camiones (10 cada uno) |
 | RDS PostgreSQL 16 (`db.t3.micro`) | Subred privada, **Multi-AZ** (réplica síncrona en la otra zona); las instalaciones nuevas nacen con protección contra borrado y respaldos de 7 días | Base `cofrial` |
 

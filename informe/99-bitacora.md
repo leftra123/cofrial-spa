@@ -146,3 +146,9 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Mientras va en camino se conserva el distintivo de llegada que trajo `main`. Al llegar a la puerta el mapa se apaga.
 - Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
 - Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.
+
+## 2026-11-13: la página de estado ahora es real
+- `/salud/` mostraba solo «ok» y no guardaba nada. Ahora el servicio `vigilante` revisa cada minuto web, base, IoT, Grafana y la dirección pública, y cada 5 minutos Gemini, Groq y Mercado Pago (solo listan la cuenta: sin gasto de cuota ni cobros). Cada revisión queda en la tabla `chequeo_servicio` con su hora.
+- La página muestra barras de 90 días y de 24 horas, la disponibilidad y qué pasó en los últimos 7 días. Cuando el laboratorio está apagado nadie revisa: esas horas aparecen en gris como «sin registros», sin contarse como caída ni como éxito. El historial parte del día en que se enciende el monitor.
+- Sin cambios para el balanceador: `/salud/` sigue respondiendo `{"estado": "ok"}` a quien no es un navegador. Detalle en `docs/decisiones.md`.
+- Pendiente en AWS: reconstruir la web primaria (`recrear-web`) para que nazca el servicio `vigilante` y se cree la tabla; opcional, definir `SALUD_URL_PUBLICA=https://www.cofrialspa.shop` para vigilar también el balanceador.

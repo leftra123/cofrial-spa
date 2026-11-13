@@ -1501,3 +1501,76 @@ button.btn-peligro:not(#mp-brick-container button):hover { background: #991B1B; 
   .portada-perfiles .interior { padding: 0; }
   .perfil, .perfil + .perfil { padding: 24px 20px; }
 }
+
+}
+
+/* ---------- carrito en pasos: productos, 1 Entrega, 2 Documento a la izquierda; 3 Resumen y pago fijo a la derecha ---------- */
+.carro { grid-template-areas: "lineas resumen" "pasos resumen"; grid-template-rows: auto 1fr; align-items: start; row-gap: 20px; }
+.carro > .carro-lineas { grid-area: lineas; }
+.carro > .pasos-compra { grid-area: pasos; display: grid; gap: 16px; min-width: 0; }
+.carro > .resumen { grid-area: resumen; grid-row: 1 / span 2; padding: 22px; }
+.paso-carro { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.paso-carro h2, .resumen h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 1.05rem; letter-spacing: -.01em; }
+.paso-n { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--lima); color: var(--lima-fg); font-size: .82rem; font-weight: 750; }
+.pasos-compra label { display: block; margin: 0 0 4px; font-size: .86rem; color: var(--texto-2); font-weight: 600; }
+.pasos-compra select, .pasos-compra input:not([type=hidden]):not([type=radio]) { width: 100%; max-width: none; margin: 0; }
+.entrega-campos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 16px; align-items: start; }
+.entrega-campos .quien-recibe { margin: 0; gap: 0; }
+.entrega-campos .quien-recibe legend { font-size: .86rem; color: var(--texto-2); font-weight: 600; margin-bottom: 4px; float: left; width: 100%; }
+.recibe-fila { clear: both; display: grid; gap: 10px; }
+.entrega-campos .ayuda { grid-column: 1 / -1; margin: 8px 0 0; }
+.entrega-campos .quien-recibe .ayuda { margin-top: 6px; }
+.paso-carro .acc-doc { margin-top: 12px; }
+.paso-carro .acc-doc summary { padding: 6px 0; min-height: 32px; }
+.paso-carro .comprobante { margin: 0; }
+.paso-carro .comprobante-opciones { gap: 12px; }
+.paso-carro label.comprobante-opcion:not(#mp-brick-container label) { flex-direction: row; text-align: left; gap: 12px; padding: 12px 40px 12px 14px; margin: 0; font-size: .95rem; }
+.paso-carro .comprobante-opcion > .comprobante-nombre, .paso-carro .comprobante-opcion > .comprobante-nota { width: auto; }
+.paso-carro .comprobante-ico { margin: 0; flex: none; }
+.paso-carro .comprobante-opcion .comprobante-nombre::after { content: none; }
+.paso-carro .comprobante-opcion { flex-wrap: wrap; }
+.pasos-compra .comprobante-opcion input { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; margin: 0; opacity: 0; cursor: pointer; }
+.pasos-compra .comprobante-opcion input:focus { outline: none; }
+.pasos-compra .comprobante-opcion:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+.paso-carro .comprobante-detalle { margin: 10px 0 0; }
+.campo-oc { margin-top: 14px; }
+.campo-oc .ayuda { margin: 6px 0 0; }
+/* resumen: total, acciones y letra chica compactos */
+.resumen .camaras { margin-bottom: 4px; }
+.resumen dl { margin-bottom: 8px; }
+.resumen .acciones-pago { display: grid; gap: 8px; margin: 0; }
+.resumen .acciones-pago button.confirmar { margin: 6px 0 0; width: 100%; }
+.resumen .acciones-pago .generar-orden:not(#mp-brick-container button) { width: 100%; min-height: 48px; margin: 0; background: var(--tarjeta); color: var(--texto); border-color: var(--borde-fuerte); box-shadow: none; }
+.resumen .acciones-pago .generar-orden:not(#mp-brick-container button):hover { background: var(--fondo-2); border-color: var(--texto-3); }
+.resumen .acciones-pago .ayuda { margin: 0; font-size: .8rem; }
+.resumen .seguro { margin-top: 12px; }
+.resumen .carrito-legal { margin: 8px 0 0; font-size: .76rem; }
+.mp-inline-error { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.4; color: var(--alerta-fg); background: var(--alerta-bg); border: 1px solid var(--alerta-borde); }
+.mp-inline-error--info { color: var(--texto); background: transparent; border-color: var(--borde-fuerte); }
+.mp-inline-error[hidden] { display: none !important; }
+/* línea de producto en una sola fila: foto · nombre · cantidad · total */
+.linea { grid-template-columns: 72px minmax(0, 1fr) auto auto; grid-template-areas: "img info form total"; gap: 8px 18px; padding: 14px 0; }
+.linea-img { grid-area: img; width: 72px; height: 72px; }
+.linea-info { grid-area: info; }
+.linea-form { grid-area: form; grid-column: auto; }
+.linea-total { grid-area: total; min-width: 5.5rem; font-size: 1.15rem; }
+.linea-form .btn-sec { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); padding: 0; border: 0; white-space: nowrap; }
+.linea-form .btn-sec:focus { position: static; width: auto; height: auto; clip-path: none; padding: 8px 12px; }
+@media (max-width: 1000px) { .entrega-campos { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .carro { grid-template-columns: minmax(0, 1fr); grid-template-areas: "lineas" "pasos" "resumen"; grid-template-rows: auto; }
+  .carro > .resumen { grid-row: auto; position: static; }
+  .carro > .resumen .acciones-pago { }
+  /* zona del pulgar: Pagar queda pegado abajo mientras se ve el resumen */
+  .resumen .acciones-pago { position: sticky; bottom: 0; z-index: 5; margin: 0 -22px; padding: 12px 22px calc(12px + env(safe-area-inset-bottom)); background: var(--tarjeta); border-top: 1px solid var(--borde); }
+  .resumen .acciones-pago button { min-height: 48px; }
+  .resumen .total { font-size: 1.3rem; }
+}
+@media (max-width: 520px) {
+  .linea { grid-template-columns: 64px minmax(0, 1fr) auto; grid-template-areas: "img info info" "img form total"; }
+  .linea-img { width: 64px; height: 64px; }
+  .linea-total { grid-column: auto; text-align: right; }
+  .paso-carro { padding: 16px; }
+  .paso-carro .comprobante-opciones { grid-template-columns: 1fr; }
+  .resumen .acciones-pago { margin: 0 -20px; padding-inline: 20px; }
+}

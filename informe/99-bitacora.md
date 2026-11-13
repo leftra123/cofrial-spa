@@ -137,6 +137,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 
 - Panel de salud (13-nov-2026): Eric notó que «salud» no muestra rojos: `/health` y `/salud/` son texto y viven en las mismas web. `aws/panel-salud.sh` crea el panel `cofrial-salud` en CloudWatch (alarmas, web sanas, 5xx, CPU, base), alojado por AWS fuera de las EC2. Detalle en `docs/decisiones.md`.
 
+- Clave única (13-nov-2026): `aws/activar.sh --clave-unica` pone una misma clave simple en todos los usuarios activos de AWS (la pide sin mostrarla y la envía por la entrada estándar de ssh); `cambiar_clave_demo` gana `--clave-stdin` y `--todos-los-activos`. Es una clave débil y compartida, solo para la demostración. Detalle en `docs/decisiones.md`.
+
 ## 2026-11-08 (revisión técnica: alta disponibilidad)
 - El evaluador aprobó la aplicación salvo infraestructura: pidió balanceador de carga, dos EC2 web y RDS en múltiples zonas, HTTPS con nombre de dominio y Grafana con autenticación y HTTPS.
 - `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).

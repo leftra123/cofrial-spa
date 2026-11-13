@@ -97,8 +97,21 @@ class Requerimiento(models.Model):
     # Desglose estructurado del texto del cliente (resumen, motivo, hechos, urgencia, acción sugerida y confianza). Es una ayuda: el texto original queda intacto.
     desglose = models.JSONField(null=True, blank=True)
     estado = models.CharField(max_length=14, choices=ESTADOS, default="sin_clasificar")
+    # De dónde vino: el formulario de Soporte o el asistente de IA de la tienda (cada consulta al asistente queda como ticket).
+    canal = models.CharField(max_length=10, choices=[("soporte", "Soporte"), ("asistente", "Asistente de IA")], default="soporte", db_default="soporte")
+    respuesta_ia = models.TextField(blank=True, default="")          # lo que el asistente le contestó al cliente (en un ticket derivado, el aviso de que lo verá una persona)
+    resuelto_por = models.CharField(max_length=8, blank=True, default="", choices=[("ia", "IA"), ("persona", "Persona")])      # vacío mientras está abierto
     creado_en = models.DateTimeField(auto_now_add=True)
     respondido_en = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def etiqueta_estado(self):
+        """El estado como lo ve el cliente y el equipo: un ticket del asistente dice quién lo resolvió o que espera a una persona."""
+        if self.canal == "asistente" and self.resuelto_por == "ia":
+            return "Resuelto por la IA"
+        if self.canal == "asistente" and self.estado == "sin_clasificar":
+            return "Derivado a una persona"
+        return self.get_estado_display()
 
     class Meta:
         db_table = "requerimiento"

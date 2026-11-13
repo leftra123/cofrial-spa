@@ -19,6 +19,7 @@
   <div class="kpi-card"><div class="etiqueta">Por cobrar</div><div class="valor">{{ ind.por_cobrar|clp }}</div><div class="detalle"><a href="/crm/cobranza/">{{ ind.sin_facturar }} entregada{{ ind.sin_facturar|pluralize }} sin facturar</a></div></div>
   <div class="kpi-card{% if ind.n_vencidas %} critico{% endif %}"><div class="etiqueta">Facturas vencidas</div><div class="valor">{{ ind.vencido|clp }}</div><div class="detalle">{{ ind.n_vencidas }} factura{{ ind.n_vencidas|pluralize }} sobre su plazo</div></div>
   <div class="kpi-card"><div class="etiqueta">Requerimientos por clasificar</div><div class="valor">{{ ind.requerimientos_pendientes }}</div><div class="detalle">pendientes de revisión</div></div>
+  <div class="kpi-card"><div class="etiqueta">Consultas al asistente de IA</div><div class="valor">{{ ind.asistente_resueltos }}</div><div class="detalle">resueltas por la IA · {{ ind.asistente_derivados }} derivadas a una persona</div></div>
 </div>
 <div class="rejilla dos" style="margin-top:20px">
   <section class="tarjeta-ui" aria-labelledby="h-canal">

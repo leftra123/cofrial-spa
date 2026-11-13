@@ -840,6 +840,8 @@ body:has(.asistente.abierto):has(.fab-carrito:not([hidden])) .toasts { bottom: m
 @keyframes as-latido { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
 .as-acciones { align-self: flex-start; }
 .as-accion { background: var(--lima); color: var(--lima-fg); border-color: var(--lima); padding: 8px 14px; font-size: .88rem; }
+a.as-accion { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--lima); border-radius: 10px; font-weight: 600; text-decoration: none; }
+.as-ticket { align-self: flex-start; font-size: .78rem; color: var(--texto-3); text-decoration: underline; margin: -2px 0 2px 4px; }
 .as-accion:hover { background: #CDEE63; border-color: #CDEE63; box-shadow: none; }
 .asistente-sug { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
 .asistente-sug[hidden] { display: none; }

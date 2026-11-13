@@ -400,8 +400,35 @@ def resolver_requerimiento(usuario, requerimiento_id):
     r = requerimientos_visibles(usuario).get(pk=requerimiento_id)
     if r.estado != "clasificado":
         raise ErrorDeNegocio("Ya está resuelto." if r.estado == "resuelto" else "Clasifícalo antes de marcarlo como resuelto.")
-    r.estado, r.respondido_en = "resuelto", timezone.now()
-    r.save(update_fields=["estado", "respondido_en"])
+    r.estado, r.respondido_en, r.resuelto_por = "resuelto", timezone.now(), "persona"
+    r.save(update_fields=["estado", "respondido_en", "resuelto_por"])
+    return r
+
+
+# ---------------------------------------------------------------- tickets del asistente de IA
+ASUNTO_ASISTENTE = "Asistente: "
+MAX_DERIVADOS_POR_HORA = 10        # derivaciones a una persona por cliente y hora: una cuenta que escribe sin parar no llena la bandeja del equipo
+VENTANA_REPETIDA_MIN = 10          # la misma consulta derivada otra vez dentro de este plazo no abre otro ticket
+
+
+def registrar_consulta_asistente(cliente, texto, respuesta, resuelta, orden=None):
+    """Cada consulta del cliente al asistente queda como ticket. Si la IA la resolvió, nace «resuelto» (por la IA) con lo que contestó;
+    si no pudo, queda «sin clasificar» en la bandeja del equipo, que ve el texto del cliente. Devuelve el requerimiento.
+    No llama a la IA para clasificar: la derivación ocurre justo cuando la IA no está o no pudo, y el equipo la clasifica o la reintenta."""
+    texto = " ".join(texto.split())
+    ahora = timezone.now()
+    if not resuelta:
+        recientes = Requerimiento.objects.filter(cliente=cliente, canal="asistente", estado="sin_clasificar", creado_en__gte=ahora - timedelta(hours=1))
+        repetido = recientes.filter(descripcion=texto, creado_en__gte=ahora - timedelta(minutes=VENTANA_REPETIDA_MIN)).first()
+        if repetido:
+            return repetido
+        if recientes.count() >= MAX_DERIVADOS_POR_HORA:
+            return recientes.order_by("-creado_en").first()
+    r = Requerimiento(cliente=cliente, orden=orden, asunto=(ASUNTO_ASISTENTE + texto)[:150], descripcion=texto[:TEXTO_MAXIMO], canal="asistente",
+                      respuesta_ia=respuesta[:TEXTO_MAXIMO])
+    if resuelta:
+        r.estado, r.resuelto_por, r.respondido_en = "resuelto", "ia", ahora
+    r.save()
     return r
 
 
@@ -429,6 +456,8 @@ def indicadores(usuario):
         "por_cobrar": cobro["por_cobrar"], "vencido": cobro["vencido"], "n_vencidas": cobro["n_vencidas"],
         "sin_facturar": len(cobro["sin_facturar"]),
         "requerimientos_pendientes": requerimientos_visibles(usuario).filter(estado="sin_clasificar").count(),
+        "asistente_resueltos": requerimientos_visibles(usuario).filter(canal="asistente", resuelto_por="ia").count(),
+        "asistente_derivados": requerimientos_visibles(usuario).filter(canal="asistente").exclude(resuelto_por="ia").count(),
         "por_etapa": list(abiertos.values("etapa__nombre", "etapa__orden_etapa").annotate(n=Count("pk"), monto=Sum("monto_estimado_clp")).order_by("etapa__orden_etapa")),
     }
 

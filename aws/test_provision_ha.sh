@@ -6,7 +6,7 @@
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TMP/bin" "$TMP/st" "$TMP/aws"; cp "$AQUI/provision.sh" "$TMP/aws/provision.sh"
+mkdir -p "$TMP/bin" "$TMP/st" "$TMP/aws"; cp "$AQUI/provision.sh" "$AQUI/reaplicar-alarmas-cpu.sh" "$TMP/aws/"
 LOG="$TMP/llamadas.log"; : > "$LOG"
 
 cat > "$TMP/bin/aws" <<'FAKE'
@@ -36,6 +36,7 @@ case "$A" in
   "ec2 describe-instances"*) n=$(nombre); [ -f "$ST/inst-$n" ] && cat "$ST/inst-$n" || echo None;;
   "ec2 run-instances"*) n=$(tag); id="i-$n-$RANDOM"; echo "$id" > "$ST/inst-$n"; echo "$id"; echo "$A" | grep -o 'file://[^ ]*' >> "$ST/userdatas";;
   "ec2 terminate-instances"*) rm -f "$ST"/inst-"$(echo "$A" | sed -n 's/.*--instance-ids i-\(cofrial-ec2-[a-z]*\(-b\)\?\).*/\1/p')" 2>/dev/null; id=$(echo "$A" | sed -n 's/.*--instance-ids \([^ ]*\).*/\1/p'); for f in "$ST"/inst-*; do [ "$(cat "$f")" = "$id" ] && rm -f "$f"; done;;
+  "cloudwatch describe-alarms"*) echo None;;     # sin alarmas previas: el reapuntado solo avisa y no crea nada
   "rds describe-db-instances"*"MultiAZ"*"SecondaryAvailabilityZone"*) echo "True us-east-1a us-east-1b";;
   "rds describe-db-instances"*"SecondaryAvailabilityZone"*) echo us-east-1b;;
   "rds describe-db-instances"*"MultiAZ"*) cat "$ST/rds-maz" 2>/dev/null || echo False;;
@@ -97,6 +98,8 @@ N_TERM=$(grep -c "terminate-instances" "$LOG"); [ "$N_TERM" = 2 ] || fallo "recr
 POS_A=$(grep -n "terminate-instances" "$LOG" | sed -n 1p | cut -d: -f1); POS_SANA=$(grep -n "describe-target-health.*Id=i-cofrial-ec2-web-" "$LOG" | sed -n 1p | cut -d: -f1)
 POS_B=$(grep -n "terminate-instances" "$LOG" | sed -n 2p | cut -d: -f1)
 [ "$POS_A" -lt "$POS_B" ] || fallo "orden de terminación incorrecto"
+grep -q "cloudwatch describe-alarms" "$LOG" || fallo "recrear-web debía revisar las alarmas de CPU al terminar (reapuntarlas a las instancias nuevas)"
+! grep -q "put-metric-alarm" "$LOG" || fallo "sin alarmas previas no debía crear ninguna"
 awk -v a="$POS_A" -v b="$POS_B" 'NR>a && NR<b && /describe-target-health.*--targets Id=/ {f=1} END{exit !f}' "$LOG" || fallo "no esperó a que la web A estuviera sana antes de terminar la B"
 grep -q "rds create-db-instance\|modify-db-instance" "$LOG" && fallo "recrear-web tocó la RDS"
 echo "ok: recrear-web es rodante (A, espera de salud, luego B) y no toca RDS"

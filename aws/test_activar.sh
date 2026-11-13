@@ -39,10 +39,13 @@ cat > "$TMP/bin/ssh" <<'FAKE'
 echo "$*" >> "$AWS_ST/ssh-args"
 for a in "$@"; do case "$a" in UserKnownHostsFile=*) cp "${a#UserKnownHostsFile=}" "$AWS_ST/known_hosts" 2>/dev/null || true;; esac; done
 ultimo="${@: -1}"
+restar() { f="$AWS_ST/$1"; n=$(cat "$f" 2>/dev/null || echo 0); [ "$n" -gt 0 ] || return 1; echo $((n-1)) > "$f"; return 0; }
 if [ "$ultimo" = true ]; then
+  if restar ssh-fallos-true; then echo "ssh: connect to host: Operation timed out" >&2; exit 255; fi
   if [ -f "$AWS_ST/ssh-bloqueado" ] && [ ! -f "$AWS_ST/ssh-abierto" ]; then echo "ssh: connect to host: Operation timed out" >&2; exit 255; fi
   exit 0
 fi
+if restar ssh-fallos-real; then echo "ssh: connect to host: Operation timed out" >&2; exit 255; fi
 cat > "$AWS_ST/ssh-stdin"
 echo "La misma clave quedó en 3 usuario(s) activo(s), 2 de ellos del equipo o administración."
 FAKE
@@ -60,7 +63,12 @@ cat > "$TMP/provision.sh" <<'FAKE'
 #!/usr/bin/env bash
 echo "provision $*" >> "$AWS_ST/provision.log"; exit "${PROV_RC:-0}"
 FAKE
-chmod +x "$TMP/bin/"* "$TMP/provision.sh"
+cat > "$TMP/reaplicar.sh" <<'FAKE'
+#!/usr/bin/env bash
+echo "reaplicar $*" >> "$AWS_ST/reaplicar.log"; echo "cofrial-ec2-web-cpu: reapuntada de i-vieja a i-nueva."
+FAKE
+chmod +x "$TMP/bin/"* "$TMP/provision.sh" "$TMP/reaplicar.sh"
+export INTERVALO_SSH=0      # sin esperas entre reintentos de ssh
 
 BUENAS=$'[default]\naws_access_key_id=AKIAFALSA\naws_secret_access_key=SECRETO-NO-IMPRIMIR\naws_session_token=bueno\n'
 MALAS=$'[default]\naws_access_key_id=AKIAVIEJA\naws_secret_access_key=SECRETO-VIEJO\naws_session_token=malo\n'
@@ -71,7 +79,7 @@ reset() {
 correr() {  # correr [opciones]: guarda la salida en $SAL y el código en $RC (la entrada estándar es $ENTRADA, vacía por defecto)
   set +e
   SAL="$(env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN PATH="$TMP/bin:$PATH" HOME="$TMP/home" AWS_ST="$TMP/st" AWS_SHARED_CREDENTIALS_FILE="$TMP/cred" \
-    PROVISION="$TMP/provision.sh" COFRIAL_ESTADO="$TMP/estado" DOMINIO_HTTPS=www.cofrial.test ESPERA_SEG=0 INTERVALO=0 PB_ARCHIVO="$TMP/portapapeles" \
+    PROVISION="$TMP/provision.sh" REAPLICAR_ALARMAS="$TMP/reaplicar.sh" COFRIAL_ESTADO="$TMP/estado" DOMINIO_HTTPS=www.cofrial.test ESPERA_SEG=0 INTERVALO=0 PB_ARCHIVO="$TMP/portapapeles" \
     bash "$AQUI/activar.sh" "$@" 2>&1 <<< "${ENTRADA-}")"; RC=$?
   set -e
 }
@@ -129,8 +137,9 @@ echo "ok: /health del dominio caído -> sale 1"
 # 8) alarmas de CPU atadas a instancias que ya no existen: avisa del comando, no falla
 reset "$BUENAS"; printf 'i-vieja1\ti-vieja2\ti-iot\n' > "$TMP/st/alarmas-ids"; correr
 [ "$RC" = 0 ] || fallo "8: las alarmas huérfanas solo avisan; salió $RC"
-echo "$SAL" | grep -q "2 alarma(s)" && echo "$SAL" | grep -q "endurecer.sh alarmas --aplicar" || fallo "8: no avisó de las alarmas huérfanas: $SAL"
-echo "ok: alarmas huérfanas -> avisa cómo reaplicarlas, sin fallar"
+echo "$SAL" | grep -q "2 alarma(s)" && echo "$SAL" | grep -q "reaplicar-alarmas-cpu.sh --aplicar" || fallo "8: no avisó de las alarmas huérfanas: $SAL"
+[ ! -f "$TMP/st/reaplicar.log" ] || fallo "8: sin consentimiento no debía reapuntar las alarmas"
+echo "ok: alarmas huérfanas -> avisa cómo reapuntarlas y no toca nada sin consentimiento"
 
 # 9) --solo-verificar no enciende nada
 reset "$BUENAS"; correr --solo-verificar
@@ -188,4 +197,25 @@ echo "ok: --abrir-ssh -> abre solo tu IP, cambia la clave y vuelve a cerrar"
 reset "$BUENAS"; correr
 [ "$RC" = 0 ] && [ ! -f "$TMP/st/ssh-args" ] || fallo "17: por defecto no debía conectarse a nada"
 echo "ok: sin --clave-unica y sin terminal no toca ninguna clave"
+# 18) --arreglar-alarmas: reapunta con el script, solo con consentimiento explícito
+reset "$BUENAS"; printf 'i-vieja1\ti-vieja2\ti-iot\n' > "$TMP/st/alarmas-ids"; correr --arreglar-alarmas
+[ "$RC" = 0 ] || fallo "18: debía salir 0 y salió $RC: $SAL"
+grep -q "reaplicar --aplicar" "$TMP/st/reaplicar.log" || fallo "18: debía llamar al script de alarmas con --aplicar"
+echo "$SAL" | grep -q "alarmas de CPU reapuntadas" || fallo "18: faltó el resultado: $SAL"
+echo "ok: --arreglar-alarmas -> reapunta las alarmas desfasadas"
+
+# 19) la conexión ssh es intermitente (la IP de salida cambia): se reintenta sin abrir el puerto 22 ni tocar la seguridad
+reset "$BUENAS"; echo 2 > "$TMP/st/ssh-fallos-true"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 0 ] || fallo "19: con fallos intermitentes de conexión debía salir 0 y salió $RC: $SAL"
+[ ! -f "$TMP/st/sg-llamadas" ] || fallo "19: un fallo intermitente no justifica abrir el puerto 22"
+grep -q "clave-simple-77" "$TMP/st/ssh-stdin" || fallo "19: la clave no llegó tras los reintentos"
+echo "ok: conexión intermitente -> reintenta y no abre el puerto 22"
+
+# 20) el comando real pierde la conexión una vez: se reintenta y la clave se envía por la conexión que sí abrió
+reset "$BUENAS"; echo 1 > "$TMP/st/ssh-fallos-real"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 0 ] || fallo "20: debía salir 0 tras reintentar y salió $RC: $SAL"
+echo "$SAL" | grep -q "La conexión falló (intento 1 de" || fallo "20: no avisó del reintento: $SAL"
+[ "$(grep -c 'cambiar_clave_demo' "$TMP/st/ssh-args")" = 2 ] || fallo "20: debía intentar el comando dos veces"
+grep -q "clave-simple-77" "$TMP/st/ssh-stdin" && ! grep -q "clave-simple-77" "$TMP/st/ssh-args" && ! echo "$SAL" | grep -q "clave-simple-77" || fallo "20: la clave solo debe ir por stdin"
+echo "ok: el comando real se reintenta y la clave nunca va en argumentos ni en la salida"
 echo "TODO OK"

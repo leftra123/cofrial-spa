@@ -47,18 +47,18 @@ Requisito de la revisión técnica del 8-nov-2026. Diseño y trade-offs: `docs/d
 
 Decisiones y trade-offs: `docs/decisiones.md` («Endurecimiento de la infraestructura y la aplicación»).
 
-**Estado.** Lo de la aplicación y los contenedores está en el código y probado en local. Lo de AWS está **preparado y sin aplicar**: el 11-nov-2026 el laboratorio estaba apagado y las credenciales, vencidas, así que no se leyó ni cambió nada en la cuenta. Lo único observado desde fuera: el balanceador responde, su 80 redirige al 443 con un 301 y el 443 devuelve 503 mientras las web están apagadas.
+**Estado (12-nov-2026).** Lo de la aplicación y los contenedores está en el código y probado en local; llega a AWS con el próximo `recrear-web`/`recrear-iot`, que aún no se hace. En AWS se aplicaron el 12-nov, con vista previa y confirmación de cada comando, la base, los security groups, el descarte de cabeceras, las alarmas y el dominio propio con certificado de ACM. Verificado después de cada paso: `https://www.cofrialspa.shop/salud/bd/` 200, el 80 redirige con 301, las dos web sanas en el balanceador y la IP directa de una web ya no responde. `endurecer.sh revisar` deja una sola falta: el chequeo en `/health`, que espera el código nuevo.
 
 | Qué | Dónde quedó | Estado |
 |---|---|---|
 | Política de contenido (CSP), cookies `Secure`/`HttpOnly`/`SameSite`, HSTS configurable, respeto de `X-Forwarded-Proto` | `web/cofrial/settings.py`, `web/cofrial/csp.py` | En el código; llega a AWS con el próximo `recrear-web` |
-| `/health` (200 solo si la aplicación alcanza la base) | `web/cofrial/urls.py` | En el código; el balanceador sigue chequeando `/salud/` hasta aplicar el paso `salud` |
+| `/health` (200 solo si la aplicación alcanza la base) | `web/cofrial/urls.py` | En el código; el balanceador sigue chequeando `/salud/` hasta desplegar el código y aplicar el paso `salud` |
 | Límites de memoria y CPU, y rotación de registros en todos los contenedores | `aws/docker-compose.web.yml`, `aws/docker-compose.iot.yml` | En el código; llega con `recrear-web` y `recrear-iot` |
-| Base: protección contra borrado, respaldos de 7 días, etiquetas en snapshots | `aws/endurecer.sh rds` (y `provision.sh` para instalaciones nuevas) | Preparado |
-| Security groups: base solo desde web e IoT; web solo desde el balanceador | `aws/endurecer.sh sg` | Preparado |
-| TLS 1.2/1.3, redirección 301 y descarte de cabeceras inválidas en el balanceador | `aws/endurecer.sh https` | Preparado (la redirección ya responde) |
-| Alarmas de CloudWatch | `aws/endurecer.sh alarmas` | Preparado |
-| Copia de las claves en SSM Parameter Store | `aws/endurecer.sh secretos-subir` | Preparado; falta comprobar que el laboratorio lo permita |
+| Base: protección contra borrado, respaldos de 7 días, etiquetas en snapshots | `aws/endurecer.sh rds` (y `provision.sh` para instalaciones nuevas) | **Aplicado** (12-nov). Además ya era Multi-AZ y privada; etiquetas `Proyecto` y `Entorno` |
+| Security groups: base solo desde web e IoT; web solo desde el balanceador | `aws/endurecer.sh sg` | **Aplicado** (12-nov): se quitaron de `cofrial-sg-web` el 80 y el 443 abiertos a internet; queda el 80 solo desde `cofrial-sg-alb`. La base ya aceptaba solo web e IoT |
+| TLS 1.2/1.3, redirección 301 y descarte de cabeceras inválidas en el balanceador | `aws/endurecer.sh https` | **Aplicado** (12-nov): descarte de cabeceras; TLS 1.2/1.3 y 301 ya estaban |
+| Alarmas de CloudWatch | `aws/endurecer.sh alarmas` | **Aplicado** (12-nov): 8 alarmas, sin aviso por correo (se ven en la consola de CloudWatch) |
+| Copia de las claves en SSM Parameter Store | `aws/endurecer.sh secretos-subir` | Preparado, sin aplicar (0 parámetros en SSM); falta comprobar que el laboratorio lo permita |
 
 **Cómo se aplica.** `aws/endurecer.sh` no recrea nada. Cada paso muestra los comandos exactos y **no ejecuta ninguno**; con `--aplicar` los ejecuta de a uno y pregunta antes de cada uno. Si las claves de la instalación están en otro checkout, se le indica con `COFRIAL_ESTADO=/ruta/a/aws/.estado` (lo mismo vale para `provision.sh`, que ahora se detiene si la base existe y no encuentra sus claves, en vez de generar otras).
 
@@ -79,7 +79,7 @@ Orden para lo que depende del código nuevo:
 
 Después de cada paso: `bash aws/endurecer.sh revisar`, `curl -sI http://DNS-ALB/health` (301 a https), `curl -sk https://DNS-ALB/health` (200) y `python3 aws/verificar.py https://DOMINIO --infra`.
 
-**Certificado.** El 443 usa el certificado de Let's Encrypt de `cofrialspa.webhop.me`, importado a ACM (vence el 6-feb-2027 y no se renueva solo). ACM con validación por DNS (`endurecer.sh acm-dns`) exige crear un CNAME en la zona del dominio, y un nombre gratuito de No-IP no lo permite; con un dominio propio ese es el camino, porque ACM renueva solo. Sin dominio, `provision.sh` genera un certificado autofirmado y lo importa: el navegador muestra «La conexión no es privada» (`NET::ERR_CERT_AUTHORITY_INVALID`) y hay que aceptar la excepción a mano; por eso en ese caso el 80 no redirige y no se anuncia HSTS. Lo mismo se ve hoy al abrir por HTTPS el nombre DNS del balanceador, porque el certificado es del dominio (`NET::ERR_CERT_COMMON_NAME_INVALID`).
+**Dominio y certificado (12-nov-2026).** El sitio se publica en `https://www.cofrialspa.shop`, un dominio propio en GoDaddy: `www` es un CNAME al DNS del balanceador. El 443 usa un certificado de ACM para `www.cofrialspa.shop` validado por DNS (CNAME de validación en GoDaddy), que ACM renueva solo; vence el 29-may-2027. Es el certificado principal del oyente. El de `cofrialspa.webhop.me` (Let's Encrypt importado, sin renovación automática) se quitó del oyente y se borró de ACM, y el nombre de No-IP se dio de baja. La raíz `cofrialspa.shop` se resuelve con el reenvío de GoDaddy hacia `https://www.cofrialspa.shop`. Al 12-nov ese reenvío aún responde 404: la dirección que se muestra es la de `www`. Sin dominio, `provision.sh` genera un certificado autofirmado y lo importa: el navegador muestra «La conexión no es privada» (`NET::ERR_CERT_AUTHORITY_INVALID`) y hay que aceptar la excepción a mano; por eso en ese caso el 80 no redirige y no se anuncia HSTS. Lo mismo se ve hoy al abrir por HTTPS el nombre DNS del balanceador, porque el certificado es del dominio (`NET::ERR_CERT_COMMON_NAME_INVALID`).
 
 **Cifrado en reposo.** `provision.sh` no pide cifrado al crear la base y RDS no permite activarlo sobre una instancia existente: hay que restaurarla desde una copia cifrada. No se hace desde los scripts; el procedimiento, si el equipo lo decide, es:
 1. Detener los escritores (EC2 IoT y las dos web) para no perder lo que se escriba entre la copia y el cambio.

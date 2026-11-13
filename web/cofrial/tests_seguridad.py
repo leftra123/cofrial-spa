@@ -52,7 +52,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/operacion/datos/x/", "/operacion/datos/x/nuevo/", "/operacion/datos/x/1/",
                     "/pedidos/1/documentos/1/", "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
-                    "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/", "/flota/por-despachar/",
+                    "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/", "/flota/por-despachar/", "/flota/camion/CAM-01/diagnostico/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
                     "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/", "/torre/", "/torre/pulso/"]
     PRIVADAS_POST = ["/cuenta/mis-datos/eliminar/", "/cuenta/mis-datos/solicitar/", "/operacion/privacidad/1/responder/", "/operacion/privacidad/1/prorrogar/", "/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
@@ -60,7 +60,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                      "/crm/alertas/1/avisar/", "/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/clientes/1/direccion/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/crm/requerimientos/1/resolver/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
-                     "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/demo/pulso/", "/demo/apagar/", "/demo/tiempo/", "/demo/limpiar/",
+                     "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/flota/camion/CAM-01/revision/", "/demo/pulso/", "/demo/apagar/", "/demo/tiempo/", "/demo/limpiar/",
                      "/pedidos/1/oc/", "/bi/x", "/carrito/direccion/", "/crm/ordenes/1/cancelar/", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/", "/operacion/stock/1/sumar/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/flota/escenarios/interpretar/", "/flota/escenarios/activar/", "/flota/escenarios/cancelar/", "/flota/despacho-auto/correr/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):
@@ -101,7 +101,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                 ruta = (str(p.pattern) + str(q.pattern)) if sub is not None else str(p.pattern)
                 if ruta.startswith(("admin", "static", "api/")) or ruta in publicas:
                     continue
-                generica = ruta.replace("<int:pk>", "1").replace("<int:orden_id>", "1").replace("<int:direccion_id>", "1").replace("<int:despacho_id>", "1").replace("<int:documento_id>", "1").replace("<path:ruta>", "x").replace("<slug:slug>", "x").replace("<str:pk>", "1").strip("/")
+                generica = ruta.replace("<int:pk>", "1").replace("<int:orden_id>", "1").replace("<int:direccion_id>", "1").replace("<int:despacho_id>", "1").replace("<str:camion_id>", "CAM-01").replace("<int:documento_id>", "1").replace("<path:ruta>", "x").replace("<slug:slug>", "x").replace("<str:pk>", "1").strip("/")
                 if generica not in cubiertas:
                     pendientes.append(ruta)
         self.assertEqual(pendientes, [], "Rutas sin prueba de acceso anónimo")

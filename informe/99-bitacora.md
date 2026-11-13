@@ -146,3 +146,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Mientras va en camino se conserva el distintivo de llegada que trajo `main`. Al llegar a la puerta el mapa se apaga.
 - Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
 - Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.
+
+## 2026-11-13: el asistente de IA crea tickets y agrega al carrito
+- Cada consulta de un cliente al asistente queda como ticket. La IA resuelve sola lo que puede (ticket «Resuelto por la IA») y deriva a una persona lo que no (reclamos, facturas, cuando falla o no tiene el dato); el cliente ve el N.º y el estado en Soporte, y el CRM cuenta resueltas y derivadas.
+- El asistente conoce todo el catálogo (SKU, stock y precio de su perfil). Si el cliente pide agregar algo, lo agrega a su carrito; el servidor valida stock y límites y escribe la confirmación. No crea pedidos ni cobra.
+- Detalle y pendientes en `docs/decisiones.md`.

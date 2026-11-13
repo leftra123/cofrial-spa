@@ -1,6 +1,7 @@
 {% extends "crm/base.html" %}
 {% block titulo %}Nuevo prospecto | Cofrial SpA{% endblock %}
 {% block crm %}
+{% include "componentes/migas.html" with a1="/crm/" t1="CRM" a2="/crm/embudo/" t2="Embudo" actual="Nuevo prospecto" %}
 <div class="pagina-cab"><div><h1>Nuevo prospecto</h1><p class="sub">Se crea en la primera etapa del embudo.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/embudo/">Cancelar</a></div></div>
 <div class="tarjeta-ui" style="max-width:560px">
 <form method="post" data-carga>{% csrf_token %}

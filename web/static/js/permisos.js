@@ -1,5 +1,5 @@
 /* Cofrial SpA · permisos del navegador y notificaciones nativas. El navegador exige un gesto de la persona y un contexto seguro (HTTPS o localhost):
-   por eso primero explicamos para qué es cada permiso en un diálogo propio, una vez por cuenta y navegador, y el aviso nativo sale al tocar el botón.
+   por eso primero explicamos para qué es cada permiso en un diálogo propio, y el aviso nativo sale al tocar el botón. El diálogo se abre solo a pedido de la persona, nunca al entrar.
    Por http no se puede pedir nada: el diálogo lo dice y los avisos siguen dentro de la página. Aquí no se manda nada al servidor. */
 (function () {
   var dialogo = document.getElementById("permisos");
@@ -52,9 +52,10 @@
   if (!dialogo || !dialogo.showModal) return;
 
   /* ---- diálogo ---- */
-  var CLAVE_VISTO = "cofrial-permisos-" + dialogo.getAttribute("data-u"), filas = {};
+  var filas = {};
   dialogo.querySelectorAll("[data-permiso]").forEach(function (f) { filas[f.getAttribute("data-permiso")] = f; });
   var cerrar = dialogo.querySelector("[data-permisos-cerrar]");
+  var sugerencias = document.querySelectorAll("[data-permisos-sugerencia]");      // línea dentro del panel de avisos: visible mientras las notificaciones sigan sin decidir
 
   function pintarFila(nombre, estado) {
     var f = filas[nombre]; if (!f) return;
@@ -63,6 +64,7 @@
                   inseguro: "No disponible sin conexión segura.", nosoporta: "Este navegador no lo permite aquí; los avisos siguen dentro de la página.", prompt: ""};
     s.textContent = textos[estado] || "";
     b.hidden = estado !== "prompt";
+    if (nombre === "notificaciones") sugerencias.forEach(function (x) { x.hidden = estado !== "prompt"; });
     pintarPie();
   }
   function pintarPie() {
@@ -103,14 +105,8 @@
   cerrar.addEventListener("click", function () { dialogo.close(); });
   document.querySelectorAll("[data-permisos-abrir]").forEach(function (b) { b.addEventListener("click", abrir); });
 
-  /* Se abre solo una vez por cuenta y navegador. Sin almacenamiento no se abre: reaparecería en cada página. Si ya está todo resuelto, no molesta. */
-  if (leer(CLAVE_VISTO, null) !== null) return;
-  refrescar(function (estados) {
-    var algo = !seguro || Object.keys(estados).some(function (n) { return estados[n] === "prompt"; });
-    if (!algo) return;
-    setTimeout(function () {
-      if (document.querySelector("dialog[open]")) return;       // no tapar otro diálogo, como la revisión de una entrega
-      if (guardar(CLAVE_VISTO, Date.now())) abrir();
-    }, 700);
-  });
+  /* El diálogo ya no se abre solo: tapaba la primera pantalla (y, tras generar un pedido, la confirmación). Se abre a pedido, desde el enlace
+     «Permisos» o desde la invitación [data-permisos-sugerencia] que va en el panel de avisos y en la confirmación de un pedido recién generado.
+     Aquí solo se averigua el estado para mostrar u ocultar esa invitación. */
+  refrescar();
 })();

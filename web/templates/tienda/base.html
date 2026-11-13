@@ -10,8 +10,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux14">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux21">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux15">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux22">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -36,6 +36,7 @@
         <button type="button" class="tema-btn campana-btn" id="campana-btn" aria-label="Avisos de tus pedidos" aria-expanded="false" aria-controls="campana-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 003.4 0"/></svg><span class="campana-n" id="campana-n" hidden>0</span></button>
         <div class="campana-panel" id="campana-panel" role="region" aria-label="Avisos" hidden>
           <div class="campana-cab"><b>Avisos</b><span class="campana-nota" id="campana-nota" role="status" hidden>Sin actualizar</span></div>
+          <p class="permisos-sugerencia" data-permisos-sugerencia hidden>Recibe estos avisos aunque estés en otra pestaña. <button type="button" class="enlace" data-permisos-abrir>Activar notificaciones</button></p>
           <ul id="campana-lista" aria-busy="true"><li class="campana-vacio cargando">Cargando avisos…</li></ul>
           <a class="campana-pie" href="/avisos/">Avisos de stock{% if avisos_n %} <span class="tb-n" title="Productos que esperabas y ya tienen stock">{{ avisos_n }}</span>{% endif %}</a>
         </div>
@@ -98,8 +99,8 @@
     <div class="acciones"><button type="button" class="btn-sec" data-salir-cancelar>Cancelar</button><button type="submit" class="btn">Confirmar</button></div>
   </form>
 </dialog>{% endif %}
-<script src="{% static 'js/tienda.js' %}?v=cant-nota-v1"></script>
-{% if menu.crm or menu.cliente %}{% include "componentes/permisos.html" %}<script src="{% static 'js/permisos.js' %}"></script>{% endif %}
+<script src="{% static 'js/tienda.js' %}?v=barra-orden-cant-nota-v1"></script>
+{% if menu.crm or menu.cliente %}{% include "componentes/permisos.html" %}<script src="{% static 'js/permisos.js' %}?v=contexto-v1"></script>{% endif %}
 {% if menu.cliente %}<script src="{% static 'js/nav-slide.js' %}?v=nav-cola-cof07"></script><script src="{% static 'js/entrega.js' %}?v=lle04"></script><script src="{% static 'js/campana.js' %}?v=lle03d"></script>{% endif %}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="solo-lector" id="vivo" role="status" aria-live="polite"></div>

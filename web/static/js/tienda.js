@@ -151,3 +151,21 @@
     });
   }
 })();
+
+/* Carrito en móvil: barra fija con el total y la acción principal, en la zona del pulgar. Se esconde cuando el botón del resumen ya está a la vista
+   o quedó más arriba, para no mostrar dos veces la misma acción. Sin JS la barra igual envía el formulario (atributo form del botón). */
+(function () {
+  var barra = document.getElementById("barra-orden"); if (!barra) return;
+  var real = document.querySelector(".resumen button.confirmar"), dir = document.getElementById("direccion"), dirTxt = barra.querySelector("[data-barra-dir]");
+  var pagar = barra.querySelector("[data-barra-pagar]"), abrirPago = document.getElementById("mp-mostrar-pago");
+  if (pagar && abrirPago) pagar.addEventListener("click", function () { abrirPago.click(); });
+  function pintarDir() { var o = dir && dir.options[dir.selectedIndex]; if (dirTxt) dirTxt.textContent = o ? "Entrega: " + o.textContent.trim() : ""; }
+  if (dir) { dir.addEventListener("change", pintarDir); pintarDir(); }
+  function medir() { document.body.style.setProperty("--barra-orden-alto", (barra.classList.contains("oculta") ? 0 : barra.offsetHeight) + "px"); }
+  if (real && "IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) {
+      var e = es[es.length - 1]; barra.classList.toggle("oculta", e.isIntersecting || e.boundingClientRect.top < 0); medir();
+    }).observe(real);
+  }
+  window.addEventListener("resize", medir); medir();
+})();

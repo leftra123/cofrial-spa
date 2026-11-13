@@ -476,7 +476,7 @@ class AsistenteDeIA(TestCase):
             r = self.client.post("/api/asistente/", json.dumps({"mensaje": "precio del lomo vetado"}), content_type="application/json")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["origen"], "error")
-        self.assertContains(self.client.get("/catalogo/"), "Asistente Cofrial (IA)")                      # la tienda sigue funcionando
+        self.assertContains(self.client.get("/catalogo/"), "Cofri · agente de Cofrial (IA)")                      # la tienda sigue funcionando
 
     def test_no_se_registra_el_texto_del_cliente(self):
         self.client.login(username="ana@correo.test", password=self.CLAVE)
@@ -590,15 +590,15 @@ class AsistenteDeIA(TestCase):
         self.assertEqual(self.client.get("/api/asistente/").status_code, 404)
         with override_settings(ASISTENTE_ACTIVO=False):
             self.assertEqual(self._preguntar("precio del lomo vetado").status_code, 404)
-            self.assertNotContains(self.client.get("/catalogo/"), "Asistente Cofrial (IA)")
+            self.assertNotContains(self.client.get("/catalogo/"), "Cofri · agente de Cofrial (IA)")
 
     def test_el_asistente_aparece_en_catalogo_detalle_carrito_y_pedido(self):
         from catalogo.models import Producto
         lomo = Producto.objects.get(sku="VAC-LOM-5K")
-        self.assertContains(self.client.get("/catalogo/"), "Asistente Cofrial (IA)")
+        self.assertContains(self.client.get("/catalogo/"), "Cofri · agente de Cofrial (IA)")
         self.assertContains(self.client.get(f"/catalogo/{lomo.pk}/"), f'data-producto="{lomo.pk}"')
         self.client.login(username="abastecimiento@hospital.test", password=self.CLAVE)
-        self.assertContains(self.client.get("/carrito/"), "Asistente Cofrial (IA)")
+        self.assertContains(self.client.get("/carrito/"), "Cofri · agente de Cofrial (IA)")
         from pedidos.models import Orden
         orden = Orden.objects.filter(direccion__cliente__usuario__username="abastecimiento@hospital.test").first()
         self.assertContains(self.client.get(f"/pedidos/{orden.orden_id}/"), f'data-orden="{orden.orden_id}"')

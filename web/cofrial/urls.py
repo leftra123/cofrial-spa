@@ -8,17 +8,13 @@ from . import bi, vistas
 from .vistas import api_avisos_equipo
 from catalogo import views as catalogo_views
 from flota import demo as flota_demo
+from salud import vistas as salud_vista
 
 from flota.urls import api_urlpatterns as flota_api
 
 admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser      # el equipo (vendedor, gerencia, despacho) trabaja en el CRM y la flota; el admin de Django es del administrador
 admin.site.site_header = "Cofrial SpA: CRM y operación"
 admin.site.site_title = "Cofrial"
-
-
-def salud(request):
-    """Responde 200 si la aplicación está viva; el balanceo y las pruebas la usan."""
-    return JsonResponse({"estado": "ok"})
 
 
 def salud_bd(request):
@@ -70,7 +66,7 @@ urlpatterns = [
         template_name="cuenta/clave.html", success_url="/cuenta/clave/hecho/"), name="cambiar_clave"),
     path("cuenta/clave/hecho/", auth_views.PasswordChangeDoneView.as_view(template_name="cuenta/clave_hecha.html"), name="clave_hecha"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
-    path("salud/", salud),
+    path("salud/", salud_vista.pagina),
     path("salud/bd/", salud_bd),
     path("health", salud_bd),            # nombre convencional para el chequeo del ALB; sin barra final, tal como lo pide el balanceador
     path(settings.ADMIN_URL, admin.site.urls),

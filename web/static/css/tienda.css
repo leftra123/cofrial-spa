@@ -827,6 +827,8 @@ body:has(.asistente.abierto):has(.fab-carrito:not([hidden])) .toasts { bottom: m
 .asistente-panel[hidden] { display: none; }
 .asistente-cab { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding: 16px 16px 12px; background: linear-gradient(135deg, #0B2350, #143A7B); color: #fff; }
 .asistente-cab h2 { font-size: 1.02rem; color: #fff; margin-bottom: 4px; }
+.asistente-id { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.asistente-avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #fff; padding: 4px; box-sizing: border-box; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); object-fit: contain; }
 .asistente-aviso { margin: 0; font-size: .78rem; color: #DCE7FF; line-height: 1.4; }
 .asistente-cerrar { background: rgba(255, 255, 255, .14); border: 0; color: #fff; padding: 0; width: 32px; height: 32px; flex: none; justify-content: center; border-radius: 50%; box-shadow: none; }
 .asistente-cerrar:hover { background: rgba(255, 255, 255, .26); box-shadow: none; }

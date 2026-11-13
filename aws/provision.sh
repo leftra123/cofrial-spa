@@ -21,7 +21,7 @@
 # ALTA DISPONIBILIDAD (revisión técnica del 8-nov-2026): Application Load Balancer en dos zonas, DOS EC2 web (una por zona, registradas en el
 # grupo de destino del ALB) y RDS Multi-AZ. `recrear-web` es "rodante": recrea una web y espera a que el ALB la dé por sana antes de tocar
 # la otra, así el sitio no se corta. Variables opcionales de esta parte:
-#   DOMINIO_HTTPS=cofrialspa.webhop.me   # nombre público (CN del certificado autofirmado y origen CSRF permitido)
+#   DOMINIO_HTTPS=www.cofrialspa.shop    # nombre público (CN del certificado autofirmado y origen CSRF permitido)
 #   CERT_ARN=arn:aws:acm:...             # certificado ya importado en ACM (de confianza). Sin él: aws/.estado/cert.pem + cert.key (+ cert-cadena.pem)
 #                                        # se importan; si tampoco están, se genera uno autofirmado (el navegador avisa y el 80 sigue sirviendo)
 #   ACTIVAR_HSTS=1                       # con certificado de confianza: cookies seguras y HSTS de un año (irreversible para los navegadores que visiten)

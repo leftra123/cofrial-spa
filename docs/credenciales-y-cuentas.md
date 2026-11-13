@@ -58,6 +58,29 @@ python manage.py crear_cuenta ana2@correo.test --rol cliente-b2c --nombre "Ana D
 
 La clave se **pide por teclado** (dos veces) y se valida (largo mínimo y no una clave común). Los errores son claros: usuario o RUT repetido, comuna inexistente (lista las que existen), vendedor inexistente. Si algo falla no queda nada creado a medias. Para cambiar la clave de una cuenta existente: `python manage.py changepassword usuario`.
 
+### C. RUT para registrar cuentas de prueba
+El registro (`/cuenta/registro/` y `/cuenta/registro/empresa/`) acepta cualquier RUT con dígito verificador correcto (módulo 11, `web/clientes/rut.py`) que no esté ya registrado; no consulta al SII ni distingue persona de empresa por el número. Cada RUT sirve una sola vez, igual que cada correo. Estas dos series son ficticias, con verificador válido, y no las usa la carga de demostración:
+
+| Empresa (registro de empresa) | Persona (registro particular) |
+|---|---|
+| 70.500.001-8 | 35.500.001-K |
+| 70.500.002-6 | 35.500.002-8 |
+| 70.500.003-4 | 35.500.003-6 |
+| 70.500.004-2 | 35.500.004-4 |
+| 70.500.005-0 | 35.500.005-2 |
+| 70.500.006-9 | 35.500.006-0 |
+| 70.500.007-7 | 35.500.007-9 |
+| 70.500.008-5 | 35.500.008-7 |
+| 70.500.009-3 | 35.500.009-5 |
+| 70.500.010-7 | 35.500.010-9 |
+| 70.500.011-5 | 35.500.011-7 |
+| 70.500.012-3 | 35.500.012-5 |
+
+- La cuenta de empresa queda pendiente hasta aprobarla en el CRM, «Solicitudes» (como `vendedora@cofrial.cl`).
+- **Ya ocupados por la demostración (el registro los rechaza):** 12.345.678-5, 19.876.543-0, 20.111.222-2, 61.973.200-4, 76.543.210-K, la serie 70.300.101 a 109 y la serie 70.400.101 a 110.
+- Si alguno de la tabla responde «Ya existe una cuenta con ese RUT», alguien lo usó antes en esa instalación: tomar el siguiente.
+- En local, el botón «Precargar datos de ejemplo» del registro particular genera un RUT válido al azar.
+
 ## 3. Cuentas de demostración y su clave
 
 Las crea `cargar_demo` (ver `docs/guia-pruebas-aws.md`). Si existían con los nombres anteriores, las renombra sin perder sus datos.

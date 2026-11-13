@@ -38,6 +38,7 @@
       {% if f.stock_clase == "poco" %}{% include "catalogo/_aviso_stock.html" %}{% endif %}
       {% endif %}
       </div>
+      {% if f.precio and p.stock_disponible > 0 %}<p class="cant-nota" data-cant-nota data-tope="Es todo el stock disponible: {{ f.maximo_texto }}.">Compra mínima: {{ f.minimo_texto }} · Disponibles: {{ f.maximo_texto }}</p>{% endif %}
       {% if not user.is_authenticated and f.precio %}<span class="ayuda-ingreso">Necesita una cuenta para comprar; si es institución, su ejecutivo le entrega el acceso.</span>{% endif %}
     </div>
     <ul class="det-garantias">
@@ -47,9 +48,13 @@
   </div>
 </div>
 {% endwith %}
+{% if juntos %}
+<section class="relacionados" aria-labelledby="h-juntos"><h2 id="h-juntos">Suelen pedirse junto con este producto</h2>
+  <div class="tira">{% for f in juntos %}{% include "catalogo/_tarjeta.html" with prioritaria=False %}{% endfor %}</div></section>
+{% endif %}
 {% if similares %}
-<div class="seccion seccion-similares"><h2>Más de {{ fila.p.categoria.nombre }}</h2></div>
-<div class="productos">{% for f in similares %}{% include "catalogo/_tarjeta.html" %}{% endfor %}</div>
+<section class="relacionados" aria-labelledby="h-similares"><h2 id="h-similares">Más de {{ fila.p.categoria.nombre }}</h2>
+  <div class="tira">{% for f in similares %}{% include "catalogo/_tarjeta.html" with prioritaria=False %}{% endfor %}</div></section>
 {% endif %}
 {% endblock %}
 {% block asistente %}{% include "componentes/asistente.html" with producto_id=fila.p.producto_id pagina="producto" %}{% endblock %}

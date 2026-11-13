@@ -19,5 +19,6 @@
       </form>
       {% endif %}
     </div>
+    {% if f.precio and f.p.stock_disponible > 0 %}<small class="cant-nota" data-cant-nota data-tope="Es todo el stock: {{ f.maximo_texto }}">Compra mínima: {{ f.minimo_texto }}</small>{% endif %}
   </div>
 </article>

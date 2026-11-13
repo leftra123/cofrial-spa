@@ -115,6 +115,8 @@
 
 Ese mismo día se desplegó el código nuevo en las dos web, una a la vez, y en el nodo IoT: el balanceador chequea `/health`, las cookies van marcadas `Secure`, se anuncia HSTS y los contenedores tienen tope de memoria y CPU.
 
+El 13 de noviembre se desplegó, también de a una web, la información legal del sitio (privacidad, términos, devoluciones, cookies y «Mis datos»). Hubo dos cortes de unos 20 segundos, uno por cada web reemplazada, y luego se rehicieron las alarmas con los ID nuevos; la verificación de punta a punta quedó sin fallas.
+
 **Preparado y sin aplicar en AWS.** La copia de las claves en Parameter Store. El cifrado en reposo de la base no está activo y exige restaurarla desde una copia cifrada.
 
 ### Limitaciones declaradas del prototipo

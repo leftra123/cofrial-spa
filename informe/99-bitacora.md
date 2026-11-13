@@ -135,6 +135,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 
 - Activación del laboratorio en cada sesión (13-nov-2026): `aws/activar.sh` pide las credenciales, enciende la base y las EC2, espera al balanceador y verifica por el dominio; no recrea nada, porque detener y encender conserva las IDs de las instancias y las alarmas. Se corrigió la espera final de `provision.sh encender`, que no seguía la redirección a HTTPS. Probado con AWS falso y en solo lectura contra el laboratorio vivo; en la primera sesión nueva real (13-nov, 15:39) el laboratorio ya había encendido las EC2 y la base, y `activar.sh` solo guardó las credenciales y verificó; `encender` sobre máquinas detenidas sigue sin probarse. Detalle en `docs/decisiones.md`.
 
+- Panel de salud (13-nov-2026): Eric notó que «salud» no muestra rojos: `/health` y `/salud/` son texto y viven en las mismas web. `aws/panel-salud.sh` crea el panel `cofrial-salud` en CloudWatch (alarmas, web sanas, 5xx, CPU, base), alojado por AWS fuera de las EC2. Detalle en `docs/decisiones.md`.
+
 ## 2026-11-08 (revisión técnica: alta disponibilidad)
 - El evaluador aprobó la aplicación salvo infraestructura: pidió balanceador de carga, dos EC2 web y RDS en múltiples zonas, HTTPS con nombre de dominio y Grafana con autenticación y HTTPS.
 - `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).

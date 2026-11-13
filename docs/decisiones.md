@@ -504,6 +504,12 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
 - **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).
 
+## Panel de salud en CloudWatch (13-nov-2026)
+- **Problema (Eric):** «salud no muestra rojos». `/health`, `/salud/` y `/salud/bd/` son respuestas JSON sin pantalla y viven en las web que vigilan: con la web caída no responde nada que se pueda poner rojo. `/salud/` nunca falla a propósito (solo dice que la aplicación está viva); la que prueba la base es `/salud/bd/` (503).
+- **Decisión:** el aviso visual va fuera de las EC2. `aws/panel-salud.sh` crea el panel `cofrial-salud` en CloudWatch con las alarmas, las web sanas, los 5xx, la respuesta, la CPU y la base, leídos de las métricas de AWS. No depende de IDs de EC2 y es idempotente. Alternativas vistas: un monitor externo gratuito (exige una cuenta ajena) o mostrar solo la consola.
+- **Límite:** no envía correos (las alarmas no tienen `ALARMA_EMAIL`). El panel solo se abre desde la consola del laboratorio.
+- **Prueba:** `aws/test_panel_salud.sh` (AWS falso) y creación real con renderizado de gráficas el 13-nov. No se abrió el panel en el navegador de la consola.
+
 ## Activar el laboratorio en cada sesión (13-nov-2026)
 - **Problema:** cada sesión del Learner Lab (4 h) detiene las EC2 y la base, y reactivarlas eran varios pasos a mano (pegar credenciales, `encender`, esperar, verificar). Además, tras poner el HTTPS en el balanceador, la espera final de `provision.sh encender` consultaba `http://<balanceador>/salud/` sin seguir redirecciones y recibía un 301: habría dado por caída una aplicación que ya funcionaba.
 - **Decisión:** `aws/activar.sh` (credenciales del portapapeles, validadas antes de reemplazar las actuales; `encender`; espera a que los destinos del balanceador estén sanos; verificación por el dominio) y `encender` con `curl -L -k`. No recrea nada: detener y encender conserva las IDs de las instancias, así que los destinos del balanceador y las alarmas siguen valiendo; `recrear-web` las rompería.
@@ -610,3 +616,12 @@ Pedido de Eric: que las consultas al asistente se resuelvan solas como tickets, 
 - **Pruebas:** `node --test web/herramientas/pruebas-js/*.test.mjs` (reglas, sin navegador; no corre dentro del contenedor, que no trae Node) y `web/clientes/tests_semaforo.py`. El comportamiento en pantalla se revisó a mano en registro, ingreso, soporte, carrito, CRM y Operación.
 - **Ver la clave:** todo campo de contraseña lleva un botón con un ojo para mostrar u ocultar lo escrito (`estados.js`). Al enviar vuelve a quedar oculto, para que el navegador no lo guarde como texto a la vista. No aplica al formulario de tarjeta de Mercado Pago.
 
+
+## Carrito en pasos (13-nov-2026)
+- **Origen:** Eric probó el pago y la columna derecha (resumen) era muy larga: dirección, quién recibe, boleta o factura, orden de compra, ayudas y legales apilados antes del botón. Pidió ordenar el flujo mirando el de Mercado Libre, sin copiarlo.
+- **Qué se tomó prestado:** la estructura, no el look. Izquierda lo que se completa; derecha un resumen compacto que concentra el total y la acción. Productos en una sola fila (foto, nombre, cantidad, total).
+- **Qué es propio de Cofrial:** pasos numerados **1 Entrega** (dirección y quién recibe, lado a lado en PC), **2 Documento de venta** (boleta o factura; el giro y la orden de compra B2B aparecen aquí) y **3 Resumen y pago** (cámaras de frío, neto, IVA, total y botones). Se conserva el aviso de temperaturas y el IVA B2B.
+- **En celular:** los pasos se apilan y el botón de pago queda fijo abajo, a todo lo ancho (zona del pulgar). En PC el resumen va fijo a la derecha.
+- **Técnica:** los campos de los pasos viven fuera del `<form>` y se asocian con `form="checkout-form"`; el formulario con los botones queda en el resumen. Los selectores de `mp-brick.js` (`.checkout-mp ...`) siguen valiendo porque el contenedor de pasos lleva esa clase. Un solo formulario para Mercado Pago y para «solo orden».
+- **Textos más cortos:** las ayudas largas se resumieron; el «Actualizar» de cada línea queda oculto a la vista (la cantidad ya se guarda sola tras una pausa) y aparece al enfocarlo con teclado.
+- **Hallazgo previo:** `web/static/css/tienda.css` tenía un `@media (max-width: 760px)` sin cerrar que dejaba todo lo posterior (nota de cantidad, `.tira`, etc.) solo para celular. No se tocó ese alcance; se cerró justo antes de las reglas nuevas. Conviene revisarlo aparte.

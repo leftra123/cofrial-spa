@@ -48,14 +48,14 @@ class BaseSeguridad(TestCase):
 
 # ---------------------------------------------------------------- 1. Quien no inició sesión no ve nada privado
 class AccesoAnonimoTests(BaseSeguridad):
-    PRIVADAS_GET = ["/operacion/productos/", "/operacion/productos/nuevo/", "/operacion/productos/1/", "/operacion/ordenes/", "/operacion/sistema/", "/operacion/datos/",
+    PRIVADAS_GET = ["/cuenta/mis-datos/", "/cuenta/mis-datos/descargar/", "/operacion/productos/", "/operacion/productos/nuevo/", "/operacion/productos/1/", "/operacion/ordenes/", "/operacion/sistema/", "/operacion/datos/",
                     "/operacion/datos/x/", "/operacion/datos/x/nuevo/", "/operacion/datos/x/1/",
                     "/pedidos/1/documentos/1/", "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/", "/flota/por-despachar/",
                     "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
                     "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/", "/torre/", "/torre/pulso/"]
-    PRIVADAS_POST = ["/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
+    PRIVADAS_POST = ["/cuenta/mis-datos/eliminar/", "/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
                      "/operacion/datos/x/1/borrar/",
                      "/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/clientes/1/direccion/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/crm/requerimientos/1/resolver/", "/flota/despachar/",
@@ -91,7 +91,8 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "cuenta/registro/empresa/", "cuenta/recuperar/", "cuenta/recuperar/enviado/", "cuenta/recuperar/<str:uidb64>/<str:token>/",
                     "cuenta/recuperar/listo/",        # pedir cuenta y recuperar la clave son para quien no puede entrar
                     "salud/bd/", "health", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/",
-                    "carrito/mp/webhook/"}   # lo llama Mercado Pago sin sesión; solo consulta el pago en la API de MP, no confía en el cuerpo
+                    "carrito/mp/webhook/",
+                    "legal/<slug:nombre>/"}   # privacidad, términos, devoluciones, cookies y licencias se leen antes de crear la cuenta   # lo llama Mercado Pago sin sesión; solo consulta el pago en la API de MP, no confía en el cuerpo
         cubiertas = {u.strip("/") for u in self.PRIVADAS_GET + self.PRIVADAS_POST}
         pendientes = []
         for p in get_resolver().url_patterns:
@@ -818,7 +819,7 @@ class CaidasControladasTests(BaseSeguridad):
     def test_el_mapa_caido_no_impide_registrarse(self):
         from clientes.models import Comuna
         datos = {"nombre": "Pedro Pérez", "rut": "11.111.111-1", "email": "pedro@correo.test", "direccion": "Calle 1 100", "comuna": Comuna.objects.first().pk,
-                 "clave": "una-clave-larga-9", "clave2": "una-clave-larga-9"}
+                 "clave": "una-clave-larga-9", "clave2": "una-clave-larga-9", "acepta": "on"}
         with override_settings(GEOCODIFICAR=True), mock.patch("urllib.request.urlopen", side_effect=OSError("sin red")):
             r = self.anonimo().post("/cuenta/registro/", datos)
         self.assertEqual(r.status_code, 302)

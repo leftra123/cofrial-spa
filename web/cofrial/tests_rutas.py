@@ -134,6 +134,11 @@ ESPERADO = {
     '/cuenta/recuperar/NO-EXISTE/NO-EXISTE/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),   # «el enlace ya no sirve»
     '/cuenta/recuperar/listo/': ('200 200 200 200 200 200 200', '405 405 405 405 405 405 405'),
     '/cuenta/clave/': ('L 200 200 200 200 200 200', 'L 200 200 200 200 200 200'),
+    # Mis datos: solo clientes (el equipo no tiene ficha de cliente). Eliminar es POST y las cuentas demo vuelven a la página sin eliminar nada.
+    '/cuenta/mis-datos/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
+    '/cuenta/mis-datos/descargar/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
+    '/cuenta/mis-datos/eliminar/': ('405 405 405 405 405 405 405', 'L →/cuenta/mis-datos/ →/cuenta/mis-datos/ 403 403 403 403'),
+    '/legal/no-existe/': ('404 404 404 404 404 404 404', '404 404 404 404 404 404 404'),     # las cinco páginas legales son públicas
     '/cuenta/clave/hecho/': ('L 200 200 200 200 200 200', 'L 405 405 405 405 405 405'),
     '/salud/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/salud/bd/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),

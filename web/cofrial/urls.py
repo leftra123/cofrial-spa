@@ -4,7 +4,7 @@ from django.db import connection
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from . import bi, vistas
+from . import bi, legal, vistas
 from .vistas import api_avisos_equipo
 from catalogo import views as catalogo_views
 from flota import demo as flota_demo
@@ -70,6 +70,10 @@ urlpatterns = [
         template_name="cuenta/clave.html", success_url="/cuenta/clave/hecho/"), name="cambiar_clave"),
     path("cuenta/clave/hecho/", auth_views.PasswordChangeDoneView.as_view(template_name="cuenta/clave_hecha.html"), name="clave_hecha"),
     path("cuenta/salir/", auth_views.LogoutView.as_view(), name="salir"),
+    path("cuenta/mis-datos/", legal.mis_datos, name="mis_datos"),
+    path("cuenta/mis-datos/descargar/", legal.descargar_datos, name="mis_datos_descargar"),
+    path("cuenta/mis-datos/eliminar/", legal.eliminar_cuenta, name="mis_datos_eliminar"),
+    path("legal/<slug:nombre>/", legal.pagina, name="legal"),
     path("salud/", salud),
     path("salud/bd/", salud_bd),
     path("health", salud_bd),            # nombre convencional para el chequeo del ALB; sin barra final, tal como lo pide el balanceador

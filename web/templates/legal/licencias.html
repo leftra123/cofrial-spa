@@ -1,0 +1,36 @@
+{% extends "legal/_base.html" %}
+{% block texto %}
+<h2>Contenido generado con inteligencia artificial</h2>
+<p>Las fotografías de los productos, la portada y las categorías, y algunas ilustraciones, fueron generadas con IA para este prototipo. Por eso en la tienda dicen «Imagen referencial del producto»: muestran el tipo de producto, no la unidad exacta que recibirás. Las respuestas del asistente y la categoría sugerida para cada consulta también las produce una IA, y así se indica donde aparecen.</p>
+
+<h2>Mapas</h2>
+<p>Los mapas muestran datos de © colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (licencia ODbL), con teselas de <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>. Las coordenadas de las direcciones se obtienen con Nominatim y las rutas con OSRM, ambos sobre datos de OpenStreetMap. La atribución aparece también en cada mapa.</p>
+
+<h2>Tipografía y bibliotecas</h2>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Componente</th><th>Uso</th><th>Licencia</th></tr></thead>
+  <tbody>
+    <tr><td>Schibsted Grotesk</td><td>Tipografía del sitio, alojada en el propio servidor</td><td>SIL Open Font License 1.1</td></tr>
+    <tr><td>MapLibre GL JS</td><td>Mapas interactivos</td><td>BSD de 3 cláusulas</td></tr>
+    <tr><td>Django y Django REST framework</td><td>Aplicación web y API</td><td>BSD de 3 cláusulas</td></tr>
+    <tr><td>Gunicorn y WhiteNoise</td><td>Servidor de la aplicación y archivos estáticos</td><td>MIT</td></tr>
+    <tr><td>Psycopg</td><td>Conexión con PostgreSQL</td><td>LGPL 3.0 (se usa sin modificar)</td></tr>
+    <tr><td>PostgreSQL (Amazon RDS)</td><td>Base de datos</td><td>Licencia PostgreSQL</td></tr>
+    <tr><td>Grafana</td><td>Tablero de BI, como servicio aparte y sin modificar</td><td>AGPL 3.0</td></tr>
+  </tbody>
+</table></div>
+<p>Los textos completos de las licencias acompañan a cada componente en el código del proyecto.</p>
+
+{% if fotos %}<h2>Fotografías de Wikimedia Commons</h2>
+<p>El sitio guarda estas fotos como respaldo para los productos que no tienen imagen propia.</p>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Producto</th><th>Foto</th><th>Autor</th><th>Licencia</th></tr></thead>
+  <tbody>{% for f in fotos %}<tr><td>{{ f.sku }}</td><td><a href="{{ f.pagina }}" target="_blank" rel="noopener">{{ f.titulo }}</a></td><td>{{ f.autor }}</td><td>{{ f.licencia }}</td></tr>{% endfor %}</tbody>
+</table></div>{% endif %}
+
+<h2>Marcas y logos</h2>
+<p>El sitio no muestra logos de clientes ni de otras empresas. Algunas cuentas de demostración llevan nombres de hospitales, clínicas, hoteles y supermercados reales de la zona solo para dar realismo al caso: sus pedidos, contactos y compras son ficticios, y esas instituciones no tienen relación con este prototipo.</p>
+
+<h2>Derechos de autor</h2>
+<p>Si crees que algún contenido de este sitio infringe tus derechos de autor, escríbenos en <a href="/soporte/">Soporte</a> indicando cuál es, y lo revisamos y retiramos mientras se aclara.</p>
+{% endblock %}

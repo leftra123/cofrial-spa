@@ -568,6 +568,7 @@ Pedido de Eric: revisar una lista general de exigencias legales y aplicar solo l
 - **No aplica:** consentimiento de padres (las compras son de mayores de edad y empresas), marketing y enlace de baja (solo hay correos transaccionales), suscripciones con renovación, acuerdos firmados con proveedores (se declara que en una operación real se firmarían).
 - **Revisado sin cambios:** asistente y clasificación ya se presentan como IA; todas las imágenes tienen texto alternativo; hay enlace para saltar al contenido. axe-core (WCAG 2.1 AA) sobre 12 pantallas, en claro y oscuro, con y sin sesión: sin fallas.
 - **Pendiente de decisión:** varias cuentas de demostración usan nombres reales de hospitales, clínicas y hoteles de la zona (y la del Hospital Regional, su dirección). Las páginas lo declaran; si se quiere evitar del todo, hay que renombrarlas en `cargar_demo` y en las pruebas que las nombran.
+- **Desplegado en AWS (13-nov-2026):** `recrear-web` rodante con `main` en `a9f3458`; dos cortes de unos 20 s (uno por web reemplazada), alarmas rehechas y `verificar.py --defensa --infra` sin fallas. Ver `aws/README.md`.
 
 ## Tienda: stock y mínimo a la vista, relacionados compactos y aviso de camiones distintos (13-nov-2026)
 - **Origen:** revisión de Eric sobre la aplicación desplegada: el bloque «Soy una institución» de la portada quedaba pegado al borde, la ficha mostraba las fotos de «Más de la categoría» a todo el ancho, y al elegir la cantidad no se sabía cuánto stock hay ni desde cuánto se compra.

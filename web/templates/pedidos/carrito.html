@@ -18,7 +18,7 @@
   {% for f in filas %}
     <article class="linea">
       <a class="linea-img" href="{% url 'producto' f.producto.producto_id %}" tabindex="-1" aria-hidden="true">{% include "catalogo/_miniatura.html" with producto=f.producto %}</a>
-      <div class="linea-info"><h3><a href="{% url 'producto' f.producto.producto_id %}" style="color:var(--texto)">{{ f.producto.nombre }}</a></h3>
+      <div class="linea-info"><h3><a href="{% url 'producto' f.producto.producto_id %}">{{ f.producto.nombre }}</a></h3>
         <span class="frio">{{ f.precio|clp }} c/u</span>
         {% if not f.hay_stock %}<span class="chip alerta sin-punto" style="margin-top:6px">{% if not f.producto.activo %}Ya no está disponible{% elif f.producto.stock_disponible <= 0 %}Agotado por ahora{% else %}Solo quedan {{ f.producto.stock_disponible }}{% endif %}</span>{% endif %}</div>
       <div class="linea-total">{{ f.subtotal|clp }}</div>

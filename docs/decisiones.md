@@ -504,6 +504,12 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
 - **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).
 
+## Panel de salud en CloudWatch (13-nov-2026)
+- **Problema (Eric):** «salud no muestra rojos». `/health`, `/salud/` y `/salud/bd/` son respuestas JSON sin pantalla y viven en las web que vigilan: con la web caída no responde nada que se pueda poner rojo. `/salud/` nunca falla a propósito (solo dice que la aplicación está viva); la que prueba la base es `/salud/bd/` (503).
+- **Decisión:** el aviso visual va fuera de las EC2. `aws/panel-salud.sh` crea el panel `cofrial-salud` en CloudWatch con las alarmas, las web sanas, los 5xx, la respuesta, la CPU y la base, leídos de las métricas de AWS. No depende de IDs de EC2 y es idempotente. Alternativas vistas: un monitor externo gratuito (exige una cuenta ajena) o mostrar solo la consola.
+- **Límite:** no envía correos (las alarmas no tienen `ALARMA_EMAIL`). El panel solo se abre desde la consola del laboratorio.
+- **Prueba:** `aws/test_panel_salud.sh` (AWS falso) y creación real con renderizado de gráficas el 13-nov. No se abrió el panel en el navegador de la consola.
+
 ## Activar el laboratorio en cada sesión (13-nov-2026)
 - **Problema:** cada sesión del Learner Lab (4 h) detiene las EC2 y la base, y reactivarlas eran varios pasos a mano (pegar credenciales, `encender`, esperar, verificar). Además, tras poner el HTTPS en el balanceador, la espera final de `provision.sh encender` consultaba `http://<balanceador>/salud/` sin seguir redirecciones y recibía un 301: habría dado por caída una aplicación que ya funcionaba.
 - **Decisión:** `aws/activar.sh` (credenciales del portapapeles, validadas antes de reemplazar las actuales; `encender`; espera a que los destinos del balanceador estén sanos; verificación por el dominio) y `encender` con `curl -L -k`. No recrea nada: detener y encender conserva las IDs de las instancias, así que los destinos del balanceador y las alarmas siguen valiendo; `recrear-web` las rompería.

@@ -170,3 +170,15 @@ Son 30 a 45 minutos con el sitio detenido y sin vuelta atrás rápida si el labo
 - **Qué avisa sin arreglar.** Si las alarmas de CPU apuntan a instancias que ya no existen, indica `bash aws/endurecer.sh alarmas --aplicar` (que pregunta antes de cada comando). Las IP públicas de la web B y de la IoT cambian en cada arranque (solo la web A tiene IP elástica): las muestra al final.
 - **Corrección de `encender` (13-nov-2026).** Su espera final consultaba `http://<balanceador>/salud/` sin seguir redirecciones; desde que el 80 redirige a HTTPS recibía un 301 y daba por caída una aplicación que ya funcionaba. Ahora sigue la redirección (`-L -k`, el certificado es del dominio, no del DNS del balanceador).
 - **Prueba.** `bash aws/test_activar.sh` (AWS, `curl` y `pbpaste` falsos: 11 casos, entre ellos bloque incompleto, rol `runserver`, web no sana y alarmas huérfanas). No valida el arranque real desde «detenido»: eso solo lo prueba una sesión de laboratorio nueva.
+
+## Panel de salud (CloudWatch)
+
+`bash aws/panel-salud.sh` crea (o actualiza) el panel **`cofrial-salud`** en CloudWatch: el estado de la aplicación en verde y rojo, **alojado por AWS fuera de las EC2**. `--vista-previa` solo imprime su definición.
+
+- **Por qué fuera de las máquinas.** `/health`, `/salud/` y `/salud/bd/` son respuestas de texto (`{"estado": "ok"}`, o 503 con `sin_base`) que viven en las mismas web que vigilan: si la web cae, no hay nada que responda ni pantalla que se ponga roja, y el panel de Grafana (`/bi/`) tampoco, porque corre en la misma máquina. CloudWatch lee las métricas del balanceador, de la base y de las EC2 y las alarmas, así que sigue mostrando aunque las web estén caídas.
+- **Qué muestra.** Un cuadro con las 8 alarmas (verde bien, rojo en alarma, gris sin datos); web sanas y no sanas del balanceador (deben ser 2 y 0); errores 5xx del balanceador y de la aplicación con la línea de la alarma; peticiones y tiempo de respuesta; la CPU más alta y el promedio de las EC2; y CPU, conexiones y espacio libre de la base.
+- **Dónde se abre.** Desde la consola de AWS del laboratorio (AWS Academy > AWS > CloudWatch > Paneles > `cofrial-salud`): `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards/dashboard/cofrial-salud`.
+- **No depende de las IDs de las EC2**, así que sigue valiendo tras cada `recrear-web`. La CPU se busca por métrica (`MAX`/`AVG` de `SEARCH`) para que las instancias terminadas no llenen la leyenda; por instancia están las alarmas.
+- **Lo que no hace.** No avisa por correo: eso lo hacen las alarmas con `ALARMA_EMAIL` (hoy sin definir). Las lagunas de la gráfica son los cierres del laboratorio, cuando no hay datos.
+- **Prueba.** `bash aws/test_panel_salud.sh` (AWS falso, 5 casos). Creado y comprobado el 13-nov-2026 contra el laboratorio vivo: se renderizaron las gráficas de 5xx y CPU con datos reales.
+

@@ -13,7 +13,8 @@
    tiene cada campo (required, min, max, minlength, type). No consulta al servidor mientras se escribe: no revela qué RUT o correos existen.
 
    - Un <form data-semaforo="no"> queda fuera. También los buscadores (method=get), el selector de cantidad (.cant), los radios y las
-     casillas (conservan la validación del navegador) y el formulario de tarjeta de Mercado Pago.
+     casillas opcionales (conservan la validación del navegador) y el formulario de tarjeta de Mercado Pago. Una casilla obligatoria sí
+     lleva luz (p. ej. aceptar los términos al registrarse).
    - Las reglas son funciones puras: se prueban sin navegador con  node --test web/herramientas/pruebas-js/*.test.mjs  */
 (function (raiz) {
   "use strict";
@@ -90,6 +91,7 @@
     var etiqueta = String(c.etiqueta || "").toUpperCase(), tipo = String(c.tipo || "text").toLowerCase(), nombre = String(c.nombre || "");
     if (etiqueta === "SELECT") return "lista";
     if (etiqueta === "TEXTAREA") return "texto";
+    if (etiqueta === "INPUT" && tipo === "checkbox" && c.requerido) return "casilla";       // p. ej. aceptar los términos: sin marcar no se puede enviar
     if (etiqueta !== "INPUT" || NO_SE_EVALUA.indexOf(tipo) >= 0) return null;
     if (/(^|_)rut$/.test(nombre)) return "rut";
     if (tipo === "email") return "correo";
@@ -104,7 +106,7 @@
     var vacio = c.regla === "clave-nueva" || c.regla === "repetir" ? valor === "" : valor.trim() === "";       // una clave puede llevar espacios
     if (vacio) {
       if (!c.tocado) return r("gris", "");
-      if (c.requerido) return r("rojo", c.regla === "lista" ? "Elige una opción" : "Falta");
+      if (c.requerido) return r("rojo", c.regla === "lista" ? "Elige una opción" : c.regla === "casilla" ? "Marca la casilla para continuar" : "Falta");
       return r("gris", "Opcional");
     }
     switch (c.regla) {
@@ -113,7 +115,7 @@
       case "clave-nueva": return claveNueva(valor, c.minlength);
       case "repetir": return repetir(valor, c.original);
       case "numero": return numero(valor, c.min, c.max);
-      case "lista": return r("verde", "Listo");
+      case "lista": case "casilla": return r("verde", "Listo");
       default: return texto(valor, c.minlength);
     }
   }
@@ -133,7 +135,7 @@
   function evaluable(campo) {
     if (!campo.name || campo.disabled || campo.readOnly) return false;
     if (campo.closest(".cant, #mp-brick-container, [data-semaforo='no']")) return false;
-    return tipoDe({etiqueta: campo.tagName, tipo: campo.type, nombre: campo.name}) !== null;
+    return tipoDe({etiqueta: campo.tagName, tipo: campo.type, nombre: campo.name, requerido: campo.required}) !== null;
   }
   function camposDe(form) { return Array.prototype.filter.call(form.elements, evaluable); }
   function visible(campo) { return !campo.disabled && (campo.offsetParent !== null || campo === doc.activeElement); }     // un campo que otro script ocultó o apagó no cuenta
@@ -172,7 +174,7 @@
   function medir(campo, enfocado) {
     var s = campo._sem, regla = s.regla, orig = regla === "repetir" ? original(campo) : null;
     if (s.delServidor) return {estado: "rojo", texto: "Revisa este dato"};       // el mensaje del servidor ya está junto al campo
-    return evaluar({regla: regla, valor: campo.value, requerido: campo.required, enfocado: enfocado, tocado: s.tocado, original: orig ? orig.value : "",
+    return evaluar({regla: regla, valor: regla === "casilla" ? (campo.checked ? "1" : "") : campo.value, requerido: campo.required, enfocado: enfocado, tocado: s.tocado, original: orig ? orig.value : "",
                     min: campo.getAttribute("min"), max: campo.getAttribute("max"), minlength: campo.getAttribute("minlength")});
   }
 
@@ -207,14 +209,16 @@
 
   function preparar(campo, form) {
     if (campo._sem) return;
-    var f = form._sem, s = campo._sem = {regla: tipoDe({etiqueta: campo.tagName, tipo: campo.type, nombre: campo.name}), tocado: false, estado: "gris",
+    var f = form._sem, s = campo._sem = {regla: tipoDe({etiqueta: campo.tagName, tipo: campo.type, nombre: campo.name, requerido: campo.required}), tocado: false, estado: "gris",
                                          delServidor: campo.getAttribute("aria-invalid") === "true"};
     if (!f.compacto) {
       s.linea = linea("sem");
-      (campo.closest(".clave-caja") || campo).insertAdjacentElement("afterend", s.linea);       // bajo la caja del ojo, no dentro
+      var ancla = campo.closest(".clave-caja") || campo;                                    // bajo la caja del ojo, no dentro
+      if (s.regla === "casilla") ancla = campo.closest(".campo-check, label") || (campo.id && form.querySelector('label[for="' + campo.id + '"]')) || campo;   // bajo la casilla y su texto
+      ancla.insertAdjacentElement("afterend", s.linea);
       campo.setAttribute("aria-describedby", ((campo.getAttribute("aria-describedby") || "") + " " + s.linea.id).trim());
     }
-    if (campo.value !== "" && campo.type !== "password") s.tocado = true;       // ya trae valor (servidor, navegador o lista con opción elegida): se puede juzgar
+    if (s.regla === "casilla" ? campo.checked : campo.value !== "" && campo.type !== "password") s.tocado = true;       // ya trae valor (servidor, navegador o lista con opción elegida): se puede juzgar
     if (s.delServidor) s.tocado = true;
     actualizar(campo, false);
   }

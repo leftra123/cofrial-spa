@@ -81,6 +81,7 @@ test("tipoDe: qué regla le toca a cada campo", () => {
   assert.equal(t("SELECT", "select-one", "comuna"), "lista");
   assert.equal(t("TEXTAREA", "textarea", "descripcion"), "texto");
   assert.equal(t("INPUT", "tel", "telefono"), "texto");
+  assert.equal(R.tipoDe({ etiqueta: "INPUT", tipo: "checkbox", nombre: "acepta", requerido: true }), "casilla");
   for (const tipo of ["hidden", "submit", "button", "radio", "checkbox", "file", "search", "image", "reset"]) assert.equal(t("INPUT", tipo, "x"), null, tipo);
 });
 
@@ -94,5 +95,8 @@ test("evaluar: vacío, sin tocar y obligatorio", () => {
   es(R.evaluar({ ...base, regla: "rut", valor: "35.500.001-K", tocado: true }), "verde");
   es(R.evaluar({ ...base, regla: "repetir", valor: "abc", original: "abcdefgh", tocado: true }), "naranja");
   es(R.evaluar({ ...base, regla: "clave-nueva", valor: "abc", tocado: true }), "naranja", "Faltan 5 caracteres");
+  es(R.evaluar({ ...base, regla: "casilla", tocado: true }), "rojo", "Marca la casilla para continuar");
+  es(R.evaluar({ ...base, regla: "casilla" }), "gris", "");                 // sin tocar no acusa: el consentimiento es un acto de la persona
+  es(R.evaluar({ ...base, regla: "casilla", valor: "1", tocado: true }), "verde", "Listo");
   es(R.evaluar({ ...base, regla: "texto", valor: "   ", tocado: true }), "rojo", "Falta");          // solo espacios no es un dato
 });

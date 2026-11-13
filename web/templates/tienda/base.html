@@ -90,7 +90,7 @@
 {{ mapa_tiles|json_script:"mapa-tiles" }}
 {% include "componentes/tema_js.html" %}
 <script src="{% static 'js/estados.js' %}?v=ojo1"></script>
-<script src="{% static 'js/semaforo.js' %}?v=sem2"></script>
+<script src="{% static 'js/semaforo.js' %}?v=sem3"></script>
 {% if user.is_authenticated %}<dialog id="salir-dialogo" class="dialogo salir-dialogo" aria-labelledby="salir-t" aria-describedby="salir-txt">
   <form method="post" action="/cuenta/salir/">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/">
     <h2 id="salir-t">¿Salir de la cuenta?</h2>

@@ -558,6 +558,7 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Laboratorio apagado:** si nadie corre el vigilante no hay filas, y la página lo muestra como «sin registros» (gris), no como caída ni como éxito. Si la base cae, las revisiones esperan en memoria y se guardan con su hora real cuando vuelve (hasta 2000). La disponibilidad (% de tiempo de actividad) se calcula solo sobre las revisiones hechas; los huecos no cuentan.
 - **Reglas de color:** un día (u hora) es rojo si al menos el 5 % de sus revisiones fallaron, amarillo si hubo alguna falla o lentitud, verde si no. En el grupo de IA (Gemini principal, Groq respaldo) con uno caído el grupo está degradado y solo es caída cuando caen los dos. IoT: lectura de hace más de 3 min = degradado, más de 10 min = caído.
 - **Compatibilidad:** el ALB, `aws/verificar.py` y las pruebas siguen recibiendo `{"estado": "ok"}` en `/salud/` (sin `Accept: text/html`, o con `?formato=json`). `/salud/bd/` y `/health` no cambian. La página es pública y cachea 30 s para no consultar la base en cada visita; los registros se podan a los 100 días.
+- **Desplegado en AWS (13-nov-2026, 13:22 a 13:31):** `recrear-web` rodante con `main` en `bf9ba35`; dos cortes de unos 7 s y 17 s, alarmas rehechas y `verificar.py --defensa --infra` sin fallas. Ver `aws/README.md`.
 
 ## Información legal y derechos del titular (13-nov-2026)
 Pedido de Eric: revisar una lista general de exigencias legales y aplicar solo las que calzan con Cofrial.

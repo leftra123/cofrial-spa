@@ -259,3 +259,30 @@ class LimpiarTests(Base):
         self.assertTrue(Requerimiento.objects.filter(pk=reclamo_real.pk).exists())
         self.assertTrue(Telemetria.objects.filter(pk=real.pk).exists())
         self.assertFalse(Telemetria.objects.filter(forzada=True).exists())
+
+
+class SensoresTests(Base):
+    def test_los_escenarios_de_sensor_completan_sus_valores_y_no_piden_paradas(self):
+        for tipo in ("sensor_falla", "sensor_pegado"):
+            e = validar({"tipo": tipo, "despacho_id": self.viaje.pk})
+            self.assertEqual(e["subida_c"], None)
+            self.assertTrue(5 <= e["momento_pct"] <= 95 and 6 <= e["duracion_lecturas"] <= 36)
+        self.assertEqual(validar({"tipo": "sensor_pegado", "despacho_id": self.viaje.pk, "momento_pct": 20, "duracion_lecturas": 10})["momento_pct"], 20)
+        for malo in ({"momento_pct": 3}, {"duracion_lecturas": 40}, {"momento_pct": "mucho"}):
+            with self.assertRaises(ErrorEscenario):
+                validar({"tipo": "sensor_falla", "despacho_id": self.viaje.pk, **malo})
+
+    def test_la_base_tambien_acota_los_sensores(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            EscenarioSimulador.objects.create(despacho=self.viaje, tipo="sensor_pegado", origen="boton", momento_pct=2, duracion_lecturas=10)
+        EscenarioSimulador.objects.create(despacho=self.viaje, tipo="sensor_pegado", origen="boton", momento_pct=10, duracion_lecturas=10)
+
+    def test_se_activan_con_su_boton_y_la_demo_los_ofrece_como_trampas(self):
+        self.entrar()
+        for clave in ("sensor_falla", "sensor_pegado"):
+            r = self.activar(clave)
+            self.assertEqual(r.status_code, 200, r.content)
+            self.assertIn("sensor", r.json()["resumen"].lower())
+            self.client.post("/flota/escenarios/cancelar/", {"escenario": r.json()["id"]})
+        self.assertEqual({k for k, p in escenarios.PREDEFINIDOS.items() if p["grupo"] == "trampa"}, {"sensor_falla", "sensor_pegado"})
+        self.assertEqual({k for k, p in escenarios.PREDEFINIDOS.items() if p["grupo"] == "principal"}, {"entrega_perfecta", "falla_mitad", "cliente_no_recibe"})

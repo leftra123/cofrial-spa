@@ -13,7 +13,8 @@ from pedidos.servicios import ErrorDeNegocio
 
 from crm.views import con_rol
 
-from . import autodespacho, rutas, servicios, sugerencias, tiempo
+from . import autodespacho, diagnostico, rutas, servicios, sugerencias, tiempo
+from .models import Camion
 from .servicios import estado_flota
 
 DESPACHAN = ("admin", "despachador")          # gerencia ve la flota y la pantalla de despacho, pero no arma viajes ni toca direcciones
@@ -174,3 +175,33 @@ def ubicar_direccion(request, direccion_id):
     else:
         messages.warning(request, f"No encontramos «{direccion}» en OpenStreetMap. Revisa que la calle y el número estén bien escritos.")
     return redirect("despachar")
+
+
+@require_GET
+@con_rol("admin", "gerencia", "despachador")
+def diagnostico_camion(request, camion_id):
+    """Qué le pasa al camión según sus últimas lecturas y qué se puede hacer. La IA, si responde, solo redacta; las reglas del código deciden."""
+    camion = get_object_or_404(Camion.objects.select_related("rango_temperatura", "rango_secundario"), pk=camion_id)
+    datos = diagnostico.diagnosticar(camion, con_ia=request.GET.get("ia") == "1")
+    if datos["accion"] and request.rol not in DESPACHAN:
+        datos["accion"] = None                       # gerencia consulta: no envía camiones a revisión
+    datos["puede_actuar"] = request.rol in DESPACHAN
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
+
+
+@require_POST
+@con_rol("admin", "despachador")
+def revision_camion(request, camion_id):
+    """Envía el camión a revisión técnica o lo devuelve a servicio. Pide confirmación explícita y deja a quién y cuándo."""
+    if request.POST.get("confirmar") != "1":
+        return JsonResponse({"detail": "Hay que confirmar la acción."}, status=400)
+    try:
+        if request.POST.get("accion") == "volver":
+            diagnostico.cerrar_revision(camion_id, request.user)
+            mensaje = f"{camion_id} volvió a servicio."
+        else:
+            r = diagnostico.abrir_revision(camion_id, request.POST.get("motivo", ""), request.user)
+            mensaje = f"{camion_id} quedó en revisión ({r.get_motivo_display()}). No se despachará hasta que vuelva a servicio."
+    except diagnostico.ErrorRevision as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+    return JsonResponse({"ok": True, "mensaje": mensaje}, json_dumps_params={"ensure_ascii": False})

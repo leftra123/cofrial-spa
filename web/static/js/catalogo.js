@@ -14,16 +14,16 @@
   function activos() {
     var a = [], txt = q.value.trim();
     if (txt) a.push({tipo: "q", texto: "\"" + txt + "\""});
-    var c = form.querySelector('input[name="categoria"]:checked'); if (c && c.value) a.push({tipo: "categoria", texto: etiqueta(c)});
-    var t = form.querySelector('input[name="temperatura"]:checked'); if (t && t.value) a.push({tipo: "temperatura", texto: etiqueta(t).replace(/\s*\(.*\)$/, "")});
+    form.querySelectorAll('input[name="categoria"]:checked').forEach(function (c) { a.push({tipo: "categoria", valor: c.value, texto: etiqueta(c)}); });
+    form.querySelectorAll('input[name="temperatura"]:checked').forEach(function (t) { a.push({tipo: "temperatura", valor: t.value, texto: etiqueta(t).replace(/\s*\(.*\)$/, "")}); });
     var s = form.elements.stock; if (s && s.checked) a.push({tipo: "stock", texto: "Solo con stock"});
     return a;
   }
   function params() {
     var p = new URLSearchParams();
     if (q.value.trim()) p.set("q", q.value.trim());
-    var c = form.querySelector('input[name="categoria"]:checked'); if (c && c.value) p.set("categoria", c.value);
-    var t = form.querySelector('input[name="temperatura"]:checked'); if (t && t.value) p.set("temperatura", t.value);
+    form.querySelectorAll('input[name="categoria"]:checked').forEach(function (c) { p.append("categoria", c.value); });
+    form.querySelectorAll('input[name="temperatura"]:checked').forEach(function (t) { p.append("temperatura", t.value); });
     if (form.elements.stock && form.elements.stock.checked) p.set("stock", "1");
     return p;
   }
@@ -34,7 +34,7 @@
     if (chips) {
       chips.hidden = n === 0; chips.innerHTML = "";
       a.forEach(function (f) {
-        var b = document.createElement("button"); b.type = "button"; b.className = "chip-filtro"; b.dataset.quitar = f.tipo;
+        var b = document.createElement("button"); b.type = "button"; b.className = "chip-filtro"; b.dataset.quitar = f.tipo; if (f.valor) b.dataset.valor = f.valor;
         b.setAttribute("aria-label", "Quitar filtro " + f.texto); b.innerHTML = "";
         b.appendChild(document.createTextNode(f.texto + " ")); var x = document.createElement("span"); x.setAttribute("aria-hidden", "true"); x.textContent = "×"; b.appendChild(x);
         chips.appendChild(b);
@@ -67,7 +67,7 @@
   function restablecer() {
     form.reset();                                   // vuelve a los valores iniciales del HTML… que pueden traer filtros, así que se fuerzan:
     q.value = "";
-    form.querySelectorAll('input[type=radio][value=""]').forEach(function (r) { r.checked = true; });
+    form.querySelectorAll('input[name="categoria"], input[name="temperatura"]').forEach(function (r) { r.checked = false; });
     if (form.elements.stock) form.elements.stock.checked = false;
     pintarEstado(); aplicar();
   }
@@ -82,7 +82,7 @@
     if (x) {
       var t = x.dataset.quitar;
       if (t === "q") q.value = ""; else if (t === "stock") form.elements.stock.checked = false;
-      else { var r = form.querySelector('input[name="' + t + '"][value=""]'); if (r) r.checked = true; }
+      else { var r = form.querySelector('input[name="' + t + '"][value="' + x.dataset.valor + '"]'); if (r) r.checked = false; }
       pintarEstado(); aplicar();
     }
     if (e.target.closest("[data-cerrar-filtros]") && detalle) { detalle.removeAttribute("open"); var m = document.getElementById("cat-inicio"); if (m) m.scrollIntoView({behavior: "smooth", block: "start"}); }

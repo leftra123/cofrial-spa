@@ -23,7 +23,11 @@ Escenarios: en cada ciclo el proceso lee de la tabla escenario_simulador los esc
 escribe; ver web/flota/escenarios.py). Cambian el comportamiento del camión, no las lecturas: estas se siguen insertando aquí.
   - falla_frio: al llegar al avance pedido la temperatura sube duracion_lecturas lecturas; la alerta sale de la misma regla de siempre.
     Esas lecturas van marcadas forzada, para que la limpieza de la demostración las pueda borrar.
-  - entrega_perfecta: sin rupturas al azar y el cliente confirma en cada parada.
+  - entrega_perfecta: sin rupturas al azar. El cliente NO responde solo: en la puerta lo decide una persona (o vence el plazo de siempre).
+  - sensor_falla: falsa alarma. El equipo de frío está bien, pero el sensor marca saltos imposibles (9 a 14 °C sobre lo real) durante
+    duracion_lecturas lecturas y la alerta se dispara. La carga llega en su temperatura.
+  - sensor_pegado: falso «todo normal». El sensor se queda clavado en un valor dentro del rango durante duracion_lecturas lecturas y nunca avisa,
+    pase lo que pase con la carga; la web lo detecta porque ningún sensor sano marca exactamente lo mismo tantas veces.
   - cliente_no_recibe: en la parada pedida el pedido queda «Entrega no concretada» y se crea el requerimiento para ventas.
 Sin escenario vigente no cambia nada. Si la tabla aún no existe (la EC2 IoT se actualizó antes que la web), se sigue como si no hubiera escenarios.
 
@@ -53,7 +57,9 @@ DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas
 CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)
 ESPERA_RESPUESTA_LECTURAS = int(os.environ.get("ESPERA_RESPUESTA_LECTURAS", "3"))   # en un escenario, lecturas que el cliente tarda en responder en la puerta
 TOPE_SOBRE_RANGO_C = 12.0                                                           # una falla de escenario no sube más que esto sobre el máximo del camión
-TIPOS_ESCENARIO = ("falla_frio", "entrega_perfecta", "cliente_no_recibe")
+TIPOS_ESCENARIO = ("falla_frio", "entrega_perfecta", "cliente_no_recibe", "sensor_falla", "sensor_pegado")
+TIPOS_SENSOR = ("sensor_falla", "sensor_pegado")                                    # cambian lo que marca el sensor, no la temperatura real
+SALTO_SENSOR = (9.0, 14.0)                                                           # °C que se suman a la temperatura real en una falsa alarma
 MULTIPLICADORES = (1, 5, 20, 60)                                                    # los mismos de web/flota/tiempo.py y de la restricción de la tabla
 if os.environ.get("CAMION_ID"):
     IDS = [os.environ["CAMION_ID"]]
@@ -325,14 +331,20 @@ class Camion:
 
     def _disparar_falla(self):
         esc = self.escenario
-        if esc is None or esc["tipo"] != "falla_frio" or esc["disparada"] or esc["terminado"]:
+        if esc is None or esc["tipo"] not in ("falla_frio",) + TIPOS_SENSOR or esc["disparada"] or esc["terminado"]:
             return
         if self.fase == "volviendo":                               # el viaje se dio por llegado antes del avance pedido: ya no hay carga que dañar
             self._terminar_escenario()
         elif self.progreso_pct() >= esc["momento_pct"]:
-            esc["disparada"], self.ruptura_restante = True, esc["duracion_lecturas"]
+            esc["disparada"] = True
             self.eventos.append(("escenario", esc["id"], "en_curso"))
-            log.warning("Escenario %s: falla de frío en %s durante %d lecturas", esc["id"], self.id, self.ruptura_restante)
+            if esc["tipo"] == "falla_frio":
+                self.ruptura_restante = esc["duracion_lecturas"]
+                log.warning("Escenario %s: falla de frío en %s durante %d lecturas", esc["id"], self.id, self.ruptura_restante)
+            else:
+                esc["restante"] = esc["duracion_lecturas"]
+                esc["clavada"] = None
+                log.warning("Escenario %s: %s en el sensor de %s durante %d lecturas", esc["id"], esc["tipo"], self.id, esc["restante"])
 
     def _despues_de_leer(self, alerta):
         """Efectos del escenario que dependen de lo que pasó en esta lectura. Sin escenario no hace nada."""
@@ -344,26 +356,42 @@ class Camion:
             if esc["disparada"] and self.ruptura_restante == 0 and not alerta:        # volvió al rango: esta última lectura normal cierra la falla
                 self._terminar_escenario()
             return
+        if esc["tipo"] in TIPOS_SENSOR:
+            if esc["disparada"]:
+                esc["restante"] -= 1
+                if esc["restante"] <= 0:
+                    self._terminar_escenario()
+            return
+        if esc["tipo"] == "entrega_perfecta":                  # no responde por el cliente: en la puerta decide una persona
+            return
         for ev in list(self.eventos):
-            if ev[0] == "puerta" and (esc["tipo"] == "entrega_perfecta" or ev[2] == esc["direccion_id"]):
+            if ev[0] == "puerta" and ev[2] == esc["direccion_id"]:
                 self.respuestas.append([ESPERA_RESPUESTA_LECTURAS, ev[2]])
-                if esc["tipo"] == "cliente_no_recibe":
-                    self.eventos.append(("escenario", esc["id"], "en_curso"))
+                self.eventos.append(("escenario", esc["id"], "en_curso"))
         for respuesta in self.respuestas:
             respuesta[0] -= 1
             if respuesta[0] <= 0:
-                if esc["tipo"] == "entrega_perfecta":
-                    self.eventos.append(("recibe", esc["despacho_id"], respuesta[1]))
-                else:
-                    self.eventos.append(("no_recibe", esc["despacho_id"], respuesta[1], esc["motivo"]))
-                    self._terminar_escenario()
+                self.eventos.append(("no_recibe", esc["despacho_id"], respuesta[1], esc["motivo"]))
+                self._terminar_escenario()
         self.respuestas = [r for r in self.respuestas if r[0] > 0]
+
+    def _lo_que_marca_el_sensor(self):
+        """La temperatura real es self.temp; un escenario de sensor cambia lo que el sensor informa, no la carga."""
+        real = round(self.temp, 1)
+        esc = self.escenario
+        if esc is None or esc["tipo"] not in TIPOS_SENSOR or not esc.get("disparada") or esc["terminado"]:
+            return real
+        if esc["tipo"] == "sensor_falla":
+            return round(real + random.uniform(*SALTO_SENSOR), 1)           # salto brusco entre dos lecturas: el frío no hace eso
+        if esc["clavada"] is None:
+            esc["clavada"] = round(min(max(real, self.tmin + 0.5), self.tmax - 0.5), 1)    # clavado dentro del rango: «todo normal» aunque nada lo sea
+        return esc["clavada"]
 
     def paso(self):
         esc = self.escenario
         self._disparar_falla()
         falla = bool(esc and esc.get("disparada") and not esc["terminado"] and self.ruptura_restante > 0)
-        protegido = bool(esc and esc["tipo"] == "entrega_perfecta")
+        protegido = bool(esc and esc["tipo"] in ("entrega_perfecta",) + TIPOS_SENSOR)
         if self.ruptura_restante == 0 and not protegido and random.random() < PROB_RUPTURA:
             self.ruptura_restante = random.randint(6, 14)
             log.warning("Falla de frío simulada en %s durante %d lecturas", self.id, self.ruptura_restante)
@@ -379,7 +407,7 @@ class Camion:
         if self.combustible < 15:
             self.combustible = 95                                  # recarga
         lat, lon = self.posicion()
-        temp = round(self.temp, 1)
+        temp = self._lo_que_marca_el_sensor()
         alerta = temp > self.tmax or temp < self.tmin
         self._despues_de_leer(alerta)
         return temp, round(lat, 6), round(lon, 6), self.combustible, alerta

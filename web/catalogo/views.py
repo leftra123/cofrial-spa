@@ -99,25 +99,25 @@ def listado(request):
     perfil = lista_del_visitante(request)
     precios = _precios(perfil)
     q = request.GET.get("q", "").strip()
-    cat = request.GET.get("categoria", "")
-    temp = request.GET.get("temperatura", "")
+    cats = [entradas.entero(c) for c in request.GET.getlist("categoria") if entradas.es_entero(c)]          # se pueden marcar varias: sin ninguna, todas
+    temps = [entradas.entero(t) for t in request.GET.getlist("temperatura") if entradas.es_entero(t)]
     solo_stock = request.GET.get("stock") == "1"
 
     productos = Producto.objects.filter(activo=True).select_related("categoria__rango_temperatura").order_by("categoria__nombre", "nombre")
     if q:
         productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q) | Q(categoria__nombre__icontains=q))
-    if entradas.es_entero(cat):
-        productos = productos.filter(categoria_id=entradas.entero(cat))
-    if entradas.es_entero(temp):
-        productos = productos.filter(categoria__rango_temperatura_id=entradas.entero(temp))
+    if cats:
+        productos = productos.filter(categoria_id__in=cats)
+    if temps:
+        productos = productos.filter(categoria__rango_temperatura_id__in=temps)
     if solo_stock:
         productos = productos.filter(stock_disponible__gt=0)
     filas = [_fila(p, precios) for p in productos]
     return render(request, "catalogo/listado.html", {
-        "filas": filas, "perfil": perfil, "q": q, "cat": cat, "temp": temp, "solo_stock": solo_stock,
+        "filas": filas, "perfil": perfil, "q": q, "cats": [str(c) for c in cats], "temps": [str(t) for t in temps], "solo_stock": solo_stock,
         "con_aviso": avisos.minimos_pendientes(_cliente(request)) if _cliente(request) else {},
         "categorias": Categoria.objects.order_by("nombre"), "rangos": RangoTemperatura.objects.order_by("-temp_min_c"),
-        "filtrado": bool(q or cat or temp or solo_stock)})
+        "filtrado": bool(q or cats or temps or solo_stock)})
 
 
 def suelen_pedirse_con(p, limite=4):

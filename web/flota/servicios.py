@@ -7,7 +7,7 @@ from pedidos import servicios as pedidos_servicios
 from pedidos.models import EstadoOrden, Orden
 
 from . import rutas
-from .models import Camion, Despacho, Telemetria
+from .models import Camion, Despacho, RevisionCamion, Telemetria
 from .vigente import ultimas_vigentes
 
 
@@ -27,6 +27,7 @@ def estado_flota():
     # DISTINCT ON de PostgreSQL: la última lectura de cada camión en una sola consulta.
     ultimas = ultimas_vigentes()
     viajes = {d.camion_id: d for d in Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).order_by("salida_en")}
+    en_revision = set(RevisionCamion.objects.filter(cerrada_en__isnull=True).values_list("camion_id", flat=True))
     ordenes = {}
     for o in (Orden.objects.filter(despacho__in=viajes.values())
               .select_related("direccion__cliente", "direccion__comuna", "estado_orden")):
@@ -40,17 +41,17 @@ def estado_flota():
         tarjetas.append({"camion": c, "lectura": t, "viaje": d, "pedidos": pedidos,
                          "destino": _proxima_direccion(pedidos),
                          "situacion": situacion_de(d), "situacion_texto": SITUACIONES[situacion_de(d)],
-                         "alerta": bool(t and t.alerta_ruptura_frio),
+                         "alerta": bool(t and t.alerta_ruptura_frio), "en_revision": c.camion_id in en_revision,
                          "combustible_bajo": bool(t and t.combustible_pct < COMBUSTIBLE_BAJO),
                          "sin_senal": bool(t and (ahora - t.registrado_en).total_seconds() > SENAL_VIGENTE_SEG)})
-        tarjetas[-1]["en_operacion"] = tarjetas[-1]["situacion"] != "en_base" or tarjetas[-1]["alerta"]     # lo que el panel muestra por defecto
+        tarjetas[-1]["en_operacion"] = tarjetas[-1]["situacion"] != "en_base" or tarjetas[-1]["alerta"] or c.camion_id in en_revision     # lo que el panel muestra por defecto
     resumen = {"total": len(camiones), "activos": sum(1 for c in camiones if c.activo),
                "en_ruta": sum(1 for x in tarjetas if x["situacion"] == "en_ruta"),
                "en_la_puerta": sum(1 for x in tarjetas if x["situacion"] == "en_la_puerta"),
                "volviendo": sum(1 for x in tarjetas if x["situacion"] == "volviendo"),
                "en_base": sum(1 for x in tarjetas if x["situacion"] == "en_base"),
                "guardados": sum(1 for x in tarjetas if not x["en_operacion"]),
-               "con_viaje": len(viajes), "con_alerta": sum(1 for x in tarjetas if x["alerta"]),
+               "con_viaje": len(viajes), "en_revision": len(en_revision), "con_alerta": sum(1 for x in tarjetas if x["alerta"]),
                "sin_lectura": sum(1 for x in tarjetas if x["lectura"] is None),
                "sin_senal": sum(1 for x in tarjetas if x["sin_senal"])}
     return tarjetas, resumen
@@ -95,7 +96,8 @@ def rangos_de(orden):
 
 def camiones_libres():
     ocupados = Despacho.objects.filter(salida_en__isnull=False, regreso_en__isnull=True).values_list("camion_id", flat=True)
-    return Camion.objects.filter(activo=True).exclude(camion_id__in=list(ocupados)).select_related("rango_temperatura", "rango_secundario").order_by("camion_id")
+    en_revision = RevisionCamion.objects.filter(cerrada_en__isnull=True).values_list("camion_id", flat=True)       # un camión en revisión no sale a repartir
+    return Camion.objects.filter(activo=True).exclude(camion_id__in=list(ocupados)).exclude(camion_id__in=list(en_revision)).select_related("rango_temperatura", "rango_secundario").order_by("camion_id")
 
 
 @transaction.atomic
@@ -133,6 +135,8 @@ def despachar(camion_id, orden_ids, decision=None):
     camion = Camion.objects.select_for_update(of=("self",)).select_related("rango_temperatura", "rango_secundario").filter(camion_id=camion_id, activo=True).first()
     if camion is None or Despacho.objects.filter(camion=camion, salida_en__isnull=False, regreso_en__isnull=True).exists():
         raise ErrorDeNegocio("Ese camión no está disponible (inactivo o con un viaje en curso).")
+    if RevisionCamion.objects.filter(camion=camion, cerrada_en__isnull=True).exists():
+        raise ErrorDeNegocio(f"{camion.camion_id} está en revisión técnica: vuelve a servicio antes de despacharlo.")
     ordenes = list(pedidos_por_despachar().select_for_update(of=("self",)).filter(pk__in=orden_ids))
     if len(ordenes) != len(set(orden_ids)):
         raise ErrorDeNegocio("Algún pedido ya no está disponible para despachar; actualiza la pantalla.")

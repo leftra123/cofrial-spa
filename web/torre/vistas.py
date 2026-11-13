@@ -9,7 +9,7 @@ from crm.views import con_rol
 from . import antes, servicios
 
 ROTULO = "Clientes ilustrativos: nombres públicos usados como ejemplo; ninguno es cliente confirmado de Cofrial"
-VEN = ("admin", "gerencia")          # los vendedores verían clientes fuera de su cartera (RN-09)
+VEN = ("admin",)          # solo el equipo de consultoría: gerencia no la ve, ni la rúbrica que lleva dentro
 
 
 @require_GET

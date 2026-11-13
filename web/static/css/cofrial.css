@@ -1064,3 +1064,51 @@ input[data-sem="verde"]:not(#mp-brick-container input), select[data-sem="verde"]
 .clave-ojo.viendo .tachado { display: inline; }
 .clave-ojo.viendo { color: var(--texto); }
 @media (pointer: coarse) { .clave-caja > button.clave-ojo:not(#mp-brick-container button) { width: 44px; height: 44px; right: 0; } }
+
+/* paginación de tablas (static/js/paginacion.js) */
+tr[data-pag-oculta] { display: none; }
+.paginacion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 10px 0 0; font-size: .92rem; color: var(--texto-2, var(--texto)); }
+.paginacion[hidden] { display: none; }
+.paginacion-texto { margin: 0; }
+.paginacion-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.paginacion-ctl .btn { min-height: 36px; padding: 6px 14px; }
+.paginacion-ctl .btn:disabled { opacity: .45; cursor: not-allowed; }
+.paginacion-tam { display: inline-flex; align-items: center; gap: 6px; }
+.paginacion-tam select { width: auto; min-height: 36px; padding: 4px 8px; }
+.paginacion-nro { min-width: 7.5em; text-align: center; }
+@media (max-width: 600px) { .paginacion { justify-content: center; } .paginacion-ctl .btn { min-height: 44px; } }
+
+/* diagnóstico y acciones de un camión con alerta (static/js/diagnostico-camion.js) */
+.diagnostico { margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--borde-fuerte, var(--borde)); background: var(--acento-suave, transparent); }
+.diagnostico[hidden] { display: none; }
+.diagnostico.diag-ruptura { border-color: #E5484D; }
+.diagnostico.diag-sensor_alerta, .diagnostico.diag-sensor_pegado { border-color: #F5A524; }
+.diagnostico.diag-revision { border-style: dashed; }
+.diag-cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.diag-origen { font-size: .8rem; color: var(--texto-3); }
+.diagnostico p { margin: 6px 0 0; }
+.diagnostico .acciones { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.diagnostico .diag-aviso { color: var(--texto-3); font-size: .9rem; }
+.vehiculo.destacada { outline: 3px solid var(--lima, #BDE63A); outline-offset: 2px; transition: outline-color .3s; }
+.pin-resumen.alerta { pointer-events: auto; cursor: pointer; }
+.pin-resumen.alerta .pin-resumen-caja { cursor: pointer; }
+.pin-resumen .resumen-accion { color: #FFFFFF; text-decoration: underline; font-weight: 700; }
+.revision-resultado[hidden] { display: none !important; }
+.revision-reportar { display: inline-block; margin: 6px 0 2px; min-height: 36px; }
+
+/* modo demostración: escenarios como opciones grandes y con su explicación */
+.demo-grupo { margin: 18px 0 8px; font-size: 1rem; }
+.demo-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.demo-opcion { display: grid; gap: 4px; text-align: left; align-content: start; padding: 12px 14px; min-height: 44px; border-radius: 14px; border: 1px solid var(--borde-fuerte, var(--borde)); background: var(--tarjeta); color: var(--texto); cursor: pointer; font: inherit; }
+.demo-opcion b { font-size: 1rem; }
+.demo-opcion span { font-size: .88rem; color: var(--texto-3); }
+.demo-opcion:hover:not(:disabled), .demo-opcion:focus-visible { border-color: var(--lima, #BDE63A); outline: 2px solid var(--lima, #BDE63A); outline-offset: 1px; }
+.demo-opcion.trampa { border-style: dashed; border-color: #F5A524; }
+.demo-opcion:disabled { opacity: .5; cursor: not-allowed; }
+.demo-aviso { margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; background: var(--acento-suave); }
+.demo-mas { margin-top: 12px; }
+.demo-mas summary, .demo-mas-herramientas summary { cursor: pointer; min-height: 36px; }
+button.demo-opcion { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; width: 100%; height: auto; white-space: normal; text-align: left; font-weight: 400; background: var(--tarjeta); color: var(--texto); }
+button.demo-opcion b { display: block; font-weight: 700; }
+button.demo-opcion span { display: block; }
+.demo-opciones { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }

@@ -2,11 +2,46 @@
 {% block titulo %}Modo demostración | Cofrial SpA{% endblock %}
 {% block cabecera %}
 <div class="pagina-cab">
-  <div><h1>Modo <span class="marca-texto">demostración</span></h1><p class="sub">Fuerza una ruptura de frío o pide un escenario para un viaje en curso. Solo para administradores.</p></div>
+  <div><h1>Modo <span class="marca-texto">demostración</span></h1><p class="sub">Elige cómo llega un camión con un pedido y recorre cada rol. Solo para administradores.</p></div>
   <div class="acciones"><span class="chip cancelado sin-punto">Rol: {{ rol }}</span></div>
 </div>
 {% endblock %}
 {% block contenido %}
+<div class="demo-aviso" role="note"><b>Antes de empezar:</b> necesitas un viaje en curso. Si no hay, arma un despacho y vuelve.</div>
+<section class="tarjeta-ui" aria-labelledby="d-t4" style="margin-top:16px">
+  <h2 id="d-t4">Un camión llega con un pedido</h2>
+  <p class="muted">1. Arma un despacho en «Armar despacho». 2. Elige el viaje y cómo llega. 3. Entra como el cliente y acepta o rechaza al recibir: nadie responde por él. Los botones funcionan sin IA.</p>
+  <div class="rejilla dos">
+    <div>
+      <label for="esc-viaje">Viaje</label>
+      <select id="esc-viaje" style="width:100%"></select>
+      <label for="esc-parada" style="margin-top:12px">Parada (solo para «Cliente no recibe»)</label>
+      <select id="esc-parada" style="width:100%"></select>
+      <h3 class="demo-grupo">¿Cómo llega el pedido?</h3>
+      <div class="demo-opciones">
+        {% for clave, p in predefinidos.items %}{% if p.grupo == "principal" %}<button type="button" class="demo-opcion esc-boton" data-predefinido="{{ clave }}"><b>{{ p.titulo }}</b><span>{{ p.detalle }}</span></button>{% endif %}{% endfor %}
+      </div>
+      <h3 class="demo-grupo">Cuidado: el sensor puede equivocarse</h3>
+      <div class="demo-opciones">
+        {% for clave, p in predefinidos.items %}{% if p.grupo == "trampa" %}<button type="button" class="demo-opcion trampa esc-boton" data-predefinido="{{ clave }}"><b>{{ p.titulo }}</b><span>{{ p.detalle }}</span></button>{% endif %}{% endfor %}
+      </div>
+    </div>
+    <div>
+      <label for="esc-texto">O pídelo con tus palabras (lo interpreta la IA gratuita)</label>
+      <textarea id="esc-texto" rows="3" maxlength="300" style="width:100%" placeholder="Falla de frío a mitad de ruta en el camión del Hospital"></textarea>
+      <div class="acciones" style="margin-top:12px"><button type="button" class="btn-sec" id="esc-interpretar">Interpretar con IA</button><button type="button" class="btn-peligro" id="esc-activar" hidden>Activar esta propuesta</button></div>
+    </div>
+  </div>
+  <div class="demo-estado" id="esc-estado" role="status" aria-live="polite">Sin escenario pedido en esta pantalla.</div>
+  <details class="demo-mas"><summary>¿Cómo hacer la prueba completa?</summary>
+    <ol class="demo-lista"><li><b>Pedido bueno:</b> el cliente ve la temperatura en rango y acepta.</li>
+    <li><b>Ruptura de frío:</b> el camión se entibia, el cliente ve el problema, rechaza o reporta; en Flota aparece la acción «Enviar a revisión».</li>
+    <li><b>Falsa alarma:</b> salta la alerta pero el salto es imposible para el frío: el diagnóstico dice «falla del sensor» y el cliente, al medir, puede aceptar. Un falso positivo.</li>
+    <li><b>Sensor pegado:</b> el sensor marca siempre lo mismo y nunca avisa; si la carga llegó tibia, solo el cliente lo ve.</li></ol></details>
+  <h3 style="margin-top:16px">Últimos escenarios</h3>
+  <ul class="demo-lista" id="esc-lista"></ul>
+</section>
+<details class="tarjeta-ui demo-mas-herramientas" style="margin-top:16px"><summary><b>Más herramientas</b>: forzar una ruptura sin viaje, tiempo acelerado y limpiar</summary>
 <div class="rejilla dos">
   <section class="tarjeta-ui" aria-labelledby="d-t1">
     <h2 id="d-t1">1. Forzar una ruptura de frío</h2>
@@ -34,29 +69,6 @@
     <button type="button" class="btn-sec" id="limpiar">Borrar lo de la demostración</button>
   </section>
 </div>
-<section class="tarjeta-ui" aria-labelledby="d-t4" style="margin-top:16px">
-  <h2 id="d-t4">4. Escenarios para un viaje en curso</h2>
-  <p class="muted">Los ejecutan los contenedores del simulador: leen el escenario de la base en su siguiente ciclo y las lecturas siguen saliendo de ellos. Los botones funcionan sin IA.</p>
-  <div class="rejilla dos">
-    <div>
-      <label for="esc-viaje">Viaje</label>
-      <select id="esc-viaje" style="width:100%"></select>
-      <label for="esc-parada" style="margin-top:12px">Parada (solo para «Cliente no recibe»)</label>
-      <select id="esc-parada" style="width:100%"></select>
-      <div class="acciones" style="margin-top:16px;flex-wrap:wrap">
-        {% for clave, p in predefinidos.items %}<button type="button" class="btn-sec esc-boton" data-predefinido="{{ clave }}">{{ p.titulo }}</button>{% endfor %}
-      </div>
-    </div>
-    <div>
-      <label for="esc-texto">O pídelo con tus palabras (lo interpreta la IA gratuita)</label>
-      <textarea id="esc-texto" rows="3" maxlength="300" style="width:100%" placeholder="Falla de frío a mitad de ruta en el camión del Hospital"></textarea>
-      <div class="acciones" style="margin-top:12px"><button type="button" class="btn-sec" id="esc-interpretar">Interpretar con IA</button><button type="button" class="btn-peligro" id="esc-activar" hidden>Activar esta propuesta</button></div>
-    </div>
-  </div>
-  <div class="demo-estado" id="esc-estado" role="status" aria-live="polite">Sin escenario pedido en esta pantalla.</div>
-  <h3 style="margin-top:16px">Últimos escenarios</h3>
-  <ul class="demo-lista" id="esc-lista"></ul>
-</section>
 <section class="tarjeta-ui" aria-labelledby="d-t5" style="margin-top:16px">
   <h2 id="d-t5">5. Tiempo de la simulación</h2>
   <p class="muted">Un viaje real a Angol toma unas 3 horas. Aquí eliges cuántas veces más rápido avanzan los camiones: el simulador lo lee en su siguiente ciclo, sin reiniciarse. La hora de llegada se ajusta sola. No cambian las lecturas (siguen entrando cada pocos segundos, con los mismos campos), la detención en la puerta ni el plazo para que el cliente confirme: lo responde una persona.</p>
@@ -65,6 +77,7 @@
   </div>
   <div class="demo-estado" id="tiempo-estado" role="status" aria-live="polite">Tiempo normal.</div>
 </section>
+</details>
 <dialog id="dlg" class="dialogo" aria-labelledby="dlg-t">
   <form method="dialog">
     <h2 id="dlg-t">¿Forzar una ruptura de frío?</h2>
@@ -181,7 +194,7 @@
   selV.addEventListener("change", pintarParadas);
   botones.forEach(function (b) {
     b.addEventListener("click", function () {
-      if (!confirm("¿Activar «" + b.textContent + "» en el viaje elegido? Los clientes de ese viaje verán sus efectos.")) return;
+      if (!confirm("¿Activar «" + b.querySelector("b").textContent + "» en el viaje elegido? Los clientes de ese viaje verán sus efectos.")) return;
       post("/flota/escenarios/activar/", {predefinido: b.dataset.predefinido, despacho: selV.value, direccion: selP.value, confirmar: "1"}).then(activado).catch(function () { avisar("Sin conexión con el servidor.", false); });
     });
   });

@@ -48,7 +48,7 @@
 {% else %}
 <div class="rejilla dos">
 {% for x in viajes %}
-  <article class="tarjeta-ui viaje"{% if x.lectura %} data-foco="{{ x.camion.camion_id }}"{% endif %}>
+  <article class="tarjeta-ui viaje" data-camion-diag="{{ x.camion.camion_id }}"{% if x.lectura %} data-foco="{{ x.camion.camion_id }}"{% endif %}>
     <div class="vehiculo-cab"><div><div class="patente" style="font-weight:700">{{ x.camion.patente }}</div><div class="frio">Despacho N.º {{ x.viaje.despacho_id }}</div></div>
       <div class="vehiculo-chips">{% if x.alerta %}<span class="chip alerta">Ruptura de frío</span>{% else %}<span class="chip transito">{{ x.situacion_texto|capfirst }}</span>{% endif %}{% if x.lectura %}<button type="button" class="ver-en-mapa">Ver en el mapa</button>{% endif %}</div></div>
     <div class="ruta">
@@ -62,6 +62,7 @@
       <div><b>{{ o.direccion.cliente.nombre }}</b><div class="frio">Parada {{ o.parada_n }} · Orden N.º {{ o.orden_id }}</div></div>
       <span style="margin-left:auto">{% include "componentes/chip_estado.html" with estado=o.estado_orden.nombre %}</span></div>
     {% endfor %}
+    <div class="diagnostico" data-diagnostico hidden></div>
     {% if puede_cerrar and not x.viaje.llegada_en %}
     <form method="post" action="/flota/viajes/{{ x.viaje.despacho_id }}/cerrar/" class="cerrar-viaje"
           onsubmit="return confirm('Corrección manual: ¿dar por llegado el despacho N.º {{ x.viaje.despacho_id }}? Los pedidos pasarán a «Entregada» y el camión {{ x.camion.camion_id|escapejs }} volverá a la base. Normalmente el sistema lo registra solo.')">
@@ -81,7 +82,7 @@
     <div class="vehiculo-cab">
       <div class="vehiculo-id"><span class="vehiculo-ico">{% include "componentes/ico_camion.html" %}</span>
         <div><div class="patente">{{ x.camion.patente }}</div><div class="frio">{{ x.camion.camion_id }} · {{ x.camion.rangos_texto }}{% if not x.lectura %} · {{ x.camion.capacidad_kg|miles }} kg{% endif %}</div></div></div>
-      <div class="vehiculo-chips"><span class="chip pendiente" data-campo="sin-senal"{% if not x.sin_senal %} hidden{% endif %}>Sin señal</span>
+      <div class="vehiculo-chips"><span class="chip pendiente" data-campo="revision"{% if not x.en_revision %} hidden{% endif %}>En revisión</span><span class="chip pendiente" data-campo="sin-senal"{% if not x.sin_senal %} hidden{% endif %}>Sin señal</span>
       {% if not x.camion.activo %}<span class="chip cancelado">Inactivo</span>
       {% elif x.alerta %}<span class="chip alerta" data-campo="situacion">Ruptura de frío</span>
       {% elif x.situacion == "en_base" %}<span class="chip entregado" data-campo="situacion">{{ x.situacion_texto|capfirst }}</span>
@@ -99,6 +100,7 @@
     {% else %}
     <div class="mini"><div><span>Capacidad</span><b>{{ x.camion.capacidad_kg|miles }} kg</b></div><div style="grid-column: span 2"><span>Telemetría</span><b class="frio" style="font-weight:500">Sin lecturas todavía</b></div></div>
     {% endif %}
+    <div class="diagnostico" data-diagnostico hidden></div>
   </article>
 {% empty %}
   {% include "componentes/vacio_estado.html" with ico="camion" titulo="No hay camiones registrados" texto="Registra la flota desde Administración para ver aquí su estado y su telemetría." url="/admin/" accion="Ir a Administración" %}
@@ -120,6 +122,8 @@
 <script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
+<script src="{% static 'js/diagnostico-camion.js' %}"></script>
+<form hidden>{% csrf_token %}</form>
 <script>
   (function () {
     fetch("/flota/sugerencias/", {credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
@@ -188,12 +192,14 @@
       t.textContent = grados(c.temp) + " °C"; t.classList.toggle("mal", c.alerta);
       k.textContent = c.comb + " %"; k.classList.toggle("mal", c.combBajo);
       r.el.querySelector(".resumen-sit").textContent = textoEstado(c);
+      var acc = r.el.querySelector(".resumen-accion"); if (acc) acc.hidden = !c.alerta;
       r.el.classList.toggle("alerta", c.alerta);
       r.el.classList.toggle("atenuado", atenuado(c));
     }
     function agregarResumen(c) {
       resumenes[c.id] = calle.marcador(c.pos, {clase: "pin-resumen", ancho: 1, alto: 1, ancla: "bottom", offset: [0, -34],
-        html: '<div class="pin-resumen-caja"><b class="resumen-temp" title="Temperatura de la cámara"></b><span class="resumen-comb" title="Combustible"></span><span class="resumen-sit"></span></div>'});
+        html: '<div class="pin-resumen-caja"><b class="resumen-temp" title="Temperatura de la cámara"></b><span class="resumen-comb" title="Combustible"></span><span class="resumen-sit"></span><span class="resumen-accion" hidden>Qué hacer ›</span></div>'});
+      resumenes[c.id].el.addEventListener("click", function (e) { if (flota[c.id] && flota[c.id].alerta) { e.stopPropagation(); window.CofrialDiagnostico && CofrialDiagnostico.abrir(c.id); } });
       pintarResumen(c);
     }
     function quitarMarcas(id) {

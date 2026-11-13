@@ -314,7 +314,7 @@ class FallaDeFrioTest(unittest.TestCase):
 
 
 class EntregaPerfectaTest(unittest.TestCase):
-    def test_no_hay_rupturas_y_cada_cliente_confirma(self):
+    def test_no_hay_rupturas_y_el_cliente_decide_en_la_puerta(self):
         c = camion()
         c.ruptura_restante = 5                                              # una ruptura al azar en curso se repara
         c.asignar(viaje(ruta(CASA, OTRA)))
@@ -328,9 +328,49 @@ class EntregaPerfectaTest(unittest.TestCase):
         finally:
             sim.PROB_RUPTURA = original
         self.assertFalse(any(l[1][4] for l in lecturas))
-        self.assertEqual([e for e in eventos if e[0] == "recibe"], [("recibe", 1, 100), ("recibe", 1, 101)])
-        self.assertLess(eventos.index(("puerta", 1, 100)), eventos.index(("recibe", 1, 100)))
+        self.assertFalse([e for e in eventos if e[0] in ("recibe", "no_recibe")])        # el simulador no responde por el cliente: lo decide una persona
+        self.assertIn(("puerta", 1, 100), eventos)
         self.assertFalse(any(l[2] for l in lecturas))
+
+
+def sensor(tipo, momento=5, duracion=10):
+    return {"id": 9, "camion_id": "CAM-01", "despacho_id": 1, "tipo": tipo, "momento_pct": momento, "duracion_lecturas": duracion, "subida_c": 1.0,
+            "direccion_id": None, "motivo": ""}
+
+
+class SensorTest(unittest.TestCase):
+    def _correr(self, tipo, **kw):
+        c = camion()
+        c.ruptura_restante = 0
+        c.asignar(viaje(ruta(CASA, OTRA)))
+        original, sim.PROB_RUPTURA = sim.PROB_RUPTURA, 1.0                  # el escenario protege al camión de las fallas al azar
+        try:
+            return leer(c, sensor(tipo, **kw), lecturas=80)
+        finally:
+            sim.PROB_RUPTURA = original
+
+    def test_falsa_alarma_salta_la_alerta_con_saltos_imposibles_y_luego_se_apaga(self):
+        lecturas, eventos = self._correr("sensor_falla", duracion=10)
+        marcadas = [l for l in lecturas if l[2]]
+        self.assertEqual(len(marcadas), 10)
+        self.assertTrue(all(l[1][4] for l in marcadas))                      # la alerta salta en todas
+        self.assertGreater(min(l[1][0] for l in marcadas), 5 + 3)           # 9 °C o más sobre una temperatura real sana (el rango del camión es 0 a 5)
+        antes = lecturas[:lecturas.index(marcadas[0])]
+        self.assertFalse(any(l[1][4] for l in antes))                        # antes de la falla, todo normal
+        self.assertIn(("escenario", 9, "terminado"), eventos)
+
+    def test_sensor_pegado_marca_siempre_lo_mismo_y_nunca_avisa(self):
+        lecturas, eventos = self._correr("sensor_pegado", duracion=12)
+        marcadas = [l[1][0] for l in lecturas if l[2]]
+        self.assertEqual(len(marcadas), 12)
+        self.assertEqual(len(set(marcadas)), 1)                              # clavado
+        self.assertFalse(any(l[1][4] for l in lecturas if l[2]))             # y sin alerta mientras dura
+        self.assertIn(("escenario", 9, "terminado"), eventos)
+
+    def test_la_temperatura_se_ignora_fuera_del_escenario(self):
+        lecturas, _ = self._correr("sensor_pegado", duracion=6)
+        libres = [l[1][0] for l in lecturas if not l[2]]
+        self.assertGreater(len(set(libres)), 3)                              # sin escenario el sensor oscila como siempre
 
 
 class ClienteNoRecibeTest(unittest.TestCase):

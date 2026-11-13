@@ -26,7 +26,7 @@ def menu(request):
         n = pedidos.lineas_en_carrito(cliente)
     tipo = tipo_de(u)
     return {"menu": {"cliente": cliente is not None, "crm": rol is not None,
-                     "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_superuser, "operacion": rol == "admin", "demo": u.is_superuser, "torre": rol in ("admin", "gerencia"),
+                     "flota": rol in ("admin", "gerencia", "despachador"), "admin": u.is_superuser, "operacion": rol == "admin", "demo": u.is_superuser, "torre": rol == "admin",
                      "tienda": tipo in ("cliente", "admin"),                       # la tienda es de los clientes; el administrador la ve para revisarla
                      "comercial": rol in ("admin", "gerencia", "vendedor")},       # el despachador del CRM solo usa demanda y alertas de frío
             "inicio_url": INICIOS[tipo], "tipo_cuenta": tipo, "etiqueta_cuenta": ETIQUETAS.get(tipo, ""),

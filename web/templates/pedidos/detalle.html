@@ -54,13 +54,13 @@
     {% elif n == "Camión en la puerta" %}<h2 id="ep-t">Tu paquete llegó</h2>
       <p>El camión está en {{ orden.direccion }} con tu pedido N.º {{ orden.orden_id }}. Hasta que confirmes, no queda como entregado.</p>
       <div class="entrega" id="entrega" data-url="/pedidos/{{ orden.orden_id }}/entrega/">
-        <form class="entrega-revision" method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar" aria-labelledby="rev-t">{% csrf_token %}
+        <form class="entrega-revision" method="post" action="/pedidos/{{ orden.orden_id }}/entrega/" data-accion="aceptar"{% if revision.temperatura.en_rango %} data-sin-problemas="1"{% endif %} aria-labelledby="rev-t">{% csrf_token %}
           <h3 id="rev-t">Revisa tu pedido antes de confirmar</h3>
           <p class="revision-recibe" id="revision-recibe"><b>Recibe:</b> {{ revision.recibe }}</p>
           <ul class="revision-productos" aria-label="Productos de tu pedido">{% for p in revision.productos %}<li><b>{{ p.cantidad }}</b> × {{ p.producto }}</li>{% endfor %}</ul>
           {% if revision.temperatura %}{% with t=revision.temperatura %}<p class="revision-temp{% if not t.en_rango %} fuera{% endif %}" id="revision-temp"><span class="revision-temp-txt"><b>Temperatura del viaje:</b> {{ t.ultima|floatformat:1 }} °C ahora (entre {{ t.minima|floatformat:1 }} y {{ t.maxima|floatformat:1 }} °C en la última hora; lo permitido es {{ t.banda.min|floatformat:"-1" }} a {{ t.banda.max|floatformat:"-1" }} °C).{% if not t.en_rango %} Si los productos llegaron tibios, cuéntalo abajo.{% endif %}</span>
             {% if t.en_rango %}<span class="chip entregado">Dentro de rango</span>{% else %}<span class="chip alerta">Fuera de rango</span>{% endif %}</p>{% endwith %}{% endif %}
-          <fieldset class="revision-resultado"><legend>¿Llegó todo bien?</legend>
+          <fieldset class="revision-resultado"><legend>{% if revision.temperatura and not revision.temperatura.en_rango %}El camión registró un problema de temperatura. ¿Cómo llegó tu pedido?{% else %}¿Llegó todo bien?{% endif %}</legend>
             <label><input type="radio" name="resultado" value="bien" required> Sí, todo llegó bien</label>
             <label><input type="radio" name="resultado" value="falla"> No, algo falló</label>
             <label><input type="radio" name="resultado" value="no"> No recibiré mi pedido</label>

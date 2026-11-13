@@ -15,12 +15,10 @@
     <form class="filtros-cuerpo" id="form-filtros" method="get" action="/catalogo/" role="search" aria-label="Filtros del catálogo">
     <h2>Buscar</h2>
     <input type="search" name="q" value="{{ q }}" placeholder="Nombre o SKU" aria-label="Buscar en el catálogo" autocomplete="off">
-    <h2>Categoría</h2>
-    <label><input type="radio" name="categoria" value="" {% if not cat %}checked{% endif %}> Todas</label>
-    {% for c in categorias %}<label><input type="radio" name="categoria" value="{{ c.pk }}" {% if cat == c.pk|stringformat:"s" %}checked{% endif %}> {{ c.nombre }}</label>{% endfor %}
-    <h2>Rango de temperatura</h2>
-    <label><input type="radio" name="temperatura" value="" {% if not temp %}checked{% endif %}> Todos</label>
-    {% for r in rangos %}<label><input type="radio" name="temperatura" value="{{ r.pk }}" {% if temp == r.pk|stringformat:"s" %}checked{% endif %}> {{ r.nombre }} ({{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C)</label>{% endfor %}
+    <h2>Categoría <span class="filtros-multi">puedes elegir varias</span></h2>
+    {% for c in categorias %}<label><input type="checkbox" name="categoria" value="{{ c.pk }}" {% if c.pk|stringformat:"s" in cats %}checked{% endif %}> {{ c.nombre }}</label>{% endfor %}
+    <h2>Rango de temperatura <span class="filtros-multi">puedes elegir varios</span></h2>
+    {% for r in rangos %}<label><input type="checkbox" name="temperatura" value="{{ r.pk }}" {% if r.pk|stringformat:"s" in temps %}checked{% endif %}> {{ r.nombre }} ({{ r.temp_min_c|floatformat:"-1" }} a {{ r.temp_max_c|floatformat:"-1" }} °C)</label>{% endfor %}
     <h2>Disponibilidad</h2>
     <label><input type="checkbox" name="stock" value="1" {% if solo_stock %}checked{% endif %}> Solo con stock</label>
     <noscript><button>Aplicar filtros</button></noscript>

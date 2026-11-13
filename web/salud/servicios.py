@@ -16,6 +16,10 @@ from .models import ChequeoServicio
 log = logging.getLogger("cofrial.salud")
 
 DIAS = 90
+# Períodos que ofrece la página: clave de la URL -> (rótulo, tamaño de cada barra, cuántas barras). Hasta 3 días una barra es una hora; desde 7, un día.
+VENTANAS = {"24h": ("24 horas", "hora", 24), "3d": ("3 días", "hora", 72), "7d": ("7 días", "dia", 7), "30d": ("30 días", "dia", 30), "90d": ("90 días", "dia", DIAS)}
+VENTANA_INICIAL = "3d"              # la que abre la página: con el historial recién empezado, 90 días son casi todas barras grises
+DIAS_INCIDENTES = 7                 # tope de la lista «Qué pasó»: más atrás solo se ve en las barras
 RETENCION_DIAS = 100
 UMBRAL_ROJO = 0.05                  # un día (u hora) se pinta rojo si al menos el 5 % de sus revisiones fallaron; con menos de eso, amarillo
 HUECO_MAX_SEG = 300                 # entre dos revisiones de «base» más que esto = el monitor (el laboratorio) estuvo apagado
@@ -168,20 +172,31 @@ def _incidentes(ahora, dias=7):
     return sorted(tramos + huecos, key=lambda x: x["inicio"], reverse=True)[:40]
 
 
-def panel(ahora=None):
-    """Todo lo que dibuja la página. Se cachea 30 s: la página es pública y no debe consultar la base en cada visita."""
+def panel(ahora=None, ventana="90d"):
+    """Todo lo que dibuja la página para el período `ventana` (una clave de VENTANAS). Se cachea 30 s por período: la página es pública y no
+    debe consultar la base en cada visita. `barras` y la disponibilidad son del período; `horas` es siempre el detalle de las últimas 24 horas."""
     ahora = ahora or timezone.now()
-    llave = "salud:panel"
+    if ventana not in VENTANAS:
+        ventana = VENTANA_INICIAL
+    rotulo, unidad, cuantas = VENTANAS[ventana]
+    llave = f"salud:panel:{ventana}"
     guardado = cache.get(llave)
     if guardado is not None:
         return guardado
     hoy = timezone.localdate(ahora)
-    dias = [hoy - timedelta(days=i) for i in range(DIAS - 1, -1, -1)]
-    inicio_dias = timezone.make_aware(datetime.combine(dias[0], time.min))
-    por_dia = _agregar(inicio_dias, TruncDate)
     hora_actual = ahora.replace(minute=0, second=0, microsecond=0)
     horas = [hora_actual - timedelta(hours=i) for i in range(23, -1, -1)]
     por_hora = _agregar(horas[0], TruncHour)
+    if unidad == "hora":                                        # las barras del período son horas: «dias» y «por_dia» llevan horas
+        dias = [hora_actual - timedelta(hours=i) for i in range(cuantas - 1, -1, -1)]
+        por_dia = por_hora if cuantas <= 24 else _agregar(dias[0], TruncHour)
+        dias_ventana = max(1, cuantas // 24)
+    else:
+        dias = [hoy - timedelta(days=i) for i in range(cuantas - 1, -1, -1)]
+        por_dia = _agregar(timezone.make_aware(datetime.combine(dias[0], time.min)), TruncDate)
+        dias_ventana = cuantas
+    # Un componente se muestra si alguna vez se registró dentro de la retención, aunque el período elegido no tenga filas (laboratorio apagado).
+    registrados = set(ChequeoServicio.objects.filter(momento__gte=ahora - timedelta(days=DIAS)).values_list("servicio", flat=True).distinct())
     # estado actual por componente: la última fila de cada uno
     ultimo = {}
     for s, m, e, d, ms in ChequeoServicio.objects.filter(momento__gte=ahora - timedelta(hours=1)).order_by("momento").values_list("servicio", "momento", "estado", "detalle", "ms"):
@@ -189,7 +204,7 @@ def panel(ahora=None):
 
     grupos = []
     for g in GRUPOS:
-        claves = [c for c, _, _ in g["componentes"] if c in por_dia or c in ultimo]
+        claves = [c for c, _, _ in g["componentes"] if c in registrados or c in ultimo]
         if not claves:
             continue                                            # componente que nunca se registró (sin clave configurada): no se muestra
         componentes = []
@@ -209,7 +224,9 @@ def panel(ahora=None):
                        "barras": _barras(por_dia, claves, g["modo"], dias), "horas": _barras(por_hora, claves, g["modo"], horas),
                        "disponibilidad": _disponibilidad(por_dia, claves, g["modo"]), "respaldo": g["modo"] == "respaldo"})
     ultima_global = max((u["momento"] for u in ultimo.values()), default=None)
-    datos = {"grupos": grupos, "incidentes": _incidentes(ahora), "dias": dias, "horas": horas, "ahora": ahora,
+    dias_incidentes = min(DIAS_INCIDENTES, dias_ventana)
+    datos = {"grupos": grupos, "incidentes": _incidentes(ahora, dias_incidentes), "dias": dias, "horas": horas, "ahora": ahora,
+             "ventana": ventana, "rotulo_ventana": rotulo, "unidad": unidad, "dias_incidentes": dias_incidentes,
              "ultima_revision": ultima_global, "monitor_activo": bool(ultima_global) and (ahora - ultima_global).total_seconds() <= HUECO_MAX_SEG,
              "problemas": [(g, c) for g in grupos for c in g["componentes"] if c["estado"] in ("degradado", "caido")]}
     cache.set(llave, datos, 30)

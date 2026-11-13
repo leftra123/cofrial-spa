@@ -10,8 +10,16 @@
       if (!i || !menos || !mas) return;
       var max = parseInt(i.max, 10) || 9999, min = parseInt(i.min, 10), espera = null, form = c.closest(".linea-form");
       if (isNaN(min)) min = 1;
+      var zona = c.closest(".prod-cuerpo, .det-compra"), nota = zona && zona.querySelector("[data-cant-nota]"), enTope = false;      // «Compra mínima…»: al llegar al stock lo dice ahí mismo
+      if (nota) nota.dataset.base = nota.textContent;
       function poner(v, enviar) {
         i.value = Math.max(min, Math.min(max, v)); menos.disabled = +i.value <= min; mas.disabled = +i.value >= max;
+        if (nota && nota.dataset.tope) {
+          var tope = +i.value >= max && max > min;
+          nota.textContent = tope ? nota.dataset.tope : nota.dataset.base; nota.classList.toggle("tope", tope);
+          if (tope && !enTope && enviar) CofrialEstados.anunciar(nota.dataset.tope);
+          enTope = tope;
+        }
         if (enviar && form) { clearTimeout(espera); espera = setTimeout(function () { if (form.requestSubmit) form.requestSubmit(); }, 700); }   // en el carrito se guarda solo tras una pausa
       }
       menos.addEventListener("click", function () { poner((parseInt(i.value, 10) || min) - 1, true); });
@@ -25,10 +33,10 @@
   /* ---------- aviso al usuario ---------- */
   /* los contenedores van al final de la página, después de este script: se buscan en el momento de usarlos */
   var anunciar = CofrialEstados.anunciar, ocupar = CofrialEstados.ocupar;      // estados.js se carga antes que este script
-  function aviso(texto, tipo) {
+  function aviso(texto, tipo, ms) {
     var toasts = document.getElementById("toasts"); if (!toasts) return;
     var t = document.createElement("div"); t.className = "toast t-" + (tipo || "info"); t.setAttribute("role", tipo === "error" ? "alert" : "status"); t.textContent = texto;
-    toasts.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 300); }, tipo === "error" ? 7000 : 4000);
+    toasts.appendChild(t); setTimeout(function () { t.classList.add("sale"); setTimeout(function () { t.remove(); }, 300); }, ms || (tipo === "error" ? 7000 : 4000));
   }
   function leerContador() {
     var el = document.querySelector(".tb-carro .tb-n");
@@ -71,7 +79,9 @@
       var errores = d.mensajes.filter(function (m) { return m.tipo === "error"; });
       if (d.ok) {
         fin("Agregado", MUESTRA_OK); contador(d.carrito_n);
-        anunciar("Producto agregado al carrito. Llevas " + d.carrito_n + " producto" + (d.carrito_n === 1 ? "" : "s") + " distinto" + (d.carrito_n === 1 ? "" : "s") + ".");
+        var extra = d.mensajes.filter(function (m) { return m.tipo === "info"; }).map(function (m) { return m.texto; }).join(" ");     // p. ej. la compra ahora lleva dos temperaturas
+        if (extra) aviso(extra, "info", 12000);
+        anunciar("Producto agregado al carrito. Llevas " + d.carrito_n + " producto" + (d.carrito_n === 1 ? "" : "s") + " distinto" + (d.carrito_n === 1 ? "" : "s") + "." + (extra ? " " + extra : ""));
       }
       else { fin(); var t = errores.map(function (m) { return m.texto; }).join(" ") || ERROR_RED; aviso(t, "error"); anunciar(t); }
     }).catch(function () { fin(); aviso(ERROR_RED, "error"); anunciar(ERROR_RED); });

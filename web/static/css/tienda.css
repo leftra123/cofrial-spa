@@ -1020,7 +1020,6 @@ button[disabled].hecho, .agregar.hecho[disabled] { opacity: 1; }
 .det-compra { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px; padding: 20px; }
 .det-compra .btn, .det-compra .agregar { min-height: 52px; padding: 0 24px; }
 .det-garantias { margin-top: 20px; }
-.seccion-similares h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); letter-spacing: -.03em; }
 @media (max-width: 860px) { .det { grid-template-columns: 1fr; } .det dl { grid-template-columns: 130px 1fr; } }
 
 /* ---------- carrito y confirmación (dirección «Termómetro») ---------- */
@@ -1080,7 +1079,7 @@ body.tienda .mapa, body.tienda .mapa.alto { border-radius: 14px; }
 :root[data-tema="oscuro"] .camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde-fuerte) 60%, #2E5AA8 60%); } :root[data-tema="oscuro"] .camara.cong .cam-marca { background: linear-gradient(90deg, #2E5AA8 28%, var(--borde-fuerte) 28%); }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .camara.ref .cam-marca { background: linear-gradient(90deg, var(--borde-fuerte) 60%, #2E5AA8 60%); } :root:not([data-tema="claro"]) .camara.cong .cam-marca { background: linear-gradient(90deg, #2E5AA8 28%, var(--borde-fuerte) 28%); } }
 .cam-n { font-size: .82rem; color: var(--texto-3); }
-.camaras-nota { margin: 0 0 14px; font-size: .84rem; color: var(--texto-2); }
+.camaras-nota { margin: 0 0 14px; font-size: .88rem; color: var(--texto); }
 .grafico { position: relative; }
 .spark { height: 190px; }
 .spark-vacio { height: 190px; }
@@ -1400,3 +1399,53 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .campana-item .campana-acciones { padding-top: 0; }
 /* En teléfonos angostos (375 px) «Carrito» y su contador quedaban cortados al borde del menú: con menos relleno caben los cuatro enlaces */
 @media (max-width: 480px) { .tb-nav { gap: 0; } .tb-nav a { padding-left: 4px; padding-right: 4px; } }
+
+/* ---------- cantidad: compra mínima y tope de stock, junto al selector ---------- */
+.cant-nota { display: block; margin: 0; font-size: .8rem; color: var(--texto-3); }
+.cant-nota.tope { color: var(--pendiente-fg); font-weight: 600; }
+.det-compra .cant-nota { font-size: .88rem; color: var(--texto-2); }
+.det-compra .cant-nota.tope { color: var(--pendiente-fg); }
+
+/* ---------- ficha: relacionados en tarjetas compactas (foto chica a la izquierda) ----------
+   Van fuera de `.productos`, que en el catálogo agrupado es un bloque y dejaba cada tarjeta a todo el ancho con la foto cuadrada gigante. */
+.relacionados { margin-top: 40px; }
+.relacionados h2 { font-size: 1.25rem; letter-spacing: -.02em; margin: 0 0 14px; }
+.tira { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.tira .prod { flex-direction: row; }
+.tira .prod:hover { transform: none; }
+.tira .prod-img { flex: none; width: 108px; background: var(--fondo-2); }
+.tira .prod-img .foto, .tira .prod-img .ilus { width: 100%; height: 100%; min-height: 108px; object-fit: cover; padding: 0; }
+.tira .prod-img .foto.ia { object-fit: contain; padding: 8px; }
+:root[data-tema="oscuro"] .tira .prod-img { background: #E9EEF5; }      /* mismo fondo claro que las fotos del catálogo en modo oscuro */
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tira .prod-img { background: #E9EEF5; } }
+.tira .prod-badges, .tira .prod-sku, .tira .cant, .tira .cant-nota, .tira .aviso-stock, .tira .ayuda-ingreso { display: none; }
+.tira .prod-cuerpo { padding: 12px 14px; gap: 4px; min-width: 0; }
+.tira .prod-cuerpo h3 { font-size: .94rem; }
+.tira .prod-precio { font-size: 1.05rem; margin-top: 2px; padding-top: 0; }
+.tira .prod-comprar { min-height: 0; margin-top: 6px; }
+.tira .prod-comprar form { width: auto; }
+.tira .prod-comprar .btn, .tira .prod-comprar .agregar { flex: none; width: auto; padding: 8px 14px; font-size: .86rem; }
+@media (max-width: 640px) {
+  .tira { grid-template-columns: 1fr; }
+  .tira .prod-comprar .btn, .tira .prod-comprar .agregar { min-height: 44px; }
+}
+
+/* ---------- portada: mejor uso de la pantalla ----------
+   «Cómo desea comprar» era una franja de borde a borde, pero los contenedores de la página la recortan justo donde empieza el texto: el
+   primer bloque quedaba pegado al borde y el segundo no. Ahora es una tarjeta contenida, con el mismo margen en los dos bloques y el texto
+   usando el ancho de su columna. El encabezado baja de alto para que esos dos accesos se vean sin desplazarse en un notebook. */
+.portada-perfiles { margin: 20px 0 0; border: 1px solid var(--borde); border-radius: var(--radio); }
+.portada-perfiles .interior { max-width: none; padding: 0; }
+.perfil, .perfil + .perfil { padding: 28px; }
+.perfil p { max-width: 58ch; margin-bottom: 20px; }
+.perfil .acciones { gap: 10px; }
+@media (min-width: 861px) {
+  .portada-hero { min-height: clamp(360px, 38vw, 450px); }
+  .portada-hero .hero-txt { padding: clamp(32px, 4.4vw, 52px) clamp(24px, 5vw, 56px); }
+  .portada-hero h1 { font-size: clamp(2.1rem, 4.2vw, 3.1rem); max-width: 19ch; }
+  .portada-hero .baja { margin-bottom: 22px; }
+}
+@media (max-width: 860px) {
+  .portada-perfiles .interior { padding: 0; }
+  .perfil, .perfil + .perfil { padding: 24px 20px; }
+}

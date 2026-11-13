@@ -69,6 +69,7 @@ urlpatterns = [
     path("cuenta/mis-datos/", legal.mis_datos, name="mis_datos"),
     path("cuenta/mis-datos/descargar/", legal.descargar_datos, name="mis_datos_descargar"),
     path("cuenta/mis-datos/eliminar/", legal.eliminar_cuenta, name="mis_datos_eliminar"),
+    path("cuenta/mis-datos/solicitar/", legal.solicitar, name="mis_datos_solicitar"),
     path("legal/<slug:nombre>/", legal.pagina, name="legal"),
     path("salud/", salud_vista.pagina),
     path("salud/bd/", salud_bd),

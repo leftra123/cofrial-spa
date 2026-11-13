@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titulo %}Mis datos | Cofrial SpA{% endblock %}
+{% block cabecera %}
+<div class="pagina-cab"><div><h1>Mis datos</h1><p class="sub">Lo que Cofrial guarda de tu cuenta del equipo, y cómo pedir que lo corrijamos, dejemos de usarlo o lo borremos. Detalle en la <a href="/legal/privacidad/">política de privacidad</a>.</p></div></div>
+{% endblock %}
+{% block contenido %}
+<div class="mis-datos">
+  <section class="tarjeta-ui" aria-labelledby="md-perfil">
+    <h2 id="md-perfil">Tu cuenta</h2>
+    <dl class="md-lista">
+      <div><dt>Usuario</dt><dd>{{ user.username }}</dd></div>
+      <div><dt>Correo</dt><dd>{{ user.email|default:"No indicado" }}</dd></div>
+      <div><dt>Rol</dt><dd>{{ etiqueta_cuenta|default:"Equipo" }}</dd></div>
+      {% if vendedor %}<div><dt>Nombre en el CRM</dt><dd>{{ vendedor.nombre }}</dd></div>
+      <div><dt>Teléfono</dt><dd>{{ vendedor.telefono|default:"No indicado" }}</dd></div>{% endif %}
+      <div><dt>Cuenta creada</dt><dd>{{ user.date_joined|date:"d/m/Y" }}</dd></div>
+      <div><dt>Último ingreso</dt><dd>{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+      <div><dt>Términos aceptados</dt><dd>{% if aceptacion %}Versión {{ aceptacion.version }}, el {{ aceptacion.aceptado_en|date:"d/m/Y H:i" }}{% else %}Cuenta creada por la empresa, sin registro de aceptación{% endif %}</dd></div>
+    </dl>
+    <p class="ayuda">Lo que registras en tu trabajo (interacciones con clientes, despachos, respuestas) es información de los clientes y de la empresa, no de tu cuenta.</p>
+  </section>
+
+  <section class="tarjeta-ui" aria-labelledby="md-descargar">
+    <h2 id="md-descargar">Descargar mis datos</h2>
+    <p>Un archivo JSON con tu cuenta, tu ficha de vendedor si la tienes, los términos aceptados y tus solicitudes.</p>
+    <p><a class="btn" href="/cuenta/mis-datos/descargar/" download>Descargar mis datos</a></p>
+  </section>
+
+  {% include "cuenta/_solicitudes.html" %}
+</div>
+{% endblock %}

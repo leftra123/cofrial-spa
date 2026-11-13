@@ -1,0 +1,28 @@
+{% extends "operacion/base.html" %}{% load iconos %}
+{% block titulo %}Privacidad | Cofrial SpA{% endblock %}
+{% block operacion %}
+<div class="pagina-cab"><div><h1>Solicitudes sobre datos personales</h1><p class="sub">Lo que clientes y equipo piden desde «Mis datos» (Ley 21.719). Se responde dentro de 30 días corridos, prorrogables una vez por otros 30; el bloqueo temporal, en 2 días hábiles. La respuesta la ve el titular en su «Mis datos».</p></div></div>
+
+<h2 class="seccion">Por responder <span class="chip{% if pendientes %} alerta{% endif %}">{{ pendientes|length }}</span></h2>
+{% for x in pendientes %}
+<article class="tarjeta-ui solicitud-op{% if x.vencida %} vencida{% endif %}" id="s{{ x.solicitud_id }}">
+  <div class="solicitud-cab"><h3>N.º {{ x.solicitud_id }} · {{ x.get_tipo_display }}</h3>
+    <span class="chip {% if x.vencida %}alerta{% else %}pendiente{% endif %}">{% if x.vencida %}Vencida el {{ x.vence_el|date:"d/m/Y" }}{% else %}Vence el {{ x.vence_el|date:"d/m/Y" }}{% endif %}{% if x.prorrogada %} · prorrogada{% endif %}</span></div>
+  <p class="frio">{{ x.usuario.username }} · recibida el {{ x.creada_en|date:"d/m/Y H:i" }}</p>
+  <p class="texto-original">{{ x.detalle|linebreaksbr }}</p>
+  <form method="post" action="/operacion/privacidad/{{ x.solicitud_id }}/responder/" data-carga>{% csrf_token %}
+    <label for="r{{ x.solicitud_id }}">Respuesta para el titular</label>
+    <textarea id="r{{ x.solicitud_id }}" name="respuesta" rows="3" maxlength="2000" required placeholder="Qué se hizo, o por qué no procede y cómo puede reclamar."></textarea>
+    <div class="acciones"><button data-cargando="Guardando…">Responder</button></div>
+  </form>
+  {% if x.puede_prorrogarse %}<form method="post" action="/operacion/privacidad/{{ x.solicitud_id }}/prorrogar/" class="en-linea" data-carga>{% csrf_token %}<button class="btn-sec" data-cargando="Extendiendo…">Prorrogar 30 días</button></form>{% endif %}
+</article>
+{% empty %}<div class="tarjeta-ui vacio-caja">{% include "componentes/vacio.html" with ico="ok" %}<h2>No hay solicitudes por responder</h2><p>Cuando alguien pida rectificar, oponerse, bloquear o suprimir sus datos, aparecerá aquí con su plazo.</p></div>{% endfor %}
+
+{% if respondidas %}
+<h2 class="seccion">Respondidas</h2>
+<div class="tabla-caja"><table><thead><tr><th>N.º</th><th>Tipo</th><th>Titular</th><th>Recibida</th><th>Respondida</th><th>Por</th></tr></thead><tbody>
+{% for x in respondidas %}<tr><td>{{ x.solicitud_id }}</td><td>{{ x.get_tipo_display }}</td><td>{{ x.usuario.username }}</td><td>{{ x.creada_en|date:"d/m/Y" }}</td><td>{{ x.respondida_en|date:"d/m/Y" }}</td><td class="frio">{{ x.atendida_por.username|default:"—" }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}

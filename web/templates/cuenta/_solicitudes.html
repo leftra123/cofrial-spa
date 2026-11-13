@@ -1,0 +1,28 @@
+{% comment %}Solicitudes de derechos sobre datos personales (Ley 21.719): formulario y lista con plazo y respuesta. Lo usan «Mis datos» del cliente y del equipo.{% endcomment %}
+<section class="tarjeta-ui" id="md-solicitar" aria-labelledby="md-solicitar-t">
+  <h2 id="md-solicitar-t">Pedir otro cambio sobre tus datos</h2>
+  <p>Te respondemos aquí mismo, gratis, dentro de 30 días corridos (el bloqueo, en 2 días hábiles). Si necesitamos más tiempo, te lo avisamos y el plazo se extiende una sola vez por otros 30 días.</p>
+  <form method="post" action="/cuenta/mis-datos/solicitar/" data-carga>{% csrf_token %}
+    <fieldset class="md-tipos"><legend>¿Qué necesitas?</legend>
+      {% for valor, nombre, ayuda in tipos_solicitud %}<label class="md-tipo"><input type="radio" name="tipo" value="{{ valor }}" required{% if forloop.first %} checked{% endif %}><span><b>{{ nombre }}</b><small>{{ ayuda }}</small></span></label>{% endfor %}
+    </fieldset>
+    <label for="md-detalle">Cuéntanos qué dato y qué quieres que hagamos</label>
+    <textarea id="md-detalle" name="detalle" rows="3" minlength="10" maxlength="2000" required placeholder="Ej.: mi teléfono correcto es +56 9 1234 5678."></textarea>
+    <p style="margin-top:12px"><button data-cargando="Enviando…">Enviar solicitud</button></p>
+  </form>
+</section>
+{% if solicitudes %}
+<section class="tarjeta-ui" id="md-solicitudes" aria-labelledby="md-solicitudes-t">
+  <h2 id="md-solicitudes-t">Tus solicitudes</h2>
+  <ul class="md-solicitudes">
+  {% for x in solicitudes %}<li>
+    <div class="md-sol-cab"><b>N.º {{ x.solicitud_id }} · {{ x.get_tipo_display }}</b>
+      {% if x.estado == "respondida" %}<span class="chip entregada">Respondida el {{ x.respondida_en|date:"d/m/Y" }}</span>
+      {% else %}<span class="chip pendiente">En curso · respuesta a más tardar el {{ x.vence_el|date:"d/m/Y" }}{% if x.prorrogada %} (plazo extendido){% endif %}</span>{% endif %}</div>
+    <p class="frio">Recibida el {{ x.creada_en|date:"d/m/Y H:i" }}: {{ x.detalle|truncatechars:160 }}</p>
+    {% if x.respuesta %}<p class="md-respuesta"><b>Respuesta:</b> {{ x.respuesta|linebreaksbr }}</p>{% endif %}
+  </li>{% endfor %}
+  </ul>
+  <p class="ayuda">Si no quedas conforme con la respuesta, o no te respondemos a tiempo, puedes reclamar ante la Agencia de Protección de Datos Personales.</p>
+</section>
+{% endif %}

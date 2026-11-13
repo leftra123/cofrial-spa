@@ -993,6 +993,35 @@ button.nav-campana.sin-actualizar:not(#mp-brick-container button) .nav-campana-n
 .migas a:hover { color: var(--acento); text-decoration-color: currentColor; }
 .migas-actual { color: var(--texto); font-weight: 600; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 860px), (pointer: coarse) { .migas a { display: inline-flex; align-items: center; min-height: 44px; } .migas { margin-bottom: 2px; } }
+
+/* ---------- «Mis datos»: solicitudes de derechos (cuenta/_solicitudes.html) y su bandeja en Operación ---------- */
+.mis-datos { display: grid; gap: 16px; max-width: 760px; }
+.mis-datos .tarjeta-ui { padding: 24px; }
+.mis-datos h2 { font-size: 1.15rem; margin: 0 0 10px; }
+.mis-datos a.btn { text-decoration: none; }
+.md-lista { display: grid; gap: 8px; margin: 0 0 8px; }
+.md-lista div { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
+.md-lista dt { color: var(--texto-2); }
+.md-lista dd { margin: 0; overflow-wrap: anywhere; }
+.md-tipos { border: 0; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.md-tipos legend { font-weight: 600; margin-bottom: 8px; }
+.md-tipo { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 10px; cursor: pointer; font-weight: 400; min-height: 44px; }
+.md-tipo:has(input:checked) { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
+.md-tipo input[type=radio]:not(#mp-brick-container input) { margin-top: 3px; }
+.md-tipo span { display: grid; gap: 2px; }
+.md-tipo small { color: var(--texto-2); font-size: .85rem; line-height: 1.4; }
+#md-detalle, .solicitud-op textarea { width: 100%; max-width: none; }
+.md-solicitudes { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 14px; }
+.md-solicitudes li { padding-bottom: 14px; border-bottom: 1px solid var(--borde); }
+.md-solicitudes li:last-child { border-bottom: 0; padding-bottom: 0; }
+.md-sol-cab, .solicitud-cab { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.md-solicitudes p { margin: 6px 0 0; }
+.md-respuesta { background: var(--fondo); border-radius: 8px; padding: 10px 12px; }
+.solicitud-op { margin-bottom: 14px; max-width: 820px; }
+.solicitud-op h3 { margin: 0; font-size: 1.05rem; }
+.solicitud-op.vencida { border-color: var(--alerta-borde); }
+.solicitud-op .acciones { margin-top: 10px; }
+@media (max-width: 760px) { .md-lista div { grid-template-columns: 1fr; gap: 0; } }
 /* ---------- semáforo de formularios (js/semaforo.js) ----------
    Una línea bajo cada campo: luz + texto. El color nunca va solo: cada estado tiene su icono y su texto.
    gris = sin tocar · rojo = falta o está malo · naranja = incompleto · verde = listo */

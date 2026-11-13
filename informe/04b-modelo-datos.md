@@ -902,3 +902,21 @@ Nota. Elaboración propia. La referencia `cliente.segmento_id` es nula para los 
 | ip | inet | Sí | Dirección IP desde la que aceptó |
 
 Nota. Elaboración propia. Se escribe al crear una cuenta B2C o B2B, que exige marcar una casilla que parte sin marcar. Es la constancia del consentimiento: eliminar la cuenta desde «Mis datos» desactiva el usuario y no la borra; solo desaparece si el usuario se borra de verdad, como al rechazar una solicitud de empresa que nunca operó. Está en 3FN: cada atributo depende solo de la aceptación, y la versión es un valor, no una referencia a otra tabla, porque el texto vive en las plantillas.
+
+**Tabla D33**
+*Diccionario físico de solicitud_derecho*
+
+| Campo | Tipo | Nulo | Clave y función |
+|---|---|---|---|
+| solicitud_id | integer autogenerado | No | PK; número que ve el titular |
+| usuario_id | integer | No | FK auth_user (PROTECT): titular que la pidió, cliente o equipo |
+| tipo | varchar(15) | No | acceso, rectificacion, supresion, oposicion, portabilidad o bloqueo |
+| detalle | text (máx. 2000) | No | Qué pide el titular, con sus palabras |
+| estado | varchar(10) | No | recibida o respondida |
+| prorrogada | boolean | No | Si el plazo se extendió (una sola vez, no en el bloqueo) |
+| creada_en | timestamptz | No | Recepción; desde aquí corre el plazo |
+| respuesta | text (máx. 2000) | No | Respuesta al titular; vacía mientras está recibida |
+| respondida_en | timestamptz | Sí | Momento de la respuesta |
+| atendida_por_id | integer | Sí | FK auth_user (SET_NULL): administrador que respondió |
+
+Nota. Elaboración propia. La escribe «Mis datos» (`/cuenta/mis-datos/solicitar/`) y la responde el administrador en `/operacion/privacidad/`, para cumplir los plazos de la Ley 21.719: 30 días corridos prorrogables una vez por otros 30, y 2 días hábiles para el bloqueo temporal. La fecha de vencimiento no se guarda: se calcula de `creada_en`, `tipo` y `prorrogada`, así que no hay un atributo derivado que pueda quedar inconsistente. Está en 3FN: cada atributo depende solo de la solicitud, y el tipo y el estado son valores fijos del código, no entidades con datos propios. `usuario_id` usa PROTECT porque eliminar la cuenta la desactiva sin borrarla, y la constancia de la solicitud debe quedar.

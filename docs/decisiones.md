@@ -504,6 +504,12 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
 - **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).
 
+## Huella SSH que sobrevive al reinicio del laboratorio (13-nov-2026)
+- **Problema:** `activar.sh --clave-unica` se negó a conectar («AWS no me dio la huella de la máquina») tras un cierre del laboratorio. La huella la tomaba de la salida de consola de EC2, pero AWS solo la imprime la primera vez que arranca la instancia: después de detener y encender ya no está (comprobado: 0 líneas `ED25519` en la salida actual). Tampoco hay SSM ni perfil IAM como otra vía.
+- **Decisión:** la huella se guarda por instancia en la carpeta de estado (`huellas-ssh/<id>.pub`) cuando se obtiene de la consola, y se reutiliza. Si no hay ninguna, se puede aceptar la que responde (pregunta o `--confiar-huella`), mostrando su `SHA256`; se guarda y desde entonces se verifica. La conexión sigue siendo con `StrictHostKeyChecking=yes`.
+- **Riesgo aceptado:** la aceptación inicial no se puede contrastar con una fuente independiente; un atacante en el camino en esa primera conexión podría ver la clave. Se mitiga pidiendo consentimiento explícito y recomendando hacerlo desde la red de siempre. Una instancia recreada trae huella nueva y vuelve a la vía (2).
+- **Pruebas:** `aws/test_activar.sh` (23 casos, con `ssh-keyscan` y `ssh-keygen` falsos). **No probado** contra AWS real.
+
 ## Alarmas de CPU que se reapuntan solas y SSH con reintentos (13-nov-2026)
 - **Problema 1:** una alarma de CPU se ata al ID de la instancia; cada `recrear-web` (hoy hubo varias) las dejaba apuntando a máquinas inexistentes y sin datos nunca avisan. Había que acordarse de correr `endurecer.sh alarmas --aplicar`, y `activar.sh` solo lo avisaba.
 - **Decisión:** `aws/reaplicar-alarmas-cpu.sh` reapunta solo las alarmas que ya existen (mismos parámetros y avisos que `endurecer.sh`, sin crear ninguna nueva). Lo llaman solos `recrear-web` y `recrear-iot` al terminar, y `activar.sh` lo ofrece con consentimiento (`--arreglar-alarmas`).

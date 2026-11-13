@@ -1,6 +1,7 @@
 {% extends "crm/base.html" %}
 {% block titulo %}{{ c.nombre }} | Cofrial SpA{% endblock %}
 {% block crm %}
+{% include "componentes/migas.html" with a1="/crm/" t1="CRM" a2="/crm/clientes/" t2="Clientes" actual=c.nombre %}
 <div class="pagina-cab">
   <div><h1>{{ c.nombre }}</h1><p class="sub">{{ c.tipo_cliente.codigo }} · RUT {{ c.rut }} · {{ c.email }} · Vendedor: {{ c.vendedor|default:"sin asignar" }}{% if nivel %} · Nivel: {{ nivel }}{% endif %}{% if ilustrativo %} · Cliente ilustrativo: nombre público usado como ejemplo{% endif %}</p></div>
   <div class="acciones">{% if rol == "admin" %}{% if c.usuario_id %}<span class="chip entregado sin-punto">Cuenta del portal: {{ c.usuario.username }}</span>{% else %}<span class="chip pendiente sin-punto">Sin cuenta del portal</span><a class="btn" href="/operacion/clientes/{{ c.cliente_id }}/cuenta/">Crear cuenta del portal</a>{% endif %}{% endif %}<a class="btn btn-sec" href="/crm/clientes/">Volver a clientes</a></div>

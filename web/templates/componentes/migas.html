@@ -1,0 +1,8 @@
+{% comment %}Migas de pan: dónde estás y cómo volver un nivel. Hasta tres niveles con enlace (a1/t1, a2/t2, a3/t3) y la página actual, sin enlace.
+Uso: {% include "componentes/migas.html" with a1="/crm/" t1="CRM" a2="/crm/clientes/" t2="Clientes" actual=c.nombre %}{% endcomment %}
+<nav class="migas" aria-label="Estás en">
+  {% if a1 %}<a href="{{ a1 }}">{{ t1 }}</a><span aria-hidden="true">/</span>{% endif %}
+  {% if a2 %}<a href="{{ a2 }}">{{ t2 }}</a><span aria-hidden="true">/</span>{% endif %}
+  {% if a3 %}<a href="{{ a3 }}">{{ t3 }}</a><span aria-hidden="true">/</span>{% endif %}
+  <span class="migas-actual" aria-current="page">{{ actual }}</span>
+</nav>

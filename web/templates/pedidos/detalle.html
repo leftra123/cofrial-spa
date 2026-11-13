@@ -2,6 +2,7 @@
 {% load static %}
 {% block titulo %}Orden {{ orden.orden_id }} | Cofrial SpA{% endblock %}
 {% block cabecera %}
+{% with n=orden.orden_id|stringformat:"d" %}{% include "componentes/migas.html" with a1="/pedidos/" t1="Mis pedidos" actual="Orden N.º "|add:n %}{% endwith %}
 <div class="pagina-cab">
   <div><h1>Orden N.º {{ orden.orden_id }}</h1><p class="sub">Creada el {{ orden.creada_en|date:"d/m/Y H:i" }}</p></div>
   <div class="acciones">
@@ -19,7 +20,8 @@
   <div><h2 id="conf-t">¡Listo! Recibimos tu pedido N.º {{ orden.orden_id }}</h2>
     <p>Lo vamos a preparar y te avisamos por la campanita cuando salga el camión. Aquí abajo puedes seguirlo en todo momento.</p>
     <p class="conf-datos"><span>Recibe <b>{{ orden.quien_recibe }}</b></span>{% if orden.numero_oc %}<span>Orden de compra <b>{{ orden.numero_oc }}</b></span>{% endif %}<span>Entrega en <b>{{ orden.direccion }}</b></span></p>
-    <div class="acciones"><a class="btn" href="/pedidos/">Mis pedidos</a><a class="btn btn-sec" href="/catalogo/">Seguir comprando</a></div></div>
+    <div class="acciones"><a class="btn" href="/pedidos/">Mis pedidos</a><a class="btn btn-sec" href="/catalogo/">Seguir comprando</a></div>
+    <p class="permisos-sugerencia conf-avisos" data-permisos-sugerencia hidden>¿Te avisamos también con esta pestaña en segundo plano? <button type="button" class="enlace" data-permisos-abrir>Activar notificaciones</button></p></div>
 </section>
 {% endif %}
 {% if not request.GET.nueva %}{% with n=orden.estado_orden.nombre %}

@@ -1,6 +1,7 @@
 {% extends "operacion/base.html" %}{% load iconos %}
 {% block titulo %}{{ tabla.titulo }} | Cofrial SpA{% endblock %}
 {% block operacion %}
+{% with ruta_tabla="/operacion/datos/"|add:tabla.slug|add:"/" %}{% include "componentes/migas.html" with a1="/operacion/" t1="Operación" a2="/operacion/datos/" t2="Datos" a3=ruta_tabla t3=tabla.titulo actual=objeto|default:"Agregar" %}{% endwith %}
 <div class="pagina-cab"><div><h1>{% if objeto %}Editar: {{ objeto }}{% else %}Agregar en {{ tabla.titulo }}{% endif %}</h1>{% if tabla.ayuda %}<p class="sub">{{ tabla.ayuda }}</p>{% endif %}</div><div class="acciones"><a class="btn btn-sec" href="/operacion/datos/{{ tabla.slug }}/">{% icono "volver" %}Volver a {{ tabla.titulo }}</a></div></div>
 <div class="tarjeta-ui" style="max-width:560px">
 {% if form.motivo_bloqueo %}<p class="error-campo" role="alert">{{ form.motivo_bloqueo }}</p>{% endif %}

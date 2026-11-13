@@ -1,6 +1,7 @@
 {% extends "operacion/base.html" %}
 {% block titulo %}Cuenta del portal de {{ c.nombre }} | Cofrial SpA{% endblock %}
 {% block operacion %}
+{% include "componentes/migas.html" with a1="/operacion/" t1="Operación" a2="/operacion/cuentas/" t2="Usuarios" actual="Crear cuenta del portal" %}
 <div class="pagina-cab"><div><h1>Crear cuenta del portal</h1><p class="sub">Para <b>{{ c.nombre }}</b> · {{ c.tipo_cliente.codigo }} · RUT {{ c.rut }}{% if c.vendedor %} · Vendedor: {{ c.vendedor }}{% endif %}. La cuenta queda enlazada a este cliente: no se crea otro ni se piden de nuevo el RUT ni la dirección.</p></div><div class="acciones"><a class="btn btn-sec" href="/crm/clientes/{{ c.cliente_id }}/">Volver a la ficha</a></div></div>
 <div class="tarjeta-ui" style="max-width:560px">
 <form method="post" data-carga autocomplete="off">{% csrf_token %}

@@ -43,7 +43,7 @@
     {% else %}<div class="total"><dt>Total (IVA incluido)</dt><dd>{{ total|clp }}</dd></div>{% endif %}
     </dl>
     {% if mp_brick %}
-    <form class="checkout-mp" data-checkout="mp-modal-v4" method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
+    <form class="checkout-mp" id="form-orden" data-checkout="mp-modal-v4" method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
       {% include "pedidos/_quien_recibe.html" %}
@@ -56,7 +56,7 @@
       <p class="ayuda mp-inline-error" id="mp-inline-error" hidden role="alert"></p>
     </form>
     {% else %}
-    <form method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
+    <form id="form-orden" method="post" action="/carrito/confirmar/" data-carga>{% csrf_token %}
       <label for="direccion">Dirección de entrega</label>
       <select name="direccion" id="direccion">{% for d in direcciones %}<option value="{{ d.direccion_id }}"{% if d.es_principal %} selected{% endif %}>{{ d }}</option>{% endfor %}</select>
       {% include "pedidos/_quien_recibe.html" %}
@@ -71,6 +71,12 @@
     <p class="ayuda carrito-legal">Al generar la orden aceptas los <a href="/legal/terminos/">términos y condiciones</a>. Por ser alimentos perecibles en cadena de frío, no aplica el derecho de retracto; lo que llegue en mal estado lo rechazas al recibir y no se cobra (<a href="/legal/devoluciones/">devoluciones</a>).</p>
   </aside>
 </div>
+{% comment %}Solo en móvil (tienda.css): la acción principal queda al alcance del pulgar. Es el mismo formulario del resumen (atributo form) o el mismo botón de pago.{% endcomment %}
+{% if direcciones %}<div class="barra-orden" id="barra-orden" role="region" aria-label="Total y acción principal del carrito">
+  <div class="barra-orden-datos"><span class="barra-orden-total">Total{% if pide_oc %} con IVA{% endif %}<b>{% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}</b></span><span class="barra-orden-dir" data-barra-dir></span></div>
+  {% if mp_brick %}<button type="button" data-barra-pagar{% if sin_stock %} disabled{% endif %}>Pagar ahora</button>
+  {% else %}<button form="form-orden" data-cargando="Generando orden…"{% if sin_stock %} disabled{% endif %}>Generar orden</button>{% endif %}
+</div>{% endif %}
 {% else %}
 <div class="tarjeta-ui vacio-caja">{% include "componentes/vacio.html" with ico="carro" %}<h2>Tu carrito está vacío</h2><p>Agregue productos del catálogo para generar su orden.</p><a class="btn" href="/catalogo/">Ver catálogo</a></div>
 {% endif %}

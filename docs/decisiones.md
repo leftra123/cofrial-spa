@@ -463,7 +463,7 @@ Pedido de Eric: que cada tipo de usuario reciba avisos sin recargar y que el sit
 
 **Permisos:**
 
-- **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Se abre una vez por cuenta y navegador, explica para qué es cada permiso según el rol y se reabre con «Permisos» en el menú.
+- **Diálogo propio antes del aviso nativo:** el navegador exige un gesto de la persona, y un aviso sin contexto suele rechazarse. Explica para qué es cada permiso según el rol y se abre con «Permisos» en el menú. Desde el 13-nov-2026 ya no se abre solo al entrar (ver «Orden visual y alcance del pulgar»).
 - **La ubicación solo se pide a los clientes:** se usa en «Estoy en esta dirección: usar mi ubicación» al agregar una dirección de entrega. Al equipo no se le pide porque no tendría ningún uso. La posición se manda solo al guardar esa dirección; no se sigue a nadie.
 - **Las coordenadas del navegador no se creen sin revisar:** `agregar_direccion` acepta solo valores numéricos dentro de Chile continental; si no, busca la dirección escrita en OpenStreetMap. Con una precisión peor que 300 m no se usan, porque el camión podría ir a otra cuadra.
 - **Sin HTTPS no hay permisos nativos:** `Notification` y `geolocation` no piden permiso sin contexto seguro, y la EC2 sirve por HTTP. El diálogo lo dice y los avisos dentro de la página funcionan igual. La pauta del Hito 2 no exige HTTPS, así que se entrega así; el plan para activarlo está más abajo, como opcional.
@@ -569,3 +569,14 @@ Pedido de Eric: revisar una lista general de exigencias legales y aplicar solo l
 - **Revisado sin cambios:** asistente y clasificación ya se presentan como IA; todas las imágenes tienen texto alternativo; hay enlace para saltar al contenido. axe-core (WCAG 2.1 AA) sobre 12 pantallas, en claro y oscuro, con y sin sesión: sin fallas.
 - **Pendiente de decisión:** varias cuentas de demostración usan nombres reales de hospitales, clínicas y hoteles de la zona (y la del Hospital Regional, su dirección). Las páginas lo declaran; si se quiere evitar del todo, hay que renombrarlas en `cargar_demo` y en las pruebas que las nombran.
 - **Desplegado en AWS (13-nov-2026):** `recrear-web` rodante con `main` en `a9f3458`; dos cortes de unos 20 s (uno por web reemplazada), alarmas rehechas y `verificar.py --defensa --infra` sin fallas. Ver `aws/README.md`.
+
+## Orden visual y alcance del pulgar (13-nov-2026)
+
+Revisión de 38 pantallas reales en celular (390 px) y PC (1440 px), por rol. Eric pidió que la aplicación quede ordenada y fácil de entender, con la acción principal al alcance del pulgar.
+
+- **Una sola acción destacada por pantalla:** `.btn-sec` y `.btn-peligro` perdían por especificidad frente a `button:not(#mp-brick-container button)`, así que todo `<button class="btn-sec">` se pintaba como acción principal (el carrito mostraba cuatro botones azules). Se les dio el mismo `:not()`. En la ficha de prospecto, «Registrar» pasó a secundario para que la única acción destacada sea avanzar de etapa.
+- **Carrito en celular:** barra fija abajo con el total, la dirección de entrega y «Generar orden» (o «Pagar ahora» con Mercado Pago) a todo lo ancho. Es el mismo formulario del resumen (atributo `form`), no uno nuevo. Se esconde cuando el botón del resumen ya está a la vista, para no repetir la acción. En PC no cambia: el resumen ya queda fijo a la derecha.
+- **Áreas táctiles de 44 px** en pantallas angostas o táctiles: iconos de la cabecera, «Permisos», «Ingresar», los botones +/− de cantidad, «Menú» y las filas de los filtros. En PC con mouse se mantienen los tamaños anteriores.
+- **El diálogo de permisos ya no se abre solo:** tapaba la primera pantalla de quien recién entraba. Ahora hay una invitación de una línea dentro del panel de avisos y en la confirmación de un pedido recién generado, visible solo mientras las notificaciones sigan sin decidir; el diálogo se abre al tocarla o desde «Permisos».
+- **Migas de pan en las fichas de detalle** (`componentes/migas.html`): «Mis pedidos / Orden N.º 83», «CRM / Clientes / Hospital…», «Operación / Datos / Categorías / Aves». Van en el pedido y el comprobante del cliente, en cliente, prospecto, prospecto nuevo y requerimiento del CRM, y en producto, fila de Datos y las tres pantallas de cuentas de Operación. La última parte es la página actual, sin enlace; en el comprobante reemplazan al enlace «Volver al pedido». Se ocultan al imprimir.
+- **Qué se cede:** en una conexión sin HTTPS el diálogo ya no aparece solo para explicar que no se pueden pedir permisos; sigue disponible en «Permisos». Quedan pendientes, por riesgo a días de la defensa, la barra de navegación inferior en celular y bajar el menú del CRM de tres niveles a dos.

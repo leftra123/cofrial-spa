@@ -1,6 +1,7 @@
 {% extends "crm/base.html" %}
 {% block titulo %}{{ p.empresa|default:p.nombre_contacto }} | Cofrial SpA{% endblock %}
 {% block crm %}
+{% include "componentes/migas.html" with a1="/crm/" t1="CRM" a2="/crm/embudo/" t2="Embudo" actual=p.empresa|default:p.nombre_contacto %}
 <div class="pagina-cab">
   <div><h1>{{ p.empresa|default:p.nombre_contacto }}</h1><p class="sub">Prospecto del embudo comercial</p></div>
   <div class="acciones"><span class="chip asignado">{{ p.etapa }}</span><a class="btn btn-sec" href="/crm/embudo/">Volver al embudo</a></div>
@@ -25,6 +26,6 @@
 {% endfor %}</div>{% endif %}
 <div class="seccion"><h2>Interacciones</h2></div>
 {% if puede_editar %}<div class="tarjeta-ui" style="margin-bottom:16px"><form class="en-linea" method="post" action="/crm/prospectos/{{ p.prospecto_id }}/interaccion/" data-carga>{% csrf_token %}
-  <select name="tipo" aria-label="Tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button data-cargando="Registrando…">Registrar</button></form></div>{% endif %}
+  <select name="tipo" aria-label="Tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select> <input name="detalle" placeholder="Detalle" size="50" required aria-label="Detalle"> <button class="btn-sec" data-cargando="Registrando…">Registrar</button></form></div>{% endif %}
 <div class="tabla-caja"><table><tbody>{% for i in interacciones %}<tr><td>{{ i.registrada_en|date:"d/m/Y H:i" }}</td><td><span class="chip asignado">{{ i.tipo }}</span></td><td>{{ i.detalle }}</td><td class="frio">{{ i.vendedor }}</td></tr>{% empty %}{% include "componentes/vacio_estado.html" with cols=4 compacto=True ico="chat" titulo="Sin interacciones registradas" texto="Anota el primer contacto con este prospecto para mover el negocio." %}{% endfor %}</tbody></table></div>
 {% endblock %}

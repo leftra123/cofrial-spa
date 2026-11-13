@@ -12,6 +12,7 @@
 #   bash aws/activar.sh --clave-unica    # además pone UNA clave simple, igual para todos los usuarios activos (la pide sin mostrarla)
 #   bash aws/activar.sh --sin-clave-unica # no pregunta por la clave única (para correrlo sin terminal)
 #   bash aws/activar.sh --abrir-ssh      # permite abrir el puerto 22 solo para tu IP mientras se pone la clave única (se cierra al terminar)
+#   bash aws/activar.sh --confiar-huella # si AWS ya no guarda la huella de la web (tras detener y encender), acepta la que responde y la guarda
 #   bash aws/activar.sh --arreglar-alarmas # reapunta las alarmas de CPU desfasadas a las instancias vivas (si no, pregunta; ver aws/reaplicar-alarmas-cpu.sh)
 #
 # Variables opcionales: COFRIAL_ESTADO (carpeta .estado vigente), DOMINIO_HTTPS (si no está en secretos.env), ESPERA_SEG (espera máxima al balanceador, 900).
@@ -25,7 +26,7 @@ CRED="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
 PROVISION="${PROVISION:-$AQUI/provision.sh}"      # sobrescribible para las pruebas
 REAPUNTAR="${REAPLICAR_ALARMAS:-$AQUI/reaplicar-alarmas-cpu.sh}"
 ESPERA_SEG="${ESPERA_SEG:-900}"; INTERVALO="${INTERVALO:-15}"
-PEGAR=0; SOLO_VERIFICAR=0; CLAVE_UNICA=0; PREGUNTAR_CLAVE=1; ABRIR_SSH=0; ARREGLAR_ALARMAS=0
+PEGAR=0; SOLO_VERIFICAR=0; CLAVE_UNICA=0; PREGUNTAR_CLAVE=1; ABRIR_SSH=0; ARREGLAR_ALARMAS=0; CONFIAR_HUELLA=0
 for a in "$@"; do
   case "$a" in
     --pegar) PEGAR=1;;
@@ -33,9 +34,10 @@ for a in "$@"; do
     --clave-unica) CLAVE_UNICA=1;;
     --sin-clave-unica) PREGUNTAR_CLAVE=0;;
     --abrir-ssh) ABRIR_SSH=1;;
+    --confiar-huella) CONFIAR_HUELLA=1;;
     --arreglar-alarmas) ARREGLAR_ALARMAS=1;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0;;
-    *) echo "Opción desconocida: $a (usa --pegar, --solo-verificar, --clave-unica, --sin-clave-unica, --abrir-ssh, --arreglar-alarmas o --help)"; exit 2;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0;;
+    *) echo "Opción desconocida: $a (usa --pegar, --solo-verificar, --clave-unica, --sin-clave-unica, --abrir-ssh, --confiar-huella, --arreglar-alarmas o --help)"; exit 2;;
   esac
 done
 
@@ -190,9 +192,27 @@ poner_clave_unica() {
   read -r id_web ip_web < <(aws ec2 describe-instances --filters "Name=tag:Name,Values=${P}-ec2-web" "Name=instance-state-name,Values=running" \
       --query 'Reservations[0].Instances[0].[InstanceId,PublicIpAddress]' --output text 2>/dev/null || echo "None None")
   { [ -n "${ip_web:-}" ] && [ "$ip_web" != None ]; } || { echo "  La web A no está encendida: no puedo conectarme."; return 1; }
-  # La huella de la máquina sale de la consola de EC2 (AWS la imprime al crearla): se verifica de verdad, sin desactivar la comprobación.
-  clavehost="$(aws ec2 get-console-output --instance-id "$id_web" --latest --query Output --output text 2>/dev/null | grep -E '^ssh-ed25519 ' | head -1 | awk '{print $1" "$2}' || true)"
-  [ -n "$clavehost" ] || { echo "  AWS no me dio la huella de la máquina; no me conecto sin verificarla."; return 1; }
+  # La huella de la máquina se verifica, no se desactiva la comprobación. Fuentes, en orden: (1) la huella ya guardada para ESTA instancia en la carpeta
+  # de estado; (2) la salida de consola de EC2 (AWS la imprime solo la primera vez que arranca la instancia: tras detener y encender el laboratorio ya
+  # no está); (3) la que responde ahora, solo si tú lo aceptas (pregunta o --confiar-huella) y entonces se guarda para las próximas veces.
+  local pin="${COFRIAL_ESTADO}/huellas-ssh/${id_web}.pub" escaneo fp
+  guardar_huella() { mkdir -p "$(dirname "$pin")" && printf '%s\n' "$clavehost" > "$pin" && chmod 600 "$pin"; }
+  if [ -s "$pin" ]; then clavehost="$(cat "$pin")"; echo "  Huella: la guardada para esta instancia."
+  else
+    clavehost="$(aws ec2 get-console-output --instance-id "$id_web" --latest --query Output --output text 2>/dev/null | grep -E '^ssh-ed25519 ' | head -1 | awk '{print $1" "$2}' || true)"
+    if [ -n "$clavehost" ]; then echo "  Huella: la de la salida de consola de EC2 (guardada para las próximas veces)."; guardar_huella
+    else
+      escaneo="$(ssh-keyscan -T 8 -t ed25519 "$ip_web" 2>/dev/null | awk '!/^#/ {print $2" "$3}' | head -1 || true)"
+      [ -n "$escaneo" ] || { echo "  AWS no me dio la huella de la máquina y ella no la entregó (¿puerto 22 cerrado para tu IP?): no me conecto sin verificarla."; return 1; }
+      fp="$(echo "$ip_web $escaneo" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}')"
+      echo "  AWS ya no guarda la huella de esta máquina (se reinició): solo la imprime la primera vez que arranca. La que responde ahora es ${fp:-desconocida}."
+      r=""
+      if [ "$CONFIAR_HUELLA" = 1 ]; then r=s
+      elif [ -t 0 ]; then read -r -p "  Sin otra fuente para compararla, ¿confiar en ella y guardarla para las próximas veces? [s/N] " r; fi
+      if [ "$r" != s ] && [ "$r" != S ]; then echo "  AWS no me dio la huella de la máquina; no me conecto sin verificarla (usa --confiar-huella si aceptas la que responde)."; return 1; fi
+      clavehost="$escaneo"; guardar_huella; echo "  Huella aceptada y guardada en $pin."
+    fi
+  fi
   kh="$(mktemp)"; echo "$ip_web $clavehost" > "$kh"
   local OPT=(-i "$key" -o ConnectTimeout=10 -o BatchMode=yes -o UserKnownHostsFile="$kh" -o StrictHostKeyChecking=yes -o LogLevel=ERROR)
   # Tu IP de salida puede cambiar entre conexiones (el proveedor reparte varias) y solo algunas están en la lista del puerto 22: se reintenta.

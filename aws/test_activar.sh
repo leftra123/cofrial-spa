@@ -63,6 +63,16 @@ cat > "$TMP/provision.sh" <<'FAKE'
 #!/usr/bin/env bash
 echo "provision $*" >> "$AWS_ST/provision.log"; exit "${PROV_RC:-0}"
 FAKE
+cat > "$TMP/bin/ssh-keyscan" <<'FAKE'
+#!/usr/bin/env bash
+# ssh-keyscan falso: devuelve la clave de $AWS_ST/keyscan (si existe); sin ese archivo, la máquina «no responde».
+[ -f "$AWS_ST/keyscan" ] && echo "1.1.1.1 ssh-ed25519 $(cat "$AWS_ST/keyscan")"
+exit 0
+FAKE
+cat > "$TMP/bin/ssh-keygen" <<'FAKE'
+#!/usr/bin/env bash
+cat > /dev/null; echo "256 SHA256:FAKEFP 1.1.1.1 (ED25519)"
+FAKE
 cat > "$TMP/reaplicar.sh" <<'FAKE'
 #!/usr/bin/env bash
 echo "reaplicar $*" >> "$AWS_ST/reaplicar.log"; echo "cofrial-ec2-web-cpu: reapuntada de i-vieja a i-nueva."
@@ -73,7 +83,7 @@ export INTERVALO_SSH=0      # sin esperas entre reintentos de ssh
 BUENAS=$'[default]\naws_access_key_id=AKIAFALSA\naws_secret_access_key=SECRETO-NO-IMPRIMIR\naws_session_token=bueno\n'
 MALAS=$'[default]\naws_access_key_id=AKIAVIEJA\naws_secret_access_key=SECRETO-VIEJO\naws_session_token=malo\n'
 reset() {
-  rm -f "$TMP/st/"* "$TMP/home/.aws/"*; echo "healthy healthy" > "$TMP/st/targets"; printf 'i-web\ti-webb\ti-iot\n' > "$TMP/st/alarmas-ids"
+  rm -f "$TMP/st/"* "$TMP/home/.aws/"*; rm -rf "$TMP/estado/huellas-ssh"; echo "healthy healthy" > "$TMP/st/targets"; printf 'i-web\ti-webb\ti-iot\n' > "$TMP/st/alarmas-ids"
   printf '%s' "$1" > "$TMP/cred"; chmod 600 "$TMP/cred"
 }
 correr() {  # correr [opciones]: guarda la salida en $SAL y el código en $RC (la entrada estándar es $ENTRADA, vacía por defecto)
@@ -218,4 +228,25 @@ echo "$SAL" | grep -q "La conexión falló (intento 1 de" || fallo "20: no avis�
 [ "$(grep -c 'cambiar_clave_demo' "$TMP/st/ssh-args")" = 2 ] || fallo "20: debía intentar el comando dos veces"
 grep -q "clave-simple-77" "$TMP/st/ssh-stdin" && ! grep -q "clave-simple-77" "$TMP/st/ssh-args" && ! echo "$SAL" | grep -q "clave-simple-77" || fallo "20: la clave solo debe ir por stdin"
 echo "ok: el comando real se reintenta y la clave nunca va en argumentos ni en la salida"
+# 21) la huella de la consola de EC2 se guarda para las próximas veces (tras detener y encender, AWS ya no la entrega)
+reset "$BUENAS"; ENTRADA="clave-simple-77" correr --clave-unica
+grep -q "ssh-ed25519 AAAAFAKE" "$TMP/estado/huellas-ssh/i-web.pub" || fallo "21: no guardó la huella verificada de la consola"
+echo "ok: la huella verificada con la consola se guarda por instancia"
+
+# 22) con la huella ya guardada no hace falta la consola: se usa la guardada (la consola ya no la trae tras un reinicio del laboratorio)
+reset "$BUENAS"; mkdir -p "$TMP/estado/huellas-ssh"; echo "ssh-ed25519 AAAAGUARDADA" > "$TMP/estado/huellas-ssh/i-web.pub"; touch "$TMP/st/sin-huella"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 0 ] || fallo "22: con la huella guardada debía salir 0 y salió $RC: $SAL"
+grep -q "ssh-ed25519 AAAAGUARDADA" "$TMP/st/known_hosts" || fallo "22: no usó la huella guardada"
+echo "$SAL" | grep -q "la guardada para esta instancia" || fallo "22: no dijo que usaba la huella guardada"
+echo "ok: usa la huella guardada cuando la consola ya no la trae"
+
+# 23) sin huella en ningún lado: no se confía solo; con --confiar-huella acepta la que responde y la guarda
+reset "$BUENAS"; touch "$TMP/st/sin-huella"; echo "AAAAESCANEADA" > "$TMP/st/keyscan"; ENTRADA="clave-simple-77" correr --clave-unica
+[ "$RC" = 1 ] && [ ! -f "$TMP/st/ssh-args" ] && [ ! -f "$TMP/estado/huellas-ssh/i-web.pub" ] || fallo "23: sin consentimiento no debía conectarse ni guardar nada: $RC $SAL"
+echo "$SAL" | grep -q "SHA256:FAKEFP" && echo "$SAL" | grep -q "usa --confiar-huella" || fallo "23: debía mostrar la huella y explicar --confiar-huella: $SAL"
+ENTRADA="clave-simple-77" correr --clave-unica --confiar-huella
+[ "$RC" = 0 ] || fallo "23: con --confiar-huella debía salir 0 y salió $RC: $SAL"
+grep -q "ssh-ed25519 AAAAESCANEADA" "$TMP/st/known_hosts" && grep -q "AAAAESCANEADA" "$TMP/estado/huellas-ssh/i-web.pub" || fallo "23: debía usar y guardar la huella aceptada"
+grep -q "StrictHostKeyChecking=yes" "$TMP/st/ssh-args" || fallo "23: aun así debía conectar con la comprobación de huella activa"
+echo "ok: sin huella no confía solo; con --confiar-huella la acepta, la guarda y conecta verificando"
 echo "TODO OK"

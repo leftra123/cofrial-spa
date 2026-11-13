@@ -180,9 +180,17 @@ trap cerrar_ssh_abierto EXIT
 poner_clave_unica() {
   local c1="" c2="" key id_web ip_web clavehost kh mi_ip sg r i alcanza=0 salida rc
   if [ -t 0 ]; then
-    read -r -s -p "  Clave simple para TODOS los usuarios activos (mínimo 4 caracteres, sin espacios; no se muestra): " c1; echo
-    read -r -s -p "  Repítela: " c2; echo
-    [ "$c1" = "$c2" ] || { echo "  No coinciden: no se cambió nada."; return 1; }
+    # Hasta 3 intentos en la misma corrida, y si no coinciden se dice por qué (largo de cada una y si trae caracteres no imprimibles), sin mostrar las claves.
+    local intento
+    for intento in 1 2 3; do
+      read -r -s -p "  Clave simple para TODOS los usuarios activos (mínimo 4 caracteres, sin espacios; no se muestra): " c1; echo
+      read -r -s -p "  Repítela: " c2; echo
+      [ "$c1" = "$c2" ] && break
+      echo "  No coinciden (la primera tuvo ${#c1} caracteres y la segunda ${#c2})."
+      if [[ "$c1$c2" =~ [^[:print:]] ]]; then echo "  Alguna entrada trae caracteres no imprimibles (¿pegaste la clave?). Escríbela a mano, de preferencia solo letras y números."; fi
+      if [ "$intento" = 3 ]; then echo "  Tres intentos sin coincidencia: no se cambió nada."; return 1; fi
+      echo "  Intenta de nuevo ($intento de 3)."
+    done
   else
     IFS= read -r c1 || true      # sin terminal (pruebas, automatización): una línea por la entrada estándar
   fi

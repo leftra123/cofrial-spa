@@ -249,4 +249,20 @@ ENTRADA="clave-simple-77" correr --clave-unica --confiar-huella
 grep -q "ssh-ed25519 AAAAESCANEADA" "$TMP/st/known_hosts" && grep -q "AAAAESCANEADA" "$TMP/estado/huellas-ssh/i-web.pub" || fallo "23: debía usar y guardar la huella aceptada"
 grep -q "StrictHostKeyChecking=yes" "$TMP/st/ssh-args" || fallo "23: aun así debía conectar con la comprobación de huella activa"
 echo "ok: sin huella no confía solo; con --confiar-huella la acepta, la guarda y conecta verificando"
+# 24) con terminal: si las dos claves no coinciden lo dice sin mostrarlas y deja reintentar en la misma corrida. Se prueba dentro de un pty con `script`,
+#     tecleando con pausas (el terminal descarta lo que llega antes de que aparezca la pregunta). Si el pty no responde, se omite en vez de fallar.
+if command -v script >/dev/null; then
+  reset "$BUENAS"
+  SAL="$( { sleep 6; printf 'abcd\n'; sleep 1; printf 'abce\n'; sleep 1; printf 'clave-simple-77\n'; sleep 1; printf 'clave-simple-77\n'; sleep 4; } | timeout 60 env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN PATH="$TMP/bin:$PATH" HOME="$TMP/home" AWS_ST="$TMP/st" AWS_SHARED_CREDENTIALS_FILE="$TMP/cred" \
+    PROVISION="$TMP/provision.sh" REAPLICAR_ALARMAS="$TMP/reaplicar.sh" COFRIAL_ESTADO="$TMP/estado" DOMINIO_HTTPS=www.cofrial.test ESPERA_SEG=0 INTERVALO=0 \
+    script -q /dev/null bash "$AQUI/activar.sh" --clave-unica --solo-verificar 2>&1 | tr -d '\r')" || true
+  if ! echo "$SAL" | grep -q "Repítela"; then echo "omitido (24): el terminal simulado no llegó a la pregunta de la clave en este equipo"
+  else
+    echo "$SAL" | grep -q "No coinciden (la primera tuvo 4 caracteres y la segunda 4)" || fallo "24: no explicó el desajuste: $SAL"
+    echo "$SAL" | grep -q "Intenta de nuevo (1 de 3)" || fallo "24: no dejó reintentar"
+    grep -q "clave-simple-77" "$TMP/st/ssh-stdin" || fallo "24: tras reintentar, la clave no llegó"
+    if echo "$SAL" | grep -q -E "abcd|abce|clave-simple-77"; then fallo "24: se imprimió una clave"; fi
+    echo "ok: con terminal, un desajuste se explica sin mostrar las claves y se puede reintentar"
+  fi
+else echo "omitido (24): no hay «script» para simular una terminal"; fi
 echo "TODO OK"

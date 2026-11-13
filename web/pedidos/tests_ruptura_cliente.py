@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from catalogo import asistente
-from flota.models import Telemetria
+from flota.models import Despacho, Telemetria
 from pedidos import servicios as s
 from pedidos.models import Orden
 
@@ -58,6 +58,7 @@ class RupturaYEntregaTests(EntregaBase):
         cliente, orden, despacho = self.entregada()
         Orden.objects.filter(pk=orden.pk).update(entrega_resuelta_en=timezone.now() - timedelta(hours=3))
         Telemetria.objects.filter(camion=despacho.camion).update(registrado_en=timezone.now() - timedelta(hours=3, minutes=5))
+        Despacho.objects.filter(pk=despacho.pk).update(salida_en=timezone.now() - timedelta(hours=4))     # el viaje salió antes de esa lectura
         orden.refresh_from_db()
         self.assertEqual(len(s.seguimiento(orden)["serie"]), 1)             # la ventana es la hora previa a la entrega, no la hora previa a ahora
 
@@ -97,3 +98,15 @@ class RupturaConDosClientesTests(ViajeDeDosClientesBase):
         o2.refresh_from_db()
         self.assertFalse(s.seguimiento(o1)["hubo_ruptura"])
         self.assertTrue(s.seguimiento(o2)["hubo_ruptura"])
+
+
+class SerieDelViajeTests(EntregaBase):
+    def test_una_ruptura_de_un_viaje_anterior_no_cuenta_en_el_pedido_nuevo(self):
+        cliente, orden, despacho = self.orden_despachada()
+        lectura(despacho, 9.0, True)
+        Telemetria.objects.filter(camion=despacho.camion).update(registrado_en=timezone.now() - timedelta(minutes=30))
+        Despacho.objects.filter(pk=despacho.pk).update(salida_en=timezone.now() - timedelta(minutes=5))      # salió después de esa falla
+        orden.refresh_from_db()
+        seg = s.seguimiento(orden)
+        self.assertFalse(seg["hubo_ruptura"])
+        self.assertEqual(seg["serie"], [])

@@ -16,14 +16,15 @@
   }
 
   function pintar(caja, d) {
-    var tarjeta = caja.closest("[data-camion], [data-foco]"), chip = tarjeta && tarjeta.querySelector('[data-campo="revision"]');
+    var espejo = caja.hasAttribute("data-atencion"), tarjeta = caja.closest("[data-camion], [data-foco]"), chip = tarjeta && tarjeta.querySelector('[data-campo="revision"]');
     if (chip) chip.hidden = !d.revision;
     var visible = d.estado !== "normal" || !!d.revision;
     caja.hidden = !visible;
     caja.textContent = "";
     if (!visible) return;
     caja.className = "diagnostico diag-" + (d.revision ? "revision" : d.estado);
-    var cab = el("div", "diag-cab"); cab.appendChild(el("b", null, d.revision ? "En revisión técnica" : d.titulo));
+    if (espejo) caja.hidden = false;
+    var cab = el("div", "diag-cab"); cab.appendChild(el("b", null, (espejo ? d.camion + " · " : "") + (d.revision ? "En revisión técnica" : d.titulo)));
     if (!d.revision) cab.appendChild(el("span", "diag-origen", d.por_ia ? "Sugerencia de la IA" : "Sugerencia del sistema"));
     caja.appendChild(cab);
     if (d.revision) {
@@ -58,6 +59,18 @@
   }
   function mensaje(caja, texto) { var a = caja.querySelector(".diag-aviso"); if (a) { a.textContent = texto; a.hidden = false; } }
 
+  /* «Requiere atención»: lo mismo que se ve en la tarjeta del camión, arriba junto al mapa, para no tener que bajar a buscarlo. */
+  function copiarArriba(id, d) {
+    var panel = document.getElementById("atencion"), lista = document.getElementById("atencion-lista");
+    if (!panel || !lista) return;
+    var copia = lista.querySelector('[data-atencion="' + id + '"]'), visible = d.estado !== "normal" || !!d.revision;
+    if (!visible) { if (copia) copia.remove(); }
+    else {
+      if (!copia) { copia = el("div"); copia.setAttribute("data-atencion", id); lista.appendChild(copia); }
+      pintar(copia, d);
+    }
+    panel.hidden = !lista.children.length;
+  }
   function idDe(caja) { var t = caja.closest("[data-camion], [data-camion-diag]"); return t && (t.dataset.camion || t.dataset.camionDiag); }
   function consultar(caja, ia) {
     var id = idDe(caja);
@@ -65,6 +78,7 @@
     return fetch("/flota/camion/" + encodeURIComponent(id) + "/diagnostico/?ia=" + (ia ? "1" : "0"), {credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (!d) return;
       pintar(caja, d);
+      copiarArriba(id, d);
       var clave = id + ":" + d.estado;
       if (!ia && d.estado !== "normal" && !d.por_ia && !pedidoIA[clave]) {            // el aviso aparece al instante con el texto del sistema; la IA lo mejora una vez por episodio
         pedidoIA[clave] = true;
@@ -77,7 +91,7 @@
   function refrescar(ya) {
     if (ocupado && !ya) return;
     ocupado = true;
-    var activos = bloques.filter(function (c) { return !c.closest("[data-guardado]") && c.offsetParent !== null || !c.hidden; });
+    var activos = bloques.filter(function (c) { return !c.closest("[data-guardado]"); });          // los camiones guardados en la base no se consultan cada 15 s
     var cadena = Promise.resolve();
     activos.forEach(function (c) { cadena = cadena.then(function () { return consultar(c, false); }); });
     cadena.then(function () { ocupado = false; }, function () { ocupado = false; });

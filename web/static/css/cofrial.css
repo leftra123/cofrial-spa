@@ -1112,3 +1112,18 @@ button.demo-opcion { display: flex; flex-direction: column; align-items: flex-st
 button.demo-opcion b { display: block; font-weight: 700; }
 button.demo-opcion span { display: block; }
 .demo-opciones { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.demo-opciones button.demo-opcion { background: var(--tarjeta) !important; color: var(--texto) !important; border: 1px solid var(--borde-fuerte, var(--borde)); box-shadow: none; }
+.demo-opciones button.demo-opcion.trampa { border: 1px dashed #F5A524; }
+.demo-opciones button.demo-opcion b { color: var(--texto) !important; text-align: left; }
+.demo-opciones button.demo-opcion span { color: var(--texto-3) !important; text-align: left; }
+.demo-opciones button.demo-opcion:hover:not(:disabled) { background: var(--acento-suave) !important; }
+
+/* flota: el mapa a la izquierda y, al costado, lo que viene (sugerencia y despacho automático), para no apilar todo hacia abajo */
+.flota-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.flota-lado > * + * { margin-top: 16px; }
+.flota-lado .seccion { margin-top: 0; }
+@media (min-width: 1180px) {
+  .flota-split { grid-template-columns: minmax(0, 1fr) 340px; }
+  .flota-lado { position: sticky; top: 16px; }
+  .flota-mapa .mapa { min-height: 520px; }
+}

@@ -394,6 +394,8 @@ def seguimiento(orden):
     if fin is not None:               # RN-13: quien ya recibió no ve lo que le pasó al camión después de su entrega (resumen hasta ese momento)
         todas = todas.filter(registrado_en__lte=fin)
     desde = (fin or timezone.now()) - timedelta(minutes=60)
+    if orden.despacho.salida_en:
+        desde = max(desde, orden.despacho.salida_en)       # la carga de este pedido subió al salir el viaje: lo que le pasó al camión antes (otro viaje) no es suyo
     lecturas = list(todas.filter(registrado_en__gte=desde).order_by("registrado_en"))
     ultima = (lecturas[-1] if lecturas else todas.order_by("-registrado_en").first())
     if fin is None:

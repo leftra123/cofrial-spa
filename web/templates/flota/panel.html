@@ -19,6 +19,23 @@
   <div class="kpi-card"><div class="etiqueta">Sin señal</div><div class="valor" data-resumen="sin_senal">{{ resumen.sin_senal }}</div><div class="detalle">más de 2 min sin reportar</div></div>
 </div>
 
+<div class="flota-split">
+<div class="flota-mapa">
+<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
+<div class="tarjeta-ui">
+  <div class="alertas-mapa" id="alertas-mapa" hidden><span class="alertas-mapa-txt" id="alertas-mapa-txt" role="status"></span><span class="alertas-mapa-lista" id="alertas-mapa-lista"></span></div>
+  <div class="filtros-tramo" id="filtros-flota" role="group" aria-label="Qué mostrar en el mapa"></div>
+  <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
+  <ul class="leyenda" id="leyenda-estados" aria-label="Estado de cada camión en el mapa"></ul>
+  <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
+  <p class="frio" style="margin:8px 0 0">Acerca con la rueda sobre el mapa o con los botones + y − para ver más detalle. De lejos, cada camión es un punto con su estado. A nivel de ciudad se ven el camión con su código, las paradas numeradas y cuántos quedan en la base. A nivel de calle se agregan el nombre del cliente y la temperatura, el combustible y la situación del camión, con cada lectura. Una ruptura de frío se ve siempre, y sus botones sobre el mapa lo llevan hasta el camión.</p>
+  <p class="frio" style="margin:8px 0 0">La ida va en línea continua azul y la vuelta a trazos ámbar; toca una ruta o elige un camión para ver solo su viaje. Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino. Por defecto se ven los camiones en ruta, en la puerta, volviendo o con alerta; donde dos etiquetas chocan se oculta una, y el camión sigue ahí: acerca el mapa o tócalo para ver su código.</p>
+  <div id="rutas-sugeridas"></div>
+</div>
+
+</div>
+<aside class="flota-lado" aria-label="Despacho: qué sigue">
+<section id="atencion" hidden><div class="seccion"><h2>Requiere atención</h2></div><div id="atencion-lista"></div></section>
 <div id="despacho-auto" data-activo="{{ auto.activo|yesno:'1,0' }}">{% include "flota/_despacho_auto.html" %}</div>
 
 <div id="sugerencia" hidden>
@@ -30,16 +47,7 @@
   </div>
 </div>
 
-<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
-<div class="tarjeta-ui">
-  <div class="alertas-mapa" id="alertas-mapa" hidden><span class="alertas-mapa-txt" id="alertas-mapa-txt" role="status"></span><span class="alertas-mapa-lista" id="alertas-mapa-lista"></span></div>
-  <div class="filtros-tramo" id="filtros-flota" role="group" aria-label="Qué mostrar en el mapa"></div>
-  <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
-  <ul class="leyenda" id="leyenda-estados" aria-label="Estado de cada camión en el mapa"></ul>
-  <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
-  <p class="frio" style="margin:8px 0 0">Acerca con la rueda sobre el mapa o con los botones + y − para ver más detalle. De lejos, cada camión es un punto con su estado. A nivel de ciudad se ven el camión con su código, las paradas numeradas y cuántos quedan en la base. A nivel de calle se agregan el nombre del cliente y la temperatura, el combustible y la situación del camión, con cada lectura. Una ruptura de frío se ve siempre, y sus botones sobre el mapa lo llevan hasta el camión.</p>
-  <p class="frio" style="margin:8px 0 0">La ida va en línea continua azul y la vuelta a trazos ámbar; toca una ruta o elige un camión para ver solo su viaje. Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino. Por defecto se ven los camiones en ruta, en la puerta, volviendo o con alerta; donde dos etiquetas chocan se oculta una, y el camión sigue ahí: acerca el mapa o tócalo para ver su código.</p>
-  <div id="rutas-sugeridas"></div>
+</aside>
 </div>
 
 <div class="seccion"><h2>Viajes activos</h2></div>
@@ -122,7 +130,7 @@
 <script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
-<script src="{% static 'js/diagnostico-camion.js' %}"></script>
+<script src="{% static 'js/diagnostico-camion.js' %}?v=3"></script>
 <form hidden>{% csrf_token %}</form>
 <script>
   (function () {

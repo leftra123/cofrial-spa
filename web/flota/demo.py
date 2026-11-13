@@ -41,7 +41,7 @@ def pagina(request):
     camiones = Camion.objects.filter(activo=True).select_related("rango_temperatura", "rango_secundario").order_by("camion_id")
     return render(request, "flota/demo.html", {"rol": request.rol, "camiones": camiones, "duracion": DURACION_MAX_S,
                                                "forzadas": Telemetria.objects.filter(forzada=True).count(),
-                                               "predefinidos": escenarios.PREDEFINIDOS, "escenarios_datos": escenarios.contexto()})
+                                               "predefinidos": escenarios.PREDEFINIDOS, "plazo_min": max(1, round(settings.CONFIRMACION_AUTO_SEG / 60)), "escenarios_datos": escenarios.contexto()})
 
 
 def _camara(request, camion):

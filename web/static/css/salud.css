@@ -68,3 +68,15 @@
 .vacio { margin: 0; padding: 16px 18px; color: var(--texto-2); }
 .nota { font-size: .82rem; color: var(--texto-3); line-height: 1.5; }
 @media (max-width: 520px) { .fila .pct { margin-left: 22px; flex-basis: 100%; } .barras { gap: 1px; } }
+
+/* ---------- período del historial y botón de actualizar ---------- */
+.s-actual { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -6px 0 16px; font-size: .88rem; color: var(--texto-2); }
+.s-actual .btn { padding: 8px 14px; font-size: .88rem; }
+.ventanas { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid var(--borde); border-radius: 10px; background: var(--fondo); }
+.ventanas a { padding: 6px 12px; border-radius: 7px; font-size: .84rem; font-weight: 600; color: var(--texto-2); text-decoration: none; white-space: nowrap; }
+.ventanas a:hover { color: var(--texto); background: var(--fondo-2); text-decoration: none; }
+.ventanas a.activa { background: var(--acento); color: var(--acento-fg); }
+.tarjeta-cab .leyenda-corta { flex-basis: 100%; }
+.barras.densas { gap: 1px; }
+@media (pointer: coarse) { .ventanas a { padding: 11px 12px; } .s-actual .btn { min-height: 44px; } }
+@media (max-width: 520px) { .ventanas { width: 100%; flex-wrap: nowrap; gap: 2px; } .ventanas a { flex: 1 1 0; min-width: 0; padding-inline: 4px; font-size: .8rem; text-align: center; } }

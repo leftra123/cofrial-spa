@@ -202,3 +202,74 @@ class ChequeosTests(TestCase):
         with mock.patch("urllib.request.urlopen", side_effect=OSError("secreto-del-proxy")):
             codigo, ms, falla = chequeos._http("http://x.test/")
         self.assertEqual((codigo, falla), (None, "sin conexión"))
+
+
+class PeriodosTests(TestCase):
+    """El historial se puede mirar por período: hasta 3 días con una barra por hora, desde 7 con una por día."""
+
+    def setUp(self):
+        cache.clear()
+        self.ahora = timezone.now()
+
+    def _datos(self, ventana):
+        return next(g for g in servicios.panel(self.ahora, ventana)["grupos"] if g["id"] == "datos")
+
+    def test_cuantas_barras_trae_cada_periodo(self):
+        fila("base", 0, ahora=self.ahora)
+        self.assertEqual({v: len(self._datos(v)["barras"]) for v in servicios.VENTANAS}, {"24h": 24, "3d": 72, "7d": 7, "30d": 30, "90d": 90})
+        self.assertEqual(self._datos("3d")["barras"][-1]["estado"], "ok")          # la última barra es la hora en curso
+
+    def test_el_porcentaje_es_del_periodo_elegido(self):
+        fila("base", 0, ahora=self.ahora)
+        fila("base", 30 * 60, "caido", ahora=self.ahora)                               # hace 30 horas: fuera de 24 h, dentro de 3 días
+        self.assertEqual(self._datos("24h")["disponibilidad"], 1)
+        self.assertEqual(self._datos("3d")["disponibilidad"], 0.5)
+        self.assertEqual(self._datos("90d")["disponibilidad"], 0.5)
+
+    def test_una_caida_antigua_no_ensucia_las_barras_de_un_periodo_corto(self):
+        fila("base", 0, ahora=self.ahora)
+        fila("base", 5 * 24 * 60, "caido", ahora=self.ahora)                           # hace 5 días
+        self.assertNotIn("caido", [b["estado"] for b in self._datos("3d")["barras"]])
+        self.assertIn("caido", [b["estado"] for b in self._datos("7d")["barras"]])
+
+    def test_un_componente_sin_filas_en_el_periodo_sigue_a_la_vista(self):
+        fila("base", 10 * 24 * 60, ahora=self.ahora)                                   # el laboratorio lleva 10 días apagado
+        g = self._datos("3d")
+        self.assertEqual({b["estado"] for b in g["barras"]}, {"sin"})
+        self.assertIsNone(g["disponibilidad"])                                         # ni caída ni éxito: no hay nada que promediar
+
+    def test_los_incidentes_siguen_al_periodo_con_tope_de_siete_dias(self):
+        fila("base", 0, ahora=self.ahora)
+        fila("base", 5 * 24 * 60, "caido", "HTTP 503", ahora=self.ahora)
+        caidas = lambda v: [i for i in servicios.panel(self.ahora, v)["incidentes"] if i["estado"] == "caido"]
+        self.assertEqual(len(caidas("3d")), 0)
+        self.assertEqual(len(caidas("7d")), 1)
+        self.assertEqual(servicios.panel(self.ahora, "90d")["dias_incidentes"], 7)
+        self.assertEqual(servicios.panel(self.ahora, "24h")["dias_incidentes"], 1)
+
+    def test_un_periodo_desconocido_cae_en_el_inicial(self):
+        fila("base", 0, ahora=self.ahora)
+        self.assertEqual(servicios.panel(self.ahora, "<script>")["ventana"], servicios.VENTANA_INICIAL)
+
+    def test_la_pagina_abre_en_tres_dias_y_ofrece_los_demas(self):
+        fila("base", 0)
+        r = self.client.get("/salud/", **HTML)
+        self.assertContains(r, 'href="?ventana=3d" class="activa" aria-current="true"')
+        for clave in servicios.VENTANAS:
+            self.assertContains(r, f'href="?ventana={clave}"')
+        self.assertContains(r, "Últimos 3 días · cada barra es una hora")
+        self.assertContains(r, 'id="s-actualizar" href="?ventana=3d"')
+        self.assertContains(r, "js/salud.js")
+
+    def test_la_pagina_respeta_el_periodo_pedido(self):
+        fila("base", 0)
+        r = self.client.get("/salud/?ventana=90d", **HTML)
+        self.assertContains(r, 'href="?ventana=90d" class="activa" aria-current="true"')
+        self.assertContains(r, "Últimos 90 días · cada barra es un día")
+        self.assertContains(r, "Últimas 24 horas · cada barra es una hora")          # el detalle por hora solo acompaña a los períodos por día
+        r = self.client.get("/salud/?ventana=24h", **HTML)
+        self.assertContains(r, "Últimas 24 horas · cada barra es una hora", count=1)
+        self.assertContains(self.client.get("/salud/?ventana=no-existe", **HTML), 'href="?ventana=3d" class="activa"')
+
+    def test_el_balanceador_sigue_recibiendo_json_con_cualquier_periodo(self):
+        self.assertEqual(self.client.get("/salud/?ventana=7d").json(), {"estado": "ok"})

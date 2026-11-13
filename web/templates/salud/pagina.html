@@ -8,8 +8,8 @@
   <meta name="color-scheme" content="light dark">
   <meta http-equiv="refresh" content="60">
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux12">
-  <link rel="stylesheet" href="{% static 'css/salud.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux14">
+  <link rel="stylesheet" href="{% static 'css/salud.css' %}?v=4">
 </head>
 <body class="salud">
 <main class="salud-col" id="contenido">
@@ -18,6 +18,8 @@
     <a class="btn btn-sec" href="/">Ir al sitio</a>
   </header>
   <h1 class="salud-titulo">Estado del sistema</h1>
+  {% if not sin_base %}<p class="s-actual"><span id="s-edad" data-momento="{{ ahora_local|date:'c' }}">Datos de las {{ ahora_local|date:"H:i:s" }}</span>
+    <a class="btn btn-sec" id="s-actualizar" href="?ventana={{ ventana }}">Actualizar</a></p>{% endif %}
 
   {% if sin_base %}
   <section class="s-aviso caido" role="status"><b>No se puede leer el historial porque la base de datos no responde.</b>
@@ -42,7 +44,9 @@
   {% endif %}
 
   <section class="tarjeta-salud" aria-labelledby="t-estado">
-    <div class="tarjeta-cab"><h2 id="t-estado">Componentes</h2><span class="leyenda-corta">Últimos 90 días · cada barra es un día</span></div>
+    <div class="tarjeta-cab"><h2 id="t-estado">Componentes</h2>
+      <nav class="ventanas" aria-label="Período del historial">{% for v in ventanas %}<a href="?ventana={{ v.clave }}"{% if v.activa %} class="activa" aria-current="true"{% endif %}>{{ v.rotulo }}</a>{% endfor %}</nav>
+      <span class="leyenda-corta">{% if ventana == "24h" %}Últimas 24 horas{% else %}Últimos {{ rotulo_ventana }}{% endif %} · cada barra es {% if por_hora %}una hora{% else %}un día{% endif %}</span></div>
     {% for g in grupos %}
     <details class="grupo" {% if g.estado == "caido" or g.estado == "degradado" %}open{% endif %}>
       <summary>
@@ -52,29 +56,29 @@
           <span class="cuantos">{{ g.componentes|length }} componente{{ g.componentes|length|pluralize }} ▾</span>
           <span class="pct">{% if g.porcentaje %}{{ g.porcentaje }} <small>de tiempo de actividad</small>{% else %}<small>sin registros</small>{% endif %}</span>
         </span>
-        <span class="barras" role="img" aria-label="{{ g.nombre }}: historial de {{ g.barras|length }} días">{% for b in g.barras %}<i class="b {{ b.estado }}" title="{{ b.titulo }}"></i>{% endfor %}</span>
+        <span class="barras{% if g.barras|length > 60 %} densas{% endif %}" role="img" aria-label="{{ g.nombre }}: historial de {{ g.barras|length }} {% if por_hora %}horas{% else %}días{% endif %}">{% for b in g.barras %}<i class="b {{ b.estado }}" title="{{ b.titulo }}"></i>{% endfor %}</span>
       </summary>
       <div class="detalle">
         <p class="desc">{{ g.descripcion }}{% if g.respaldo %} Con uno caído el grupo se marca degradado; solo es caída cuando fallan todos.{% endif %}</p>
-        <div class="horas"><span class="rotulo">Últimas 24 horas · cada barra es una hora</span>
-          <span class="barras" role="img" aria-label="{{ g.nombre }}: últimas 24 horas">{% for b in g.horas %}<i class="b {{ b.estado }}" title="{{ b.titulo }}"></i>{% endfor %}</span></div>
+        {% if not por_hora %}<div class="horas"><span class="rotulo">Últimas 24 horas · cada barra es una hora</span>
+          <span class="barras" role="img" aria-label="{{ g.nombre }}: últimas 24 horas">{% for b in g.horas %}<i class="b {{ b.estado }}" title="{{ b.titulo }}"></i>{% endfor %}</span></div>{% endif %}
         {% for c in g.componentes %}
         <div class="comp">
           <div class="fila"><span class="punto {{ c.estado }}" aria-hidden="true"></span><span class="nombre">{{ c.nombre }}</span>
             <span class="estado-txt {{ c.estado }}">{{ c.etiqueta }}{% if c.detalle %} · {{ c.detalle }}{% endif %}{% if c.ms is not None and c.estado != "sin" %} · {{ c.ms }} ms{% endif %}</span>
             <span class="pct">{% if c.porcentaje %}{{ c.porcentaje }}{% endif %}</span></div>
-          {% if g.componentes|length > 1 %}<span class="barras" role="img" aria-label="{{ c.nombre }}: historial">{% for b in c.barras %}<i class="b {{ b.estado }}" title="{{ b.titulo }}"></i>{% endfor %}</span>{% endif %}
+          {% if g.componentes|length > 1 %}<span class="barras{% if c.barras|length > 60 %} densas{% endif %}" role="img" aria-label="{{ c.nombre }}: historial">{% for b in c.barras %}<i class="b {{ b.estado }}" title="{{ b.titulo }}"></i>{% endfor %}</span>{% endif %}
         </div>
         {% endfor %}
       </div>
-      <span class="eje"><span>Hace 90 días ({{ primer_dia }})</span><span>Hoy</span></span>
+      <span class="eje"><span>Hace {{ rotulo_ventana }} ({{ primer_dia }})</span><span>{% if por_hora %}Ahora{% else %}Hoy{% endif %}</span></span>
     </details>
     {% endfor %}
     <p class="leyenda"><span><i class="b ok"></i> Sin caídas</span><span><i class="b degradado"></i> Alguna falla</span><span><i class="b caido"></i> Caída (5 % o más de las revisiones)</span><span><i class="b sin"></i> Sin registros</span></p>
   </section>
 
   <section class="tarjeta-salud" aria-labelledby="t-inc">
-    <div class="tarjeta-cab"><h2 id="t-inc">Qué pasó en los últimos 7 días</h2></div>
+    <div class="tarjeta-cab"><h2 id="t-inc">Qué pasó en {% if dias_incidentes == 1 %}las últimas 24 horas{% else %}los últimos {{ dias_incidentes }} días{% endif %}</h2></div>
     {% if incidentes %}
     <ul class="incidentes">
       {% for i in incidentes %}
@@ -83,11 +87,12 @@
           <small>{% if i.en_curso %}Desde el {{ i.desde|date:"j/n" }} a las {{ i.desde|date:"H:i" }} · en curso, {{ i.minutos }} min{% else %}{{ i.desde|date:"j/n H:i" }} a {{ i.hasta|date:"H:i" }} · {{ i.minutos }} min{% endif %}</small></div></li>
       {% endfor %}
     </ul>
-    {% else %}<p class="vacio">No hubo caídas ni fallas registradas en los últimos 7 días.</p>{% endif %}
+    {% else %}<p class="vacio">No hubo caídas ni fallas registradas en {% if dias_incidentes == 1 %}las últimas 24 horas{% else %}los últimos {{ dias_incidentes }} días{% endif %}.</p>{% endif %}
   </section>
 
   <p class="nota">Cada revisión es real y queda guardada con su hora: el servidor, la base y el simulador IoT se miran cada minuto; la IA y Mercado Pago cada 5 minutos (solo consultan la cuenta, no consumen cuota ni cobran). El historial empezó cuando se encendió el monitor; antes de eso no hay datos.</p>
   {% endif %}
 </main>
+<script src="{% static 'js/salud.js' %}?v=1"></script>
 </body>
 </html>

@@ -18,10 +18,14 @@
     var d = document.createElement("div"); d.className = "as-msg as-" + quien; d.textContent = texto;
     log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
   }
+  function presentacion() {
+    var i = document.createElement("img"); i.className = "as-presenta"; i.alt = ""; i.width = 96; i.height = 64;
+    i.src = raiz.querySelector(".asistente-camion").src; log.appendChild(i);
+  }
   function abrir() {
     panel.hidden = false; btn.setAttribute("aria-expanded", "true"); raiz.classList.add("abierto");
     if (!saludado) {
-      saludado = true; burbuja("Hola, soy el asistente de IA de Cofrial. Conozco todo el inventario: te ayudo con precios, stock y el estado de tus pedidos, y puedo agregar productos a tu carrito. Si algo no lo puedo resolver, lo derivo a una persona.", "bot");
+      saludado = true; presentacion(); burbuja("Hola, soy Cofri, el agente de IA de Cofrial. Conozco todo el inventario: te ayudo con precios, stock y el estado de tus pedidos, y puedo agregar productos a tu carrito. Si algo no lo puedo resolver, lo derivo a una persona.", "bot");
       (SUGERENCIAS[raiz.dataset.pagina] || SUGERENCIAS.catalogo).forEach(function (t) {
         var b = document.createElement("button"); b.type = "button"; b.className = "as-chip"; b.textContent = t;
         b.addEventListener("click", function () { preguntar(t); }); sug.appendChild(b);

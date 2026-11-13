@@ -133,6 +133,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Pago y salud (8-nov-2026, revisión técnica): el modal de Mercado Pago pide confirmación («Confirmar y pagar» / «Cancelar compra»), «Cancelar» de la entrega deja de ser ambiguo y `/salud/` queda exenta de la redirección HTTPS para el balanceador. Probado solo en local; el balanceador y Multi-AZ los lleva otra sesión. Detalle en `docs/decisiones.md`. Revisión del 13-nov (PR 87, aún borrador): se integró `main`; la exención de salud ahora incluye `/health`; el modal toma el documento también del campo oculto de la institución, monta la tarjeta solo al confirmar y cierra la confirmación con Esc.
 
 
+- Activación del laboratorio en cada sesión (13-nov-2026): `aws/activar.sh` pide las credenciales, enciende la base y las EC2, espera al balanceador y verifica por el dominio; no recrea nada, porque detener y encender conserva las IDs de las instancias y las alarmas. Se corrigió la espera final de `provision.sh encender`, que no seguía la redirección a HTTPS. Probado con AWS falso y en solo lectura contra el laboratorio vivo; el arranque desde «detenido» queda por probar en la próxima sesión. Detalle en `docs/decisiones.md`.
+
 ## 2026-11-08 (revisión técnica: alta disponibilidad)
 - El evaluador aprobó la aplicación salvo infraestructura: pidió balanceador de carga, dos EC2 web y RDS en múltiples zonas, HTTPS con nombre de dominio y Grafana con autenticación y HTTPS.
 - `aws/provision.sh` ahora crea un ALB en dos zonas, la web secundaria, RDS Multi-AZ (o convierte la existente) y trae `recrear-web` rodante y `cerrar-acceso-directo`. Los compose distinguen web primaria y secundaria (`ROL_WEB`).
@@ -144,3 +146,9 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - Mientras va en camino se conserva el distintivo de llegada que trajo `main`. Al llegar a la puerta el mapa se apaga.
 - Campanita: «Ver boleta», «Ver pedido» y «Ver dónde va» quedaron a la misma altura que «Revisar y recibir» (36 px).
 - Carrito de demostración: particular y empresa ven «Pagar ahora» (Mercado Pago, con reintento si la tarjeta falla) y, debajo, «Generar orden» a 30 días. El particular descarga el documento al crear la orden; la empresa sigue descargando la factura después de la entrega.
+
+## 2026-11-13: la página de estado ahora es real
+- `/salud/` mostraba solo «ok» y no guardaba nada. Ahora el servicio `vigilante` revisa cada minuto web, base, IoT, Grafana y la dirección pública, y cada 5 minutos Gemini, Groq y Mercado Pago (solo listan la cuenta: sin gasto de cuota ni cobros). Cada revisión queda en la tabla `chequeo_servicio` con su hora.
+- La página muestra barras de 90 días y de 24 horas, la disponibilidad y qué pasó en los últimos 7 días. Cuando el laboratorio está apagado nadie revisa: esas horas aparecen en gris como «sin registros», sin contarse como caída ni como éxito. El historial parte del día en que se enciende el monitor.
+- Sin cambios para el balanceador: `/salud/` sigue respondiendo `{"estado": "ok"}` a quien no es un navegador. Detalle en `docs/decisiones.md`.
+- Pendiente en AWS: reconstruir la web primaria (`recrear-web`) para que nazca el servicio `vigilante` y se cree la tabla; opcional, definir `SALUD_URL_PUBLICA=https://www.cofrialspa.shop` para vigilar también el balanceador.

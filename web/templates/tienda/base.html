@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux14">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux19">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux20">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -46,6 +46,7 @@
       {% if user.is_authenticated %}
         {% if menu.crm or menu.flota or menu.admin %}<a class="tb-ingresar" href="/portada/" title="La portada que ven los visitantes">Portada pública</a>{% endif %}
         <a class="tb-clave" href="/cuenta/clave/">Mi clave</a>
+        {% if menu.cliente %}<a class="tb-clave" href="/cuenta/mis-datos/">Mis datos</a>{% endif %}
         {% if menu.crm or menu.cliente %}<button type="button" class="enlace tb-permisos" data-permisos-abrir>Permisos</button>{% endif %}
         <form method="post" action="/cuenta/salir/" class="tb-salir-form">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/"><button type="submit" class="tema-btn tb-salir" aria-label="Salir de la cuenta" title="Salir" aria-haspopup="dialog" aria-controls="salir-dialogo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></form>
       {% else %}
@@ -71,7 +72,16 @@
 <footer class="t-pie"><div class="t-pie-fila">
   <div class="t-pie-logo"><span class="logo-chip">{% include "componentes/logo.html" with alt="Cofrial SpA, distribución y cadena de frío" ancho=162 alto=54 %}</span><small>Frigorífico y distribución en cadena de frío · La Araucanía</small></div>
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
-  <div>Prototipo académico INACAP Temuco</div></div></footer>
+  <div>Prototipo académico INACAP Temuco</div></div>
+  <div class="t-pie-legal">
+    <nav aria-label="Información legal"><a href="/legal/privacidad/">Privacidad</a><a href="/legal/terminos/">Términos y condiciones</a><a href="/legal/devoluciones/">Devoluciones</a><a href="/legal/cookies/">Cookies</a><a href="/legal/licencias/">Créditos y licencias</a>{% if menu.cliente %}<a href="/cuenta/mis-datos/">Mis datos</a>{% endif %}</nav>
+    <p>Cofrial SpA · Frigorífico y distribución en cadena de frío · La Araucanía, Chile. Contacto y reclamos: <a href="/soporte/">Soporte</a>. Caso de estudio con datos ficticios.</p>
+  </div></footer>
+<div class="aviso-cookies" id="aviso-cookies" role="region" aria-label="Aviso de cookies" hidden>
+  <p>Usamos solo las cookies necesarias para que el sitio funcione (sesión, seguridad y balanceo de carga). No usamos cookies de publicidad ni de rastreo. <a href="/legal/cookies/">Qué guardamos y para qué</a></p>
+  <button type="button" class="btn-sec" id="aviso-cookies-ok">Entendido</button>
+</div>
+<script src="{% static 'js/aviso-cookies.js' %}" defer></script>
 {% block mp_modal_portal %}{% endblock %}
 {% if menu.cliente %}<template id="nav-skeleton-catalogo">{% include "catalogo/_skeleton_nav.html" %}</template>
 <template id="nav-skeleton-pedidos">{% include "pedidos/_skeleton_nav.html" %}</template>

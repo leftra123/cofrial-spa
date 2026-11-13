@@ -186,6 +186,16 @@ El asistente de tienda está implementado en catálogo, detalle, carrito y segui
 
 El chat utiliza Groq y luego Gemini por defecto, con presupuesto nominal de diez segundos y configuración independiente del clasificador. Limita las entradas a 300 caracteres y usa contadores de seis mensajes por minuto y sesenta por hora por proceso. Como la caché es local a cada proceso Gunicorn, no es un límite global estricto para toda la instalación. Los controles rechazan intentos detectados de manipulación y montos ajenos al contexto, sin garantizar que todo riesgo de generación esté eliminado. Si falla el proveedor, la tienda sigue disponible y ofrece soporte.
 
+## Información legal y datos del cliente (13-nov-2026)
+
+El portal publica cinco páginas en `/legal/`: política de privacidad (Ley 19.628 y Ley 21.719), términos y condiciones, devoluciones y reembolsos (Ley 19.496), cookies y créditos y licencias. Todas describen lo que el sistema hace de verdad: qué datos pide y para qué, quiénes los procesan (AWS, Gemini y Groq, Mercado Pago, OpenStreetMap, OSRM y OpenFreeMap), cuánto tiempo se guardan y cómo ejercer los derechos.
+
+- **Consentimiento:** los dos registros (B2C y empresa) piden marcar una casilla que parte sin marcar; sin ella no se crea la cuenta. Queda en `aceptacion_legal` quién aceptó, cuándo, qué versión y desde qué IP.
+- **Mis datos (`/cuenta/mis-datos/`):** el cliente descarga en JSON todo lo que el sistema guarda de su cuenta y puede eliminarla con su clave. La eliminación borra o reemplaza nombre, correo, teléfono, direcciones, carrito y avisos, y cierra el acceso; conserva los pedidos y documentos con el RUT por la obligación tributaria. No se permite con pedidos en curso ni en las cuentas de demostración.
+- **Cookies:** solo hay cookies necesarias (sesión, CSRF y afinidad del balanceador), así que el aviso informa y no pide aceptar. No hay analítica ni rastreo.
+- **Compra:** el carrito avisa, antes de confirmar, que por ser alimentos perecibles no aplica el derecho de retracto y que lo que llegue mal se rechaza al recibir y no se cobra.
+- **IA:** el asistente y la clasificación ya se presentan como IA; la política advierte que el nivel gratuito de Gemini puede usar lo enviado para mejorar sus productos. Las imágenes generadas con IA se declaran en «Créditos y licencias».
+
 ## Presentación y estados de interfaz
 
 El catálogo de demostración contiene veinte productos en cuatro categorías. Las imágenes prioritarias son representaciones referenciales generadas con IA y no fotografías de envases reales de Cofrial; los recursos previos quedan como respaldo. Se utilizan AVIF adaptables y JPG de respaldo, tipografía y MapLibre GL JS autoalojados. Los mapas conservan dependencias externas para teselas, geocodificación y rutas; si OpenFreeMap no responde, siguen mostrando rutas y puntos sobre un fondo local.

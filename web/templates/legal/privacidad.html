@@ -1,0 +1,68 @@
+{% extends "legal/_base.html" %}
+{% block texto %}
+<h2>Quién trata tus datos</h2>
+<p>Cofrial SpA, frigorífico y distribuidora en cadena de frío de La Araucanía, es la responsable del tratamiento de los datos de este sitio. Para cualquier consulta sobre tus datos usa <a href="/soporte/">Soporte</a> (con tu sesión iniciada) o las opciones de <a href="/cuenta/mis-datos/">Mis datos</a>. Si no tienes cuenta, el sitio no guarda datos asociados a tu nombre.</p>
+<p>Aplicamos la Ley N.º 19.628 sobre protección de la vida privada y la Ley N.º 21.719, que la reemplaza y regula la protección y el tratamiento de los datos personales.</p>
+
+<h2>Qué datos guardamos y para qué</h2>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Datos</th><th>Para qué</th><th>Fundamento</th></tr></thead>
+  <tbody>
+    <tr><td>Nombre o razón social, RUT, correo, teléfono (opcional), dirección y comuna; giro en las empresas</td><td>Crear tu cuenta, venderte, despachar y emitir el comprobante</td><td>Ejecución del contrato de compra</td></tr>
+    <tr><td>Clave</td><td>Ingresar a tu cuenta. Se guarda cifrada (un resumen que no se puede revertir); nadie del equipo puede leerla</td><td>Ejecución del contrato</td></tr>
+    <tr><td>Pedidos, quién recibe, orden de compra, rechazos y documentos tributarios</td><td>Despachar, seguir la entrega en vivo, cobrar y cumplir las obligaciones tributarias</td><td>Contrato y obligación legal</td></tr>
+    <tr><td>Consultas y reclamos que escribes en Soporte o al asistente</td><td>Responderte. Una IA sugiere el área que corresponde y una persona lo revisa</td><td>Contrato e interés legítimo en atenderte</td></tr>
+    <tr><td>Avisos de stock que pides</td><td>Avisarte en la tienda cuando el producto vuelva</td><td>Tu solicitud</td></tr>
+    <tr><td>Ubicación del navegador</td><td>Solo si la permites y tú lo pides, para marcar una dirección de entrega en el mapa</td><td>Consentimiento, que puedes retirar desde el navegador</td></tr>
+    <tr><td>Dirección IP, fecha y versión al aceptar estos términos</td><td>Dejar constancia de lo que aceptaste</td><td>Obligación de acreditar el consentimiento</td></tr>
+    <tr><td>Dirección IP en intentos de ingreso fallidos</td><td>Bloquear por 15 minutos a quien prueba claves en una cuenta ajena</td><td>Interés legítimo en la seguridad</td></tr>
+  </tbody>
+</table></div>
+<p>No pedimos datos sensibles, no vendemos ni cedemos datos, no hacemos perfiles publicitarios y no enviamos correos de marketing. Los únicos correos son los que el servicio necesita, como el de recuperar la clave. Las compras están pensadas para personas mayores de edad y empresas.</p>
+
+<h2>Quién más procesa datos</h2>
+<p>Estos proveedores reciben datos solo para prestar su servicio. Algunos están fuera de Chile, por lo que hay transferencia internacional de datos.</p>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Proveedor</th><th>Qué recibe</th><th>Dónde</th></tr></thead>
+  <tbody>
+    <tr><td>Amazon Web Services</td><td>Todo lo anterior: aloja los servidores y la base de datos</td><td>Estados Unidos (us-east-1)</td></tr>
+    <tr><td>Google (Gemini) y Groq</td><td>El texto de tus consultas y reclamos, y lo que preguntas al asistente</td><td>Estados Unidos</td></tr>
+    <tr><td>Mercado Pago</td><td>Los datos del pago con tarjeta, que escribes en su formulario. Cofrial no ve ni guarda el número de la tarjeta</td><td>Según Mercado Pago</td></tr>
+    <tr><td>OpenStreetMap (Nominatim)</td><td>La dirección de entrega, para obtener sus coordenadas</td><td>Europa</td></tr>
+    <tr><td>OSRM</td><td>Las coordenadas del recorrido, para calcular la ruta del camión</td><td>Europa</td></tr>
+    <tr><td>OpenFreeMap</td><td>Tu dirección IP al cargar los mapas, como cualquier sitio que visitas</td><td>Europa</td></tr>
+  </tbody>
+</table></div>
+<p><b>Sobre la IA:</b> la clasificación y el asistente usan el nivel gratuito de Gemini (Google) y de Groq. En el nivel gratuito, Google puede usar lo que se le envía para mejorar sus productos, y personas pueden revisarlo. Por eso, no escribas en Soporte ni en el asistente datos que no sean necesarios para tu consulta. Cofrial no entrena modelos de IA con tus datos.</p>
+<p><b>Como prototipo,</b> no hay contratos de encargo de tratamiento firmados con estos proveedores. En una operación real con datos reales se firmarían antes de empezar.</p>
+
+<h2>Cuánto tiempo los guardamos</h2>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Datos</th><th>Plazo</th></tr></thead>
+  <tbody>
+    <tr><td>Cuenta, direcciones, avisos de stock y carrito</td><td>Mientras tengas la cuenta. Si la eliminas, se borran o se reemplazan de inmediato</td></tr>
+    <tr><td>Pedidos y documentos tributarios, con el RUT</td><td>Seis años, el plazo de conservación que exige la ley tributaria, aunque elimines la cuenta</td></tr>
+    <tr><td>Consultas y reclamos</td><td>Mientras se conserven los pedidos a los que se refieren, para responder ante un reclamo</td></tr>
+    <tr><td>Constancia de aceptación de términos</td><td>Mientras se conserven los pedidos, como prueba del consentimiento</td></tr>
+    <tr><td>Intentos de ingreso fallidos</td><td>15 minutos, solo en la memoria del servidor</td></tr>
+    <tr><td>Sesión iniciada</td><td>Hasta que cierres sesión o dos semanas sin volver</td></tr>
+    <tr><td>Registros técnicos del servidor</td><td>Se rotan por tamaño y se sobrescriben solos</td></tr>
+    <tr><td>Lecturas de temperatura de los camiones (no son datos personales)</td><td>Siete días las normales; las alertas de ruptura de frío se conservan</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Tus derechos</h2>
+<p>Puedes pedir acceso, rectificación, supresión, oposición, portabilidad y bloqueo de tus datos. Sin intermediarios:</p>
+<ul>
+  <li><b>Acceso y portabilidad:</b> en <a href="/cuenta/mis-datos/">Mis datos</a> descargas un archivo con todo lo que guardamos de tu cuenta.</li>
+  <li><b>Supresión:</b> en <a href="/cuenta/mis-datos/">Mis datos</a> eliminas tu cuenta. Solo se conserva lo que la ley tributaria obliga a guardar.</li>
+  <li><b>Rectificación, oposición y bloqueo:</b> escríbenos en <a href="/soporte/">Soporte</a>.</li>
+</ul>
+<p>Si no quedas conforme con la respuesta, puedes reclamar ante la Agencia de Protección de Datos Personales.</p>
+
+<h2>Cómo los protegemos</h2>
+<p>El sitio funciona solo con conexión cifrada (HTTPS). La base de datos está en una red privada, sin acceso desde internet, y tiene respaldos automáticos. Cada persona del equipo ve solo lo que necesita según su rol, y el ingreso bloquea a quien prueba claves.</p>
+
+<h2>Cambios</h2>
+<p>Si esta política cambia en algo importante, publicamos una versión con nueva fecha. Al crear la cuenta queda registrada la versión que aceptaste, y puedes verla en <a href="/cuenta/mis-datos/">Mis datos</a>.</p>
+{% endblock %}

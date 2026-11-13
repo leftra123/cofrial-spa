@@ -1,8 +1,9 @@
 """Reglas de negocio del CRM (RN-09 a RN-15 del informe, sección de arquitectura funcional del CRM)."""
+import re
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Count, Exists, F, Max, OuterRef, Q, Sum
+from django.db.models import Count, Exists, F, Max, Min, OuterRef, Q, Sum
 from django.utils import timezone
 
 from catalogo.asistente import estado_de_pedido
@@ -195,16 +196,17 @@ def fin_de_exposicion(orden, ahora=None):
 
 
 def ordenes_con_alerta(ordenes):
-    """Agrega a cada orden `alertas_frio`: lecturas con alerta del camión del despacho mientras la carga de esa orden iba a bordo."""
+    """Agrega a cada orden `alertas_frio` (lecturas con alerta del camión del despacho mientras la carga de esa orden iba a bordo), `temp_maxima`
+    y `primera_alerta`, con una consulta por orden."""
     resultado = []
     ahora = timezone.now()
     for o in ordenes:
-        n = 0
+        r = {"n": 0, "m": None, "p": None}
         d = o.despacho
         if d is not None and d.salida_en is not None:
-            n = Telemetria.objects.filter(camion_id=d.camion_id, camara=o.camara, alerta_ruptura_frio=True, registrado_en__gte=d.salida_en,
-                                          registrado_en__lte=fin_de_exposicion(o, ahora)).count()
-        o.alertas_frio = n
+            r = Telemetria.objects.filter(camion_id=d.camion_id, camara=o.camara, alerta_ruptura_frio=True, registrado_en__gte=d.salida_en,
+                                          registrado_en__lte=fin_de_exposicion(o, ahora)).aggregate(n=Count("pk"), m=Max("temp_camara"), p=Min("registrado_en"))
+        o.alertas_frio, o.temp_maxima, o.primera_alerta = r["n"], r["m"], r["p"]
         resultado.append(o)
     return resultado
 
@@ -219,14 +221,37 @@ def ordenes_de_cliente(cliente):
     return ordenes_con_alerta(ordenes)
 
 
+AVISO_FRIO = "Aviso de ruptura de frío · orden N.º "      # encabezado del detalle de la interacción: así se sabe qué órdenes ya se avisaron, sin tabla nueva
+_AVISO_FRIO_RE = re.compile(r"^" + re.escape(AVISO_FRIO) + r"(\d+)")
+
+
 def ordenes_afectadas(usuario):
-    """Órdenes con alerta de frío durante su viaje, dentro del alcance del usuario (para el seguimiento de alertas)."""
+    """Órdenes con alerta de frío durante su viaje, dentro del alcance del usuario, con el contacto del cliente y si ya se le avisó (`aviso`)."""
     cartera = clientes_visibles(usuario).values_list("pk", flat=True)
     base = Orden.objects.filter(despacho__isnull=False, despacho__salida_en__isnull=False).select_related(
         "estado_orden", "despacho__camion", "direccion__cliente")
     if rol(usuario) != "despachador":
         base = base.filter(direccion__cliente_id__in=cartera)
-    return [o for o in ordenes_con_alerta(list(base.order_by("-creada_en"))) if o.alertas_frio]
+    afectadas = [o for o in ordenes_con_alerta(list(base.order_by("-creada_en"))) if o.alertas_frio]
+    avisos = {}
+    for i in Interaccion.objects.filter(cliente_id__in={o.direccion.cliente_id for o in afectadas}, detalle__startswith=AVISO_FRIO).order_by("registrada_en"):
+        m = _AVISO_FRIO_RE.match(i.detalle)
+        if m:
+            avisos[int(m.group(1))] = i
+    for o in afectadas:
+        o.aviso = avisos.get(o.orden_id)
+    return afectadas
+
+
+def avisar_alerta_frio(usuario, orden_id, tipo, detalle):
+    """Deja en el CRM que se avisó al cliente de una ruptura de frío en su pedido: una interacción con encabezado fijo (llamada o correo)."""
+    if tipo not in ("llamada", "correo"):
+        raise ErrorDeNegocio("Indica si avisaste por llamada o por correo.")
+    orden = next((o for o in ordenes_afectadas(usuario) if o.orden_id == orden_id), None)
+    if orden is None:
+        raise ErrorDeNegocio("Ese pedido no tiene una alerta de frío que puedas atender.")
+    cuerpo = (detalle or "").strip() or "Se informó al cliente de la ruptura de frío durante el viaje."
+    return registrar_interaccion(usuario, tipo, f"{AVISO_FRIO}{orden_id}: {cuerpo}", cliente=orden.direccion.cliente)
 
 
 # ---------------------------------------------------------------- RN-15: pedido a nombre del cliente

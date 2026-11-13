@@ -152,3 +152,8 @@ Registro breve de avances y acuerdos (sirve para el informe y la defensa).
 - La página muestra barras de 90 días y de 24 horas, la disponibilidad y qué pasó en los últimos 7 días. Cuando el laboratorio está apagado nadie revisa: esas horas aparecen en gris como «sin registros», sin contarse como caída ni como éxito. El historial parte del día en que se enciende el monitor.
 - Sin cambios para el balanceador: `/salud/` sigue respondiendo `{"estado": "ok"}` a quien no es un navegador. Detalle en `docs/decisiones.md`.
 - Pendiente en AWS: reconstruir la web primaria (`recrear-web`) para que nazca el servicio `vigilante` y se cree la tabla; opcional, definir `SALUD_URL_PUBLICA=https://www.cofrialspa.shop` para vigilar también el balanceador.
+
+## 2026-11-13: extras de la Torre y de las alertas de frío
+- Torre de control: al tocar un camión (en el mapa o en la lista) se abre un panel de detalle con su estado, temperatura, combustible, antigüedad de la última lectura y los clientes a bordo, con enlace a su ficha. Si hay ruptura de frío ofrece ir a avisar a los clientes. Cada cliente a bordo se limita al alcance del usuario y la consulta es una sola, sin importar cuántos camiones haya.
+- CRM, alertas de frío: la lista muestra contacto del cliente (teléfono y correo), temperatura máxima y hora de la primera lectura, y el vendedor o administrador registra el aviso. Queda en el historial del cliente y la orden pasa a «Avisado».
+- Pendiente (necesita AWS encendido): probar una restauración de RDS a un punto en el tiempo y agregar la revisión de respaldos a `aws/verificar.py --infra`.

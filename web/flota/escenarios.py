@@ -1,4 +1,6 @@
-"""Escenarios del simulador: pedir, para un viaje en curso, una falla de frío, una entrega perfecta o un cliente que no recibe.
+"""Escenarios del simulador: pedir, para un viaje en curso, cómo llega el camión a la puerta: con el pedido bueno, con una falla de frío, con un
+cliente que no está, con una falsa alarma por un sensor defectuoso o con un sensor pegado que dice «normal» aunque no lo sea.
+En ninguno responde el simulador por el cliente (salvo «no está»): quien acepta o rechaza el pedido es una persona, o vence el plazo.
 
 Quién hace qué:
   - La IA solo interpreta. Recibe el pedido en lenguaje natural y propone JSON; no toca la base ni el simulador.
@@ -32,20 +34,32 @@ from .models import Despacho, EscenarioSimulador, Telemetria
 
 CATALOGO = {
     "falla_frio": "El equipo de frío falla al llegar a cierto avance de la ruta: la temperatura sube, salta la alerta y luego se recupera.",
-    "entrega_perfecta": "Viaje sin rupturas de frío; en cada parada el cliente confirma que recibió.",
+    "entrega_perfecta": "Pedido bueno: viaje sin rupturas de frío. Al llegar, el cliente revisa y decide si acepta.",
     "cliente_no_recibe": "En una parada el cliente no recibe: el pedido queda «Entrega no concretada» y llega un requerimiento a ventas.",
+    "sensor_falla": "Falsa alarma: el equipo de frío está bien pero el sensor marca saltos imposibles y salta la alerta. La carga llega en su temperatura.",
+    "sensor_pegado": "Sensor pegado: marca siempre la misma temperatura «normal» y nunca avisa, aunque la carga se entibie. El cliente puede encontrarla tibia.",
 }
 LIMITES = {"momento_pct": (5, 95), "duracion_lecturas": (6, 36), "subida_c": (1.0, 2.0)}     # los mismos que las restricciones de la tabla; con el mínimo la alerta salta incluso en el rango más ancho
 DEFECTOS = {"momento_pct": 50, "duracion_lecturas": 12, "subida_c": 1.0}
+DEFECTOS_SENSOR = {"sensor_falla": {"momento_pct": 60, "duracion_lecturas": 14}, "sensor_pegado": {"momento_pct": 5, "duracion_lecturas": 36}}   # la alarma falsa llega a la puerta; el sensor pegado cubre todo el viaje
+TIPOS_SENSOR = tuple(DEFECTOS_SENSOR)
 MOTIVOS = {"nadie_en_casa": "No había nadie para recibir el pedido.",
            "direccion_incorrecta": "La dirección estaba incorrecta y no se pudo ubicar el lugar.",
            "rechazo_del_cliente": "El cliente decidió no recibir el pedido."}
 MOTIVO_POR_DEFECTO = "nadie_en_casa"
 PREDEFINIDOS = {
-    "falla_mitad": {"titulo": "Falla de frío a mitad de ruta", "tipo": "falla_frio", "momento_pct": 50},
-    "falla_ahora": {"titulo": "Falla de frío ahora", "tipo": "falla_frio", "momento_pct": 5},
-    "entrega_perfecta": {"titulo": "Entrega perfecta", "tipo": "entrega_perfecta"},
-    "cliente_no_recibe": {"titulo": "Cliente no recibe", "tipo": "cliente_no_recibe"},
+    "entrega_perfecta": {"titulo": "Pedido bueno", "tipo": "entrega_perfecta", "grupo": "principal",
+                         "detalle": "Sin problemas de frío. El cliente revisa y acepta."},
+    "falla_mitad": {"titulo": "Pedido con ruptura de frío", "tipo": "falla_frio", "momento_pct": 50, "grupo": "principal",
+                    "detalle": "El equipo falla a mitad de ruta: la temperatura sube y el cliente lo ve al recibir."},
+    "cliente_no_recibe": {"titulo": "Cliente no está", "tipo": "cliente_no_recibe", "grupo": "principal",
+                          "detalle": "Nadie recibe: el pedido queda «Entrega no concretada» y ventas lo reprograma."},
+    "sensor_falla": {"titulo": "Falsa alarma: sensor defectuoso", "tipo": "sensor_falla", "grupo": "trampa",
+                     "detalle": "Salta la alerta pero la carga está bien. ¿El cliente la acepta? Sí: es un falso positivo."},
+    "sensor_pegado": {"titulo": "Sensor pegado en «normal»", "tipo": "sensor_pegado", "grupo": "trampa",
+                      "detalle": "El sensor nunca avisa. Si la carga llegó tibia, solo el cliente lo detecta al recibir."},
+    "falla_ahora": {"titulo": "Ruptura de frío ahora mismo", "tipo": "falla_frio", "momento_pct": 5, "grupo": "extra",
+                    "detalle": "La falla parte apenas sale el camión."},
 }
 PROVEEDORES_GRATUITOS = ["groq", "gemini"]     # el orden se fija aquí para que un escenario nunca dependa de ANTHROPIC_API_KEY
 PLAZO_IA_SEG = 10
@@ -111,7 +125,7 @@ def validar(datos):
         raise ErrorEscenario("La propuesta no tiene el formato esperado.")
     tipo = datos.get("tipo")
     if not isinstance(tipo, str) or tipo not in CATALOGO:
-        raise ErrorEscenario("Ese escenario no existe. Los conocidos son: falla de frío, entrega perfecta y cliente no recibe.")
+        raise ErrorEscenario("Ese escenario no existe. Los conocidos son: pedido bueno, falla de frío, cliente no recibe, falsa alarma por sensor y sensor pegado.")
     if datos.get("despacho_id") is None:
         raise ErrorEscenario("Falta indicar el viaje.")
     despacho_id = _entero(datos["despacho_id"], "despacho_id")
@@ -120,6 +134,15 @@ def validar(datos):
         raise ErrorEscenario(f"El viaje {despacho_id} no está en curso.")
     limpio = {"tipo": tipo, "despacho_id": despacho_id, "camion": viaje["camion"], "momento_pct": None, "duracion_lecturas": None, "subida_c": None,
               "direccion_id": None, "motivo": None, "parada": None}
+    if tipo in TIPOS_SENSOR:
+        base = {**DEFECTOS, **DEFECTOS_SENSOR[tipo]}
+        for nombre in ("momento_pct", "duracion_lecturas"):
+            valor = _entero(datos[nombre] if datos.get(nombre) is not None else base[nombre], nombre)
+            minimo, maximo = LIMITES[nombre]
+            if not minimo <= valor <= maximo:
+                raise ErrorEscenario(f"{nombre} debe estar entre {minimo} y {maximo}.")
+            limpio[nombre] = valor
+        return limpio
     if tipo == "falla_frio":
         limpio["momento_pct"] = _acotado(datos, "momento_pct", _entero)
         limpio["duracion_lecturas"] = _acotado(datos, "duracion_lecturas", _entero)
@@ -148,7 +171,11 @@ def resumen(e):
         subida = f"{e['subida_c']:g}".replace(".", ",")
         return f"Falla de frío en {camion}: parte al {e['momento_pct']} % del camino a la última parada, dura {e['duracion_lecturas']} lecturas y sube {subida} °C por lectura."
     if e["tipo"] == "entrega_perfecta":
-        return f"Entrega perfecta en {camion}: sin rupturas de frío y cada cliente confirma al llegar el camión."
+        return f"Pedido bueno en {camion}: sin rupturas de frío; al llegar el camión, cada cliente revisa y decide si acepta."
+    if e["tipo"] == "sensor_falla":
+        return f"Falsa alarma en {camion}: el sensor marca saltos imposibles durante {e['duracion_lecturas']} lecturas desde el {e['momento_pct']} % del camino; el equipo de frío y la carga están bien."
+    if e["tipo"] == "sensor_pegado":
+        return f"Sensor pegado en {camion}: desde el {e['momento_pct']} % del camino marca siempre lo mismo ({e['duracion_lecturas']} lecturas) y no avisa, aunque la carga se entibie."
     return f"Cliente no recibe en {camion}: en la parada de {e['parada']['cliente']} ({e['parada']['comuna']}). Motivo: {MOTIVOS[e['motivo']]}"
 
 
@@ -163,8 +190,9 @@ def _prompt(texto, viajes):
             'Responde SOLO con JSON: {"tipo": "<clave de la lista o null si el pedido no calza>", "despacho_id": <número de un viaje de la lista>, '
             '"momento_pct": <número>, "duracion_lecturas": <número>, "subida_c": <número>, "direccion_id": <número de una parada del viaje>, '
             f'"motivo": "<una de: {", ".join(MOTIVOS)}>"}}.\n'
-            f"Rangos: {limites}. Solo falla_frio usa momento_pct, duracion_lecturas y subida_c; solo cliente_no_recibe usa direccion_id y motivo. "
+            f"Rangos: {limites}. falla_frio usa momento_pct, duracion_lecturas y subida_c; solo cliente_no_recibe usa direccion_id y motivo. "
             "Omite lo que el pedido no indique. momento_pct es el avance de la ruta: «ahora» = 5, «al principio» = 20, «a mitad de ruta» = 50, «antes de llegar» = 85. "
+            "Solo sensor_falla y sensor_pegado usan momento_pct y duracion_lecturas, sin subida_c. "
             "Si nombra a un cliente, elige el viaje que tiene esa parada. No inventes viajes ni paradas.")
 
 

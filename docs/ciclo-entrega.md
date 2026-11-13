@@ -161,3 +161,20 @@ Restricción nueva: `regreso_requiere_llegada` (`regreso_en` solo si hay `llegad
 `flota/tests_rutas.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py`, `pedidos/tests_recepcion_parcial.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.
 
 `flota/tests_rutas.py`, `flota/tests_dos_camaras.py`, `pedidos/tests_entrega.py`, `pedidos/tests_comprobante.py`, `pedidos/tests_recepcion_parcial.py` y `iot/test_simulador.py` cubren: ruta con y sin OSRM, caché y reintento; ciclo completo del camión con y sin ruta, ida, puerta, llegada, vuelta y regreso; guardado en base; estados, aceptación, rechazo con motivo y requerimiento ligado, plazo vencido, idempotencia y orden ajena; visibilidad del mapa por estado; reprogramación; situación de la flota y siembra de comunas.
+
+## 9. Escenarios de la demostración, sensores y revisión de camiones (13-nov-2026)
+
+**Quién decide al recibir.** Ningún escenario responde por el cliente, salvo «Cliente no está». «Pedido bueno» (`entrega_perfecta`) ya no confirma solo: solo evita rupturas al azar; el cliente revisa y acepta o rechaza, o vence el plazo de siempre. Si el camión no tuvo problemas de frío (`temperatura.en_rango`), la revisión muestra solo «Recibí mi pedido» y un enlace «¿Algo no está bien? Reportar un problema» que abre las opciones de siempre; con un problema de temperatura registrado, las opciones se ven desde el principio.
+
+**Escenarios** (`/demo/`, solo administrador): pedido bueno, ruptura de frío, cliente no está y dos trampas del sensor. Las trampas mueven lo que informa el sensor, no la carga:
+
+| Tipo | Qué hace el sensor | Qué prueba |
+|---|---|---|
+| `sensor_falla` (falsa alarma) | Marca saltos de 9 a 14 °C sobre lo real y salta la alerta | La carga está bien: aceptarla es correcto (falso positivo) |
+| `sensor_pegado` (falso «normal») | Queda clavado en un valor dentro del rango y nunca avisa | Si la carga llegó tibia, solo el cliente lo detecta al recibir |
+
+**Diagnóstico de un camión** (`web/flota/diagnostico.py`, `GET /flota/camion/<id>/diagnostico/`): con las últimas 12 lecturas el código clasifica `ruptura` (sube de a poco), `sensor_alerta` (alerta con un salto de 6 °C o más entre dos lecturas), `sensor_pegado` (8 lecturas idénticas sin alerta) o `normal`. La IA gratuita solo redacta el texto (se descarta si nombra otro camión; no recibe clientes ni direcciones) y su texto se guarda 2 minutos para no gastar cuota.
+
+**Revisión técnica** (`revision_camion`, migración `flota/0009`): `id`, `camion_id`, `motivo` (equipo de frío, sensor, otro), `nota`, `abierta_en/por`, `cerrada_en/por`. Una sola abierta por camión (índice único parcial). Un camión en revisión no se sugiere ni se despacha; sigue su viaje hasta volver a la base. Lo envían y devuelven el administrador y el despachador (`POST /flota/camion/<id>/revision/`, con confirmación); gerencia solo consulta. Se ofrece en el recuadro de diagnóstico de cada camión y desde el pin rojo del mapa («Qué hacer ›»).
+
+**Otros cambios del mismo día.** La Torre de control (con la rúbrica) queda solo para el administrador y sin enlace para gerencia, que ahora inicia en el CRM. Las tablas con más de 10 filas se paginan en el navegador (`static/js/paginacion.js`: «Viendo 1–10 de N», Anterior, Siguiente, 10/25/50 filas). El filtro del catálogo permite marcar varias categorías y varios rangos (`?categoria=1&categoria=2`). El aviso de cookies se cierra con Escape o al enviar el ingreso.

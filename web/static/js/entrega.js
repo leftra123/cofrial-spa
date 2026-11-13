@@ -69,6 +69,21 @@
         tipo = form.querySelector("select[name=tipo_problema]"), err = form.querySelector(".entrega-error"), boton = form.querySelector('button[value="aceptar"]'),
         botonNo = form.querySelector('button[value="no_recibido"]'), bloqueNo = form.querySelector(".revision-no"), motivoNo = bloqueNo ? bloqueNo.querySelector("textarea") : null,
         filas = Array.prototype.slice.call(form.querySelectorAll(".revision-linea")), caja = form.querySelector(".revision-tipo"), resumen = form.querySelector(".revision-resumen");
+    /* Camión sin problemas de frío (data-sin-problemas): lo normal es recibir. Solo se ve «Recibí mi pedido» y, aparte, «Reportar un problema», que abre las opciones
+       de siempre (algo falló o no lo recibo). Con una ruptura de frío registrada, las opciones se ven desde el principio. */
+    if (form.dataset.sinProblemas === "1") {
+      var opciones = form.querySelector(".revision-resultado"), bien = form.querySelector('input[name=resultado][value="bien"]');
+      if (opciones && bien) {
+        bien.checked = true; opciones.hidden = true;
+        var reportar = document.createElement("button"); reportar.type = "button"; reportar.className = "enlace revision-reportar"; reportar.textContent = "¿Algo no está bien? Reportar un problema";
+        reportar.setAttribute("aria-expanded", "false");
+        opciones.parentNode.insertBefore(reportar, opciones);
+        reportar.addEventListener("click", function () {
+          opciones.hidden = false; reportar.hidden = true; reportar.setAttribute("aria-expanded", "true");
+          var r = opciones.querySelector('input[value="falla"]'); if (r) r.focus();
+        });
+      }
+    }
     form.noValidate = true;       // con JavaScript valida este código: el navegador se trabaría en silencio con un número inválido en el bloque ya oculto
     if (motivoNo) contadorDe(motivoNo, bloqueNo.querySelector(".entrega-cuenta-car"));
     function pedidas(f) { return parseInt(f.dataset.cantidad, 10); }
@@ -186,6 +201,7 @@
     fetch(url, {credentials: "same-origin", headers: {"Accept": "application/json"}}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (!d || !d.puede_responder || !d.revision) { document.dispatchEvent(new CustomEvent("cofrial:entrega", {detail: {orden: ordenId, ok: false}})); location.href = "/pedidos/" + ordenId + "/"; return; }
       var rev = d.revision, dlg = el("dialog", {"class": "dialogo entrega-dialogo", "aria-labelledby": "rv-t"}), form = el("form", {novalidate: ""});
+      if (rev.temperatura && rev.temperatura.en_rango) form.dataset.sinProblemas = "1";
       form.appendChild(el("h2", {id: "rv-t"}, "Revisa tu pedido N.º " + ordenId));
       var pr = el("p", {"class": "revision-recibe"}); pr.appendChild(el("b", {}, "Recibe: ")); pr.appendChild(document.createTextNode(rev.recibe)); form.appendChild(pr);
       var ul = el("ul", {"class": "revision-productos", "aria-label": "Productos de tu pedido"});

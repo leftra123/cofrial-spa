@@ -665,3 +665,10 @@ De chatbot a agente. El asistente de la tienda ahora tiene identidad propia, **C
 - **Técnica:** los campos de los pasos viven fuera del `<form>` y se asocian con `form="checkout-form"`; el formulario con los botones queda en el resumen. Los selectores de `mp-brick.js` (`.checkout-mp ...`) siguen valiendo porque el contenedor de pasos lleva esa clase. Un solo formulario para Mercado Pago y para «solo orden».
 - **Textos más cortos:** las ayudas largas se resumieron; el «Actualizar» de cada línea queda oculto a la vista (la cantidad ya se guarda sola tras una pausa) y aparece al enfocarlo con teclado.
 - **Hallazgo previo:** `web/static/css/tienda.css` tenía un `@media (max-width: 760px)` sin cerrar que dejaba todo lo posterior (nota de cantidad, `.tira`, etc.) solo para celular. No se tocó ese alcance; se cerró justo antes de las reglas nuevas. Conviene revisarlo aparte.
+
+## Diagnóstico de sensor y revisión de camiones (13-nov-2026)
+
+- **Una alerta no siempre es una ruptura de frío.** Se distingue por el comportamiento de la lectura (salto imposible o valor clavado), con reglas fijas del código. La IA solo redacta; nunca decide ni envía un camión a revisión: lo hace una persona con confirmación.
+- **Revisión como tabla propia** (`revision_camion`) y no como columna de `camion`: guarda quién, cuándo y por qué, y permite varias revisiones en el tiempo con una sola abierta (3FN).
+- **El cliente decide al recibir**: los escenarios de la demostración no confirman por él. Trade-off: la demostración ahora exige entrar como el cliente (o esperar el plazo, `CONFIRMACION_AUTO_SEG`).
+- **Torre de control solo para el equipo de consultoría**: la rúbrica y el «antes/ahora» son material interno, no de gerencia de Cofrial.

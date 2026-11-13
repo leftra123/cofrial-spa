@@ -60,6 +60,18 @@ class TiendaTests(TestCase):
         r = self.client.get("/catalogo/?temperatura=" + str(aves.rango_temperatura_id))
         self.assertNotContains(r, "Filete de salmón")
 
+    def test_se_pueden_marcar_varias_categorias_y_rangos(self):
+        from catalogo.models import Categoria
+        aves, carnes = Categoria.objects.get(nombre="Aves"), Categoria.objects.get(nombre="Cárnicos refrigerados")
+        r = self.client.get(f"/catalogo/?categoria={aves.pk}&categoria={carnes.pk}")
+        self.assertContains(r, "Pollo entero")
+        self.assertContains(r, "Lomo vetado")
+        self.assertNotContains(r, "Filete de salmón")
+        self.assertEqual(r.context["cats"], [str(aves.pk), str(carnes.pk)])
+        r = self.client.get("/catalogo/?categoria=abc&categoria=%C2%B2&temperatura=99999")       # valores raros no rompen; un rango inexistente no deja nada
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["filas"], [])
+
     def test_busca_por_nombre_y_sku(self):
         self.assertContains(self.client.get("/catalogo/?q=salmón"), "Filete de salmón")
         self.assertContains(self.client.get("/catalogo/?q=POL-ENT"), "Pollo entero")

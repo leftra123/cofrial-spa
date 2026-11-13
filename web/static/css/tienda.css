@@ -1603,3 +1603,4 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .confirmacion .conf-avisos { margin: 14px 0 0; padding: 0; background: none; border: 0; }
 
 .linea-info h3 a { color: var(--texto); }
+.filtros-multi { display: block; font-size: .78rem; font-weight: 400; color: var(--texto-3); margin-top: 2px; }

@@ -116,7 +116,9 @@ class EscenarioSimulador(models.Model):
     """Comportamiento pedido para un viaje en curso. Lo escribe la web (botón o propuesta de la IA ya validada) y lo leen los contenedores
     del simulador en cada ciclo. El camión no se guarda: se obtiene del despacho. Las restricciones repiten en la base los límites de
     `flota/escenarios.py`, así ni un error del código deja pasar un parámetro fuera de rango."""
-    TIPOS = [("falla_frio", "falla de frío"), ("entrega_perfecta", "entrega perfecta"), ("cliente_no_recibe", "cliente no recibe")]
+    TIPOS = [("falla_frio", "falla de frío"), ("entrega_perfecta", "entrega perfecta"), ("cliente_no_recibe", "cliente no recibe"),
+             ("sensor_falla", "falsa alarma por sensor"), ("sensor_pegado", "sensor pegado en normal")]
+    CON_MOMENTO = ("falla_frio", "sensor_falla", "sensor_pegado")       # los que empiezan a cierto avance de la ruta y duran cierto número de lecturas
     ESTADOS = [("pendiente", "pendiente"), ("en_curso", "en curso"), ("terminado", "terminado"), ("cancelado", "cancelado")]
     ORIGENES = [("boton", "botón predefinido"), ("ia", "propuesta de la IA")]
     VIGENTES = ("pendiente", "en_curso")
@@ -143,10 +145,12 @@ class EscenarioSimulador(models.Model):
         verbose_name_plural = "escenarios del simulador"
         constraints = [
             models.UniqueConstraint(fields=["despacho"], condition=Q(estado__in=("pendiente", "en_curso")), name="uq_escenario_vigente_por_despacho"),
-            models.CheckConstraint(condition=Q(tipo__in=("falla_frio", "entrega_perfecta", "cliente_no_recibe")), name="escenario_tipo_conocido"),
+            models.CheckConstraint(condition=Q(tipo__in=("falla_frio", "entrega_perfecta", "cliente_no_recibe", "sensor_falla", "sensor_pegado")), name="escenario_tipo_conocido"),
             models.CheckConstraint(condition=Q(estado__in=("pendiente", "en_curso", "terminado", "cancelado")), name="escenario_estado_conocido"),
             models.CheckConstraint(condition=~Q(tipo="falla_frio") | Q(momento_pct__gte=5, momento_pct__lte=95, duracion_lecturas__gte=6, duracion_lecturas__lte=36,
                                                                        subida_c__gte=1.0, subida_c__lte=2.0), name="escenario_falla_acotada"),
+            models.CheckConstraint(condition=~Q(tipo__in=("sensor_falla", "sensor_pegado")) | Q(momento_pct__gte=5, momento_pct__lte=95, duracion_lecturas__gte=6, duracion_lecturas__lte=36),
+                                   name="escenario_sensor_acotado"),
             models.CheckConstraint(condition=~Q(tipo="cliente_no_recibe") | (Q(direccion__isnull=False) & ~Q(motivo_no_recibe="")), name="escenario_no_recibe_completo"),
         ]
 
@@ -174,3 +178,31 @@ class AjusteSimulador(models.Model):
 
     def __str__(self):
         return f"Tiempo a {self.multiplicador_tiempo}×"
+
+
+class RevisionCamion(models.Model):
+    """Un camión enviado a revisión técnica: mientras haya una abierta no se sugiere ni se despacha. La abre una persona (administrador o
+    despachador) desde la alerta de frío de la flota, con el diagnóstico a la vista; se cierra con «Volver a servicio». Un camión no puede
+    tener dos revisiones abiertas a la vez. La situación del camión (en ruta, en base...) no cambia: sigue su viaje hasta volver a la base."""
+    MOTIVOS = [("equipo_frio", "equipo de frío"), ("sensor", "sensor de temperatura"), ("otro", "otro motivo")]
+
+    revision_id = models.AutoField(primary_key=True)
+    camion = models.ForeignKey(Camion, on_delete=models.PROTECT)
+    motivo = models.CharField(max_length=12, choices=MOTIVOS)
+    nota = models.CharField(max_length=300, blank=True, default="", db_default="")      # lo que sugirió el diagnóstico o escribió la persona
+    abierta_en = models.DateTimeField(auto_now_add=True)
+    abierta_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    cerrada_en = models.DateTimeField(null=True, blank=True)
+    cerrada_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+
+    class Meta:
+        db_table = "revision_camion"
+        verbose_name_plural = "revisiones de camión"
+        constraints = [
+            models.UniqueConstraint(fields=["camion"], condition=Q(cerrada_en__isnull=True), name="uq_revision_abierta_por_camion"),
+            models.CheckConstraint(condition=Q(motivo__in=("equipo_frio", "sensor", "otro")), name="revision_motivo_conocido"),
+            models.CheckConstraint(condition=Q(cerrada_en__isnull=True) | Q(cerrada_en__gte=models.F("abierta_en")), name="revision_cierre_despues_de_apertura"),
+        ]
+
+    def __str__(self):
+        return f"Revisión {self.revision_id} ({self.camion_id}, {self.motivo})"

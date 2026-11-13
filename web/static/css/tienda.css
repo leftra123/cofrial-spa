@@ -75,6 +75,13 @@ body.tienda {
 .salir-dialogo button.btn-sec:not(#mp-brick-container button):hover {
   background: var(--fondo-2); border-color: var(--texto-3); box-shadow: none;
 }
+/* En los diálogos de entrega, «Volver sin responder» / «Volver sin enviar» no se parece a la acción principal: cerrar no responde nada */
+.entrega-dialogo button.btn-sec:not(.btn):not(#mp-brick-container button) {
+  background: transparent; color: var(--texto); border-color: var(--borde-fuerte); box-shadow: none;
+}
+.entrega-dialogo button.btn-sec:not(.btn):not(#mp-brick-container button):hover {
+  background: var(--fondo-2); border-color: var(--texto-3); box-shadow: none;
+}
 .tb-interno { font-size: .85rem; padding: 6px 12px; border: 1px solid var(--borde-fuerte); border-radius: 8px; color: var(--texto-2); font-weight: 500; white-space: nowrap; }
 .tb-interno:hover { background: var(--fondo-2); text-decoration: none; }
 .tb-ingresar { display: inline-block; padding: 9px 18px; background: var(--acento); color: var(--acento-fg); border-radius: 10px; font-weight: 600; transition: background .12s; }
@@ -351,6 +358,10 @@ body.mp-modal-abierto [data-tema-btn] { opacity: .45; cursor: not-allowed; }
 .mp-modal__estado-acc { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; width: 100%; max-width: 320px; padding: 0 12px; }
 .mp-modal__estado-acc[hidden] { display: none !important; }
 .mp-modal__estado-acc .btn, .mp-modal__estado-acc .btn-sec { flex: 1 1 140px; min-height: 44px; margin: 0; }
+/* «Cancelar compra» / «Volver al carrito» se ve como salida, distinta de la acción principal */
+.mp-modal__estado-acc button.btn-sec:not(#mp-brick-container button) { background: transparent; color: var(--texto); border: 1px solid var(--borde-fuerte); box-shadow: none; }
+.mp-modal__estado-acc button.btn-sec:not(#mp-brick-container button):hover { background: var(--fondo-2); border-color: var(--texto-3); color: var(--texto); box-shadow: none; }
+.mp-modal__estado--conf .mp-modal__estado-ico { display: none; }
 .mp-modal__estado--accion .mp-modal__estado-sub { max-width: 36ch; }
 @keyframes mp-estado-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
@@ -511,6 +522,7 @@ body.mp-modal-abierto [data-tema-btn] { opacity: .45; cursor: not-allowed; }
   background: var(--alerta-bg);
   border: 1px solid var(--alerta-borde);
 }
+.checkout-mp .mp-inline-error--info { color: var(--texto); background: transparent; border-color: var(--borde-fuerte); }
 .checkout-mp .mp-inline-error[hidden] { display: none !important; }
 
 .mp-modal .mp-brick--loading {

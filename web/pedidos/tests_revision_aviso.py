@@ -80,7 +80,8 @@ class RevisionAlRecibirTests(EntregaBase):
         js = open("static/js/entrega.js", encoding="utf-8").read()
         self.assertIn('["no", "No recibiré mi pedido"]', js)
         self.assertIn('value: "no_recibido"', js)
-        self.assertIn('type: "button", "class": "btn-sec"}, "Cancelar"', js)
+        self.assertIn('"class": "btn-sec", title: "Cierra esta ventana sin responder: el pedido sigue pendiente de confirmar"}, "Volver sin responder"', js)   # la salida no se llama «Cancelar»: no responde nada
+        self.assertNotIn('"class": "btn-sec"}, "Cancelar"', js)
         self.assertIn('enviar(ordenId, "no_recibido"', js)
 
     def test_la_revision_marca_la_temperatura_fuera_de_rango(self):

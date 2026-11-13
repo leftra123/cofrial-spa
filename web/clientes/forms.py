@@ -2,9 +2,19 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from django.utils.safestring import mark_safe
 
 from . import geo, rut as rutlib
-from .models import Cliente, Comuna, Direccion, TipoCliente
+from .models import AceptacionLegal, Cliente, Comuna, Direccion, TipoCliente
+
+ACEPTA_ETIQUETA = mark_safe('Leí y acepto los <a href="/legal/terminos/" target="_blank" rel="noopener">términos y condiciones</a> '
+                            'y la <a href="/legal/privacidad/" target="_blank" rel="noopener">política de privacidad</a>')
+
+
+def registrar_aceptacion(usuario, ip=None):
+    """Deja constancia de quién aceptó, cuándo, qué versión y desde qué IP (la versión vigente está en cofrial/legal.py)."""
+    from cofrial.legal import VERSION
+    return AceptacionLegal.objects.create(usuario=usuario, version=VERSION, ip=ip or None)
 
 
 class RegistroB2CForm(forms.Form):
@@ -17,6 +27,10 @@ class RegistroB2CForm(forms.Form):
     comuna = forms.ModelChoiceField(label="Comuna", queryset=Comuna.objects.order_by("nombre"), empty_label=None)
     clave = forms.CharField(label="Clave", widget=forms.PasswordInput, help_text="Al menos 8 caracteres y no una clave común.")
     clave2 = forms.CharField(label="Repite la clave", widget=forms.PasswordInput)
+    # La casilla parte sin marcar y es obligatoria: el consentimiento tiene que ser un acto de la persona, no un valor por defecto.
+    acepta = forms.BooleanField(label=ACEPTA_ETIQUETA, required=True,
+                                error_messages={"required": "Para crear la cuenta tienes que aceptar los términos y la política de privacidad."})
+    template_name_p = "clientes/_form_p.html"      # dentro de la app: el renderizador de formularios no mira la carpeta templates del proyecto
 
     def clean_rut(self):
         valor = self.cleaned_data["rut"]
@@ -45,9 +59,10 @@ class RegistroB2CForm(forms.Form):
         return datos
 
     @transaction.atomic
-    def guardar(self):
+    def guardar(self, ip=None):
         d = self.cleaned_data
         u = get_user_model().objects.create_user(d["email"], email=d["email"], password=d["clave"])
+        registrar_aceptacion(u, ip)
         c = Cliente.objects.create(usuario=u, tipo_cliente=TipoCliente.objects.get(codigo="B2C"), rut=d["rut"],
                                    nombre=d["nombre"], email=d["email"], telefono=d["telefono"])
         dir_ = Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)
@@ -72,9 +87,10 @@ class RegistroEmpresaForm(RegistroB2CForm):
                 self.fields[campo].help_text = ayuda
 
     @transaction.atomic
-    def guardar(self):
+    def guardar(self, ip=None):
         d = self.cleaned_data
         u = get_user_model().objects.create_user(d["email"], email=d["email"], password=d["clave"], is_active=False)
+        registrar_aceptacion(u, ip)
         c = Cliente.objects.create(usuario=u, tipo_cliente=TipoCliente.objects.get(codigo="B2B"), rut=d["rut"], giro=d["giro"],
                                    nombre=d["nombre"], email=d["email"], telefono=d["telefono"])
         dir_ = Direccion.objects.create(cliente=c, calle_numero=d["direccion"], comuna=d["comuna"], es_principal=True)

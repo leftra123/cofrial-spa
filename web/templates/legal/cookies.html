@@ -1,0 +1,33 @@
+{% extends "legal/_base.html" %}
+{% block texto %}
+<h2>En resumen</h2>
+<p>Este sitio no usa cookies de publicidad, de analítica ni de rastreo, y no carga herramientas de terceros que te sigan entre sitios. Lo que se guarda en tu navegador sirve para que el sitio funcione o para recordar tus preferencias. Por eso no hay nada que aceptar: el aviso de cookies solo informa.</p>
+
+<h2>Cookies</h2>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Nombre</th><th>Para qué</th><th>Duración</th><th>De quién</th></tr></thead>
+  <tbody>
+    <tr><td><code>sessionid</code></td><td>Mantener tu sesión iniciada. Solo existe si ingresas</td><td>Hasta salir o dos semanas</td><td>Cofrial</td></tr>
+    <tr><td><code>csrftoken</code></td><td>Proteger los formularios para que otro sitio no pueda enviarlos en tu nombre</td><td>Un año</td><td>Cofrial</td></tr>
+    <tr><td><code>AWSALB</code> y <code>AWSALBCORS</code></td><td>Que el balanceador de carga te mantenga en el mismo servidor durante la visita</td><td>Un día</td><td>Cofrial (balanceador de AWS)</td></tr>
+    <tr><td>Cookies de Mercado Pago</td><td>Solo en el carrito, si pagas con tarjeta: prevención de fraude en el pago</td><td>Las define Mercado Pago</td><td>Mercado Pago</td></tr>
+  </tbody>
+</table></div>
+<p>Las cookies de Cofrial van marcadas como seguras (solo viajan por HTTPS) y la de sesión no se puede leer desde JavaScript. El equipo interno, al abrir el tablero de BI, recibe además la cookie de sesión del tablero.</p>
+
+<h2>Almacenamiento del navegador</h2>
+<p>Además de las cookies, el sitio guarda datos en tu propio navegador (almacenamiento local). Nunca se envían a otros sitios:</p>
+<div class="tabla-caja"><table>
+  <thead><tr><th>Qué</th><th>Para qué</th><th>Duración</th></tr></thead>
+  <tbody>
+    <tr><td>Tema claro u oscuro</td><td>Recordar cómo prefieres ver el sitio</td><td>Hasta que lo cambies</td></tr>
+    <tr><td>Filtros de las pantallas</td><td>Volver a la búsqueda o pestaña que tenías</td><td>Siete días; se borran al cerrar sesión</td></tr>
+    <tr><td>Avisos vistos y permisos consultados</td><td>No repetirte un aviso ni volver a preguntarte por notificaciones o ubicación</td><td>Hasta que borres los datos del sitio</td></tr>
+    <tr><td>Recorridos del mapa</td><td>Dibujar más rápido la ruta de un camión</td><td>Hasta que borres los datos del sitio</td></tr>
+    <tr><td>Aviso de cookies cerrado</td><td>No mostrarte el aviso en cada página</td><td>Hasta que borres los datos del sitio</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Cómo borrarlas</h2>
+<p>Puedes borrar las cookies y los datos de este sitio desde la configuración de tu navegador. Si borras la cookie de sesión, tendrás que volver a ingresar. El resto del sitio sigue funcionando sin el almacenamiento local, solo que no recuerda tus preferencias.</p>
+{% endblock %}

@@ -57,7 +57,7 @@ class RegistroEmpresaTests(TestCase):
     def datos(self, **cambios):
         return {"nombre": "Hotel Villarrica SpA", "rut": "77.123.456-9", "giro": "Hotelería", "email": "Compras@HotelVillarrica.test", "telefono": "",
                 "direccion": "Pedro de Valdivia 100", "comuna": Comuna.objects.get(nombre="Temuco").pk,
-                "clave": "hotel-clave-larga-73", "clave2": "hotel-clave-larga-73", **cambios}
+                "clave": "hotel-clave-larga-73", "clave2": "hotel-clave-larga-73", "acepta": "on", **cambios}
 
     def pedir(self):
         r = self.client.post("/cuenta/registro/empresa/", self.datos(), follow=True)

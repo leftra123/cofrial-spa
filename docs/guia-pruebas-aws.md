@@ -139,6 +139,8 @@ docker compose -f aws/docker-compose.web.yml --env-file .env exec -T web python 
 
 ## Dominio `cofrialspa.webhop.me` y el balanceador: qué comprobar ANTES de `cerrar-acceso-directo`
 
+> **Histórico (12-nov-2026):** el dominio pasó a `www.cofrialspa.shop` (CNAME al ALB, certificado de ACM) y el acceso directo a las web ya se cerró. Lo que sigue queda como registro de cómo se decidió.
+
 **El riesgo.** El dominio es un registro **A** de No-IP gratis hacia la IP elástica `54.82.100.161`, que hoy es la web A (con el Caddy manual del 8-nov en el 443). Un ALB **no tiene IP fija: solo un nombre DNS**. Si se ejecuta `bash aws/provision.sh cerrar-acceso-directo` mientras el dominio sigue apuntando a la IP elástica, se cierran el 80 y el 443 de `cofrial-sg-web` y **el dominio deja de abrir** (el balanceador sí sigue sirviendo por su propio nombre). Además, el certificado de Let's Encrypt está en el Caddy de esa web, no en el ALB: el 443 del ALB usa el que importe `provision.sh` (`CERT_ARN`, o `aws/.estado/cert.pem` + `cert.key`, o uno autofirmado que el navegador avisa).
 
 **Comprobaciones, en este orden (todas de lectura salvo la 4):**

@@ -90,7 +90,7 @@ class AccesoAnonimoTests(BaseSeguridad):
         publicas = {"", "portada/", "catalogo/", "catalogo/<int:producto_id>/", "cuenta/entrar/", "cuenta/registro/", "cuenta/salir/", "salud/",
                     "cuenta/registro/empresa/", "cuenta/recuperar/", "cuenta/recuperar/enviado/", "cuenta/recuperar/<str:uidb64>/<str:token>/",
                     "cuenta/recuperar/listo/",        # pedir cuenta y recuperar la clave son para quien no puede entrar
-                    "salud/bd/", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/",
+                    "salud/bd/", "health", "avisos/", "avisos/pedir/", "avisos/<int:aviso_id>/quitar/",
                     "carrito/mp/webhook/"}   # lo llama Mercado Pago sin sesión; solo consulta el pago en la API de MP, no confía en el cuerpo
         cubiertas = {u.strip("/") for u in self.PRIVADAS_GET + self.PRIVADAS_POST}
         pendientes = []
@@ -494,6 +494,71 @@ class ConfiguracionSeguraTests(TestCase):
 
     def test_la_salud_no_filtra_detalles(self):
         self.assertEqual(self.client.get("/salud/").json(), {"estado": "ok"})
+
+    def test_la_politica_de_contenido_va_en_cada_pagina(self):
+        """CSP: todo desde el propio sitio; nadie enmarca la página, no hay complementos ni formularios hacia fuera, y el mapa conserva su worker."""
+        for url in ("/", "/catalogo/", "/cuenta/entrar/", "/no-existe/"):
+            with self.subTest(url=url):
+                csp = self.client.get(url)["Content-Security-Policy"]
+                for trozo in ("default-src 'self'", "frame-ancestors 'none'", "object-src 'none'", "base-uri 'self'", "form-action 'self'",
+                              "worker-src 'self' blob:", "https://tiles.openfreemap.org"):
+                    self.assertIn(trozo, csp)
+                for sobra in ("unsafe-eval", " http:", "script-src 'self' 'unsafe-inline' https:", "mercadopago"):
+                    self.assertNotIn(sobra, csp)
+
+    def test_la_politica_de_contenido_se_puede_dejar_en_modo_informe_o_apagar(self):
+        from django.conf import settings as s
+        with override_settings(SECURE_CSP={}, SECURE_CSP_REPORT_ONLY=s.SECURE_CSP):
+            r = self.client.get("/catalogo/")
+            self.assertNotIn("Content-Security-Policy", r)
+            self.assertIn("default-src 'self'", r["Content-Security-Policy-Report-Only"])
+        with override_settings(SECURE_CSP={}, SECURE_CSP_REPORT_ONLY={}):
+            r = self.client.get("/catalogo/")
+            self.assertNotIn("Content-Security-Policy", r)
+            self.assertNotIn("Content-Security-Policy-Report-Only", r)
+
+    def test_health_prueba_la_base_y_responde_sin_redirigir(self):
+        """El chequeo del ALB: 200 con la base al alcance y 503 sin ella (una web que perdió la base sale de rotación)."""
+        r = self.client.get("/health")
+        self.assertEqual((r.status_code, r.json()), (200, {"estado": "ok"}))
+        with mock.patch("django.db.backends.utils.CursorWrapper.execute", side_effect=OperationalError("down")):
+            r = self.client.get("/health")
+        self.assertEqual((r.status_code, r.json()), (503, {"estado": "sin_base"}))
+
+
+class HttpsTrasElBalanceadorTests(BaseSeguridad):
+    def test_el_tablero_de_bi_lleva_su_politica_minima(self):
+        """Grafana necesita eval y scripts propios: /bi/ no recibe la política del sitio, pero tampoco se puede enmarcar ni cargar complementos."""
+        self.assertTrue(self.client.login(username="gerencia@cofrial.cl", password=CLAVE))
+        csp = self.client.get("/bi/")["Content-Security-Policy"]
+        self.assertEqual(csp, "frame-ancestors 'none'; object-src 'none'")
+
+    def test_solo_el_carrito_admite_los_recursos_de_mercado_pago(self):
+        """El formulario de pago trae scripts y marcos de Mercado Pago: esa página los admite por https; el resto del sitio, no."""
+        c = self.entrar("ana@correo.test")
+        csp = c.get("/carrito/")["Content-Security-Policy"]
+        for trozo in ("script-src 'self' 'unsafe-inline' 'unsafe-eval' https:", "frame-src 'self' https:", "frame-ancestors 'none'", "object-src 'none'", "form-action 'self'"):
+            self.assertIn(trozo, csp)
+        self.assertNotIn("https:", c.get("/pedidos/")["Content-Security-Policy"].split("script-src")[1].split(";")[0])
+
+    @override_settings(SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"), SESSION_COOKIE_SECURE=True, CSRF_COOKIE_SECURE=True,
+                       SECURE_HSTS_SECONDS=86400, CSRF_TRUSTED_ORIGINS=["https://cofrial.example"])
+    def test_detras_del_balanceador_con_https_las_cookies_son_seguras_y_los_enlaces_https(self):
+        """El ALB termina TLS y pasa HTTP con X-Forwarded-Proto: la aplicación debe saber que el visitante vino por HTTPS."""
+        c = Client(enforce_csrf_checks=True)
+        r = c.get("/cuenta/entrar/", HTTP_X_FORWARDED_PROTO="https", HTTP_HOST="cofrial.example")
+        self.assertTrue(r.wsgi_request.is_secure())
+        self.assertEqual(r.wsgi_request.build_absolute_uri("/catalogo/"), "https://cofrial.example/catalogo/")
+        self.assertEqual(r["Strict-Transport-Security"], "max-age=86400")
+        galleta = r.cookies["csrftoken"]
+        self.assertTrue(galleta["secure"]); self.assertEqual(galleta["samesite"], "Lax")
+        r = c.post("/cuenta/entrar/", {"username": "ana@correo.test", "password": CLAVE, "csrfmiddlewaretoken": galleta.value},
+                   HTTP_X_FORWARDED_PROTO="https", HTTP_HOST="cofrial.example", HTTP_ORIGIN="https://cofrial.example")
+        self.assertEqual(r.status_code, 302)
+        sesion = r.cookies["sessionid"]
+        self.assertTrue(sesion["secure"]); self.assertTrue(sesion["httponly"]); self.assertEqual(sesion["samesite"], "Lax")
+        # sin la cabecera del balanceador (chequeo de salud, por HTTP plano) no se anuncia HSTS
+        self.assertNotIn("Strict-Transport-Security", c.get("/health"))
 
 
 # ---------------------------------------------------------------- 7. Límites: quien insiste, se frena

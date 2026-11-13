@@ -2,9 +2,16 @@
 # La flota de 50 camiones se reparte en 5 contenedores de 10 camiones cada uno.
 # Uso desde la raíz del repositorio:  docker compose -f aws/docker-compose.iot.yml --env-file .env up -d --build
 # Los camiones deben existir en la base: los crea `cargar_demo` al arrancar la EC2 web (CAM-01 a CAM-50).
+# La EC2 IoT es una t3.micro (2 vCPU y 1 GB) con cinco contenedores: cada uno tiene un tope de memoria y CPU para que uno desbocado no
+# deje sin recursos a los otros cuatro, y sus registros rotan (una línea por lectura llenaría el disco en días). Corren como usuario sin privilegios (iot/Dockerfile).
 x-flota: &flota
   build: ../iot
   restart: unless-stopped
+  mem_limit: 128m
+  cpus: 0.4
+  logging:
+    driver: json-file
+    options: {max-size: "5m", max-file: "2"}
 x-bd: &bd
   DB_HOST: ${DB_HOST:?define DB_HOST (endpoint de RDS) en .env}
   DB_PORT: ${DB_PORT:-5432}

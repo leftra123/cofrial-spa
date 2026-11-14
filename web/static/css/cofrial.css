@@ -1127,3 +1127,5 @@ button.demo-opcion span { display: block; }
   .flota-lado { position: sticky; top: 16px; }
   .flota-mapa .mapa { min-height: 520px; }
 }
+/* códigos e identificadores (CAM-01, patentes, N.º de orden) no se parten en dos líneas */
+.tabla-caja:not(.texto) td:first-child, .tabla-caja:not(.texto) td:nth-child(2) { white-space: nowrap; }

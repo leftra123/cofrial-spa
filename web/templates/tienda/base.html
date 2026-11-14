@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux29">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux33">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux34">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -81,7 +81,7 @@
     <p>Cofrial SpA · Frigorífico y distribución en cadena de frío · La Araucanía, Chile. Contacto y reclamos: <a href="/soporte/">Soporte</a>. Caso de estudio con datos ficticios.</p>
   </div></footer>
 <div class="aviso-cookies" id="aviso-cookies" role="region" aria-label="Aviso de cookies" hidden>
-  <p>Usamos solo las cookies necesarias para que el sitio funcione (sesión, seguridad y balanceo de carga). No usamos cookies de publicidad ni de rastreo. <a href="/legal/cookies/">Qué guardamos y para qué</a></p>
+  <p>Usamos solo las cookies necesarias para que el sitio funcione (sesión, seguridad y balanceo de carga). <span class="solo-escritorio">No usamos cookies de publicidad ni de rastreo.</span> <a href="/legal/cookies/">Qué guardamos y para qué</a></p>
   <button type="button" class="btn-sec" id="aviso-cookies-ok">Entendido</button>
 </div>
 <script src="{% static 'js/aviso-cookies.js' %}" defer></script>

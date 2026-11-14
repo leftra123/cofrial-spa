@@ -1639,3 +1639,13 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
   .asistente-btn { width: 54px; height: 54px; padding: 0; justify-content: center; gap: 0; border-radius: 50% !important; }
   .asistente-btn .asistente-cara { width: 42px; height: 42px; min-width: 42px; margin: 0; flex: none; object-fit: cover; }
 }
+
+/* portada: el buscador grande ya está en la pantalla; el del encabezado se oculta para no tener dos buscadores juntos */
+body:has(.portada-hero) .tb-buscar { display: none; }
+/* aviso de cookies: en celular es una franja baja y corta, no una tarjeta que tapa la portada */
+@media (max-width: 600px) {
+  .solo-escritorio { display: none; }
+  .aviso-cookies { flex-direction: row !important; align-items: center !important; padding: 8px 10px !important; gap: 10px; left: 10px; right: 10px; bottom: 10px; }
+  .aviso-cookies p { font-size: .78rem; line-height: 1.35; }
+  .aviso-cookies button { min-height: 44px; padding: 0 14px; }
+}

@@ -1680,3 +1680,11 @@ body:has(.portada-hero) .tb-buscar { display: none; }
   .t-pie-fila { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px 40px; align-items: center; }
   .t-pie-fila > :last-child { text-align: right; }
 }
+
+/* Barra superior: el botón del panel dice adónde lleva y «Crear cuenta» acompaña a «Ingresar» */
+.tb-interno { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; background: var(--acento); color: var(--acento-fg); border-color: var(--acento); font-weight: 600; }
+.tb-interno svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.tb-interno:hover { background: var(--acento-hover); color: var(--acento-fg); }
+.tb-crear { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--borde-fuerte); border-radius: 10px; color: var(--texto); font-weight: 600; white-space: nowrap; }
+.tb-crear:hover { background: var(--fondo-2); text-decoration: none; }
+@media (max-width: 640px) { .tb-crear { display: none; } }

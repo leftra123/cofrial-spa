@@ -114,6 +114,8 @@ def limpiar(request):
         return JsonResponse({"detail": "Hay que confirmar para borrar."}, status=400)
     resultado = escenarios.limpiar()                 # primero: así el simulador deja de marcar lecturas antes de borrarlas
     tiempo.restablecer(request.user)
+    from .models import RevisionCamion
+    RevisionCamion.objects.filter(nota__startswith="Demostración", cerrada_en__isnull=True).update(cerrada_en=timezone.now(), cerrada_por=request.user)
     n, _ = Telemetria.objects.filter(forzada=True).delete()
     for k in [k for k in request.session.keys() if k.startswith("demo_")]:
         request.session.pop(k)

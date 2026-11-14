@@ -117,8 +117,8 @@ class EscenarioSimulador(models.Model):
     del simulador en cada ciclo. El camión no se guarda: se obtiene del despacho. Las restricciones repiten en la base los límites de
     `flota/escenarios.py`, así ni un error del código deja pasar un parámetro fuera de rango."""
     TIPOS = [("falla_frio", "falla de frío"), ("entrega_perfecta", "entrega perfecta"), ("cliente_no_recibe", "cliente no recibe"),
-             ("sensor_falla", "falsa alarma por sensor"), ("sensor_pegado", "sensor pegado en normal")]
-    CON_MOMENTO = ("falla_frio", "sensor_falla", "sensor_pegado")       # los que empiezan a cierto avance de la ruta y duran cierto número de lecturas
+             ("sensor_falla", "falsa alarma por sensor"), ("sensor_pegado", "sensor pegado en normal"), ("sin_senal", "pérdida de señal")]
+    CON_MOMENTO = ("falla_frio", "sensor_falla", "sensor_pegado", "sin_senal")       # los que empiezan a cierto avance de la ruta y duran cierto número de lecturas
     ESTADOS = [("pendiente", "pendiente"), ("en_curso", "en curso"), ("terminado", "terminado"), ("cancelado", "cancelado")]
     ORIGENES = [("boton", "botón predefinido"), ("ia", "propuesta de la IA")]
     VIGENTES = ("pendiente", "en_curso")
@@ -145,11 +145,11 @@ class EscenarioSimulador(models.Model):
         verbose_name_plural = "escenarios del simulador"
         constraints = [
             models.UniqueConstraint(fields=["despacho"], condition=Q(estado__in=("pendiente", "en_curso")), name="uq_escenario_vigente_por_despacho"),
-            models.CheckConstraint(condition=Q(tipo__in=("falla_frio", "entrega_perfecta", "cliente_no_recibe", "sensor_falla", "sensor_pegado")), name="escenario_tipo_conocido"),
+            models.CheckConstraint(condition=Q(tipo__in=("falla_frio", "entrega_perfecta", "cliente_no_recibe", "sensor_falla", "sensor_pegado", "sin_senal")), name="escenario_tipo_conocido"),
             models.CheckConstraint(condition=Q(estado__in=("pendiente", "en_curso", "terminado", "cancelado")), name="escenario_estado_conocido"),
             models.CheckConstraint(condition=~Q(tipo="falla_frio") | Q(momento_pct__gte=5, momento_pct__lte=95, duracion_lecturas__gte=6, duracion_lecturas__lte=36,
                                                                        subida_c__gte=1.0, subida_c__lte=2.0), name="escenario_falla_acotada"),
-            models.CheckConstraint(condition=~Q(tipo__in=("sensor_falla", "sensor_pegado")) | Q(momento_pct__gte=5, momento_pct__lte=95, duracion_lecturas__gte=6, duracion_lecturas__lte=36),
+            models.CheckConstraint(condition=~Q(tipo__in=("sensor_falla", "sensor_pegado", "sin_senal")) | Q(momento_pct__gte=5, momento_pct__lte=95, duracion_lecturas__gte=6, duracion_lecturas__lte=36),
                                    name="escenario_sensor_acotado"),
             models.CheckConstraint(condition=~Q(tipo="cliente_no_recibe") | (Q(direccion__isnull=False) & ~Q(motivo_no_recibe="")), name="escenario_no_recibe_completo"),
         ]

@@ -9,7 +9,7 @@
 {% block contenido %}
 <section class="tarjeta-ui demo-paso demo-listo" aria-labelledby="d-t00">
   <h2 id="d-t00">Dejar lista la demostración (un clic)</h2>
-  <p class="muted">Crea tres pedidos de clientes cercanos, los despacha en camiones sanos y activa «Pedido bueno»: así parten con entregas sin problemas de temperatura. Luego entra como cada cliente a recibirlas.</p>
+  <p class="muted">Crea tres pedidos de clientes cercanos, los despacha en camiones sanos y activa «Pedido bueno»: así parten con entregas sin problemas de temperatura. Deja además tres camiones en reparación. Luego entra como cada cliente a recibir.</p>
   <div class="acciones"><button type="button" class="btn" id="preparar-demo">Preparar la demostración</button></div>
   <div class="demo-estado" id="prep-estado" role="status" aria-live="polite">Aún no se preparó nada.</div>
 </section>
@@ -33,7 +33,7 @@
       <div class="demo-opciones">
         {% for clave, p in predefinidos.items %}{% if p.grupo == "principal" %}<button type="button" class="demo-opcion esc-boton" data-predefinido="{{ clave }}"><b>{{ p.titulo }}</b><span>{{ p.detalle }}</span></button>{% endif %}{% endfor %}
       </div>
-      <h3 class="demo-grupo">Cuidado: el sensor puede equivocarse</h3>
+      <h3 class="demo-grupo">Cuidado: el sensor o la señal pueden fallar</h3>
       <div class="demo-opciones">
         {% for clave, p in predefinidos.items %}{% if p.grupo == "trampa" %}<button type="button" class="demo-opcion trampa esc-boton" data-predefinido="{{ clave }}"><b>{{ p.titulo }}</b><span>{{ p.detalle }}</span></button>{% endif %}{% endfor %}
       </div>
@@ -49,6 +49,7 @@
     <ol class="demo-lista"><li><b>Pedido bueno:</b> el cliente ve la temperatura en rango y acepta.</li>
     <li><b>Ruptura de frío:</b> el camión se entibia, el cliente ve el problema, rechaza o reporta; en Flota aparece la acción «Enviar a revisión».</li>
     <li><b>Falsa alarma:</b> salta la alerta pero el salto es imposible para el frío: el diagnóstico dice «falla del sensor» y el cliente, al medir, puede aceptar. Un falso positivo.</li>
+    <li><b>Pérdida de señal:</b> el camión deja de reportar unos minutos y Flota lo marca «Sin señal»; sigue su ruta, entrega y la temperatura no cambia.</li>
     <li><b>Sensor pegado:</b> el sensor marca siempre lo mismo y nunca avisa; si la carga llegó tibia, solo el cliente lo ve.</li></ol></details>
   <h3 style="margin-top:16px">Últimos escenarios</h3>
   <ul class="demo-lista" id="esc-lista"></ul>
@@ -228,7 +229,7 @@
     post("/demo/preparar/", {confirmar: "1"}).then(function (r) {
       est.classList.toggle("activa", r._ok);
       if (!r._ok) { est.textContent = r.detail || "No se pudo preparar."; return; }
-      est.textContent = r.viajes.length + " viaje(s) en camino: " + r.viajes.map(function (v) { return v.camion + " con el pedido N.º " + v.orden + " (" + v.comuna + ")"; }).join("; ") + "." + (r.omitidos.length ? " Quedó pendiente: " + r.omitidos.join(" ") : "");
+      est.textContent = r.viajes.length + " viaje(s) en camino: " + r.viajes.map(function (v) { return v.camion + " con el pedido N.º " + v.orden + " (" + v.comuna + ")"; }).join("; ") + "." + (r.en_reparacion && r.en_reparacion.length ? " En reparación: " + r.en_reparacion.map(function (c) { return c.camion + " (" + c.motivo + ")"; }).join(", ") + "." : "") + (r.omitidos.length ? " Quedó pendiente: " + r.omitidos.join(" ") : "");
       refrescar();
     }).catch(function () { est.textContent = "Sin conexión con el servidor."; }).then(function () { b.disabled = false; });
   });

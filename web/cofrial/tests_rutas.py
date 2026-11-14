@@ -58,6 +58,7 @@ ESPERADO = {
     '/flota/por-despachar/': ('L 403 403 403 200 200 200', '405 405 405 405 405 405 405'),      # el contador del menú: los mismos roles que ven Flota; solo lectura
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 403 →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
+    '/flota/despachar/sugerir-camion/': ('L 403 403 403 200 200 200', '405 405 405 405 405 405 405'),     # los mismos tres que ven Flota; solo lectura
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despacho-auto/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despacho-auto/correr/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),

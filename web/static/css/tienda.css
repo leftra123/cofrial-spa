@@ -1670,3 +1670,13 @@ body:has(.portada-hero) .tb-buscar { display: none; }
   .camino li.actual { grid-column: auto; }
   .camino li.actual .camino-t small { display: none; }
 }
+
+/* tres zonas iguales: izquierda (marca), centro y derecha (cuenta), en el encabezado y en el pie, sobre el mismo ancho de 1240 px del contenido */
+@media (min-width: 1100px) {
+  .tb-fila { flex-wrap: nowrap; }
+  .tb-marca { flex: 1 1 0; min-width: 260px; }
+  .tb-cuenta { flex: 1 1 0; min-width: 210px; margin-left: 0; justify-content: flex-end; }
+  .tb-buscar { flex: 0 1 300px; }
+  .t-pie-fila { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px 40px; align-items: center; }
+  .t-pie-fila > :last-child { text-align: right; }
+}

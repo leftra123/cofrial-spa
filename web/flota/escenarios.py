@@ -38,10 +38,12 @@ CATALOGO = {
     "cliente_no_recibe": "En una parada el cliente no recibe: el pedido queda «Entrega no concretada» y llega un requerimiento a ventas.",
     "sensor_falla": "Falsa alarma: el equipo de frío está bien pero el sensor marca saltos imposibles y salta la alerta. La carga llega en su temperatura.",
     "sensor_pegado": "Sensor pegado: marca siempre la misma temperatura «normal» y nunca avisa, aunque la carga se entibie. El cliente puede encontrarla tibia.",
+    "sin_senal": "Pérdida de señal: el camión sigue su ruta y entrega, y la carga no se entibia, pero deja de enviar lecturas. La flota lo marca «Sin señal» y luego vuelve a reportar.",
 }
 LIMITES = {"momento_pct": (5, 95), "duracion_lecturas": (6, 36), "subida_c": (1.0, 2.0)}     # los mismos que las restricciones de la tabla; con el mínimo la alerta salta incluso en el rango más ancho
 DEFECTOS = {"momento_pct": 50, "duracion_lecturas": 12, "subida_c": 1.0}
-DEFECTOS_SENSOR = {"sensor_falla": {"momento_pct": 60, "duracion_lecturas": 14}, "sensor_pegado": {"momento_pct": 5, "duracion_lecturas": 36}}   # la alarma falsa llega a la puerta; el sensor pegado cubre todo el viaje
+DEFECTOS_SENSOR = {"sensor_falla": {"momento_pct": 60, "duracion_lecturas": 14}, "sensor_pegado": {"momento_pct": 5, "duracion_lecturas": 36},
+                   "sin_senal": {"momento_pct": 30, "duracion_lecturas": 36}}       # 36 lecturas son 3 minutos: pasa los 2 de la flota y se ve «Sin señal»   # la alarma falsa llega a la puerta; el sensor pegado cubre todo el viaje
 TIPOS_SENSOR = tuple(DEFECTOS_SENSOR)
 MOTIVOS = {"nadie_en_casa": "No había nadie para recibir el pedido.",
            "direccion_incorrecta": "La dirección estaba incorrecta y no se pudo ubicar el lugar.",
@@ -58,6 +60,8 @@ PREDEFINIDOS = {
                      "detalle": "Salta la alerta pero la carga está bien. ¿El cliente la acepta? Sí: es un falso positivo."},
     "sensor_pegado": {"titulo": "Sensor pegado en «normal»", "tipo": "sensor_pegado", "grupo": "trampa",
                       "detalle": "El sensor nunca avisa. Si la carga llegó tibia, solo el cliente lo detecta al recibir."},
+    "sin_senal": {"titulo": "Pérdida de señal (la carga está bien)", "tipo": "sin_senal", "grupo": "trampa",
+                  "detalle": "El camión deja de reportar unos minutos y la flota lo marca «Sin señal»; sigue su ruta y la temperatura no cambia."},
     "falla_ahora": {"titulo": "Ruptura de frío ahora mismo", "tipo": "falla_frio", "momento_pct": 5, "grupo": "extra",
                     "detalle": "La falla parte apenas sale el camión."},
 }
@@ -125,7 +129,7 @@ def validar(datos):
         raise ErrorEscenario("La propuesta no tiene el formato esperado.")
     tipo = datos.get("tipo")
     if not isinstance(tipo, str) or tipo not in CATALOGO:
-        raise ErrorEscenario("Ese escenario no existe. Los conocidos son: pedido bueno, falla de frío, cliente no recibe, falsa alarma por sensor y sensor pegado.")
+        raise ErrorEscenario("Ese escenario no existe. Los conocidos son: pedido bueno, falla de frío, cliente no recibe, falsa alarma por sensor, sensor pegado y pérdida de señal.")
     if datos.get("despacho_id") is None:
         raise ErrorEscenario("Falta indicar el viaje.")
     despacho_id = _entero(datos["despacho_id"], "despacho_id")
@@ -174,6 +178,8 @@ def resumen(e):
         return f"Pedido bueno en {camion}: sin rupturas de frío; al llegar el camión, cada cliente revisa y decide si acepta."
     if e["tipo"] == "sensor_falla":
         return f"Falsa alarma en {camion}: el sensor marca saltos imposibles durante {e['duracion_lecturas']} lecturas desde el {e['momento_pct']} % del camino; el equipo de frío y la carga están bien."
+    if e["tipo"] == "sin_senal":
+        return f"Pérdida de señal en {camion}: desde el {e['momento_pct']} % del camino deja de enviar lecturas durante {e['duracion_lecturas']} lecturas ({e['duracion_lecturas'] * 5 // 60} min aprox.); sigue su ruta y la temperatura no cambia."
     if e["tipo"] == "sensor_pegado":
         return f"Sensor pegado en {camion}: desde el {e['momento_pct']} % del camino marca siempre lo mismo ({e['duracion_lecturas']} lecturas) y no avisa, aunque la carga se entibie."
     return f"Cliente no recibe en {camion}: en la parada de {e['parada']['cliente']} ({e['parada']['comuna']}). Motivo: {MOTIVOS[e['motivo']]}"
@@ -192,7 +198,7 @@ def _prompt(texto, viajes):
             f'"motivo": "<una de: {", ".join(MOTIVOS)}>"}}.\n'
             f"Rangos: {limites}. falla_frio usa momento_pct, duracion_lecturas y subida_c; solo cliente_no_recibe usa direccion_id y motivo. "
             "Omite lo que el pedido no indique. momento_pct es el avance de la ruta: «ahora» = 5, «al principio» = 20, «a mitad de ruta» = 50, «antes de llegar» = 85. "
-            "Solo sensor_falla y sensor_pegado usan momento_pct y duracion_lecturas, sin subida_c. "
+            "Solo sensor_falla, sensor_pegado y sin_senal usan momento_pct y duracion_lecturas, sin subida_c. "
             "Si nombra a un cliente, elige el viaje que tiene esa parada. No inventes viajes ni paradas.")
 
 

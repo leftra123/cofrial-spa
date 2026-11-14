@@ -241,9 +241,10 @@ class ReglasAutomaticasTests(ConDemo):
         self.assertTrue(sugerencias.calcular()[0])                      # la sugerencia a una persona la sigue ofreciendo
 
     def test_agrupa_por_comuna_sin_sumar_camiones(self):
+        COORDENADAS = {"Angol": (-37.80, -72.71), "Temuco": (-38.74, -72.59)}        # Temuco queda en el camino a Angol: va en el mismo camión
         comunas = ["Angol", "Temuco", "Angol", "Temuco", "Angol", "Temuco", "Angol", "Temuco"]
         filas = [type("O", (), {"orden_id": i, "direccion_id": i, "creada_en": timezone.now() - timedelta(minutes=20 - i), "estado_orden": type("E", (), {"nombre": "Recibida"}),
-                                "direccion": type("D", (), {"lat": 1.0, "comuna": type("C", (), {"nombre": c})})}) for i, c in enumerate(comunas)]
+                                "direccion": type("D", (), {"lat": COORDENADAS[c][0], "long": COORDENADAS[c][1], "comuna": type("C", (), {"nombre": c})})}) for i, c in enumerate(comunas)]
         with patch("flota.sugerencias.servicios.pedidos_por_despachar", return_value=filas), patch("flota.sugerencias.servicios.rangos_de", return_value=["Refrigerado"]):
             viajes, _ = sugerencias.calcular()
         self.assertEqual([[p["comuna"] for p in v["pedidos"]] for v in viajes], [["Angol"] * 4 + ["Temuco"] * 2, ["Temuco"] * 2])

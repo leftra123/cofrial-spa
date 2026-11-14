@@ -5,6 +5,8 @@ from catalogo.models import Producto
 from clientes.models import Direccion
 from pedidos import servicios as s
 
+from . import servicios
+
 COMUNAS_CERCANAS = ("Temuco", "Padre Las Casas")
 RANGOS = ("Refrigerado", "Congelado")
 ETAPA_EN_PREPARACION = 3          # orden_flujo de «En preparación»
@@ -45,7 +47,7 @@ PLAN_DE_PREPARACION = ("Refrigerado", "Congelado", "Refrigerado")        # tres 
 def preparar(usuario):
     """Deja la demostración andando con un solo clic: crea pedidos cercanos, los despacha en camiones libres y sanos y pide «Pedido bueno» para
     cada viaje (sin rupturas de frío; el cliente decide al recibir). Devuelve qué hizo y lo que no pudo."""
-    from . import escenarios, servicios, sugerencias
+    from . import escenarios, sugerencias
     hechos, omitidos = [], []
     for rango in PLAN_DE_PREPARACION:
         try:
@@ -64,4 +66,25 @@ def preparar(usuario):
             omitidos.append(f"Pedido N.º {pedido['orden']}: {' '.join(getattr(e, 'mensajes', [str(e)]))}")
             continue
         hechos.append({**pedido, "camion": camion["id"], "despacho": despacho.despacho_id})
-    return {"viajes": hechos, "omitidos": omitidos}
+    return {"viajes": hechos, "omitidos": omitidos, "en_reparacion": dejar_en_reparacion(usuario)}
+
+
+MOTIVOS_DEMO = (("equipo_frio", "Demostración: el equipo de frío está en el taller."), ("sensor", "Demostración: se cambia el sensor de temperatura."),
+                ("otro", "Demostración: mantención programada."))
+
+
+def dejar_en_reparacion(usuario, cuantos=len(MOTIVOS_DEMO)):
+    """Deja unos camiones libres «en revisión técnica» para que la flota no sea solo camiones sanos. Toma los de código más alto (los menos probables en un
+    viaje de prueba) y marca la nota como «Demostración»: «Borrar lo de la demostración» los devuelve a servicio."""
+    from django.db import IntegrityError, transaction
+    from .models import RevisionCamion
+    libres = [c for c in servicios.camiones_libres() if not c.dos_camaras][::-1]
+    hechos = []
+    for camion, (motivo, nota) in zip(libres, MOTIVOS_DEMO[:cuantos]):
+        try:
+            with transaction.atomic():
+                RevisionCamion.objects.create(camion=camion, motivo=motivo, nota=nota, abierta_por=usuario)
+        except IntegrityError:
+            continue
+        hechos.append({"camion": camion.camion_id, "motivo": dict(RevisionCamion.MOTIVOS)[motivo]})
+    return hechos

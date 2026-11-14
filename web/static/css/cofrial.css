@@ -1155,3 +1155,28 @@ td.cod, .cod { white-space: nowrap; }      /* códigos como CAM-02 no se parten 
   .maplibregl-ctrl-group button { width: 40px; height: 40px; }
   .tabla-caja td a:not(.btn), .kpi-card a { display: inline-block; padding: 12px 0; }
 }
+
+/* ayudas largas plegadas: el texto explicativo está a un clic, no ocupa la pantalla */
+.ayuda-mapa { margin-top: 10px; font-size: .9rem; color: var(--texto-2); }
+.ayuda-mapa summary { cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; font-weight: 600; color: var(--texto); }
+.ayuda-mapa ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* Flota: el mapa manda; el resumen es una franja corta y los vehículos quedan plegados */
+.kpi-franja { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0; }
+.kpi-franja .kpi-card { padding: 10px 14px; }
+.kpi-franja .kpi-card .valor { font-size: 1.5rem; }
+.kpi-franja .kpi-card .detalle { display: none; }
+.vehiculos-det { margin-top: 20px; }
+.vehiculos-det > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 6px 2px; list-style: none; }
+.vehiculos-det > summary::-webkit-details-marker { display: none; }
+.vehiculos-det > summary::before { content: "▸"; transition: transform .15s; }
+.vehiculos-det[open] > summary::before { transform: rotate(90deg); }
+
+/* sugerencia de camión en «Armar despacho» */
+.sug-ia { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--lima, #BDE63A); border-radius: 14px; background: var(--acento-suave, transparent); }
+.sug-ia[hidden] { display: none; }
+.sug-ia-cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sug-ia p { margin: 6px 0 10px; }
+.sug-viaje { padding: 10px 0; border-top: 1px solid var(--borde); }
+.sug-viaje:first-child { border-top: 0; padding-top: 0; }
+.sug-viaje-txt { margin: 0 0 8px; font-weight: 600; }

@@ -55,11 +55,14 @@ class Preparar(TestCase):
     def setUpTestData(cls):
         call_command("cargar_demo", verbosity=0)
 
-    def test_deja_viajes_en_curso_con_pedido_bueno_y_sin_rupturas(self):
-        from flota.models import Camion, Despacho, EscenarioSimulador, Telemetria
-        for c in Camion.objects.select_related('rango_temperatura'):                    # como en vivo: todos los camiones reportan, sanos y con combustible
+    def setUp(self):
+        from flota.models import Camion, Telemetria
+        for c in Camion.objects.select_related("rango_temperatura"):                    # como en vivo: todos los camiones reportan, sanos y con combustible
             r = c.rango_temperatura
             Telemetria.objects.create(camion=c, temp_camara=(float(r.temp_min_c) + float(r.temp_max_c)) / 2, lat=-38.73, long=-72.6, combustible_pct=80, alerta_ruptura_frio=False)
+
+    def test_deja_viajes_en_curso_con_pedido_bueno_y_sin_rupturas(self):
+        from flota.models import Despacho, EscenarioSimulador
         self.assertTrue(self.client.login(username="admin@cofrial.cl", password=CLAVE))
         self.assertEqual(self.client.post("/demo/preparar/", {}).status_code, 400)               # sin confirmar no hace nada
         r = self.client.post("/demo/preparar/", {"confirmar": "1"})
@@ -74,3 +77,18 @@ class Preparar(TestCase):
             self.assertEqual(Orden.objects.get(pk=v["orden"]).estado_orden.nombre, "Despachada")
         camiones = [v["camion"] for v in datos["viajes"]]
         self.assertEqual(len(camiones), len(set(camiones)))                                      # cada viaje, su camión
+
+    def test_deja_tres_camiones_en_reparacion_y_borrar_la_demo_los_devuelve(self):
+        from flota import servicios
+        from flota.models import RevisionCamion
+        self.client.login(username="admin@cofrial.cl", password=CLAVE)
+        libres_antes = {c.camion_id for c in servicios.camiones_libres()}
+        r = self.client.post("/demo/preparar/", {"confirmar": "1"})
+        self.assertEqual(r.status_code, 200, r.content)
+        rep = [x["camion"] for x in r.json()["en_reparacion"]]
+        self.assertEqual(len(rep), 3)
+        self.assertEqual(RevisionCamion.objects.filter(cerrada_en__isnull=True).count(), 3)
+        self.assertFalse(set(rep) & {c.camion_id for c in servicios.camiones_libres()})        # en reparación no se despachan
+        self.assertTrue(set(rep) <= libres_antes)
+        self.client.post("/demo/limpiar/", {"confirmar": "1"})
+        self.assertEqual(RevisionCamion.objects.filter(cerrada_en__isnull=True).count(), 0)    # «Borrar lo de la demostración» los devuelve a servicio

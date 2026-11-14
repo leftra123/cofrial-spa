@@ -102,6 +102,7 @@
     abrir: function (id) {
       var t = document.querySelector('#vehiculos [data-camion="' + id + '"]');
       if (!t) return;
+      var det = document.getElementById("vehiculos-det"); if (det) det.open = true;      // las tarjetas viven en un bloque plegado: se abre para mostrarla
       t.removeAttribute("data-guardado");
       t.scrollIntoView({behavior: "smooth", block: "center"});
       t.classList.add("destacada"); window.setTimeout(function () { t.classList.remove("destacada"); }, 2400);

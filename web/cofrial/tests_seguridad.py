@@ -53,7 +53,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                     "/pedidos/1/documentos/1/", "/crm/", "/crm/embudo/", "/crm/clientes/", "/crm/clientes/1/", "/crm/prospectos/1/", "/crm/prospectos/nuevo/",
                     "/crm/requerimientos/", "/crm/ia/", "/crm/demanda/", "/crm/alertas/", "/flota/", "/flota/despachar/",
                     "/carrito/", "/pedidos/", "/pedidos/1/", "/seguimiento/", "/soporte/", "/crm/requerimientos/1/", "/flota/sugerencias/", "/flota/por-despachar/", "/flota/camion/CAM-01/diagnostico/",
-                    "/flota/despachar/ruta/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
+                    "/flota/despachar/ruta/", "/flota/despachar/sugerir-camion/", "/demo/", "/pedidos/1/entrega/", "/cuenta/clave/", "/cuenta/clave/hecho/", "/bi/", "/bi/x",
                     "/crm/cobranza/", "/crm/solicitudes/", "/operacion/", "/operacion/stock/", "/operacion/cuentas/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/carrito/mp/vuelta/exito/", "/carrito/mp/vuelta/fallo/", "/carrito/mp/vuelta/pendiente/", "/flota/escenarios/estado/", "/flota/despacho-auto/", "/torre/", "/torre/pulso/"]
     PRIVADAS_POST = ["/cuenta/mis-datos/eliminar/", "/cuenta/mis-datos/solicitar/", "/operacion/privacidad/1/responder/", "/operacion/privacidad/1/prorrogar/", "/operacion/cuentas/1/activa/", "/operacion/ordenes/1/avanzar/", "/operacion/ordenes/1/cancelar/", "/operacion/sistema/ia/", "/operacion/sistema/podar/",
                      "/operacion/datos/x/1/borrar/",

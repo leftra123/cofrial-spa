@@ -20,6 +20,7 @@ from . import servicios
 from .vigente import ultimas_vigentes
 
 MAX_PARADAS = 6           # pedidos por viaje sugerido
+DESVIO_MAX_KM = 12        # un pedido va en el mismo viaje si queda «en el camino» de otro: ir a él por esa ruta alarga el recorrido a lo más esto (supuesto del prototipo)
 CACHE_SEG = 300           # la misma situación no vuelve a consultar a la IA durante 5 minutos
 MAX_VIAJES_EN_MENU = 3    # viajes con enlace propio en el contador del menú; el resto se arma desde «Armar despacho»
 
@@ -95,6 +96,28 @@ def _viajes_de_una_salida(por_rango, camiones):
     return viajes
 
 
+def _agrupar_por_camino(pedidos):
+    """Junta pedidos que coinciden en la ruta para no mandar un camión por cada uno. Parte por el más lejano de la base (el «ancla») y le suma los que
+    quedan en su camino: los que, pasando por ellos de ida, alargan el recorrido a la base ≤ DESVIO_MAX_KM (misma comuna incluida). Un grupo no pasa de MAX_PARADAS."""
+    from django.conf import settings
+    from . import rutas
+    base = (settings.BASE_LOGISTICA["lat"], settings.BASE_LOGISTICA["long"])
+    km = rutas.km_entre
+    pendientes = sorted(pedidos, key=lambda p: (-km(base, p["pos"]), p["orden"]))
+    grupos = []
+    while pendientes:
+        ancla = pendientes.pop(0)
+        grupo = [ancla]
+        for p in list(pendientes):
+            if len(grupo) >= MAX_PARADAS:
+                break
+            if km(base, p["pos"]) + km(p["pos"], ancla["pos"]) - km(base, ancla["pos"]) <= DESVIO_MAX_KM:
+                grupo.append(p)
+                pendientes.remove(p)
+        grupos.append(grupo)
+    return grupos
+
+
 def calcular(automatico=False):
     """Sugerencias de despacho: (lista de viajes sugeridos, resto que no se pudo asignar).
 
@@ -112,7 +135,8 @@ def calcular(automatico=False):
             sin_ubicar.append(o.orden_id)
         else:
             por_rango.setdefault(rangos[0], []).append(
-                {"orden": o.orden_id, "comuna": o.direccion.comuna.nombre, "direccion": o.direccion_id, "espera_min": int((ahora - o.creada_en).total_seconds() // 60)})
+                {"orden": o.orden_id, "comuna": o.direccion.comuna.nombre, "direccion": o.direccion_id, "espera_min": int((ahora - o.creada_en).total_seconds() // 60),
+                 "pos": (o.direccion.lat, o.direccion.long)})
     libres, dos_camaras = {}, []
     for c in opciones_camion():
         if c["apto_auto" if automatico else "apto"]:
@@ -123,19 +147,17 @@ def calcular(automatico=False):
     viajes, sin_camion = _viajes_de_una_salida(por_rango, dos_camaras), []
     # el rango con el pedido más antiguo se atiende primero
     for rango, pedidos in sorted(por_rango.items(), key=lambda kv: -max(p["espera_min"] for p in kv[1])):
-        # pedidos de una misma comuna juntos, partiendo por la que tiene el más antiguo: un viaje no cruza la región sin necesidad
-        antigua = {}
-        for p in pedidos:
-            antigua[p["comuna"]] = max(antigua.get(p["comuna"], 0), p["espera_min"])
-        pedidos = sorted(pedidos, key=lambda p: (-antigua[p["comuna"]], p["comuna"]))
-        for i in range(0, len(pedidos), MAX_PARADAS):
-            grupo = pedidos[i:i + MAX_PARADAS]
+        # los pedidos que quedan en el mismo camino van juntos en un solo camión; los grupos con el pedido más antiguo salen primero
+        for grupo in sorted(_agrupar_por_camino(pedidos), key=lambda g: -max(p["espera_min"] for p in g)):
             c = libres[rango].pop(0) if libres.get(rango) else _tomar_de_dos_camaras(dos_camaras, rango)     # los de dos cámaras son pocos: se usan al final
             if c:
                 viajes.append({"camion": c["id"], "patente": c["patente"], "rango": rango, "pedidos": grupo,
                                "espera_max_min": max(p["espera_min"] for p in grupo), "nota_camion": c["nota"]})
             else:
                 sin_camion.append({"rango": rango, "pedidos": len(grupo)})
+    for v in viajes:                           # las coordenadas sirven para agrupar y no salen de aquí: ni a la pantalla ni a la IA
+        v["pedidos"] = [{k: x for k, x in p.items() if k != "pos"} for p in v["pedidos"]]
+        v["comunas"] = sorted({p["comuna"] for p in v["pedidos"]})
     return viajes, {"sin_camion": sin_camion, "sin_ubicar": sin_ubicar, "mixtos": mixtos, "reprogramar": reprogramar}
 
 
@@ -148,13 +170,18 @@ def _de_rango(rango, n):
     return f"de {rango.lower()}" if " y " in rango else rango.lower() + ("s" if n != 1 else "")
 
 
+def _lista(items):
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " y " + items[-1]
+
+
 def texto_base(viajes, resto):
     """Aviso sin IA, armado con plantillas: siempre disponible."""
     frases = []
     for v in viajes:
         n = len(v["pedidos"])
         frases.append(f"{n} pedido{'s' if n != 1 else ''} {_de_rango(v['rango'], n)} espera{'n' if n != 1 else ''} despacho (el más antiguo, hace {_espera(v['espera_max_min'])}). "
-                      f"{v['camion']} está libre y su rango sirve.")
+                      f"{v['camion']} está libre y su rango sirve."
+                      + (f" Van juntos {_lista(v['comunas'])} porque quedan en el mismo camino: un solo camión en vez de {len(v['comunas'])}." if len(v.get("comunas", [])) > 1 else ""))
     for s in resto["sin_camion"]:
         frases.append(f"Hay {s['pedidos']} pedido(s) {s['rango'].lower()}(s) sin camión libre de ese rango.")
     if resto["sin_ubicar"]:
@@ -168,7 +195,7 @@ def _prompt(viajes, resto):
     hechos = json.dumps({"viajes_sugeridos": viajes, **resto}, ensure_ascii=False)
     return ("Eres el asistente de despacho de Cofrial SpA, distribuidora chilena de alimentos refrigerados y congelados. "
             "Con estos hechos, ya calculados por el sistema, escribe un aviso para el despachador: 2 o 3 frases en español, "
-            "claras y sin saludos. Di cuántos pedidos esperan, cuánto lleva el más antiguo y qué camión conviene usar para cada viaje. "
+            "claras y sin saludos. Di cuántos pedidos esperan, cuánto lleva el más antiguo y qué camión conviene usar para cada viaje; si un viaje reúne varias comunas, di que van juntas porque quedan en el mismo camino. "
             "Usa SOLO los camiones y números que aparecen en los hechos; no inventes nada y no menciones nombres de clientes.\n"
             f"Hechos: {hechos}")
 
@@ -213,3 +240,95 @@ def acciones_del_menu(viajes, puede_armar):
             acciones.append({"texto": f"Armar despacho con {v['camion']} ({n} pedido{'s' if n != 1 else ''})", "url": v["enlace"]})
         acciones.append({"texto": "Armar despacho", "url": "/flota/despachar/"})
     return acciones + [{"texto": "Ver la sugerencia en Flota", "url": "/flota/"}]
+
+
+# ---------------------------------------------------------------------------------------------------------- qué camión usar para estas solicitudes
+VIAJE_LARGO_KM = 150          # ida y vuelta; desde aquí el camión necesita combustible de sobra (supuesto del prototipo, no un dato de Cofrial)
+COMBUSTIBLE_VIAJE_LARGO = 50  # % mínimo para un viaje largo; en uno corto basta lo que ya exige el sistema (COMBUSTIBLE_BAJO)
+
+
+def _km_de_ida_y_vuelta(ordenes):
+    """Estimación sin pedir rutas: línea recta base → paradas (vecino más cercano) → base, por el factor de calles. La ruta real por calles se calcula al despachar."""
+    from django.conf import settings
+    from . import rutas
+    paradas = [(o.direccion_id, o.direccion.lat, o.direccion.long) for o in ordenes if o.direccion.lat is not None]
+    if not paradas:
+        return None
+    base = (settings.BASE_LOGISTICA["lat"], settings.BASE_LOGISTICA["long"])
+    orden = rutas.ordenar_paradas(base, paradas)
+    puntos = [base] + [(p[1], p[2]) for p in orden] + [base]
+    return round(rutas.largo_km(puntos) * settings.FACTOR_CALLES)
+
+
+def sugerir_para(orden_ids):
+    """Qué camión conviene para estos pedidos. Decide el código, con reglas a la vista: el rango de frío que exigen los productos, un camión libre y sano
+    (sin ruptura, sin revisión técnica, con lecturas recientes), y combustible suficiente para el largo del viaje. Entre los que sirven gana el que tiene más
+    combustible, y para un solo rango se prefiere un camión simple (los de dos cámaras son pocos). Devuelve None si no hay pedidos válidos."""
+    from . import tiempo
+    ordenes = list(servicios.pedidos_por_despachar().filter(pk__in=orden_ids))
+    if not ordenes:
+        return None
+    rangos = sorted({r for o in ordenes for r in servicios.rangos_de(o)})
+    km = _km_de_ida_y_vuelta(ordenes)
+    largo = bool(km and km >= VIAJE_LARGO_KM)
+    minimo = COMBUSTIBLE_VIAJE_LARGO if largo else servicios.COMBUSTIBLE_BAJO
+    candidatos, descartados = [], []
+    for c in opciones_camion():
+        if not all(r in c["rangos"] for r in rangos):
+            continue                                            # no es de ese frío: no merece ni mencionarse
+        motivo = None
+        if not c["apto"]:
+            motivo = "tiene ruptura de frío"
+        elif not c["apto_auto"]:
+            motivo = "no tiene lecturas recientes o le queda poco combustible"
+        elif c["combustible"] is not None and c["combustible"] < minimo:
+            motivo = f"tiene {c['combustible']} % de combustible y este viaje pide al menos {minimo} %"
+        (descartados if motivo else candidatos).append({**c, "motivo": motivo})
+    candidatos.sort(key=lambda c: (len(c["rangos"]) != len(rangos), -(c["combustible"] or 0), c["id"]))
+    elegido = candidatos[0] if candidatos else None
+    return {"ordenes": [o.orden_id for o in ordenes], "rangos": rangos, "destinos": sorted({o.direccion.comuna.nombre for o in ordenes}),
+            "km": km, "minutos": round(tiempo.minutos_de_viaje(km)) if km else None, "viaje_largo": largo, "minimo_combustible": minimo,
+            "camion": None if elegido is None else {k: elegido[k] for k in ("id", "patente", "combustible", "rangos")},
+            "alternativas": [{k: c[k] for k in ("id", "combustible")} for c in candidatos[1:3]],
+            "descartados": [{"id": c["id"], "motivo": c["motivo"]} for c in descartados[:3]]}
+
+
+def _hm(minutos):
+    h, m = divmod(int(minutos), 60)
+    return f"{h} h {m:02d} min" if h else f"{m} min"
+
+
+def texto_para(s):
+    """Explicación sin IA, de plantilla: siempre disponible."""
+    lugar = " y ".join(s["destinos"]) if len(s["destinos"]) <= 2 else f"{len(s['destinos'])} comunas"
+    viaje = f" Son unos {s['km']} km entre ida y vuelta (≈ {_hm(s['minutos'])} sin contar paradas)." if s["km"] else ""
+    if s["camion"] is None:
+        porque = "; ".join(f"{d['id']} {d['motivo']}" for d in s["descartados"])
+        return (f"Para {lugar} ({' y '.join(r.lower() for r in s['rangos'])}) no hay un camión libre que sirva ahora." + viaje +
+                (f" Descartados: {porque}." if porque else " Espera a que uno vuelva a la base."))
+    c = s["camion"]
+    alt = f" Alternativas: {', '.join(a['id'] for a in s['alternativas'])}." if s["alternativas"] else ""
+    return (f"Para {lugar} conviene {c['id']}: es {' y '.join(r.lower() for r in c['rangos'])}, está libre, sin alertas y con {c['combustible']} % de combustible."
+            + viaje + (f" Como el viaje es largo, se exige al menos {s['minimo_combustible']} % de combustible." if s["viaje_largo"] else "") + alt)
+
+
+def redactar_para(s):
+    """(texto, por_ia): la misma explicación escrita por la IA, o el texto base. La IA solo recibe comunas, kilómetros, rangos y camiones; ningún cliente."""
+    base = texto_para(s)
+    prompt = ("Eres el asistente de despacho de Cofrial SpA. Con estos hechos, ya calculados por el sistema, explica en 2 frases en español, sin saludos, qué camión "
+              "conviene usar y por qué. Usa SOLO los camiones y números de los hechos; no inventes nada ni menciones clientes.\n"
+              f"Hechos: {json.dumps({k: v for k, v in s.items() if k != 'ordenes'}, ensure_ascii=False)}")
+    clave = "sugerencia_camion_" + hashlib.sha256(prompt.encode()).hexdigest()
+    guardado = cache.get(clave)
+    if guardado is not None:
+        return guardado, True
+    permitidos = {s["camion"]["id"]} if s["camion"] else set()
+    permitidos |= {a["id"] for a in s["alternativas"]} | {d["id"] for d in s["descartados"]}
+    try:
+        texto = ia.redactar(prompt).strip()
+    except ia.ErrorIA:
+        return base, False
+    if not 0 < len(texto) <= 500 or not set(re.findall(r"CAM-\d+", texto)) <= permitidos:
+        return base, False
+    cache.set(clave, texto, CACHE_SEG)
+    return texto, True

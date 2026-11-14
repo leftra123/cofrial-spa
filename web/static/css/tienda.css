@@ -1612,3 +1612,12 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
   .tb-cuenta { flex-wrap: nowrap !important; }
   .t-pie .solo-movil { display: inline-flex; align-items: center; min-height: 44px; }
 }
+
+/* emulador de Mercado Pago (static/js/mp-emulador.js) */
+.mp-emu { max-width: 440px; width: calc(100% - 32px); }
+.mp-emu-marca { margin: 0 0 2px; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #009EE3; }
+.mp-emu input[readonly] { background: var(--fondo-2, transparent); }
+.mp-emu-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mp-emu .acciones { margin-top: 14px; }
+.mp-emu input, .mp-emu select { box-sizing: border-box; width: 100%; min-width: 0; }
+.mp-emu-fila > div { min-width: 0; }

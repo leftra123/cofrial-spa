@@ -2,9 +2,9 @@
 {% block titulo %}Demanda en espera | Cofrial SpA{% endblock %}
 {% block crm %}
 <div class="pagina-cab"><div><h1>Demanda en espera</h1><p class="sub">Productos que los clientes pidieron que se les avise cuando haya stock. Sirve para reponer lo más pedido y para contactar a quien espera.</p></div></div>
-<div class="tabla-caja"><table><thead><tr><th>Producto</th><th class="num">Clientes esperando</th><th class="num">Unidades pedidas</th><th class="num">Stock actual</th><th>Estado</th></tr></thead><tbody>
-{% for f in filas %}<tr><td><b>{{ f.producto__nombre }}</b><br><span class="frio">{{ f.producto__sku }}</span></td><td class="num">{{ f.n_clientes }}</td><td class="num">{{ f.pedido }}</td><td class="num">{{ f.producto__stock_disponible }}</td>
+<div class="tabla-caja"><table><thead><tr><th>Producto</th><th class="num">Clientes esperando</th><th class="num">Unidades pedidas</th><th class="num">Stock actual</th><th>Quién espera</th><th>Estado</th></tr></thead><tbody>
+{% for f in filas %}<tr><td><b>{{ f.producto__nombre }}</b><br><span class="frio">{{ f.producto__sku }}</span></td><td class="num">{{ f.n_clientes }}</td><td class="num">{{ f.pedido }}</td><td class="num">{{ f.producto__stock_disponible }}</td><td>{% for c in f.espera.contactos %}<a href="/crm/clientes/{{ c.cliente.pk }}/">{{ c.cliente.nombre }}</a> <span class="frio">({{ c.cantidad }} u.)</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}{% if f.espera.otros %}{% if f.espera.contactos %}<br>{% endif %}<span class="frio">{{ f.espera.otros }} cliente{{ f.espera.otros|pluralize }} de otras carteras</span>{% endif %}</td>
 <td>{% if f.producto__stock_disponible >= f.pedido %}<span class="chip entregado">Alcanza para todos</span>{% elif f.producto__stock_disponible > 0 %}<span class="chip pendiente">Alcanza parcialmente</span>{% else %}<span class="chip alerta">Sin stock: reponer</span>{% endif %}{% if rol == "admin" %} <a class="btn btn-sec" href="/operacion/stock/?q={{ f.producto__sku|urlencode }}">Reponer<span class="solo-lector"> {{ f.producto__nombre }}</span></a>{% endif %}</td></tr>
-{% empty %}{% include "componentes/vacio_estado.html" with cols=5 ico="campana" titulo="Nadie espera productos" texto="Cuando un cliente pida un aviso de stock, aparecerá aquí con cuánto necesita." %}{% endfor %}
+{% empty %}{% include "componentes/vacio_estado.html" with cols=6 ico="campana" titulo="Nadie espera productos" texto="Cuando un cliente pida un aviso de stock, aparecerá aquí con cuánto necesita." %}{% endfor %}
 </tbody></table></div>
 {% endblock %}

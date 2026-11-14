@@ -25,6 +25,12 @@ def activo():
     return bool(getattr(settings, "MERCADOPAGO_ACCESS_TOKEN", "")) and bool(getattr(settings, "MERCADOPAGO_PUBLIC_KEY", ""))
 
 
+def emulador():
+    """Sin credenciales de Mercado Pago, el carrito ofrece un emulador de su pago con tarjeta: mismo flujo (aprobado o rechazado, pedido y boleta
+    solo si se aprueba), pero nada sale a internet y no se cobra. Con credenciales reales el emulador desaparece."""
+    return not activo() and bool(getattr(settings, "MP_EMULADOR", True))
+
+
 def clave_publica():
     return getattr(settings, "MERCADOPAGO_PUBLIC_KEY", "") or ""
 
@@ -153,6 +159,16 @@ def _referencia_pago(pago):
     return str(pago.get("id") or "")
 
 
+DETALLES_DE_RECHAZO = {
+    "cc_rejected_insufficient_amount": "la tarjeta no tiene fondos suficientes.",
+    "cc_rejected_other_reason": "el banco rechazó la tarjeta.",
+    "cc_rejected_bad_filled_card_number": "revisa el número de la tarjeta.",
+    "cc_rejected_bad_filled_date": "revisa la fecha de vencimiento.",
+    "cc_rejected_bad_filled_security_code": "revisa el código de seguridad.",
+    "cc_rejected_call_for_authorize": "debes autorizar el pago con tu banco.",
+}
+
+
 @transaction.atomic
 def _aplicar_respuesta_pago(checkout, pago, fallar_si_rechazado=True):
     checkout = CheckoutPago.objects.select_for_update().get(pk=checkout.pk)
@@ -180,7 +196,8 @@ def _aplicar_respuesta_pago(checkout, pago, fallar_si_rechazado=True):
         checkout.estado = "fallido"
         checkout.save(update_fields=["estado", "payment_id"])
         if fallar_si_rechazado:
-            detalle = (pago.get("status_detail") or "").replace("_", " ")
+            codigo = pago.get("status_detail") or ""
+            detalle = DETALLES_DE_RECHAZO.get(codigo) or codigo.replace("_", " ")
             raise ErrorMercadoPago(f"El pago no fue aprobado{(': ' + detalle) if detalle else '.'}")
         return checkout
     checkout.save(update_fields=["payment_id"])
@@ -258,3 +275,28 @@ def procesar_notificacion_webhook(cuerpo, payment_id_query=None):
     if not payment_id:
         return None
     return procesar_pago_mp(str(payment_id))
+
+
+# Resultados del emulador, con los mismos nombres de titular que usa Mercado Pago en sus tarjetas de prueba.
+TITULARES_EMULADOR = {
+    "APRO": ("approved", "accredited", "Pago aprobado"),
+    "FUND": ("rejected", "cc_rejected_insufficient_amount", "Fondos insuficientes"),
+    "OTHE": ("rejected", "cc_rejected_other_reason", "Rechazado por error general"),
+}
+
+
+@transaction.atomic
+def pagar_emulado(cliente, direccion_id, titular, comprobante=None, giro="", recibe=""):
+    """Igual que `pagar_con_brick`, pero la respuesta de Mercado Pago la fabrica el emulador según el titular elegido. Todo lo demás es lo de siempre:
+    el carrito se valida, se crea el `CheckoutPago` y solo un pago aprobado genera la orden, el documento pagado y el descuento de stock."""
+    if not emulador():
+        raise ErrorMercadoPago("El emulador de pagos no está disponible.")
+    if titular not in TITULARES_EMULADOR:
+        raise ErrorMercadoPago("Elige cómo quieres que responda el pago de prueba.")
+    comprobante = s.elegir_comprobante(cliente, comprobante, giro)
+    ctx = s._contexto_desde_carrito(cliente, direccion_id, "", recibe)
+    checkout, monto = _crear_checkout(cliente, ctx, comprobante)
+    estado, detalle, _ = TITULARES_EMULADOR[titular]
+    pago = {"id": f"EMU-{uuid.uuid4().hex[:12]}", "status": estado, "status_detail": detalle, "transaction_amount": monto,
+            "external_reference": checkout.external_reference}
+    return _aplicar_respuesta_pago(checkout, pago)

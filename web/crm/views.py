@@ -344,9 +344,31 @@ def ia_panel(request):
                                                     filas=filas, resumen=resumen, ultimos=ultimos, umbral=s.UMBRAL_CONFIANZA, acierto=s.acierto_de_la_ia()))
 
 
+MINUTOS_RECIENTES = 10     # las lecturas con alerta de los últimos minutos no se borran: pueden ser de un viaje en curso
+
+
+def _alertas_borrables():
+    """Lecturas con alerta de frío que no son de demostración y tienen más de unos minutos (telemetría real o del simulador)."""
+    from flota.models import Telemetria
+    return Telemetria.objects.filter(alerta_ruptura_frio=True, forzada=False, registrado_en__lt=timezone.now() - timedelta(minutes=MINUTOS_RECIENTES))
+
+
 @con_rol(*TODOS)
 def alertas(request):
-    return render(request, "crm/alertas.html", _contexto(request, ordenes=s.ordenes_afectadas(request.user)))
+    extra = {"borrables": _alertas_borrables().count()} if request.rol == "admin" else {}
+    return render(request, "crm/alertas.html", _contexto(request, ordenes=s.ordenes_afectadas(request.user), **extra))
+
+
+@require_POST
+@con_rol("admin")
+def alertas_borrar(request):
+    """Solo el administrador: borra las lecturas con alerta antiguas (y con ellas las alertas de los pedidos). No se puede deshacer."""
+    if request.POST.get("confirmar") != "1":
+        messages.error(request, "Marca la casilla de confirmación para borrar las alertas.")
+        return redirect("crm_alertas")
+    n, _ = _alertas_borrables().delete()
+    messages.success(request, f"Se borraron {n} lectura{'s' if n != 1 else ''} con alerta de frío. Las lecturas normales y las de demostración no se tocaron.")
+    return redirect("crm_alertas")
 
 
 @require_POST

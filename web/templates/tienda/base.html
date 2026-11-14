@@ -10,8 +10,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux24">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux27">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux26">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux29">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -42,13 +42,15 @@
         </div>
       </div>{% endif %}
       {% include "componentes/tema_btn.html" %}
-      {% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }} · {{ cliente_tienda.tipo_cliente.codigo }}"><span class="tb-perfil-nombre">{{ cliente_tienda.nombre }}</span><span class="tb-perfil-tipo perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}"{% if cliente_tienda.tipo_cliente.codigo == 'B2C' %} title="Lista de precios: {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% elif cliente_tienda.tipo_cliente.codigo == 'B2B' %} title="Cliente institucional · lista {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% endif %}>{{ cliente_tienda.tipo_cliente.codigo }}</span></span>{% endif %}
       {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{{ inicio_url }}">Panel interno</a>{% endif %}
       {% if user.is_authenticated %}
-        {% if menu.crm or menu.flota or menu.admin %}<a class="tb-ingresar" href="/portada/" title="La portada que ven los visitantes">Portada pública</a>{% endif %}
-        <a class="tb-clave" href="/cuenta/clave/">Mi clave</a>
-        {% if menu.cliente %}<a class="tb-clave" href="/cuenta/mis-datos/">Mis datos</a>{% endif %}
-        {% if menu.crm or menu.cliente %}<button type="button" class="enlace tb-permisos" data-permisos-abrir>Permisos</button>{% endif %}
+        <details class="tb-menu" id="tb-menu"><summary class="tb-menu-btn" aria-label="Mi cuenta">{% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }} · {{ cliente_tienda.tipo_cliente.codigo }}"><span class="tb-perfil-nombre">{{ cliente_tienda.nombre }}</span><span class="tb-perfil-tipo perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}"{% if cliente_tienda.tipo_cliente.codigo == 'B2C' %} title="Lista de precios: {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% elif cliente_tienda.tipo_cliente.codigo == 'B2B' %} title="Cliente institucional · lista {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% endif %}>{{ cliente_tienda.tipo_cliente.codigo }}</span></span>{% endif %}{% if not cliente_tienda %}<span class="tb-menu-txt">Mi cuenta</span>{% endif %}<svg viewBox="0 0 24 24" aria-hidden="true" class="tb-menu-flecha"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <div class="tb-menu-lista">
+            {% if menu.cliente %}<a href="/cuenta/mis-datos/">Mis datos</a>{% endif %}
+            <a href="/cuenta/clave/">Mi clave</a>
+            {% if menu.crm or menu.cliente %}<button type="button" class="enlace" data-permisos-abrir>Permisos</button>{% endif %}
+            {% if menu.crm or menu.flota or menu.admin %}<a href="/portada/" title="La portada que ven los visitantes">Portada pública</a>{% endif %}
+          </div></details>
         <form method="post" action="/cuenta/salir/" class="tb-salir-form">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/"><button type="submit" class="tema-btn tb-salir" aria-label="Salir de la cuenta" title="Salir" aria-haspopup="dialog" aria-controls="salir-dialogo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></form>
       {% else %}
         <a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>

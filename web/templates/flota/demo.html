@@ -7,9 +7,15 @@
 </div>
 {% endblock %}
 {% block contenido %}
+<section class="tarjeta-ui demo-paso" aria-labelledby="d-t0">
+  <h2 id="d-t0">1. Crea un pedido de prueba cercano</h2>
+  <p class="muted">Crea un pedido «En preparación» de un cliente de Temuco o Padre Las Casas, para que el camión llegue en minutos. Después arma su viaje en «Armar despacho».</p>
+  <div class="acciones"><button type="button" class="btn" data-pedido-cercano="Refrigerado">Pedido refrigerado</button><button type="button" class="btn" data-pedido-cercano="Congelado">Pedido congelado</button><a class="btn btn-sec" href="/flota/despachar/">Armar despacho</a></div>
+  <div class="demo-estado" id="pc-estado" role="status" aria-live="polite">Aún no creaste ningún pedido de prueba.</div>
+</section>
 <div class="demo-aviso" role="note"><b>Antes de empezar:</b> necesitas un viaje en curso. Si no hay, arma un despacho y vuelve. Cuando el camión llega, el cliente tiene unos {{ plazo_min }} minuto{{ plazo_min|pluralize }} para aceptar o rechazar; si no responde, el pedido se da por entregado solo.</div>
 <section class="tarjeta-ui" aria-labelledby="d-t4" style="margin-top:16px">
-  <h2 id="d-t4">Un camión llega con un pedido</h2>
+  <h2 id="d-t4">2. Un camión llega con un pedido</h2>
   <p class="muted">1. Arma un despacho en «Armar despacho». 2. Elige el viaje y cómo llega. 3. Entra como el cliente y acepta o rechaza al recibir: nadie responde por él. Los botones funcionan sin IA.</p>
   <div class="rejilla dos">
     <div>
@@ -208,6 +214,16 @@
   bActivar.addEventListener("click", function () {
     if (!confirm("¿Activar la propuesta? " + estadoE.textContent)) return;
     post("/flota/escenarios/activar/", {propuesta: "1", confirmar: "1"}).then(activado).catch(function () { avisar("Sin conexión con el servidor.", false); });
+  });
+  /* Pedido de prueba cercano: lo arma el servidor con los mismos servicios del carrito; aquí solo se pide y se cuenta qué pasó. */
+  document.querySelectorAll("[data-pedido-cercano]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var est = document.getElementById("pc-estado"); b.disabled = true; est.textContent = "Creando el pedido…";
+      post("/demo/pedido-cercano/", {rango: b.dataset.pedidoCercano}).then(function (r) {
+        est.classList.toggle("activa", r._ok);
+        est.textContent = r._ok ? "Pedido N.º " + r.orden + " creado: " + r.producto + " para " + r.cliente + " (" + r.comuna + "). Ya está «En preparación»: arma su despacho." : (r.detail || "No se pudo crear el pedido.");
+      }).catch(function () { est.textContent = "Sin conexión con el servidor."; }).then(function () { b.disabled = false; });
+    });
   });
   pintar(JSON.parse(document.getElementById("esc-datos").textContent));
   setInterval(refrescar, 5000);

@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from crm.views import con_rol
 
-from . import escenarios, tiempo
+from . import escenarios, pedido_demo, tiempo
 from .models import Camion, Telemetria
 
 DURACION_MAX_S = 180     # tope de una ruptura forzada
@@ -118,3 +118,14 @@ def limpiar(request):
     for k in [k for k in request.session.keys() if k.startswith("demo_")]:
         request.session.pop(k)
     return JsonResponse({"borradas": n, "forzadas": 0, "tiempo": tiempo.estado(), **resultado})
+
+
+@require_POST
+@con_rol("admin")
+def pedido_cercano(request):
+    """Crea un pedido de prueba de un cliente de Temuco o Padre Las Casas, «En preparación», para armar su despacho."""
+    try:
+        datos = pedido_demo.crear(request.POST.get("rango", ""))
+    except pedido_demo.ErrorPedidoDemo as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})

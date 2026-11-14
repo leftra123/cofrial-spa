@@ -60,3 +60,11 @@
     if (window.ResizeObserver) new ResizeObserver(function () { raiz.style.setProperty("--tb-alto", barra.offsetHeight + "px"); }).observe(barra);   // los filtros del catálogo se pegan justo debajo
   }
 })();
+
+/* menú «Mi cuenta» del encabezado de la tienda: se cierra al tocar fuera o con Escape */
+(function () {
+  var m = document.getElementById("tb-menu");
+  if (!m) return;
+  document.addEventListener("click", function (e) { if (m.open && !m.contains(e.target)) m.open = false; });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && m.open) { m.open = false; var s = m.querySelector("summary"); if (s) s.focus(); } });
+})();

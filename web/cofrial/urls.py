@@ -48,6 +48,7 @@ urlpatterns = [
     path("demo/apagar/", flota_demo.apagar, name="demo_apagar"),
     path("demo/limpiar/", flota_demo.limpiar, name="demo_limpiar"),
     path("demo/tiempo/", flota_demo.cambiar_tiempo, name="demo_tiempo"),
+    path("demo/pedido-cercano/", flota_demo.pedido_cercano, name="demo_pedido_cercano"),
     path("api/asistente/", catalogo_views.api_asistente, name="api_asistente"),
     path("api/avisos-equipo/", api_avisos_equipo, name="api_avisos_equipo"),
     path("api/productos/", catalogo_views.api_productos, name="api_productos"),

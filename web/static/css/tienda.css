@@ -1605,13 +1605,8 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .linea-info h3 a { color: var(--texto); }
 .filtros-multi { display: block; font-size: .78rem; font-weight: 400; color: var(--texto-3); margin-top: 2px; }
 
-/* celular: el encabezado no se apila. Arriba quedan logo, campana, tema y salir; «Mi clave» y «Permisos» pasan al pie, junto a «Mis datos». */
-.t-pie .solo-movil { display: none; }
-@media (max-width: 600px) {
-  .tb-cuenta .tb-clave, .tb-cuenta .tb-permisos, .tb-cuenta .tb-perfil-nombre { display: none !important; }
-  .tb-cuenta { flex-wrap: nowrap !important; }
-  .t-pie .solo-movil { display: inline-flex; align-items: center; min-height: 44px; }
-}
+/* celular: la cuenta es un solo menú, así que el encabezado cabe en una fila (ver «Mi cuenta» más abajo) */
+.t-pie .solo-movil { display: none !important; }
 
 /* emulador de Mercado Pago (static/js/mp-emulador.js) */
 .mp-emu { max-width: 440px; width: calc(100% - 32px); }
@@ -1621,3 +1616,16 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .mp-emu .acciones { margin-top: 14px; }
 .mp-emu input, .mp-emu select { box-sizing: border-box; width: 100%; min-width: 0; }
 .mp-emu-fila > div { min-width: 0; }
+
+/* encabezado: todo lo de la cuenta en un solo menú «Mi cuenta» (Mis datos, Mi clave, Permisos, Portada pública) */
+.tb-menu { position: relative; }
+.tb-menu > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--borde-fuerte); border-radius: 10px; min-height: 40px; color: var(--texto); }
+.tb-menu > summary::-webkit-details-marker { display: none; }
+.tb-menu > summary .tb-perfil { border: 0; padding: 0; background: none; }
+.tb-menu-flecha { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; transition: transform .15s; }
+.tb-menu[open] .tb-menu-flecha { transform: rotate(180deg); }
+.tb-menu-lista { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 200px; display: grid; gap: 2px; padding: 8px; background: var(--tarjeta); border: 1px solid var(--borde-fuerte); border-radius: 14px; box-shadow: var(--sombra-alta, 0 12px 30px rgba(15, 23, 42, .25)); }
+.tb-menu-lista a, .tb-menu-lista button.enlace { display: flex; align-items: center; min-height: 40px; padding: 6px 12px; border-radius: 8px; color: var(--texto); text-align: left; text-decoration: none; font-size: .95rem; }
+.tb-menu-lista a:hover, .tb-menu-lista button.enlace:hover { background: var(--fondo-2); }
+@media (max-width: 600px) { .tb-menu .tb-perfil-nombre { display: none; } .tb-menu > summary { padding: 6px 8px; } .tb-menu-txt { display: inline; } }
+.tb-menu-lista button.enlace:not(#mp-brick-container button) { width: 100%; justify-content: flex-start; text-decoration: none; background: none; border: 0; font: inherit; font-size: .95rem; color: var(--texto); cursor: pointer; }

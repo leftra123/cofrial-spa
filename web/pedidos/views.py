@@ -77,7 +77,7 @@ def ver_carrito(request, cliente):
     filas = s.lineas(cliente)
     sin_stock = [f for f in filas if not f["hay_stock"]]
     es_b2c = cliente.tipo_cliente.codigo == "B2C"
-    mp_brick = mp.activo() and filas and not sin_stock
+    mp_brick = mp.activo() and filas and not sin_stock and not mp.forzar_emulador()
     mp_emulador = mp.emulador() and bool(filas) and not sin_stock
     total = s.total(filas)
     monto_mp = round(total * (1 + documentos.IVA)) if not es_b2c else total

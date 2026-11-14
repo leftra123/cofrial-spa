@@ -45,6 +45,7 @@ services:
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}   # pago B2C en modo prueba; vacío = cobro simulado
       MERCADOPAGO_PUBLIC_KEY: ${MERCADOPAGO_PUBLIC_KEY:-}
       MERCADOPAGO_PAYER_EMAIL: ${MERCADOPAGO_PAYER_EMAIL:-}     # comprador de prueba; lo exigen las cuentas @correo.test
+      MP_EMULADOR: ${MP_EMULADOR:-1}                              # forzar = emulador de pago aunque haya claves (ver docs/mercadopago-checkout.md)
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
       DJANGO_CSRF_ORIGINS: ${DJANGO_CSRF_ORIGINS:-}
       DJANGO_ADMIN_URL: ${DJANGO_ADMIN_URL:-admin/}            # ruta propia del panel de administración; por defecto /admin/

@@ -28,7 +28,15 @@ def activo():
 def emulador():
     """Sin credenciales de Mercado Pago, el carrito ofrece un emulador de su pago con tarjeta: mismo flujo (aprobado o rechazado, pedido y boleta
     solo si se aprueba), pero nada sale a internet y no se cobra. Con credenciales reales el emulador desaparece."""
-    return not activo() and bool(getattr(settings, "MP_EMULADOR", True))
+    modo = str(getattr(settings, "MP_EMULADOR", "1")).strip().lower()
+    if modo in ("0", "false", ""):
+        return False
+    return True if modo == "forzar" else not activo()
+
+
+def forzar_emulador():
+    """MP_EMULADOR=forzar: el emulador reemplaza al formulario real aunque haya credenciales (una defensa no debe depender de la red de Mercado Pago)."""
+    return str(getattr(settings, "MP_EMULADOR", "1")).strip().lower() == "forzar"
 
 
 def clave_publica():

@@ -6,9 +6,7 @@
   {% if puede_editar %}<div class="acciones"><a class="btn" href="/crm/prospectos/nuevo/">+ Nuevo prospecto</a></div>{% endif %}
 </div>
 {% if rol == "admin" %}
-<nav class="accesos" aria-label="Accesos directos del administrador">
-  <a href="/operacion/cuentas/"><b>Usuarios</b></a><a href="/operacion/stock/">Reponer stock</a><a href="/flota/">Flota y despacho</a><a href="/crm/alertas/">Alertas de frío</a><a href="/demo/">Modo demostración</a>{% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" rel="noopener">Panel BI en vivo<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}<a href="/operacion/">Operación del sistema</a><a href="/catalogo/">Tienda</a><a href="/portada/">Portada pública</a>
-</nav>
+<nav class="accesos-admin" aria-label="Accesos directos del administrador">Administración: <a href="/operacion/cuentas/">Usuarios</a> · <a href="/operacion/stock/">Reponer stock</a> · <a href="/operacion/">Operación del sistema</a></nav>
 {% endif %}
 <div class="rejilla">
   <div class="kpi-card acento"><div class="etiqueta">oportunidades abiertas</div><div class="valor">{{ ind.abiertos }}</div><div class="detalle">en el embudo</div></div>

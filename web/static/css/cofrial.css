@@ -1186,3 +1186,7 @@ td.cod, .cod { white-space: nowrap; }      /* códigos como CAM-02 no se parten 
 .sug-viaje { padding: 10px 0; border-top: 1px solid var(--borde); }
 .sug-viaje:first-child { border-top: 0; padding-top: 0; }
 .sug-viaje-txt { margin: 0 0 8px; font-weight: 600; }
+
+/* Panel del CRM (admin): una línea de texto en vez de una fila de píldoras que repetía la barra lateral */
+.accesos-admin { margin: -4px 0 18px; font-size: .9rem; color: var(--texto-2); }
+.accesos-admin a { font-weight: 600; padding: 10px 2px; display: inline-block; }

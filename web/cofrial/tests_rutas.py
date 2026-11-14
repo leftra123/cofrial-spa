@@ -289,7 +289,7 @@ class MenuPorRol(Base):
     def test_cada_rol_si_ve_lo_suyo(self):
         esperado = {"B2B": ('href="/pedidos/"', 'href="/carrito/"', 'href="/soporte/"', 'href="/avisos/"'), "vendedor": ('href="/crm/embudo/"', 'href="/crm/requerimientos/"'),
                     "gerencia": ('href="/crm/embudo/"', 'href="/flota/"'), "despachador": ('href="/flota/"', 'href="/crm/alertas/"'),
-                    "admin": ('href="/flota/"', 'href="/demo/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
+                    "admin": ('href="/flota/"', 'href="/operacion/"', 'href="/catalogo/"', 'href="/portada/"')}
         paginas = {"B2B": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
         for rol, enlaces in esperado.items():
             html = self.cliente(rol).get(paginas[rol]).content.decode()
@@ -312,7 +312,7 @@ class MenuPorRol(Base):
     def test_el_administrador_tiene_accesos_directos(self):
         html = self.cliente("admin").get("/crm/").content.decode()
         self.assertIn('aria-label="Accesos directos del administrador"', html)
-        for e in ('href="/flota/"', 'href="/demo/"', 'href="/operacion/"', 'href="/catalogo/"'):
+        for e in ('href="/flota/"', 'href="/operacion/"', 'href="/catalogo/"'):
             self.assertIn(e, html)
         self.assertNotIn("Accesos directos del administrador", self.cliente("vendedor").get("/crm/").content.decode())
 

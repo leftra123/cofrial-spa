@@ -10,8 +10,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux34">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux37">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux35">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux38">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -42,7 +42,7 @@
         </div>
       </div>{% endif %}
       {% include "componentes/tema_btn.html" %}
-      {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{{ inicio_url }}">Panel interno</a>{% endif %}
+      {% if menu.crm or menu.flota or menu.admin %}<a class="tb-interno" href="{{ inicio_url }}" title="Volver al panel de trabajo del equipo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Volver al panel</a>{% endif %}
       {% if user.is_authenticated %}
         <details class="tb-menu" id="tb-menu"><summary class="tb-menu-btn" aria-label="Mi cuenta">{% if cliente_tienda %}<span class="tb-perfil" title="{{ cliente_tienda.nombre }} · {{ cliente_tienda.tipo_cliente.codigo }}"><span class="tb-perfil-nombre">{{ cliente_tienda.nombre }}</span><span class="tb-perfil-tipo perfil-{{ cliente_tienda.tipo_cliente.codigo|lower }}"{% if cliente_tienda.tipo_cliente.codigo == 'B2C' %} title="Lista de precios: {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% elif cliente_tienda.tipo_cliente.codigo == 'B2B' %} title="Cliente institucional · lista {{ cliente_tienda.tipo_cliente.lista_precio.nombre }}"{% endif %}>{{ cliente_tienda.tipo_cliente.codigo }}</span></span>{% endif %}{% if not cliente_tienda %}<span class="tb-menu-txt">Mi cuenta</span>{% endif %}<svg viewBox="0 0 24 24" aria-hidden="true" class="tb-menu-flecha"><path d="M6 9l6 6 6-6"/></svg></summary>
           <div class="tb-menu-lista">
@@ -53,7 +53,7 @@
             <form method="post" action="/cuenta/salir/" class="tb-salir-form tb-menu-salir">{% csrf_token %}<input type="hidden" name="next" value="/cuenta/entrar/"><button type="submit" class="enlace tb-salir" aria-haspopup="dialog" aria-controls="salir-dialogo">Cerrar sesión</button></form>
           </div></details>
       {% else %}
-        <a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>
+        <a class="tb-crear" href="/cuenta/registro/">Crear cuenta</a><a class="tb-ingresar" href="/cuenta/entrar/">Ingresar</a>
       {% endif %}
     </div>
   </div>

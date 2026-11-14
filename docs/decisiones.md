@@ -690,3 +690,5 @@ De chatbot a agente. El asistente de la tienda ahora tiene identidad propia, **C
 - **Revisión como tabla propia** (`revision_camion`) y no como columna de `camion`: guarda quién, cuándo y por qué, y permite varias revisiones en el tiempo con una sola abierta (3FN).
 - **El cliente decide al recibir**: los escenarios de la demostración no confirman por él. Trade-off: la demostración ahora exige entrar como el cliente (o esperar el plazo, `CONFIRMACION_AUTO_SEG`).
 - **Torre de control solo para el equipo de consultoría**: la rúbrica y el «antes/ahora» son material interno, no de gerencia de Cofrial.
+
+- **Rupturas de frío solo en modo demostración (14-nov-2026).** `aws/provision.sh` escribía `PROB_RUPTURA=0.01` en la EC2 IoT (diez veces más que el 0.001 decidido antes): con 10 camiones y lecturas cada 5 s eran ~1,2 rupturas por minuto en la flota y el panel mostraba caídas todo el tiempo. Ahora AWS usa `PROB_RUPTURA=0` por defecto (variable `PROB_RUPTURA` en `secretos.env` para cambiarlo) y las rupturas se provocan desde `/demo/` con los escenarios.

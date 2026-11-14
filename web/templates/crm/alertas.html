@@ -15,11 +15,4 @@
 {% else %}<span class="chip pendiente">Sin avisar</span>{% endif %}</td></tr>
 {% empty %}{% if menu.flota %}{% include "componentes/vacio_estado.html" with cols=6 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." url="/flota/" accion="Ver la flota en vivo" %}{% else %}{% include "componentes/vacio_estado.html" with cols=6 ico="ok" titulo="Todo en rango" texto="Ningún pedido tuvo temperatura fuera de rango durante su viaje." %}{% endif %}{% endfor %}
 </tbody></table></div>
-{% if rol == "admin" %}<details class="limpiar-alertas">
-<summary>Limpiar alertas antiguas</summary>
-<form method="post" action="/crm/alertas/borrar/" data-carga>{% csrf_token %}
-  <p>{% if borrables %}Hay <b>{{ borrables }}</b> lectura{{ borrables|pluralize }} con alerta de frío de hace más de 10 minutos (sin contar las de demostración). Al borrarlas desaparecen las alertas de los pedidos y de los camiones que dependen de ellas. <b>No se puede deshacer.</b>{% else %}No hay lecturas con alerta antiguas que borrar.{% endif %}</p>
-  {% if borrables %}<label class="chk"><input type="checkbox" name="confirmar" value="1" required> Entiendo que se borran y no se puede deshacer</label>
-  <button class="btn-peligro" data-cargando="Borrando…">Borrar {{ borrables }} lectura{{ borrables|pluralize }}</button>{% endif %}
-</form></details>{% endif %}
 {% endblock %}

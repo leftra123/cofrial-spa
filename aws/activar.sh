@@ -12,6 +12,8 @@
 #   bash aws/activar.sh --clave-unica    # además pone UNA clave simple, igual para todos los usuarios activos (la pide sin mostrarla)
 #   bash aws/activar.sh --sin-clave-unica # no pregunta por la clave única (para correrlo sin terminal)
 #   bash aws/activar.sh --abrir-ssh      # permite abrir el puerto 22 solo para tu IP mientras se pone la clave única (se cierra al terminar)
+#   bash aws/activar.sh --confiar-huella # si AWS ya no guarda la huella de la web (tras detener y encender), acepta la que responde y la guarda
+#   bash aws/activar.sh --arreglar-alarmas # reapunta las alarmas de CPU desfasadas a las instancias vivas (si no, pregunta; ver aws/reaplicar-alarmas-cpu.sh)
 #
 # Variables opcionales: COFRIAL_ESTADO (carpeta .estado vigente), DOMINIO_HTTPS (si no está en secretos.env), ESPERA_SEG (espera máxima al balanceador, 900).
 # Es idempotente: con todo ya encendido, solo verifica. No cierra accesos ni toca alarmas; si las alarmas apuntan a instancias que ya no existen, lo avisa.
@@ -22,8 +24,9 @@ export AWS_DEFAULT_REGION="${AWS_REGION:-us-east-1}"
 P=cofrial
 CRED="${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}"
 PROVISION="${PROVISION:-$AQUI/provision.sh}"      # sobrescribible para las pruebas
+REAPUNTAR="${REAPLICAR_ALARMAS:-$AQUI/reaplicar-alarmas-cpu.sh}"
 ESPERA_SEG="${ESPERA_SEG:-900}"; INTERVALO="${INTERVALO:-15}"
-PEGAR=0; SOLO_VERIFICAR=0; CLAVE_UNICA=0; PREGUNTAR_CLAVE=1; ABRIR_SSH=0
+PEGAR=0; SOLO_VERIFICAR=0; CLAVE_UNICA=0; PREGUNTAR_CLAVE=1; ABRIR_SSH=0; ARREGLAR_ALARMAS=0; CONFIAR_HUELLA=0
 for a in "$@"; do
   case "$a" in
     --pegar) PEGAR=1;;
@@ -31,8 +34,10 @@ for a in "$@"; do
     --clave-unica) CLAVE_UNICA=1;;
     --sin-clave-unica) PREGUNTAR_CLAVE=0;;
     --abrir-ssh) ABRIR_SSH=1;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0;;
-    *) echo "Opción desconocida: $a (usa --pegar, --solo-verificar, --clave-unica, --sin-clave-unica, --abrir-ssh o --help)"; exit 2;;
+    --confiar-huella) CONFIAR_HUELLA=1;;
+    --arreglar-alarmas) ARREGLAR_ALARMAS=1;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0;;
+    *) echo "Opción desconocida: $a (usa --pegar, --solo-verificar, --clave-unica, --sin-clave-unica, --abrir-ssh, --confiar-huella, --arreglar-alarmas o --help)"; exit 2;;
   esac
 done
 
@@ -147,7 +152,14 @@ VIVAS="$(aws ec2 describe-instances --filters "Name=tag:Name,Values=${P}-*" "Nam
 DE_ALARMAS="$(aws cloudwatch describe-alarms --alarm-name-prefix "$P" --query "MetricAlarms[?Namespace=='AWS/EC2'].Dimensions[0].Value" --output text 2>/dev/null || true)"
 VIVAS="$(echo $VIVAS)"      # la CLI separa con tabuladores; con espacios simples el «case» de abajo reconoce cada ID
 HUERFANAS=0; for id in $DE_ALARMAS; do case " $VIVAS " in *" $id "*) ;; *) HUERFANAS=$((HUERFANAS+1));; esac; done
-if [ "$HUERFANAS" -gt 0 ]; then nota "$HUERFANAS alarma(s) de CPU apuntan a instancias que ya no existen: bash aws/endurecer.sh alarmas --aplicar (pregunta antes de cada comando)"
+if [ "$HUERFANAS" -gt 0 ]; then
+  nota "$HUERFANAS alarma(s) de CPU apuntan a instancias que ya no existen (un recrear-web cambió sus IDs y la alarma sin datos nunca avisa)."
+  r_al=""
+  if [ "$ARREGLAR_ALARMAS" = 1 ]; then r_al=s
+  elif [ -t 0 ]; then read -r -p "  ¿Reapuntarlas ahora a las instancias vivas? [s/N] " r_al || true; fi
+  if [ "$r_al" = s ] || [ "$r_al" = S ]; then
+    if bash "$REAPUNTAR" --aplicar | sed 's/^/  /'; then ok "alarmas de CPU reapuntadas a las instancias vivas"; else mal "no pude reapuntar las alarmas: prueba bash aws/endurecer.sh alarmas --aplicar (pregunta antes de cada comando)"; fi
+  else nota "para arreglarlas: bash aws/reaplicar-alarmas-cpu.sh --aplicar (o repite esto con --arreglar-alarmas)"; fi
 else ok "las alarmas de CPU apuntan a las instancias vivas"; fi
 ALARMADAS="$(aws cloudwatch describe-alarms --alarm-name-prefix "$P" --state-value ALARM --query 'MetricAlarms[].AlarmName' --output text 2>/dev/null || true)"
 [ -n "$ALARMADAS" ] && nota "en ALARMA ahora: $ALARMADAS"
@@ -180,15 +192,36 @@ poner_clave_unica() {
   read -r id_web ip_web < <(aws ec2 describe-instances --filters "Name=tag:Name,Values=${P}-ec2-web" "Name=instance-state-name,Values=running" \
       --query 'Reservations[0].Instances[0].[InstanceId,PublicIpAddress]' --output text 2>/dev/null || echo "None None")
   { [ -n "${ip_web:-}" ] && [ "$ip_web" != None ]; } || { echo "  La web A no está encendida: no puedo conectarme."; return 1; }
-  # La huella de la máquina sale de la consola de EC2 (AWS la imprime al crearla): se verifica de verdad, sin desactivar la comprobación.
-  clavehost="$(aws ec2 get-console-output --instance-id "$id_web" --latest --query Output --output text 2>/dev/null | grep -E '^ssh-ed25519 ' | head -1 | awk '{print $1" "$2}' || true)"
-  [ -n "$clavehost" ] || { echo "  AWS no me dio la huella de la máquina; no me conecto sin verificarla."; return 1; }
+  # La huella de la máquina se verifica, no se desactiva la comprobación. Fuentes, en orden: (1) la huella ya guardada para ESTA instancia en la carpeta
+  # de estado; (2) la salida de consola de EC2 (AWS la imprime solo la primera vez que arranca la instancia: tras detener y encender el laboratorio ya
+  # no está); (3) la que responde ahora, solo si tú lo aceptas (pregunta o --confiar-huella) y entonces se guarda para las próximas veces.
+  local pin="${COFRIAL_ESTADO}/huellas-ssh/${id_web}.pub" escaneo fp
+  guardar_huella() { mkdir -p "$(dirname "$pin")" && printf '%s\n' "$clavehost" > "$pin" && chmod 600 "$pin"; }
+  if [ -s "$pin" ]; then clavehost="$(cat "$pin")"; echo "  Huella: la guardada para esta instancia."
+  else
+    clavehost="$(aws ec2 get-console-output --instance-id "$id_web" --latest --query Output --output text 2>/dev/null | grep -E '^ssh-ed25519 ' | head -1 | awk '{print $1" "$2}' || true)"
+    if [ -n "$clavehost" ]; then echo "  Huella: la de la salida de consola de EC2 (guardada para las próximas veces)."; guardar_huella
+    else
+      escaneo="$(ssh-keyscan -T 8 -t ed25519 "$ip_web" 2>/dev/null | awk '!/^#/ {print $2" "$3}' | head -1 || true)"
+      [ -n "$escaneo" ] || { echo "  AWS no me dio la huella de la máquina y ella no la entregó (¿puerto 22 cerrado para tu IP?): no me conecto sin verificarla."; return 1; }
+      fp="$(echo "$ip_web $escaneo" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}')"
+      echo "  AWS ya no guarda la huella de esta máquina (se reinició): solo la imprime la primera vez que arranca. La que responde ahora es ${fp:-desconocida}."
+      r=""
+      if [ "$CONFIAR_HUELLA" = 1 ]; then r=s
+      elif [ -t 0 ]; then read -r -p "  Sin otra fuente para compararla, ¿confiar en ella y guardarla para las próximas veces? [s/N] " r; fi
+      if [ "$r" != s ] && [ "$r" != S ]; then echo "  AWS no me dio la huella de la máquina; no me conecto sin verificarla (usa --confiar-huella si aceptas la que responde)."; return 1; fi
+      clavehost="$escaneo"; guardar_huella; echo "  Huella aceptada y guardada en $pin."
+    fi
+  fi
   kh="$(mktemp)"; echo "$ip_web $clavehost" > "$kh"
   local OPT=(-i "$key" -o ConnectTimeout=10 -o BatchMode=yes -o UserKnownHostsFile="$kh" -o StrictHostKeyChecking=yes -o LogLevel=ERROR)
-  if ssh "${OPT[@]}" "ubuntu@$ip_web" true </dev/null 2>/dev/null; then alcanza=1; else
+  # Tu IP de salida puede cambiar entre conexiones (el proveedor reparte varias) y solo algunas están en la lista del puerto 22: se reintenta.
+  local N="${REINTENTOS_SSH:-6}"
+  probar_ssh() { local k; for k in $(seq 1 "$N"); do ssh "${OPT[@]}" "ubuntu@$ip_web" true </dev/null 2>/dev/null && return 0; if [ "$k" -lt "$N" ]; then sleep "${INTERVALO_SSH:-4}"; fi; done; return 1; }
+  if probar_ssh; then alcanza=1; else
     mi_ip="$(curl -s -m 8 https://checkip.amazonaws.com 2>/dev/null | tr -d '[:space:]')"
     sg="$(aws ec2 describe-security-groups --filters "Name=group-name,Values=${P}-sg-web" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo None)"
-    echo "  El puerto 22 de la web no responde desde tu IP (${mi_ip:-desconocida}): la lista de IPs permitidas no la incluye."
+    echo "  El puerto 22 de la web no respondió en $N intentos desde tu IP (${mi_ip:-desconocida}): la lista de IPs permitidas no la incluye, o tu IP de salida cambia entre conexiones."
     r=""
     if [ "$ABRIR_SSH" = 1 ]; then r=s
     elif [ -t 0 ]; then read -r -p "  ¿Abrir el puerto 22 de ${P}-sg-web solo para ${mi_ip:-tu IP}/32 mientras dure este paso (se cierra al terminar)? [s/N] " r; fi
@@ -196,15 +229,20 @@ poner_clave_unica() {
       if [ -z "$mi_ip" ] || [ "$sg" = None ]; then echo "  No pude saber tu IP o el grupo de seguridad."; rm -f "$kh"; return 1; fi
       aws ec2 authorize-security-group-ingress --group-id "$sg" --protocol tcp --port 22 --cidr "$mi_ip/32" >/dev/null 2>&1 || true
       SG_ABIERTO="$sg"; CIDR_ABIERTO="$mi_ip/32"; echo "  Puerto 22 abierto para $CIDR_ABIERTO."
-      for i in 1 2 3 4; do sleep "${INTERVALO_SSH:-4}"; if ssh "${OPT[@]}" "ubuntu@$ip_web" true </dev/null 2>/dev/null; then alcanza=1; break; fi; done
+      sleep "${INTERVALO_SSH:-4}"; if probar_ssh; then alcanza=1; fi
     else
       echo "  Para abrirlo tú: aws ec2 authorize-security-group-ingress --group-id ${sg} --protocol tcp --port 22 --cidr ${mi_ip:-TU_IP}/32   (y ciérralo después con revoke-security-group-ingress), o repite con --abrir-ssh."
     fi
   fi
   [ "$alcanza" = 1 ] || { echo "  No pude conectarme por SSH: no se cambió ninguna clave."; rm -f "$kh"; cerrar_ssh_abierto; return 1; }
+  # El comando real también se reintenta si la conexión misma falla (código 255): la clave solo se envía por conexiones que llegaron a abrirse.
+  for i in $(seq 1 "$N"); do
   set +e
   salida="$(printf '%s\n' "$c1" | ssh "${OPT[@]}" "ubuntu@$ip_web" 'cd /opt/cofrial && sudo docker compose -f aws/docker-compose.web.yml --env-file .env exec -T web python manage.py cambiar_clave_demo --clave-stdin --todos-los-activos --permitir-clave-debil' 2>&1)"; rc=$?
   set -e
+  if [ "$rc" != 255 ]; then break; fi
+  if [ "$i" -lt "$N" ]; then echo "  La conexión falló (intento $i de $N); reintento..."; sleep "${INTERVALO_SSH:-4}"; fi
+  done
   rm -f "$kh"; cerrar_ssh_abierto
   echo "$salida" | sed 's/^/  /'
   [ "$rc" = 0 ] || { echo "  El comando falló (código $rc): puede que no se haya cambiado ninguna clave."; return 1; }

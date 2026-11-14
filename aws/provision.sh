@@ -449,7 +449,7 @@ cat <<R
     Dominio    : apuntar ${DOMINIO_HTTPS:-el dominio} al DNS del balanceador (CNAME/ALIAS) y, cuando abra por el dominio, ejecutar: bash aws/provision.sh cerrar-acceso-directo
     Panel BI   : http://$ALB_DNS/bi/   (con sesión de la aplicación: administración edita, gerencia mira; el puerto 3000 no está abierto)
     Verificar  : curl -L http://$ALB_DNS/health   y   python3 aws/verificar.py
-    Endurecer  : bash aws/endurecer.sh revisar   (y, tras cada recrear-web o recrear-iot: bash aws/endurecer.sh alarmas --aplicar)
+    Endurecer  : bash aws/endurecer.sh revisar   (las alarmas de CPU se reapuntan solas tras recrear-web y recrear-iot; si fallara: bash aws/endurecer.sh alarmas --aplicar)
     Base       : RDS Multi-AZ=$(aws rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].MultiAZ' --output text)  (zona de respaldo: $(aws rds describe-db-instances --db-instance-identifier "${P}-db" --query 'DBInstances[0].SecondaryAvailabilityZone' --output text))
     SSH web A  : ssh -i $ESTADO/${P}-key.pem ubuntu@$IP_WEB_A   (primaria: migra la base, podador y despachador)
     SSH web B  : ssh -i $ESTADO/${P}-key.pem ubuntu@$IP_WEB_B   (secundaria)
@@ -458,3 +458,11 @@ cat <<R
     Prueba de caída: bash aws/provision.sh estado; apagar una web desde la consola de EC2 y comprobar que http://$ALB_DNS/salud/ sigue respondiendo.
     Al terminar la sesión del laboratorio las EC2 se apagan; al encender (bash aws/provision.sh encender), los contenedores vuelven solos.
 R
+
+# Las alarmas de CPU se atan al ID de cada EC2: tras recrear-web o recrear-iot quedarían apuntando a máquinas que ya no existen y, sin datos, nunca
+# avisarían. Se reapuntan solas (solo las que ya existen; no crea alarmas nuevas). Si falla, no se corta nada: queda el comando manual.
+case "${1:-}" in
+  recrear-web|recrear-iot)
+    log "Reapuntando las alarmas de CPU a las instancias nuevas"
+    bash "$(cd "$(dirname "$0")" && pwd)/reaplicar-alarmas-cpu.sh" --aplicar || echo "AVISO: no pude reapuntar las alarmas de CPU; usa: bash aws/endurecer.sh alarmas --aplicar";;
+esac

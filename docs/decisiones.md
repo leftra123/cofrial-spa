@@ -504,6 +504,11 @@ Volver atrás: `DJANGO_HTTPS=0` y `80:8000` en `web`. No se comprobó si sslip.i
 - **Límite que queda:** quien ya tiene sesión desde una IP bloqueada tampoco navega hasta que vence la ventana (el contador se evalúa antes de saber quién es). Si en la sala pasara, reiniciar la web limpia los contadores (viven en memoria).
 - **Pruebas:** `cofrial/tests_seguridad.py`, `BarridoDeRutasTests` (el ingreso responde y entra durante el bloqueo; el límite de claves malas se mantiene).
 
+## La clave única admite 3 intentos y explica el desajuste (13-nov-2026)
+- **Problema:** dos corridas seguidas de `--clave-unica` terminaron en «No coinciden: no se cambió nada», y cada corrida repetía el encendido y la verificación antes de volver a pedir la clave. El campo oculto no deja ver qué se tecleó.
+- **Decisión:** hasta 3 intentos en la misma corrida; cada desajuste muestra el largo de cada entrada y avisa si hay caracteres no imprimibles, sin mostrar las claves. Con 3 desajustes, no se cambia nada.
+- **Prueba:** `aws/test_activar.sh` caso 24, dentro de un terminal simulado (`script`), tecleando con pausas porque el terminal descarta lo que llega antes de la pregunta; se omite si ese terminal no responde.
+
 ## Huella SSH que sobrevive al reinicio del laboratorio (13-nov-2026)
 - **Problema:** `activar.sh --clave-unica` se negó a conectar («AWS no me dio la huella de la máquina») tras un cierre del laboratorio. La huella la tomaba de la salida de consola de EC2, pero AWS solo la imprime la primera vez que arranca la instancia: después de detener y encender ya no está (comprobado: 0 líneas `ED25519` en la salida actual). Tampoco hay SSM ni perfil IAM como otra vía.
 - **Decisión:** la huella se guarda por instancia en la carpeta de estado (`huellas-ssh/<id>.pub`) cuando se obtiene de la consola, y se reutiliza. Si no hay ninguna, se puede aceptar la que responde (pregunta o `--confiar-huella`), mostrando su `SHA256`; se guarda y desde entonces se verifica. La conexión sigue siendo con `StrictHostKeyChecking=yes`.

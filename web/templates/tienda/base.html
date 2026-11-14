@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux24">
-  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux24">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}?v=ux25">
   {% block cabeza %}{% endblock %}
 </head>
 <body class="tienda" data-u="{{ user.pk|default:'' }}">
@@ -75,7 +75,7 @@
   <nav aria-label="Pie de página"><a href="/catalogo/">Catálogo</a><a href="/seguimiento/">Seguir mi pedido</a><a href="/soporte/">Soporte</a></nav>
   <div>Prototipo académico INACAP Temuco</div></div>
   <div class="t-pie-legal">
-    <nav aria-label="Información legal"><a href="/legal/privacidad/">Privacidad</a><a href="/legal/terminos/">Términos y condiciones</a><a href="/legal/devoluciones/">Devoluciones</a><a href="/legal/cookies/">Cookies</a><a href="/legal/licencias/">Créditos y licencias</a>{% if menu.cliente %}<a href="/cuenta/mis-datos/">Mis datos</a>{% endif %}</nav>
+    <nav aria-label="Información legal"><a href="/legal/privacidad/">Privacidad</a><a href="/legal/terminos/">Términos y condiciones</a><a href="/legal/devoluciones/">Devoluciones</a><a href="/legal/cookies/">Cookies</a><a href="/legal/licencias/">Créditos y licencias</a>{% if menu.cliente %}<a href="/cuenta/mis-datos/">Mis datos</a>{% endif %}{% if user.is_authenticated %}<a class="solo-movil" href="/cuenta/clave/">Mi clave</a>{% endif %}{% if menu.crm or menu.cliente %}<button type="button" class="enlace solo-movil" data-permisos-abrir>Permisos</button>{% endif %}</nav>
     <p>Cofrial SpA · Frigorífico y distribución en cadena de frío · La Araucanía, Chile. Contacto y reclamos: <a href="/soporte/">Soporte</a>. Caso de estudio con datos ficticios.</p>
   </div></footer>
 <div class="aviso-cookies" id="aviso-cookies" role="region" aria-label="Aviso de cookies" hidden>

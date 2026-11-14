@@ -1604,3 +1604,11 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 
 .linea-info h3 a { color: var(--texto); }
 .filtros-multi { display: block; font-size: .78rem; font-weight: 400; color: var(--texto-3); margin-top: 2px; }
+
+/* celular: el encabezado no se apila. Arriba quedan logo, campana, tema y salir; «Mi clave» y «Permisos» pasan al pie, junto a «Mis datos». */
+.t-pie .solo-movil { display: none; }
+@media (max-width: 600px) {
+  .tb-cuenta .tb-clave, .tb-cuenta .tb-permisos, .tb-cuenta .tb-perfil-nombre { display: none !important; }
+  .tb-cuenta { flex-wrap: nowrap !important; }
+  .t-pie .solo-movil { display: inline-flex; align-items: center; min-height: 44px; }
+}

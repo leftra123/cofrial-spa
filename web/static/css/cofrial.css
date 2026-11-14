@@ -210,7 +210,7 @@ td.vacio { text-align: center; color: var(--texto-3); padding: 40px 20px; }
 .chip.cancelado { background: var(--cancelado-bg); color: var(--cancelado-fg); }
 .chip.alerta, .alerta { background: var(--alerta-bg); color: var(--alerta-fg); }
 .chip.sin-punto::before { display: none; }
-.alerta { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.alerta { display: inline-block; padding: 3px 11px; border-radius: 10px; font-size: .78rem; font-weight: 600; line-height: 1.35; }     /* etiqueta roja suelta: con texto largo no se vuelve un óvalo */
 .rechazo-crm { display: block; margin-top: 4px; min-width: 240px; max-width: 44ch; white-space: normal; overflow-wrap: anywhere; font-size: .85rem; color: var(--alerta-fg); }
 
 /* ---------- pestañas con contador ---------- */
@@ -1147,3 +1147,4 @@ button.demo-opcion span { display: block; }
 .usuario-menu a.enlace, .usuario-menu button.enlace { display: block; padding: 3px 0 3px 10px; }
 .lateral .subnav-2::before { content: attr(aria-label); display: block; padding: 4px 10px 2px; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--texto-3); }
 .lateral .subnav-2 { margin-top: -4px; }
+td.cod, .cod { white-space: nowrap; }      /* códigos como CAM-02 no se parten en el guion */

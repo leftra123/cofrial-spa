@@ -273,4 +273,4 @@ MERCADOPAGO_PUBLIC_KEY = entorno("MERCADOPAGO_PUBLIC_KEY", "")
 MERCADOPAGO_PUBLIC_URL = entorno("MERCADOPAGO_PUBLIC_URL", "")
 # Correo del comprador de prueba (panel de Mercado Pago). Obligatorio si el cliente usa un correo .test.
 MERCADOPAGO_PAYER_EMAIL = entorno("MERCADOPAGO_PAYER_EMAIL", "")
-MP_EMULADOR = entorno("MP_EMULADOR", "1") != "0"      # sin claves de Mercado Pago el carrito ofrece un emulador del pago con tarjeta; MP_EMULADOR=0 lo apaga
+MP_EMULADOR = entorno("MP_EMULADOR", "1")      # 1: sin claves de Mercado Pago el carrito ofrece un emulador del pago con tarjeta; 0: lo apaga; forzar: emulador aunque haya claves (para no depender de Mercado Pago)

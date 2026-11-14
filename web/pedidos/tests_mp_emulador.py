@@ -105,3 +105,17 @@ class EmuladorTests(Base):
         with override_settings(**REALES):
             self.assertFalse(mp.emulador())
             self.assertTrue(mp.activo())
+
+
+class EmuladorForzadoTests(Base):
+    def test_forzar_reemplaza_al_formulario_real_aunque_haya_credenciales(self):
+        s.agregar(self.ana, self.lomo.pk, 1)
+        self.entrar()
+        with override_settings(**REALES, MP_EMULADOR="forzar"):
+            html = self.client.get("/carrito/").content.decode()
+            self.assertIn('id="mp-emu-abrir"', html)
+            self.assertNotIn("mp-mostrar-pago", html)
+            self.assertEqual(self.pagar("APRO").status_code, 200)                         # el emulador responde y crea el pedido
+        s.agregar(self.ana, self.lomo.pk, 1)
+        with override_settings(**REALES, MP_EMULADOR="1"):
+            self.assertIn("mp-mostrar-pago", self.client.get("/carrito/").content.decode())   # sin forzar, con credenciales manda el real

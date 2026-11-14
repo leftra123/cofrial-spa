@@ -119,3 +119,5 @@ Sin `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_PUBLIC_KEY`, el carrito ya no se q
 - No sale nada a internet y no se cobra. Con credenciales reales el emulador desaparece y se ve el Brick; `MP_EMULADOR=0` lo apaga aunque no haya credenciales.
 - Los rechazos se explican en español (`DETALLES_DE_RECHAZO`), también en el pago real.
 - Pruebas: `pedidos/tests_mp_emulador.py` (aprobado, rechazado, titular inventado, institución con factura, y que solo aparezca sin credenciales).
+
+**Forzar el emulador (`MP_EMULADOR=forzar`).** Con credenciales reales el carrito usa el formulario de Mercado Pago, que depende de su red y de tarjetas de prueba. Para una defensa donde no se puede fallar, `MP_EMULADOR=forzar` pone el emulador aunque haya credenciales (`1` = automático, `0` = apagado). En AWS: agregar `MP_EMULADOR=forzar` a `secretos.env` (con `printf '\nMP_EMULADOR=forzar\n' >>`) y correr `recrear-web`; `provision.sh` y el compose ya pasan la variable.

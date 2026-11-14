@@ -1131,4 +1131,4 @@ button.demo-opcion span { display: block; }
 .tabla-caja:not(.texto) td:first-child:not([colspan]), .tabla-caja:not(.texto) td:nth-child(2):not(:last-child) { white-space: nowrap; }
 .tabla-caja td[colspan] { white-space: normal; }
 /* la acción de cada fila (Emitir, Editar, Avanzar) queda a la vista aunque la tabla sea más ancha que la pantalla */
-.tabla-caja td:last-child:has(.btn, button, a.btn) { position: sticky; right: 0; background: var(--tarjeta); box-shadow: -10px 0 8px -8px rgba(15, 23, 42, .18); }
+.tabla-caja td:last-child:has(.btn, button, a.btn):not(:has(input:not([type=hidden]), select, textarea)) { position: sticky; right: 0; background: var(--tarjeta); box-shadow: -10px 0 8px -8px rgba(15, 23, 42, .18); }

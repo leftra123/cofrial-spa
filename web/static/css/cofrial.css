@@ -1148,3 +1148,10 @@ button.demo-opcion span { display: block; }
 .lateral .subnav-2::before { content: attr(aria-label); display: block; padding: 4px 10px 2px; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--texto-3); }
 .lateral .subnav-2 { margin-top: -4px; }
 td.cod, .cod { white-space: nowrap; }      /* códigos como CAM-02 no se parten en el guion */
+
+/* áreas táctiles de 44 px donde la auditoría de celular las encontró chicas (enlaces del encabezado, zoom del mapa, enlaces dentro de tablas y tarjetas) */
+@media (max-width: 700px) {
+  .tb-nav a { display: inline-flex; align-items: center; min-height: 40px; }
+  .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+  .tabla-caja td a:not(.btn), .kpi-card a { display: inline-block; padding: 12px 0; }
+}

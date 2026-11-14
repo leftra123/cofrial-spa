@@ -1629,3 +1629,7 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .tb-menu-lista a:hover, .tb-menu-lista button.enlace:hover { background: var(--fondo-2); }
 @media (max-width: 600px) { .tb-menu .tb-perfil-nombre { display: none; } .tb-menu > summary { padding: 6px 8px; } .tb-menu-txt { display: inline; } }
 .tb-menu-lista button.enlace:not(#mp-brick-container button) { width: 100%; justify-content: flex-start; text-decoration: none; background: none; border: 0; font: inherit; font-size: .95rem; color: var(--texto); cursor: pointer; }
+/* cerrar sesión: dentro de «Mi cuenta», separado del resto (una acción que saca de la sesión no va junto a los atajos del día a día) */
+.tb-menu-salir { margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--borde); }
+.tb-menu-lista .tb-menu-salir button.enlace { color: var(--alerta-fg, var(--texto)); }
+.tb-menu-lista button.enlace:not(#mp-brick-container button) { padding: 6px 12px; min-height: 40px; display: flex; align-items: center; }

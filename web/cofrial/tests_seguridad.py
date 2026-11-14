@@ -60,7 +60,7 @@ class AccesoAnonimoTests(BaseSeguridad):
                      "/crm/alertas/1/avisar/", "/crm/prospectos/nuevo/", "/crm/prospectos/1/mover/", "/crm/prospectos/1/interaccion/", "/crm/clientes/1/interaccion/",
                      "/crm/clientes/1/pedido/", "/crm/clientes/1/direccion/", "/crm/requerimientos/1/ia/", "/crm/requerimientos/1/clasificar/", "/crm/requerimientos/1/resolver/", "/flota/despachar/",
                      "/flota/despachar/ubicar/1/", "/carrito/agregar/", "/carrito/actualizar/", "/carrito/repetir/", "/carrito/confirmar/",
-                     "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/flota/camion/CAM-01/revision/", "/demo/pulso/", "/demo/pedido-cercano/", "/demo/apagar/", "/demo/tiempo/", "/demo/limpiar/",
+                     "/pedidos/1/cancelar/", "/soporte/", "/flota/viajes/1/cerrar/", "/flota/camion/CAM-01/revision/", "/demo/pulso/", "/demo/pedido-cercano/", "/demo/preparar/", "/demo/apagar/", "/demo/tiempo/", "/demo/limpiar/",
                      "/pedidos/1/oc/", "/bi/x", "/carrito/direccion/", "/carrito/mp/emulador/", "/crm/ordenes/1/cancelar/", "/crm/ordenes/1/factura/", "/crm/documentos/1/pago/", "/crm/documentos/1/nota-credito/", "/crm/solicitudes/1/aprobar/", "/crm/solicitudes/1/rechazar/", "/carrito/mp/pagar/", "/operacion/stock/1/sumar/", "/operacion/cuentas/nueva/", "/operacion/cuentas/1/clave/", "/operacion/clientes/1/cuenta/", "/flota/escenarios/interpretar/", "/flota/escenarios/activar/", "/flota/escenarios/cancelar/", "/flota/despacho-auto/correr/"]
 
     def test_las_pantallas_privadas_mandan_a_iniciar_sesion(self):

@@ -129,3 +129,15 @@ def pedido_cercano(request):
     except pedido_demo.ErrorPedidoDemo as e:
         return JsonResponse({"detail": str(e)}, status=400)
     return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
+
+
+@require_POST
+@con_rol("admin")
+def preparar_demo(request):
+    """Un clic: pedidos cercanos, despachados en camiones sanos y con «Pedido bueno» activo, para que la demostración parta con entregas sin problemas."""
+    if request.POST.get("confirmar") != "1":
+        return JsonResponse({"detail": "Hay que confirmar para preparar la demostración."}, status=400)
+    datos = pedido_demo.preparar(request.user)
+    if not datos["viajes"]:
+        return JsonResponse({"detail": " ".join(datos["omitidos"]) or "No se pudo preparar nada."}, status=400)
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})

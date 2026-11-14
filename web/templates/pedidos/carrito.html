@@ -10,7 +10,7 @@
 </div>
 {% endblock %}
 {% block contenido %}
-{% if filas %}
+{% if filas %}{% include "componentes/camino.html" with paso=2 %}
 {% if sin_stock %}<p class="aviso warning" role="alert">{% if sin_stock|length == 1 %}Un producto de tu carrito supera el stock disponible{% else %}{{ sin_stock|length }} productos de tu carrito superan el stock disponible{% endif %}. Ajusta la cantidad o quítalo para poder generar la orden.</p>{% endif %}
 <div class="carro">
   <div class="carro-lineas">

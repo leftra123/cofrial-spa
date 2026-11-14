@@ -37,3 +37,31 @@ def crear(rango):
                 orden = s.avanzar(orden)
             return {"orden": orden.pk, "cliente": cliente.nombre, "comuna": d.comuna.nombre, "rango": rango, "producto": p.nombre}
     raise ErrorPedidoDemo("Ningún cliente cercano está libre para un pedido de prueba (todos tienen algo en el carrito).")
+
+
+PLAN_DE_PREPARACION = ("Refrigerado", "Congelado", "Refrigerado")        # tres entregas cercanas, en camiones distintos
+
+
+def preparar(usuario):
+    """Deja la demostración andando con un solo clic: crea pedidos cercanos, los despacha en camiones libres y sanos y pide «Pedido bueno» para
+    cada viaje (sin rupturas de frío; el cliente decide al recibir). Devuelve qué hizo y lo que no pudo."""
+    from . import escenarios, servicios, sugerencias
+    hechos, omitidos = [], []
+    for rango in PLAN_DE_PREPARACION:
+        try:
+            pedido = crear(rango)
+        except ErrorPedidoDemo as e:
+            omitidos.append(str(e))
+            continue
+        camion = next((c for c in sugerencias.opciones_camion() if c["apto_auto"] and rango in c["rangos"]), None)
+        if camion is None:
+            omitidos.append(f"El pedido N.º {pedido['orden']} quedó listo, pero no hay un camión {rango.lower()} libre y sano para despacharlo.")
+            continue
+        try:
+            despacho = servicios.despachar(camion["id"], [pedido["orden"]])
+            escenarios.crear(escenarios.validar({"tipo": "entrega_perfecta", "despacho_id": despacho.despacho_id}), usuario, "boton")
+        except (s.ErrorDeNegocio, escenarios.ErrorEscenario) as e:
+            omitidos.append(f"Pedido N.º {pedido['orden']}: {' '.join(getattr(e, 'mensajes', [str(e)]))}")
+            continue
+        hechos.append({**pedido, "camion": camion["id"], "despacho": despacho.despacho_id})
+    return {"viajes": hechos, "omitidos": omitidos}

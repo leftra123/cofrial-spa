@@ -1649,3 +1649,24 @@ body:has(.portada-hero) .tb-buscar { display: none; }
   .aviso-cookies p { font-size: .78rem; line-height: 1.35; }
   .aviso-cookies button { min-height: 44px; padding: 0 14px; }
 }
+
+/* camino de compra (componentes/camino.html): el paso actual destaca y el resto queda en gris */
+.camino { margin: 0 0 20px; }
+.camino ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; counter-reset: none; }
+.camino li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 14px; background: var(--tarjeta); color: var(--texto-3); min-width: 0; }
+.camino li:not(.actual):not(.hecho) { opacity: .55; }
+.camino li.hecho { opacity: .8; }
+.camino li.actual { border-color: var(--lima, #BDE63A); box-shadow: 0 0 0 2px var(--lima, #BDE63A); color: var(--texto); background: var(--tarjeta); }
+.camino-n { flex: none; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--borde-fuerte); color: var(--texto); font-weight: 700; font-size: .85rem; }
+.camino li.actual .camino-n { background: var(--lima, #BDE63A); color: #0B1A33; }
+.camino li.hecho .camino-n { background: var(--entregado-bg, #D1FADF); color: var(--entregado-fg, #065F46); }
+.camino-t { display: grid; min-width: 0; line-height: 1.25; }
+.camino-t b { font-size: .95rem; }
+.camino-t small { font-size: .78rem; color: var(--texto-3); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 700px) {
+  .camino ol { grid-template-columns: repeat(4, auto); justify-content: space-between; }
+  .camino li { padding: 6px 8px; gap: 6px; }
+  .camino li:not(.actual) .camino-t { display: none; }          /* en celular solo el paso actual muestra su nombre */
+  .camino li.actual { grid-column: auto; }
+  .camino li.actual .camino-t small { display: none; }
+}

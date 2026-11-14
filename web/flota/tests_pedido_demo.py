@@ -48,3 +48,29 @@ class PedidoCercano(TestCase):
         n = s.lineas_en_carrito(hospital)
         self.post("admin@cofrial.cl")
         self.assertEqual(s.lineas_en_carrito(hospital), n)
+
+
+class Preparar(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("cargar_demo", verbosity=0)
+
+    def test_deja_viajes_en_curso_con_pedido_bueno_y_sin_rupturas(self):
+        from flota.models import Camion, Despacho, EscenarioSimulador, Telemetria
+        for c in Camion.objects.select_related('rango_temperatura'):                    # como en vivo: todos los camiones reportan, sanos y con combustible
+            r = c.rango_temperatura
+            Telemetria.objects.create(camion=c, temp_camara=(float(r.temp_min_c) + float(r.temp_max_c)) / 2, lat=-38.73, long=-72.6, combustible_pct=80, alerta_ruptura_frio=False)
+        self.assertTrue(self.client.login(username="admin@cofrial.cl", password=CLAVE))
+        self.assertEqual(self.client.post("/demo/preparar/", {}).status_code, 400)               # sin confirmar no hace nada
+        r = self.client.post("/demo/preparar/", {"confirmar": "1"})
+        self.assertEqual(r.status_code, 200, r.content)
+        datos = r.json()
+        self.assertTrue(1 <= len(datos["viajes"]) <= 3)
+        for v in datos["viajes"]:
+            d = Despacho.objects.get(pk=v["despacho"])
+            self.assertIsNone(d.regreso_en)
+            e = EscenarioSimulador.objects.get(despacho=d)
+            self.assertEqual((e.tipo, e.estado), ("entrega_perfecta", "pendiente"))
+            self.assertEqual(Orden.objects.get(pk=v["orden"]).estado_orden.nombre, "Despachada")
+        camiones = [v["camion"] for v in datos["viajes"]]
+        self.assertEqual(len(camiones), len(set(camiones)))                                      # cada viaje, su camión

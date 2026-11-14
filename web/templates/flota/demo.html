@@ -7,6 +7,12 @@
 </div>
 {% endblock %}
 {% block contenido %}
+<section class="tarjeta-ui demo-paso demo-listo" aria-labelledby="d-t00">
+  <h2 id="d-t00">Dejar lista la demostración (un clic)</h2>
+  <p class="muted">Crea tres pedidos de clientes cercanos, los despacha en camiones sanos y activa «Pedido bueno»: así parten con entregas sin problemas de temperatura. Luego entra como cada cliente a recibirlas.</p>
+  <div class="acciones"><button type="button" class="btn" id="preparar-demo">Preparar la demostración</button></div>
+  <div class="demo-estado" id="prep-estado" role="status" aria-live="polite">Aún no se preparó nada.</div>
+</section>
 <section class="tarjeta-ui demo-paso" aria-labelledby="d-t0">
   <h2 id="d-t0">1. Crea un pedido de prueba cercano</h2>
   <p class="muted">Crea un pedido «En preparación» de un cliente de Temuco o Padre Las Casas, para que el camión llegue en minutos. Después arma su viaje en «Armar despacho».</p>
@@ -214,6 +220,17 @@
   bActivar.addEventListener("click", function () {
     if (!confirm("¿Activar la propuesta? " + estadoE.textContent)) return;
     post("/flota/escenarios/activar/", {propuesta: "1", confirmar: "1"}).then(activado).catch(function () { avisar("Sin conexión con el servidor.", false); });
+  });
+  document.getElementById("preparar-demo").addEventListener("click", function () {
+    var b = this, est = document.getElementById("prep-estado");
+    if (!confirm("¿Preparar la demostración? Se crean pedidos de prueba y salen camiones con entregas sin problemas.")) return;
+    b.disabled = true; est.textContent = "Preparando… (calcula las rutas, puede tardar unos segundos)";
+    post("/demo/preparar/", {confirmar: "1"}).then(function (r) {
+      est.classList.toggle("activa", r._ok);
+      if (!r._ok) { est.textContent = r.detail || "No se pudo preparar."; return; }
+      est.textContent = r.viajes.length + " viaje(s) en camino: " + r.viajes.map(function (v) { return v.camion + " con el pedido N.º " + v.orden + " (" + v.comuna + ")"; }).join("; ") + "." + (r.omitidos.length ? " Quedó pendiente: " + r.omitidos.join(" ") : "");
+      refrescar();
+    }).catch(function () { est.textContent = "Sin conexión con el servidor."; }).then(function () { b.disabled = false; });
   });
   /* Pedido de prueba cercano: lo arma el servidor con los mismos servicios del carrito; aquí solo se pide y se cuenta qué pasó. */
   document.querySelectorAll("[data-pedido-cercano]").forEach(function (b) {

@@ -1633,3 +1633,9 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 .tb-menu-salir { margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--borde); }
 .tb-menu-lista .tb-menu-salir button.enlace { color: var(--alerta-fg, var(--texto)); }
 .tb-menu-lista button.enlace:not(#mp-brick-container button) { padding: 6px 12px; min-height: 40px; display: flex; align-items: center; }
+
+/* asistente Cofri en celular: círculo con la cara, sin deformarla (antes el padding la aplastaba a 14×44 dentro de un cuadrado lima) */
+@media (max-width: 700px) {
+  .asistente-btn { width: 54px; height: 54px; padding: 0; justify-content: center; gap: 0; border-radius: 50% !important; }
+  .asistente-btn .asistente-cara { width: 42px; height: 42px; min-width: 42px; margin: 0; flex: none; object-fit: cover; }
+}

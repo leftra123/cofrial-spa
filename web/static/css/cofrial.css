@@ -1195,3 +1195,6 @@ td.cod, .cod { white-space: nowrap; }      /* códigos como CAM-02 no se parten 
 .limpiar-alertas summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
 .limpiar-alertas form { padding: 0 0 14px; }
 .limpiar-alertas .chk { display: flex; gap: 8px; align-items: center; margin: 10px 0; min-height: 44px; }
+
+#atencion-lista.recortada > :nth-child(n+4) { display: none; }
+.atencion-mas { min-height: 44px; margin: 4px 0 8px; font-weight: 600; }

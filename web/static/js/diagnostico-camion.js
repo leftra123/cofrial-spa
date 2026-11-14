@@ -70,6 +70,19 @@
       pintar(copia, d);
     }
     panel.hidden = !lista.children.length;
+    plegar(panel, lista);
+  }
+  /* Con más de 3 avisos (p. ej. varios camiones en revisión) se muestran 3 y un botón abre el resto: así la columna no se alarga. */
+  function plegar(panel, lista) {
+    var n = lista.children.length, extra = n - 3, b = panel.querySelector(".atencion-mas");
+    if (extra <= 0) { lista.classList.remove("recortada"); if (b) b.remove(); return; }
+    if (!b) {
+      b = el("button", "enlace atencion-mas"); b.type = "button";
+      b.addEventListener("click", function () { var r = lista.classList.toggle("recortada"); b.setAttribute("aria-expanded", r ? "false" : "true"); b.textContent = r ? b.dataset.abrir : "Ver menos"; });
+      panel.appendChild(b); lista.classList.add("recortada");
+    }
+    b.dataset.abrir = "Ver los " + extra + " restantes";
+    if (lista.classList.contains("recortada")) { b.textContent = b.dataset.abrir; b.setAttribute("aria-expanded", "false"); }
   }
   function idDe(caja) { var t = caja.closest("[data-camion], [data-camion-diag]"); return t && (t.dataset.camion || t.dataset.camionDiag); }
   function consultar(caja, ia) {

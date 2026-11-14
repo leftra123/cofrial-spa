@@ -205,3 +205,15 @@ def revision_camion(request, camion_id):
     except diagnostico.ErrorRevision as e:
         return JsonResponse({"detail": str(e)}, status=400)
     return JsonResponse({"ok": True, "mensaje": mensaje}, json_dumps_params={"ensure_ascii": False})
+
+
+@require_GET
+@con_rol("admin", "gerencia", "despachador")
+def sugerir_camion(request):
+    """Qué camión conviene para los pedidos marcados en «Armar despacho». Decide el código; con ?ia=1 la IA, si responde, redacta la explicación."""
+    ids = [entradas.entero(i) for i in request.GET.get("ordenes", "").split(",") if entradas.es_entero(i)][:20]
+    s = sugerencias.sugerir_para(ids) if ids else None
+    if s is None:
+        return JsonResponse({"vacio": True})
+    texto, por_ia = sugerencias.redactar_para(s) if request.GET.get("ia") == "1" else (sugerencias.texto_para(s), False)
+    return JsonResponse({**s, "texto": texto, "por_ia": por_ia}, json_dumps_params={"ensure_ascii": False})

@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/marca/favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/marca/favicon-180.png' %}">
   <link rel="preload" href="{% static 'fonts/schibsted-grotesk-latin-var.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux19">
+  <link rel="stylesheet" href="{% static 'css/cofrial.css' %}?v=ux33">
   {% block cabeza %}{% endblock %}
 </head>
 <body data-u="{{ user.pk|default:'' }}">
@@ -41,19 +41,22 @@
       <div class="nav-despacho" id="despacho-panel" role="region" aria-label="Pedidos por despachar" hidden></div><span class="solo-lector" id="despacho-vivo" role="status"></span>{% endif %}
       {% if menu.crm and not menu.comercial %}<a href="/crm/alertas/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>{% endif %}
       {% if menu.comercial %}<a href="/crm/" {% if "/crm/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "crm" %}CRM</a>{% endif %}
+      {% if menu.crm and "/crm/" in ruta and rol %}{% include "crm/_nav.html" %}{% endif %}
       {% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" rel="noopener">{% icono "bi" %}Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
       {% if menu.demo %}<a href="/demo/" {% if "/demo/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "demo" %}Modo demostración</a>{% endif %}
-      {% if menu.operacion %}<a href="/operacion/" {% if "/operacion/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "operacion" %}Operación del sistema</a>{% endif %}
+      {% if menu.operacion %}<a href="/operacion/" {% if "/operacion/" in ruta %}class="activo" aria-current="page"{% endif %}>{% icono "operacion" %}Operación del sistema</a>
+      {% if "/operacion/" in ruta %}{% include "operacion/_nav.html" %}{% endif %}{% endif %}
       {% endif %}
     </nav>
     <div class="usuario">
       {% if user.is_authenticated %}
         <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
         <div class="usuario-datos"><b>{{ user.username }}</b>{% if etiqueta_cuenta %}<small class="rol-cuenta">{{ etiqueta_cuenta }}</small>{% endif %}
-          <a class="enlace" href="/cuenta/mis-datos/"{% if "/cuenta/mis-datos/" in ruta %} aria-current="page"{% endif %}>Mis datos</a>
-          <a class="enlace" href="/cuenta/clave/">Cambiar mi clave</a>
-          {% if menu.crm or menu.cliente %}<button type="button" class="enlace" data-permisos-abrir>Permisos</button>{% endif %}
-          <a class="enlace" href="/portada/">Portada pública</a>
+          <details class="usuario-menu"{% if "/cuenta/" in ruta %} open{% endif %}><summary>Mi cuenta</summary>
+            <a class="enlace" href="/cuenta/mis-datos/"{% if "/cuenta/mis-datos/" in ruta %} aria-current="page"{% endif %}>Mis datos</a>
+            <a class="enlace" href="/cuenta/clave/">Cambiar mi clave</a>
+            {% if menu.crm or menu.cliente %}<button type="button" class="enlace" data-permisos-abrir>Permisos</button>{% endif %}
+            <a class="enlace" href="/portada/">Portada pública</a></details>
           <form method="post" action="/cuenta/salir/">{% csrf_token %}<button class="enlace">Cerrar sesión</button></form></div>
         {% include "componentes/tema_btn.html" %}
       {% else %}

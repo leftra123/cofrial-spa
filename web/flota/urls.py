@@ -12,6 +12,7 @@ urlpatterns = [
     path("despachar/", views.despachar, name="despachar"),
     path("viajes/<int:despacho_id>/cerrar/", views.cerrar_despacho, name="cerrar_despacho"),
     path("despachar/ruta/", views.ruta_sugerida, name="ruta_sugerida"),
+    path("despachar/sugerir-camion/", views.sugerir_camion, name="sugerir_camion"),
     path("despachar/ubicar/<int:direccion_id>/", views.ubicar_direccion, name="ubicar_direccion"),
     path("camion/<str:camion_id>/diagnostico/", views.diagnostico_camion, name="diagnostico_camion"),
     path("camion/<str:camion_id>/revision/", views.revision_camion, name="revision_camion"),

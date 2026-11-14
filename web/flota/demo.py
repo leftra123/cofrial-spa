@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from crm.views import con_rol
 
-from . import escenarios, tiempo
+from . import escenarios, pedido_demo, tiempo
 from .models import Camion, Telemetria
 
 DURACION_MAX_S = 180     # tope de una ruptura forzada
@@ -41,7 +41,7 @@ def pagina(request):
     camiones = Camion.objects.filter(activo=True).select_related("rango_temperatura", "rango_secundario").order_by("camion_id")
     return render(request, "flota/demo.html", {"rol": request.rol, "camiones": camiones, "duracion": DURACION_MAX_S,
                                                "forzadas": Telemetria.objects.filter(forzada=True).count(),
-                                               "predefinidos": escenarios.PREDEFINIDOS, "escenarios_datos": escenarios.contexto()})
+                                               "predefinidos": escenarios.PREDEFINIDOS, "plazo_min": max(1, round(settings.CONFIRMACION_AUTO_SEG / 60)), "escenarios_datos": escenarios.contexto()})
 
 
 def _camara(request, camion):
@@ -114,7 +114,32 @@ def limpiar(request):
         return JsonResponse({"detail": "Hay que confirmar para borrar."}, status=400)
     resultado = escenarios.limpiar()                 # primero: así el simulador deja de marcar lecturas antes de borrarlas
     tiempo.restablecer(request.user)
+    from .models import RevisionCamion
+    RevisionCamion.objects.filter(nota__startswith="Demostración", cerrada_en__isnull=True).update(cerrada_en=timezone.now(), cerrada_por=request.user)
     n, _ = Telemetria.objects.filter(forzada=True).delete()
     for k in [k for k in request.session.keys() if k.startswith("demo_")]:
         request.session.pop(k)
     return JsonResponse({"borradas": n, "forzadas": 0, "tiempo": tiempo.estado(), **resultado})
+
+
+@require_POST
+@con_rol("admin")
+def pedido_cercano(request):
+    """Crea un pedido de prueba de un cliente de Temuco o Padre Las Casas, «En preparación», para armar su despacho."""
+    try:
+        datos = pedido_demo.crear(request.POST.get("rango", ""))
+    except pedido_demo.ErrorPedidoDemo as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})
+
+
+@require_POST
+@con_rol("admin")
+def preparar_demo(request):
+    """Un clic: pedidos cercanos, despachados en camiones sanos y con «Pedido bueno» activo, para que la demostración parta con entregas sin problemas."""
+    if request.POST.get("confirmar") != "1":
+        return JsonResponse({"detail": "Hay que confirmar para preparar la demostración."}, status=400)
+    datos = pedido_demo.preparar(request.user)
+    if not datos["viajes"]:
+        return JsonResponse({"detail": " ".join(datos["omitidos"]) or "No se pudo preparar nada."}, status=400)
+    return JsonResponse(datos, json_dumps_params={"ensure_ascii": False})

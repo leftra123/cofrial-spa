@@ -10,7 +10,7 @@
 </div>
 {% endblock %}
 {% block contenido %}
-{% if filas %}
+{% if filas %}{% include "componentes/camino.html" with paso=2 %}
 {% if sin_stock %}<p class="aviso warning" role="alert">{% if sin_stock|length == 1 %}Un producto de tu carrito supera el stock disponible{% else %}{{ sin_stock|length }} productos de tu carrito superan el stock disponible{% endif %}. Ajusta la cantidad o quítalo para poder generar la orden.</p>{% endif %}
 <div class="carro">
   <div class="carro-lineas">
@@ -65,7 +65,9 @@
       <p class="ayuda" id="ayuda-plazo">{% if pide_oc %}Descargas la factura desde «Mis pedidos» después de la entrega.{% else %}Queda en «Mis pedidos»; ahí descargas la boleta o la factura.{% endif %} Pago con tarjeta en modo prueba; si no resulta, reintentas y el pedido se crea solo al aprobarse.</p>
       <p class="ayuda mp-inline-error" id="mp-inline-error" hidden role="alert"></p>
       {% else %}
-      <button class="confirmar" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>Generar orden</button>
+      {% if mp_emulador %}<button type="button" class="confirmar" id="mp-emu-abrir" aria-haspopup="dialog" aria-controls="mp-emu">Pagar ahora con Mercado Pago · {% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}</button>{% endif %}
+      <button class="{% if mp_emulador %}btn-sec generar-orden{% else %}confirmar{% endif %}" data-cargando="Generando orden…"{% if sin_stock %} disabled aria-describedby="why-confirmar"{% else %} aria-describedby="ayuda-pago"{% endif %}>Generar orden{% if mp_emulador %} y pagar a {% if pide_oc %}{{ cliente.tipo_cliente.dias_credito }}{% else %}30{% endif %} días{% endif %}</button>
+      {% if mp_emulador %}<p class="ayuda">Pago de prueba: Mercado Pago está emulado, no se cobra nada. El pedido y la boleta se crean solo si el pago se aprueba.</p>{% endif %}
       <p class="ayuda" id="ayuda-pago">{% if pide_oc %}Pagas a {{ cliente.tipo_cliente.dias_credito }} días: la guía de despacho sale con el camión y la factura se emite después de la entrega.{% else %}Queda en «Mis pedidos». Pagas a 30 días y descargas la boleta o la factura desde el pedido.{% endif %}</p>
       {% if sin_stock %}<p class="ayuda" id="why-confirmar">Resuelve los productos sin stock para continuar.</p>{% endif %}
       {% endif %}
@@ -78,6 +80,7 @@
 {% if direcciones %}<div class="barra-orden" id="barra-orden" role="region" aria-label="Total y acción principal del carrito">
   <div class="barra-orden-datos"><span class="barra-orden-total">Total{% if pide_oc %} con IVA{% endif %}<b>{% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}</b></span><span class="barra-orden-dir" data-barra-dir></span></div>
   {% if mp_brick %}<button type="button" data-barra-pagar{% if sin_stock %} disabled{% endif %}>Pagar ahora</button>
+  {% elif mp_emulador %}<button type="button" id="mp-emu-barra"{% if sin_stock %} disabled{% endif %}>Pagar ahora</button>
   {% else %}<button form="checkout-form" data-cargando="Generando orden…"{% if sin_stock %} disabled{% endif %}>Generar orden</button>{% endif %}
 </div>{% endif %}
 {% else %}
@@ -175,4 +178,25 @@
   }
 })();
 </script>{% endif %}{% endblock %}
-{% block asistente %}{% include "componentes/asistente.html" with pagina="carrito" %}{% endblock %}
+{% block asistente %}{% include "componentes/asistente.html" with pagina="carrito" %}{% if mp_emulador %}
+<dialog id="mp-emu" class="dialogo mp-emu" aria-labelledby="mp-emu-t" data-url="/carrito/mp/emulador/">
+  <form method="dialog" novalidate>
+    <p class="mp-emu-marca">Mercado Pago · emulador</p>
+    <h2 id="mp-emu-t">Pago con tarjeta</h2>
+    <p class="ayuda">Total {% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}. Es una prueba: no sale nada a internet ni se cobra.</p>
+    <label for="mp-emu-num">Número de tarjeta</label><input id="mp-emu-num" value="5031 7557 3453 0604" readonly inputmode="numeric" autocomplete="off">
+    <div class="mp-emu-fila"><div><label for="mp-emu-ven">Vencimiento</label><input id="mp-emu-ven" value="11/30" readonly></div><div><label for="mp-emu-cvv">CVV</label><input id="mp-emu-cvv" value="123" readonly></div></div>
+    <label for="mp-emu-titular">¿Cómo responde el pago?</label>
+    <select id="mp-emu-titular">
+      <option value="APRO">APRO · pago aprobado</option>
+      <option value="FUND">FUND · fondos insuficientes (rechazado)</option>
+      <option value="OTHE">OTHE · rechazado por error general</option>
+    </select>
+    <p class="ayuda">Son los mismos titulares de las tarjetas de prueba de Mercado Pago. Si lo rechazan, el carrito queda como estaba y puedes reintentar.</p>
+    <p class="aviso warning" id="mp-emu-error" role="alert" hidden></p>
+    <div class="acciones"><button type="button" class="btn" id="mp-emu-pagar">Pagar {% if pide_oc %}{{ total|con_iva }}{% else %}{{ total|clp }}{% endif %}</button><button type="button" class="btn-sec" id="mp-emu-cancelar">Cancelar</button></div>
+  </form>
+</dialog>
+{% load static %}<script src="{% static 'js/mp-emulador.js' %}" defer></script>
+{% endif %}
+{% endblock %}

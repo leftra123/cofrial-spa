@@ -1604,3 +1604,79 @@ button.al-cerrar:not(#mp-brick-container button):hover { background: rgba(0, 0, 
 
 .linea-info h3 a { color: var(--texto); }
 .filtros-multi { display: block; font-size: .78rem; font-weight: 400; color: var(--texto-3); margin-top: 2px; }
+
+/* celular: la cuenta es un solo menú, así que el encabezado cabe en una fila (ver «Mi cuenta» más abajo) */
+.t-pie .solo-movil { display: none !important; }
+
+/* emulador de Mercado Pago (static/js/mp-emulador.js) */
+.mp-emu { max-width: 440px; width: calc(100% - 32px); }
+.mp-emu-marca { margin: 0 0 2px; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #009EE3; }
+.mp-emu input[readonly] { background: var(--fondo-2, transparent); }
+.mp-emu-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mp-emu .acciones { margin-top: 14px; }
+.mp-emu input, .mp-emu select { box-sizing: border-box; width: 100%; min-width: 0; }
+.mp-emu-fila > div { min-width: 0; }
+
+/* encabezado: todo lo de la cuenta en un solo menú «Mi cuenta» (Mis datos, Mi clave, Permisos, Portada pública) */
+.tb-menu { position: relative; }
+.tb-menu > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--borde-fuerte); border-radius: 10px; min-height: 40px; color: var(--texto); }
+.tb-menu > summary::-webkit-details-marker { display: none; }
+.tb-menu > summary .tb-perfil { border: 0; padding: 0; background: none; }
+.tb-menu-flecha { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; transition: transform .15s; }
+.tb-menu[open] .tb-menu-flecha { transform: rotate(180deg); }
+.tb-menu-lista { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 200px; display: grid; gap: 2px; padding: 8px; background: var(--tarjeta); border: 1px solid var(--borde-fuerte); border-radius: 14px; box-shadow: var(--sombra-alta, 0 12px 30px rgba(15, 23, 42, .25)); }
+.tb-menu-lista a, .tb-menu-lista button.enlace { display: flex; align-items: center; min-height: 40px; padding: 6px 12px; border-radius: 8px; color: var(--texto); text-align: left; text-decoration: none; font-size: .95rem; }
+.tb-menu-lista a:hover, .tb-menu-lista button.enlace:hover { background: var(--fondo-2); }
+@media (max-width: 600px) { .tb-menu .tb-perfil-nombre { display: none; } .tb-menu > summary { padding: 6px 8px; } .tb-menu-txt { display: inline; } }
+.tb-menu-lista button.enlace:not(#mp-brick-container button) { width: 100%; justify-content: flex-start; text-decoration: none; background: none; border: 0; font: inherit; font-size: .95rem; color: var(--texto); cursor: pointer; }
+/* cerrar sesión: dentro de «Mi cuenta», separado del resto (una acción que saca de la sesión no va junto a los atajos del día a día) */
+.tb-menu-salir { margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--borde); }
+.tb-menu-lista .tb-menu-salir button.enlace { color: var(--alerta-fg, var(--texto)); }
+.tb-menu-lista button.enlace:not(#mp-brick-container button) { padding: 6px 12px; min-height: 40px; display: flex; align-items: center; }
+
+/* asistente Cofri en celular: círculo con la cara, sin deformarla (antes el padding la aplastaba a 14×44 dentro de un cuadrado lima) */
+@media (max-width: 700px) {
+  .asistente-btn { width: 54px; height: 54px; padding: 0; justify-content: center; gap: 0; border-radius: 50% !important; }
+  .asistente-btn .asistente-cara { width: 42px; height: 42px; min-width: 42px; margin: 0; flex: none; object-fit: cover; }
+}
+
+/* portada: el buscador grande ya está en la pantalla; el del encabezado se oculta para no tener dos buscadores juntos */
+body:has(.portada-hero) .tb-buscar { display: none; }
+/* aviso de cookies: en celular es una franja baja y corta, no una tarjeta que tapa la portada */
+@media (max-width: 600px) {
+  .solo-escritorio { display: none; }
+  .aviso-cookies { flex-direction: row !important; align-items: center !important; padding: 8px 10px !important; gap: 10px; left: 10px; right: 10px; bottom: 10px; }
+  .aviso-cookies p { font-size: .78rem; line-height: 1.35; }
+  .aviso-cookies button { min-height: 44px; padding: 0 14px; }
+}
+
+/* camino de compra (componentes/camino.html): el paso actual destaca y el resto queda en gris */
+.camino { margin: 0 0 20px; }
+.camino ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; counter-reset: none; }
+.camino li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 14px; background: var(--tarjeta); color: var(--texto-3); min-width: 0; }
+.camino li:not(.actual):not(.hecho) { opacity: .55; }
+.camino li.hecho { opacity: .8; }
+.camino li.actual { border-color: var(--lima, #BDE63A); box-shadow: 0 0 0 2px var(--lima, #BDE63A); color: var(--texto); background: var(--tarjeta); }
+.camino-n { flex: none; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--borde-fuerte); color: var(--texto); font-weight: 700; font-size: .85rem; }
+.camino li.actual .camino-n { background: var(--lima, #BDE63A); color: #0B1A33; }
+.camino li.hecho .camino-n { background: var(--entregado-bg, #D1FADF); color: var(--entregado-fg, #065F46); }
+.camino-t { display: grid; min-width: 0; line-height: 1.25; }
+.camino-t b { font-size: .95rem; }
+.camino-t small { font-size: .78rem; color: var(--texto-3); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 700px) {
+  .camino ol { grid-template-columns: repeat(4, auto); justify-content: space-between; }
+  .camino li { padding: 6px 8px; gap: 6px; }
+  .camino li:not(.actual) .camino-t { display: none; }          /* en celular solo el paso actual muestra su nombre */
+  .camino li.actual { grid-column: auto; }
+  .camino li.actual .camino-t small { display: none; }
+}
+
+/* tres zonas iguales: izquierda (marca), centro y derecha (cuenta), en el encabezado y en el pie, sobre el mismo ancho de 1240 px del contenido */
+@media (min-width: 1100px) {
+  .tb-fila { flex-wrap: nowrap; }
+  .tb-marca { flex: 1 1 0; min-width: 260px; }
+  .tb-cuenta { flex: 1 1 0; min-width: 210px; margin-left: 0; justify-content: flex-end; }
+  .tb-buscar { flex: 0 1 300px; }
+  .t-pie-fila { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px 40px; align-items: center; }
+  .t-pie-fila > :last-child { text-align: right; }
+}

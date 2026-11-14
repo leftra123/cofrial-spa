@@ -1,0 +1,9 @@
+{% comment %}Camino de compra para el cliente: dónde está y qué sigue; lo demás en gris. Uso: {% include "componentes/camino.html" with paso=1 %} (1 elegir, 2 carrito, 3 pagar, 4 seguir la entrega).{% endcomment %}
+<nav class="camino" aria-label="Pasos para comprar">
+  <ol>
+    <li{% if paso == 1 %} aria-current="step" class="actual"{% elif paso > 1 %} class="hecho"{% endif %}><span class="camino-n" aria-hidden="true">{% if paso > 1 %}✓{% else %}1{% endif %}</span><span class="camino-t"><b>Elige</b><small>Mira el catálogo y agrega productos</small></span></li>
+    <li{% if paso == 2 %} aria-current="step" class="actual"{% elif paso > 2 %} class="hecho"{% endif %}><span class="camino-n" aria-hidden="true">{% if paso > 2 %}✓{% else %}2{% endif %}</span><span class="camino-t"><b>Revisa</b><small>Tu carrito, dirección y quién recibe</small></span></li>
+    <li{% if paso == 3 %} aria-current="step" class="actual"{% elif paso > 3 %} class="hecho"{% endif %}><span class="camino-n" aria-hidden="true">{% if paso > 3 %}✓{% else %}3{% endif %}</span><span class="camino-t"><b>Paga</b><small>Con tarjeta ahora o a 30 días</small></span></li>
+    <li{% if paso == 4 %} aria-current="step" class="actual"{% endif %}><span class="camino-n" aria-hidden="true">4</span><span class="camino-t"><b>Recibe</b><small>Sigue el camión y confirma al llegar</small></span></li>
+  </ol>
+</nav>

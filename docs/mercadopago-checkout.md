@@ -110,3 +110,12 @@ Copia la URL `https://….ngrok-free.app` en `MERCADOPAGO_PUBLIC_URL` y reinicia
 - [ ] Pago rechazado → mensaje en Brick, carrito abierto
 - [ ] B2B sin Brick
 - [ ] Sin credenciales → Webpay simulado
+
+## Emulador de Mercado Pago (13-nov-2026)
+
+Sin `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_PUBLIC_KEY`, el carrito ya no se queda solo con «Generar orden»: ofrece **Pagar ahora con Mercado Pago** con un emulador (`web/static/js/mp-emulador.js`, `POST /carrito/mp/emulador/`, `mercadopago.pagar_emulado`). Muestra una tarjeta de prueba y deja elegir cómo responde el pago, con los mismos titulares de las tarjetas de prueba de Mercado Pago: `APRO` (aprobado), `FUND` (fondos insuficientes) y `OTHE` (rechazado por error general).
+
+- Usa el mismo camino que el Brick real: valida el carrito, crea el `CheckoutPago` y pasa por `_aplicar_respuesta_pago`. Solo un pago **aprobado** crea la orden, el documento pagado (boleta o factura al contado) y el pago (`medio = mercadopago`, referencia `EMU-…`) y descuenta el stock. Un rechazo no deja nada y el carrito queda como estaba.
+- No sale nada a internet y no se cobra. Con credenciales reales el emulador desaparece y se ve el Brick; `MP_EMULADOR=0` lo apaga aunque no haya credenciales.
+- Los rechazos se explican en español (`DETALLES_DE_RECHAZO`), también en el pago real.
+- Pruebas: `pedidos/tests_mp_emulador.py` (aprobado, rechazado, titular inventado, institución con factura, y que solo aparezca sin credenciales).

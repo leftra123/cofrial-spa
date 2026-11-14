@@ -28,6 +28,8 @@ escribe; ver web/flota/escenarios.py). Cambian el comportamiento del camión, no
     duracion_lecturas lecturas y la alerta se dispara. La carga llega en su temperatura.
   - sensor_pegado: falso «todo normal». El sensor se queda clavado en un valor dentro del rango durante duracion_lecturas lecturas y nunca avisa,
     pase lo que pase con la carga; la web lo detecta porque ningún sensor sano marca exactamente lo mismo tantas veces.
+  - sin_senal: pérdida de señal. El camión sigue su ruta, entrega y mide bien (la carga no se entibia), pero durante duracion_lecturas lecturas
+    no envía nada; la flota lo marca «Sin señal» pasados 2 minutos y luego vuelve a reportar solo.
   - cliente_no_recibe: en la parada pedida el pedido queda «Entrega no concretada» y se crea el requerimiento para ventas.
 Sin escenario vigente no cambia nada. Si la tabla aún no existe (la EC2 IoT se actualizó antes que la web), se sigue como si no hubiera escenarios.
 
@@ -57,8 +59,8 @@ DETENCION_LECTURAS = int(os.environ.get("DETENCION_LECTURAS", "6"))   # lecturas
 CONFIRMACION_AUTO_SEG = int(os.environ.get("CONFIRMACION_AUTO_SEG") or 120)
 ESPERA_RESPUESTA_LECTURAS = int(os.environ.get("ESPERA_RESPUESTA_LECTURAS", "3"))   # en un escenario, lecturas que el cliente tarda en responder en la puerta
 TOPE_SOBRE_RANGO_C = 12.0                                                           # una falla de escenario no sube más que esto sobre el máximo del camión
-TIPOS_ESCENARIO = ("falla_frio", "entrega_perfecta", "cliente_no_recibe", "sensor_falla", "sensor_pegado")
-TIPOS_SENSOR = ("sensor_falla", "sensor_pegado")                                    # cambian lo que marca el sensor, no la temperatura real
+TIPOS_ESCENARIO = ("falla_frio", "entrega_perfecta", "cliente_no_recibe", "sensor_falla", "sensor_pegado", "sin_senal")
+TIPOS_SENSOR = ("sensor_falla", "sensor_pegado", "sin_senal")                                    # cambian lo que marca el sensor, no la temperatura real
 SALTO_SENSOR = (9.0, 14.0)                                                           # °C que se suman a la temperatura real en una falsa alarma
 MULTIPLICADORES = (1, 5, 20, 60)                                                    # los mismos de web/flota/tiempo.py y de la restricción de la tabla
 if os.environ.get("CAMION_ID"):
@@ -202,6 +204,7 @@ class Camion:
         self.escenario = None           # escenario vigente de este camión (None: comportamiento normal)
         self.respuestas = []            # [[lecturas que faltan, direccion_id]...] clientes de un escenario por responder en la puerta
         self.lectura_forzada = False    # la última lectura es parte de una falla de escenario
+        self.sin_senal_ahora = False    # un escenario de pérdida de señal está en curso: el camión sigue y mide, pero no envía lecturas
 
     @property
     def en_base(self):
@@ -350,6 +353,7 @@ class Camion:
         """Efectos del escenario que dependen de lo que pasó en esta lectura. Sin escenario no hace nada."""
         esc = self.escenario
         self.lectura_forzada = bool(esc and esc.get("disparada") and not esc["terminado"])
+        self.sin_senal_ahora = bool(esc and esc["tipo"] == "sin_senal" and esc.get("disparada") and not esc["terminado"])
         if esc is None or esc["terminado"]:
             return
         if esc["tipo"] == "falla_frio":
@@ -381,6 +385,8 @@ class Camion:
         esc = self.escenario
         if esc is None or esc["tipo"] not in TIPOS_SENSOR or not esc.get("disparada") or esc["terminado"]:
             return real
+        if esc["tipo"] == "sin_senal":
+            return real                                                      # la carga mide lo de siempre: solo se corta el envío
         if esc["tipo"] == "sensor_falla":
             return round(real + random.uniform(*SALTO_SENSOR), 1)           # salto brusco entre dos lecturas: el frío no hace eso
         if esc["clavada"] is None:
@@ -521,10 +527,11 @@ def main():
                 c.asignar(viajes.get(c.id))
                 c.aplicar_escenario(escenarios.get(c.id))
                 temp, lat, lon, comb, alerta = c.paso()
-                filas.append((c.id, temp, lat, lon, comb, alerta, c.lectura_forzada, 1))
                 segunda = c.paso_segunda()
-                if segunda:
-                    filas.append((c.id, segunda[0], lat, lon, comb, segunda[1], False, 2))
+                if not c.sin_senal_ahora:                       # sin señal: sigue su camino y entrega, pero no manda lecturas
+                    filas.append((c.id, temp, lat, lon, comb, alerta, c.lectura_forzada, 1))
+                    if segunda:
+                        filas.append((c.id, segunda[0], lat, lon, comb, segunda[1], False, 2))
                 aplicar_eventos(con, c)
             confirmadas = confirmar_vencidas(con)
             if confirmadas:

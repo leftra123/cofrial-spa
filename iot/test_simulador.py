@@ -367,6 +367,27 @@ class SensorTest(unittest.TestCase):
         self.assertFalse(any(l[1][4] for l in lecturas if l[2]))             # y sin alerta mientras dura
         self.assertIn(("escenario", 9, "terminado"), eventos)
 
+    def test_sin_senal_no_envia_pero_la_carga_sigue_sana_y_el_camion_entrega(self):
+        c = camion()
+        c.ruptura_restante = 0
+        c.asignar(viaje(ruta(CASA, OTRA)))
+        sin_envio, todas, eventos = 0, [], []
+        esc = sensor("sin_senal", duracion=10)
+        for _ in range(80):
+            c.aplicar_escenario(esc)
+            lectura = c.paso()
+            if c.sin_senal_ahora:
+                sin_envio += 1
+            todas.append((lectura, c.sin_senal_ahora))
+            eventos += c.eventos
+            if any(e[0] == "escenario" and e[2] == "terminado" for e in c.eventos):
+                esc = None
+            c.eventos = []
+        self.assertEqual(sin_envio, 10)                                      # justo las lecturas pedidas no se envían
+        self.assertFalse(any(l[4] for l, _ in todas))                         # y la temperatura nunca se sale del rango
+        self.assertIn(("puerta", 1, 100), eventos)                           # el camión llega y entrega igual
+        self.assertIn(("escenario", 9, "terminado"), eventos)
+
     def test_la_temperatura_se_ignora_fuera_del_escenario(self):
         lecturas, _ = self._correr("sensor_pegado", duracion=6)
         libres = [l[1][0] for l in lecturas if not l[2]]

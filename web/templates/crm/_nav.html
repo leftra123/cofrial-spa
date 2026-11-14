@@ -11,7 +11,6 @@
   <a href="/crm/requerimientos/"{% if "/crm/requerimientos" in ruta or "/crm/ia" in ruta %} class="activo" aria-current="true"{% endif %}>{% icono "atencion" %}Atención</a>
   <a href="/crm/alertas/"{% if "/crm/alertas" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "alerta-frio" %}Alertas de frío</a>
 {% endif %}
-{% if grafana_url %}  <a class="panel-bi" href="{{ grafana_url }}" target="_blank" rel="noopener">{% icono "bi" %}Panel BI<span class="solo-lector"> (se abre en otra pestaña)</span></a>{% endif %}
 </nav>
 {% if rol != "despachador" %}
 {% if "/crm/embudo" in ruta or "/crm/prospectos" in ruta or "/crm/demanda" in ruta %}

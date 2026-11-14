@@ -12,6 +12,7 @@ urlpatterns = [
     path("carrito/confirmar/", views.confirmar, name="carrito_confirmar"),
     path("carrito/direccion/", views.direccion_nueva, name="carrito_direccion"),
     path("carrito/mp/pagar/", views.mp_pagar_brick, name="mp_pagar_brick"),
+    path("carrito/mp/emulador/", views.mp_pagar_emulador, name="mp_pagar_emulador"),
     path("carrito/mp/webhook/", views.mp_webhook, name="mp_webhook"),
     path("carrito/mp/vuelta/exito/", views.mp_vuelta_exito, name="mp_vuelta_exito"),
     path("carrito/mp/vuelta/fallo/", views.mp_vuelta_fallo, name="mp_vuelta_fallo"),

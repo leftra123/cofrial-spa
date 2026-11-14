@@ -25,17 +25,5 @@ button.btn-peligro:not(#mp-brick-container button) { background: var(--tarjeta);
 .tabla-op-n { color: var(--texto-3); font-size: .9rem; }
 </style>{% endblock %}
 {% block contenido %}
-{% with ruta=request.path %}
-<nav class="subnav" aria-label="Secciones de operación">
-  <a href="/operacion/"{% if ruta == "/operacion/" %} class="activo" aria-current="page"{% endif %}>{% icono "panel" %}Resumen</a>
-  <a href="/operacion/cuentas/"{% if "/operacion/cuentas/" in ruta or "/operacion/clientes/" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "usuarios" %}Usuarios</a>
-  <a href="/operacion/productos/"{% if "/operacion/productos" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "productos" %}Productos</a>
-  <a href="/operacion/stock/"{% if "/operacion/stock" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "stock" %}Reponer stock</a>
-  <a href="/operacion/ordenes/"{% if "/operacion/ordenes" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "ordenes" %}Órdenes</a>
-  <a href="/operacion/datos/"{% if "/operacion/datos" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "datos" %}Datos</a>
-  <a href="/operacion/privacidad/"{% if "/operacion/privacidad" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "solicitudes" %}Privacidad</a>
-  <a href="/operacion/sistema/"{% if "/operacion/sistema" in ruta %} class="activo" aria-current="page"{% endif %}>{% icono "sistema" %}Sistema</a>
-</nav>
-{% endwith %}
 {% block operacion %}{% endblock %}
 {% endblock %}

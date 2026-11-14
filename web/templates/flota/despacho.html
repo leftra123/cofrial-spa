@@ -14,6 +14,11 @@
   <div>
     <div class="seccion"><h2>1. Camión</h2></div>
     <p class="frio" id="aviso-camion" aria-live="polite">Marca pedidos y proponemos el mejor camión libre.</p>
+    <div class="sug-ia" id="sug-ia" hidden aria-live="polite">
+      <div class="sug-ia-cab"><b>¿Qué camión uso?</b><span class="chip transito sin-punto" id="sug-ia-origen"></span></div>
+      <p id="sug-ia-texto"></p>
+      <button type="button" class="btn btn-sec" id="sug-ia-usar" hidden></button>
+    </div>
     <div class="tarjeta-ui lista-corta" id="lista-camiones">
       {% for c in camiones %}
       <label class="opcion"><input type="radio" name="camion" data-rangos="{{ c.rangos|join:"," }}" value="{{ c.camion_id }}" {% if camion_sugerido %}{% if c.camion_id == camion_sugerido %}checked{% endif %}{% elif forloop.first %}checked{% endif %}> <b>{{ c.camion_id }}</b> · {{ c.patente }} <span class="chip transito">{{ c.rangos_texto }}</span> {% if c.camion_id in camiones_en_alerta %}<span class="chip alerta">Ruptura de frío</span> {% endif %}<span class="frio">{{ c.capacidad_kg|miles }} kg</span></label>
@@ -131,6 +136,29 @@
   }
   radios.forEach(function (r) { r.addEventListener("change", function () { aMano = true; proponer(); }); });
   document.querySelectorAll("input[name=ordenes]").forEach(function (c) { c.addEventListener("change", function () { recalcular(); proponer(); }); });
+  /* Sugerencia de camión para lo marcado: decide el servidor con reglas (frío, estado, combustible y largo del viaje); la IA, si responde, solo redacta el porqué. */
+  var caja = document.getElementById("sug-ia"), cajaTexto = document.getElementById("sug-ia-texto"), cajaOrigen = document.getElementById("sug-ia-origen"), botonUsar = document.getElementById("sug-ia-usar"), turno = 0, temporizador = null;
+  botonUsar.addEventListener("click", function () {
+    var radio = radios.filter(function (r) { return r.value === botonUsar.dataset.camion; })[0];
+    if (radio) { radio.checked = true; aMano = true; radio.dispatchEvent(new Event("change", {bubbles: true})); radio.focus(); }
+  });
+  function pintarSugerencia(j) {
+    cajaTexto.textContent = j.texto; cajaOrigen.textContent = j.por_ia ? "Redactado por IA" : "Cálculo del sistema";
+    if (j.camion && radios.some(function (r) { return r.value === j.camion.id; })) { botonUsar.hidden = false; botonUsar.dataset.camion = j.camion.id; botonUsar.textContent = "Usar " + j.camion.id; }
+    else botonUsar.hidden = true;
+    caja.hidden = false;
+  }
+  function pedirSugerencia() {
+    var ids = marcados().map(function (c) { return c.dataset.orden; }), mio = ++turno;
+    if (!ids.length) { caja.hidden = true; return; }
+    function consulta(ia) {
+      return fetch("/flota/despachar/sugerir-camion/?ordenes=" + ids.join(",") + (ia ? "&ia=1" : ""), {credentials: "same-origin"}).then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { if (!j || j.vacio || mio !== turno) return null; pintarSugerencia(j); return j; });
+    }
+    consulta(false).then(function (j) { if (j) consulta(true); }).catch(function () {});     // al instante el texto del sistema; la IA lo mejora después
+  }
+  document.querySelectorAll("input[name=ordenes]").forEach(function (c) { c.addEventListener("change", function () { clearTimeout(temporizador); temporizador = setTimeout(pedirSugerencia, 350); }); });
+  if (marcados().length) pedirSugerencia();
   if (marcados().length) { recalcular(); proponer(); }       // viene de una sugerencia: ya hay pedidos marcados
 })();
 </script>

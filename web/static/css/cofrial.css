@@ -210,7 +210,7 @@ td.vacio { text-align: center; color: var(--texto-3); padding: 40px 20px; }
 .chip.cancelado { background: var(--cancelado-bg); color: var(--cancelado-fg); }
 .chip.alerta, .alerta { background: var(--alerta-bg); color: var(--alerta-fg); }
 .chip.sin-punto::before { display: none; }
-.alerta { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.alerta { display: inline-block; padding: 3px 11px; border-radius: 10px; font-size: .78rem; font-weight: 600; line-height: 1.35; }     /* etiqueta roja suelta: con texto largo no se vuelve un óvalo */
 .rechazo-crm { display: block; margin-top: 4px; min-width: 240px; max-width: 44ch; white-space: normal; overflow-wrap: anywhere; font-size: .85rem; color: var(--alerta-fg); }
 
 /* ---------- pestañas con contador ---------- */
@@ -1112,3 +1112,71 @@ button.demo-opcion { display: flex; flex-direction: column; align-items: flex-st
 button.demo-opcion b { display: block; font-weight: 700; }
 button.demo-opcion span { display: block; }
 .demo-opciones { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.demo-opciones button.demo-opcion { background: var(--tarjeta) !important; color: var(--texto) !important; border: 1px solid var(--borde-fuerte, var(--borde)); box-shadow: none; }
+.demo-opciones button.demo-opcion.trampa { border: 1px dashed #F5A524; }
+.demo-opciones button.demo-opcion b { color: var(--texto) !important; text-align: left; }
+.demo-opciones button.demo-opcion span { color: var(--texto-3) !important; text-align: left; }
+.demo-opciones button.demo-opcion:hover:not(:disabled) { background: var(--acento-suave) !important; }
+
+/* flota: el mapa a la izquierda y, al costado, lo que viene (sugerencia y despacho automático), para no apilar todo hacia abajo */
+.flota-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.flota-lado > * + * { margin-top: 16px; }
+.flota-lado .seccion { margin-top: 0; }
+@media (min-width: 1180px) {
+  .flota-split { grid-template-columns: minmax(0, 1fr) 340px; }
+  .flota-lado { position: sticky; top: 16px; }
+  .flota-mapa .mapa { min-height: 520px; }
+}
+/* códigos e identificadores (CAM-01, patentes, N.º de orden) no se parten en dos líneas */
+.tabla-caja:not(.texto) td:first-child:not([colspan]), .tabla-caja:not(.texto) td:nth-child(2):not(:last-child) { white-space: nowrap; }
+.tabla-caja td[colspan] { white-space: normal; }
+/* la acción de cada fila (Emitir, Editar, Avanzar) queda a la vista aunque la tabla sea más ancha que la pantalla */
+.tabla-caja td:last-child:has(.btn, button, a.btn):not(:has(input:not([type=hidden]), select, textarea)) { position: sticky; right: 0; background: var(--tarjeta); box-shadow: -10px 0 8px -8px rgba(15, 23, 42, .18); }
+
+/* menú lateral: las secciones de CRM y Operación viven aquí, bajo su entrada, en vez de dos filas de pestañas arriba */
+.lateral .subnav { display: flex; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 1px; width: auto; overflow: visible; margin: 2px 0 10px 18px; padding: 0 0 0 10px; border: 0; border-left: 2px solid var(--borde-fuerte, var(--borde)); border-radius: 0; background: none; box-shadow: none; }
+.lateral .subnav a { padding: 6px 10px; margin: 0; border: 0; border-radius: 8px; font-size: .88rem; display: flex; align-items: center; gap: 8px; }
+.lateral .subnav a:hover { background: var(--fondo); border: 0; }
+.lateral .subnav a.activo { background: var(--acento); color: var(--acento-fg); }
+.lateral .subnav-2 { margin-left: 30px; margin-top: -6px; }
+.lateral .subnav a .ico { width: 16px; height: 16px; flex: none; }
+/* perfil: un solo lugar para lo de la cuenta */
+.usuario-menu { margin: 2px 0; }
+.usuario-menu summary { cursor: pointer; font-size: .85rem; color: var(--texto-2); padding: 4px 0; min-height: 28px; }
+.usuario-menu[open] { padding-bottom: 4px; }
+.usuario-menu a.enlace, .usuario-menu button.enlace { display: block; padding: 3px 0 3px 10px; }
+.lateral .subnav-2::before { content: attr(aria-label); display: block; padding: 4px 10px 2px; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--texto-3); }
+.lateral .subnav-2 { margin-top: -4px; }
+td.cod, .cod { white-space: nowrap; }      /* códigos como CAM-02 no se parten en el guion */
+
+/* áreas táctiles de 44 px donde la auditoría de celular las encontró chicas (enlaces del encabezado, zoom del mapa, enlaces dentro de tablas y tarjetas) */
+@media (max-width: 700px) {
+  .tb-nav a { display: inline-flex; align-items: center; min-height: 40px; }
+  .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+  .tabla-caja td a:not(.btn), .kpi-card a { display: inline-block; padding: 12px 0; }
+}
+
+/* ayudas largas plegadas: el texto explicativo está a un clic, no ocupa la pantalla */
+.ayuda-mapa { margin-top: 10px; font-size: .9rem; color: var(--texto-2); }
+.ayuda-mapa summary { cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; font-weight: 600; color: var(--texto); }
+.ayuda-mapa ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* Flota: el mapa manda; el resumen es una franja corta y los vehículos quedan plegados */
+.kpi-franja { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0; }
+.kpi-franja .kpi-card { padding: 10px 14px; }
+.kpi-franja .kpi-card .valor { font-size: 1.5rem; }
+.kpi-franja .kpi-card .detalle { display: none; }
+.vehiculos-det { margin-top: 20px; }
+.vehiculos-det > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 6px 2px; list-style: none; }
+.vehiculos-det > summary::-webkit-details-marker { display: none; }
+.vehiculos-det > summary::before { content: "▸"; transition: transform .15s; }
+.vehiculos-det[open] > summary::before { transform: rotate(90deg); }
+
+/* sugerencia de camión en «Armar despacho» */
+.sug-ia { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--lima, #BDE63A); border-radius: 14px; background: var(--acento-suave, transparent); }
+.sug-ia[hidden] { display: none; }
+.sug-ia-cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sug-ia p { margin: 6px 0 10px; }
+.sug-viaje { padding: 10px 0; border-top: 1px solid var(--borde); }
+.sug-viaje:first-child { border-top: 0; padding-top: 0; }
+.sug-viaje-txt { margin: 0 0 8px; font-weight: 600; }

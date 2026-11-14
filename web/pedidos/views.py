@@ -78,6 +78,7 @@ def ver_carrito(request, cliente):
     sin_stock = [f for f in filas if not f["hay_stock"]]
     es_b2c = cliente.tipo_cliente.codigo == "B2C"
     mp_brick = mp.activo() and filas and not sin_stock
+    mp_emulador = mp.emulador() and bool(filas) and not sin_stock
     total = s.total(filas)
     monto_mp = round(total * (1 + documentos.IVA)) if not es_b2c else total
     ctx = {
@@ -85,7 +86,7 @@ def ver_carrito(request, cliente):
         "direcciones": cliente.direccion_set.select_related("comuna"), "comunas": Comuna.objects.order_by("nombre"),
         "pide_oc": cliente.tipo_cliente.codigo == "B2B", "aviso_rangos": s.aviso_de_rangos(s.rangos_en_carrito(cliente)),
         "recibe_opciones": s.opciones_de_quien_recibe(cliente), "recibe_maximo": s.RECIBE_MAXIMO,
-        "mp_brick": mp_brick,
+        "mp_brick": mp_brick, "mp_emulador": mp_emulador,
         "monto_mp": monto_mp,
     }
     if mp_brick:
@@ -200,6 +201,25 @@ def mp_pagar_brick(request, cliente):
     except s.ErrorDeNegocio as e:
         return JsonResponse({"ok": False, "mensaje": " ".join(e.mensajes)}, status=400,
                             json_dumps_params={"ensure_ascii": False})
+
+
+@require_POST
+@solo_clientes
+def mp_pagar_emulador(request, cliente):
+    """Pago con el emulador de Mercado Pago (solo sin credenciales reales). Responde igual que `mp_pagar_brick`."""
+    import json
+    from django.http import JsonResponse
+    if not mp.emulador():
+        return JsonResponse({"ok": False, "mensaje": "El emulador de pagos no está disponible."}, status=403)
+    try:
+        datos = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "mensaje": "Solicitud no válida."}, status=400)
+    try:
+        checkout = mp.pagar_emulado(cliente, datos.get("direccion"), str(datos.get("titular") or ""), datos.get("comprobante"), datos.get("giro", ""), recibe=str(datos.get("recibe") or ""))
+        return JsonResponse({"ok": True, "redirect": f"/pedidos/{checkout.primera_orden_id}/?nueva=1"}, json_dumps_params={"ensure_ascii": False})
+    except s.ErrorDeNegocio as e:
+        return JsonResponse({"ok": False, "mensaje": " ".join(e.mensajes)}, status=400, json_dumps_params={"ensure_ascii": False})
 
 
 @solo_clientes

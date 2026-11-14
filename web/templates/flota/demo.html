@@ -7,9 +7,21 @@
 </div>
 {% endblock %}
 {% block contenido %}
-<div class="demo-aviso" role="note"><b>Antes de empezar:</b> necesitas un viaje en curso. Si no hay, arma un despacho y vuelve.</div>
+<section class="tarjeta-ui demo-paso demo-listo" aria-labelledby="d-t00">
+  <h2 id="d-t00">Dejar lista la demostración (un clic)</h2>
+  <p class="muted">Crea tres pedidos de clientes cercanos, los despacha en camiones sanos y activa «Pedido bueno»: así parten con entregas sin problemas de temperatura. Deja además tres camiones en reparación. Luego entra como cada cliente a recibir.</p>
+  <div class="acciones"><button type="button" class="btn" id="preparar-demo">Preparar la demostración</button></div>
+  <div class="demo-estado" id="prep-estado" role="status" aria-live="polite">Aún no se preparó nada.</div>
+</section>
+<section class="tarjeta-ui demo-paso" aria-labelledby="d-t0">
+  <h2 id="d-t0">1. Crea un pedido de prueba cercano</h2>
+  <p class="muted">Crea un pedido «En preparación» de un cliente de Temuco o Padre Las Casas, para que el camión llegue en minutos. Después arma su viaje en «Armar despacho».</p>
+  <div class="acciones"><button type="button" class="btn" data-pedido-cercano="Refrigerado">Pedido refrigerado</button><button type="button" class="btn" data-pedido-cercano="Congelado">Pedido congelado</button><a class="btn btn-sec" href="/flota/despachar/">Armar despacho</a></div>
+  <div class="demo-estado" id="pc-estado" role="status" aria-live="polite">Aún no creaste ningún pedido de prueba.</div>
+</section>
+<div class="demo-aviso" role="note"><b>Antes de empezar:</b> necesitas un viaje en curso. Si no hay, arma un despacho y vuelve. Cuando el camión llega, el cliente tiene unos {{ plazo_min }} minuto{{ plazo_min|pluralize }} para aceptar o rechazar; si no responde, el pedido se da por entregado solo.</div>
 <section class="tarjeta-ui" aria-labelledby="d-t4" style="margin-top:16px">
-  <h2 id="d-t4">Un camión llega con un pedido</h2>
+  <h2 id="d-t4">2. Un camión llega con un pedido</h2>
   <p class="muted">1. Arma un despacho en «Armar despacho». 2. Elige el viaje y cómo llega. 3. Entra como el cliente y acepta o rechaza al recibir: nadie responde por él. Los botones funcionan sin IA.</p>
   <div class="rejilla dos">
     <div>
@@ -21,7 +33,7 @@
       <div class="demo-opciones">
         {% for clave, p in predefinidos.items %}{% if p.grupo == "principal" %}<button type="button" class="demo-opcion esc-boton" data-predefinido="{{ clave }}"><b>{{ p.titulo }}</b><span>{{ p.detalle }}</span></button>{% endif %}{% endfor %}
       </div>
-      <h3 class="demo-grupo">Cuidado: el sensor puede equivocarse</h3>
+      <h3 class="demo-grupo">Cuidado: el sensor o la señal pueden fallar</h3>
       <div class="demo-opciones">
         {% for clave, p in predefinidos.items %}{% if p.grupo == "trampa" %}<button type="button" class="demo-opcion trampa esc-boton" data-predefinido="{{ clave }}"><b>{{ p.titulo }}</b><span>{{ p.detalle }}</span></button>{% endif %}{% endfor %}
       </div>
@@ -37,6 +49,7 @@
     <ol class="demo-lista"><li><b>Pedido bueno:</b> el cliente ve la temperatura en rango y acepta.</li>
     <li><b>Ruptura de frío:</b> el camión se entibia, el cliente ve el problema, rechaza o reporta; en Flota aparece la acción «Enviar a revisión».</li>
     <li><b>Falsa alarma:</b> salta la alerta pero el salto es imposible para el frío: el diagnóstico dice «falla del sensor» y el cliente, al medir, puede aceptar. Un falso positivo.</li>
+    <li><b>Pérdida de señal:</b> el camión deja de reportar unos minutos y Flota lo marca «Sin señal»; sigue su ruta, entrega y la temperatura no cambia.</li>
     <li><b>Sensor pegado:</b> el sensor marca siempre lo mismo y nunca avisa; si la carga llegó tibia, solo el cliente lo ve.</li></ol></details>
   <h3 style="margin-top:16px">Últimos escenarios</h3>
   <ul class="demo-lista" id="esc-lista"></ul>
@@ -208,6 +221,27 @@
   bActivar.addEventListener("click", function () {
     if (!confirm("¿Activar la propuesta? " + estadoE.textContent)) return;
     post("/flota/escenarios/activar/", {propuesta: "1", confirmar: "1"}).then(activado).catch(function () { avisar("Sin conexión con el servidor.", false); });
+  });
+  document.getElementById("preparar-demo").addEventListener("click", function () {
+    var b = this, est = document.getElementById("prep-estado");
+    if (!confirm("¿Preparar la demostración? Se crean pedidos de prueba y salen camiones con entregas sin problemas.")) return;
+    b.disabled = true; est.textContent = "Preparando… (calcula las rutas, puede tardar unos segundos)";
+    post("/demo/preparar/", {confirmar: "1"}).then(function (r) {
+      est.classList.toggle("activa", r._ok);
+      if (!r._ok) { est.textContent = r.detail || "No se pudo preparar."; return; }
+      est.textContent = r.viajes.length + " viaje(s) en camino: " + r.viajes.map(function (v) { return v.camion + " con el pedido N.º " + v.orden + " (" + v.comuna + ")"; }).join("; ") + "." + (r.en_reparacion && r.en_reparacion.length ? " En reparación: " + r.en_reparacion.map(function (c) { return c.camion + " (" + c.motivo + ")"; }).join(", ") + "." : "") + (r.omitidos.length ? " Quedó pendiente: " + r.omitidos.join(" ") : "");
+      refrescar();
+    }).catch(function () { est.textContent = "Sin conexión con el servidor."; }).then(function () { b.disabled = false; });
+  });
+  /* Pedido de prueba cercano: lo arma el servidor con los mismos servicios del carrito; aquí solo se pide y se cuenta qué pasó. */
+  document.querySelectorAll("[data-pedido-cercano]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var est = document.getElementById("pc-estado"); b.disabled = true; est.textContent = "Creando el pedido…";
+      post("/demo/pedido-cercano/", {rango: b.dataset.pedidoCercano}).then(function (r) {
+        est.classList.toggle("activa", r._ok);
+        est.textContent = r._ok ? "Pedido N.º " + r.orden + " creado: " + r.producto + " para " + r.cliente + " (" + r.comuna + "). Ya está «En preparación»: arma su despacho." : (r.detail || "No se pudo crear el pedido.");
+      }).catch(function () { est.textContent = "Sin conexión con el servidor."; }).then(function () { b.disabled = false; });
+    });
   });
   pintar(JSON.parse(document.getElementById("esc-datos").textContent));
   setInterval(refrescar, 5000);

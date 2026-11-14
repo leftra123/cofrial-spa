@@ -1,6 +1,6 @@
 /* Cofrial SpA · paginación de tablas. Un solo script para toda la web: cualquier tabla dentro de .tabla-caja con más de 10 filas
    se muestra de a 10 y trae debajo «Viendo 1–10 de 47», «Anterior» y «Siguiente».
-   - No hay que editar cada plantilla. Para dejar una tabla entera a la vista: data-sin-paginar en su <table>.
+   - No hay que editar cada plantilla. Para dejar una tabla entera a la vista: data-sin-paginar en su <table>. Las tablas con campos para llenar nunca se paginan.
    - Convive con los filtros (filtros.js oculta filas con [hidden]): se cuentan y se reparten solo las filas que el filtro deja visibles.
    - Si las filas cambian solas (una tabla que se vuelve a dibujar), se recalcula la página sin volver al inicio. */
 (function () {
@@ -15,6 +15,7 @@
   function armar(tabla) {
     var caja = tabla.closest(".tabla-caja");
     if (!caja || tabla.hasAttribute("data-sin-paginar") || tabla.tBodies.length !== 1) return;
+    if (tabla.tBodies[0].querySelector("input, select, textarea")) return;          // una tabla para llenar (cantidades de un pedido) se ve completa: no se parte en páginas
     if (filasDe(tabla).length <= POR_PAGINA) return;
     var pagina = 0, tamano = POR_PAGINA, trabajando = false;
 

@@ -8,17 +8,29 @@
 </div>
 {% endblock %}
 {% block contenido %}
-<div class="rejilla">
-  <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor" data-resumen="activos">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
-  <div class="kpi-card"><div class="etiqueta">En base</div><div class="valor" data-resumen="en_base">{{ resumen.en_base }}</div><div class="detalle">guardados, sin despacho</div></div>
-  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor" data-resumen="en_ruta">{{ resumen.en_ruta }}</div><div class="detalle">hacia sus entregas</div></div>
-  <div class="kpi-card"><div class="etiqueta">En la puerta</div><div class="valor" data-resumen="en_la_puerta">{{ resumen.en_la_puerta }}</div><div class="detalle">esperando la confirmación del cliente</div></div>
-  <div class="kpi-card"><div class="etiqueta">Volviendo</div><div class="valor" data-resumen="volviendo">{{ resumen.volviendo }}</div><div class="detalle">de regreso a la base</div></div>
-  <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor" data-resumen="con_alerta">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
-  <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
-  <div class="kpi-card"><div class="etiqueta">Sin señal</div><div class="valor" data-resumen="sin_senal">{{ resumen.sin_senal }}</div><div class="detalle">más de 2 min sin reportar</div></div>
+
+<div class="flota-split">
+<div class="flota-mapa">
+<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
+<div class="tarjeta-ui">
+  <div class="alertas-mapa" id="alertas-mapa" hidden><span class="alertas-mapa-txt" id="alertas-mapa-txt" role="status"></span><span class="alertas-mapa-lista" id="alertas-mapa-lista"></span></div>
+  <div class="filtros-tramo" id="filtros-flota" role="group" aria-label="Qué mostrar en el mapa"></div>
+  <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
+  <ul class="leyenda" id="leyenda-estados" aria-label="Estado de cada camión en el mapa"></ul>
+  <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
+  <details class="ayuda-mapa"><summary>Cómo leer el mapa</summary>
+    <ul>
+      <li><b>Zoom:</b> con la rueda o los botones + y −. De lejos ves puntos; en la ciudad, camión y paradas; en la calle, cliente y temperatura.</li>
+      <li><b>Rutas:</b> la ida va en línea azul y la vuelta a trazos ámbar. Los números son el orden de entrega sugerido.</li>
+      <li><b>Un camión:</b> tócalo, o toca su ruta, para ver solo su viaje. Una ruptura de frío se ve siempre.</li>
+    </ul>
+  </details>
+  <div id="rutas-sugeridas"></div>
 </div>
 
+</div>
+<aside class="flota-lado" aria-label="Despacho: qué sigue">
+<section id="atencion" hidden><div class="seccion"><h2>Requiere atención</h2></div><div id="atencion-lista"></div></section>
 <div id="despacho-auto" data-activo="{{ auto.activo|yesno:'1,0' }}">{% include "flota/_despacho_auto.html" %}</div>
 
 <div id="sugerencia" hidden>
@@ -30,16 +42,18 @@
   </div>
 </div>
 
-<div class="seccion"><h2>Mapa y rutas sugeridas</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button><button type="button" class="btn btn-sec" id="ver-flota">Ver toda la flota</button><button type="button" class="btn btn-sec" id="ver-rutas">Ver rutas de entrega</button></div></div>
-<div class="tarjeta-ui">
-  <div class="alertas-mapa" id="alertas-mapa" hidden><span class="alertas-mapa-txt" id="alertas-mapa-txt" role="status"></span><span class="alertas-mapa-lista" id="alertas-mapa-lista"></span></div>
-  <div class="filtros-tramo" id="filtros-flota" role="group" aria-label="Qué mostrar en el mapa"></div>
-  <div id="mapa-flota" class="mapa" role="region" aria-label="Mapa de la flota y rutas de entrega"></div>
-  <ul class="leyenda" id="leyenda-estados" aria-label="Estado de cada camión en el mapa"></ul>
-  <ul class="leyenda" id="leyenda-flota" aria-label="Leyenda del mapa"></ul>
-  <p class="frio" style="margin:8px 0 0">Acerca con la rueda sobre el mapa o con los botones + y − para ver más detalle. De lejos, cada camión es un punto con su estado. A nivel de ciudad se ven el camión con su código, las paradas numeradas y cuántos quedan en la base. A nivel de calle se agregan el nombre del cliente y la temperatura, el combustible y la situación del camión, con cada lectura. Una ruptura de frío se ve siempre, y sus botones sobre el mapa lo llevan hasta el camión.</p>
-  <p class="frio" style="margin:8px 0 0">La ida va en línea continua azul y la vuelta a trazos ámbar; toca una ruta o elige un camión para ver solo su viaje. Los números marcan el orden sugerido de entrega, calculado con OpenStreetMap para recorrer el menor camino. Por defecto se ven los camiones en ruta, en la puerta, volviendo o con alerta; donde dos etiquetas chocan se oculta una, y el camión sigue ahí: acerca el mapa o tócalo para ver su código.</p>
-  <div id="rutas-sugeridas"></div>
+</aside>
+</div>
+
+<div class="rejilla kpi-franja" aria-label="Resumen de la flota">
+  <div class="kpi-card acento"><div class="etiqueta">Vehículos activos</div><div class="valor" data-resumen="activos">{{ resumen.activos }}</div><div class="detalle">de {{ resumen.total }} en la flota</div></div>
+  <div class="kpi-card"><div class="etiqueta">En base</div><div class="valor" data-resumen="en_base">{{ resumen.en_base }}</div><div class="detalle">guardados, sin despacho</div></div>
+  <div class="kpi-card"><div class="etiqueta">En ruta</div><div class="valor" data-resumen="en_ruta">{{ resumen.en_ruta }}</div><div class="detalle">hacia sus entregas</div></div>
+  <div class="kpi-card"><div class="etiqueta">En la puerta</div><div class="valor" data-resumen="en_la_puerta">{{ resumen.en_la_puerta }}</div><div class="detalle">esperando la confirmación del cliente</div></div>
+  <div class="kpi-card"><div class="etiqueta">Volviendo</div><div class="valor" data-resumen="volviendo">{{ resumen.volviendo }}</div><div class="detalle">de regreso a la base</div></div>
+  <div class="kpi-card critico"><div class="etiqueta">Con ruptura de frío</div><div class="valor" data-resumen="con_alerta">{{ resumen.con_alerta }}</div><div class="detalle">según la última lectura</div></div>
+  <div class="kpi-card"><div class="etiqueta">Sin lecturas</div><div class="valor" data-resumen="sin_lectura">{{ resumen.sin_lectura }}</div><div class="detalle">el simulador aún no reporta</div></div>
+  <div class="kpi-card"><div class="etiqueta">Sin señal</div><div class="valor" data-resumen="sin_senal">{{ resumen.sin_senal }}</div><div class="detalle">más de 2 min sin reportar</div></div>
 </div>
 
 <div class="seccion"><h2>Viajes activos</h2></div>
@@ -74,6 +88,7 @@
 {% endfor %}
 </div>
 {% endif %}
+<details class="vehiculos-det" id="vehiculos-det"><summary><b>Todos los vehículos</b> <span class="frio">({{ resumen.total }}) · estado y combustible de cada uno</span></summary>
 <div class="seccion"><h2>Vehículos</h2><div class="acciones"><button type="button" class="btn btn-sec alternar-base" aria-pressed="false" aria-controls="mapa-flota vehiculos">Mostrar los {{ resumen.guardados }} en base</button></div></div>
 <p class="sub" id="vehiculos-vacio"{% if resumen.guardados != resumen.total or not tarjetas %} hidden{% endif %}>Ningún camión en operación ahora: toda la flota está en la base.</p>
 <div class="rejilla vehiculos" id="vehiculos">
@@ -106,6 +121,7 @@
   {% include "componentes/vacio_estado.html" with ico="camion" titulo="No hay camiones registrados" texto="Registra la flota desde Administración para ver aquí su estado y su telemetría." url="/admin/" accion="Ir a Administración" %}
 {% endfor %}
 </div>
+</details>
 
 {% endblock %}
 {% block cabeza %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">
@@ -122,7 +138,7 @@
 <script src="{% static 'vendor/maplibre/maplibre-gl.js' %}"></script>
 <script src="{% static 'js/mapa.js' %}"></script>
 <script src="{% static 'js/leyenda.js' %}"></script>
-<script src="{% static 'js/diagnostico-camion.js' %}"></script>
+<script src="{% static 'js/diagnostico-camion.js' %}?v=4"></script>
 <form hidden>{% csrf_token %}</form>
 <script>
   (function () {
@@ -131,11 +147,25 @@
       document.getElementById("sug-texto").textContent = d.texto;
       document.getElementById("sug-origen").textContent = d.por_ia ? "Redactado por IA" : "Cálculo del sistema";
       var cont = document.getElementById("sug-viajes");
+      var puedeEnviar = {{ puede_cerrar|yesno:"true,false" }}, token = (document.querySelector("[name=csrfmiddlewaretoken]") || {}).value || "";
       d.viajes.forEach(function (v) {
+        var fila = document.createElement("div"); fila.className = "sug-viaje";
+        var info = document.createElement("p"); info.className = "sug-viaje-txt";
+        var n = v.pedidos.length;
+        info.textContent = v.camion + " · " + n + (n === 1 ? " pedido" : " pedidos") + " · " + (v.comunas || []).join(", ");
+        fila.appendChild(info);
+        var acc = document.createElement("div"); acc.className = "acciones";
+        if (puedeEnviar) {                                   // listo para salir: camión y pedidos ya elegidos; solo falta confirmar
+          var f = document.createElement("form"); f.method = "post"; f.action = "/flota/despachar/";
+          var campos = [["csrfmiddlewaretoken", token], ["camion", v.camion]].concat(v.pedidos.map(function (p) { return ["ordenes", p.orden]; }));
+          campos.forEach(function (c) { var i = document.createElement("input"); i.type = "hidden"; i.name = c[0]; i.value = c[1]; f.appendChild(i); });
+          var b = document.createElement("button"); b.className = "btn"; b.textContent = "Enviar ahora";
+          f.addEventListener("submit", function (e) { if (!confirm("¿Enviar " + v.camion + " con " + n + (n === 1 ? " pedido" : " pedidos") + " a " + (v.comunas || []).join(", ") + "?")) e.preventDefault(); });
+          f.appendChild(b); acc.appendChild(f);
+        }
         var a = document.createElement("a");
-        a.className = "btn btn-sec"; a.href = v.enlace; a.style.marginRight = "8px";
-        a.textContent = "Armar despacho con " + v.camion + " (" + v.pedidos.length + (v.pedidos.length === 1 ? " pedido" : " pedidos") + ")";
-        cont.appendChild(a);
+        a.className = "btn btn-sec"; a.href = v.enlace; a.textContent = "Revisar antes";
+        acc.appendChild(a); fila.appendChild(acc); cont.appendChild(fila);
       });
       document.getElementById("sugerencia").hidden = false;
     }).catch(function () {});               // sin sugerencia el panel funciona igual

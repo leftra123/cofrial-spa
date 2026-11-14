@@ -14,13 +14,13 @@ CLAVE = "demo-cofrial-2026"
 CUENTAS = {"anonimo": None, "B2B": "abastecimiento@hospital.test", "B2C": "ana@correo.test", "vendedor": "vendedora@cofrial.cl",
            "gerencia": "gerencia@cofrial.cl", "despachador": "despacho@cofrial.cl", "admin": "admin@cofrial.cl"}
 ROLES = list(CUENTAS)
-INICIO = {"B2B": "/catalogo/", "B2C": "/catalogo/", "vendedor": "/crm/", "gerencia": "/torre/", "despachador": "/flota/", "admin": "/crm/"}
+INICIO = {"B2B": "/catalogo/", "B2C": "/catalogo/", "vendedor": "/crm/", "gerencia": "/crm/", "despachador": "/flota/", "admin": "/crm/"}
 
 # url (con 999999 y NO-EXISTE donde va un id) -> (GET, POST) para [anonimo, B2B, B2C, vendedor, gerencia, despachador, admin].
 # 200 = entra · L = redirige al login · 403/404/405/400 = ese código · →destino = redirige ahí (N = un número).
 # Generada recorriendo las rutas (ver docs/rutas-y-roles.md); revisada a mano. Los comentarios de abajo marcan lo que se decidió.
 ESPERADO = {
-    '/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
+    '/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
     '/portada/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
     '/catalogo/999999/': ('404 404 404 404 404 404 404', '404 404 404 404 404 404 404'),
@@ -58,12 +58,13 @@ ESPERADO = {
     '/flota/por-despachar/': ('L 403 403 403 200 200 200', '405 405 405 405 405 405 405'),      # el contador del menú: los mismos roles que ven Flota; solo lectura
     '/flota/despachar/': ('L 403 403 403 200 200 200', 'L 403 403 403 403 →/flota/despachar/ →/flota/despachar/'),
     '/flota/viajes/999999/cerrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
+    '/flota/despachar/sugerir-camion/': ('L 403 403 403 200 200 200', '405 405 405 405 405 405 405'),     # los mismos tres que ven Flota; solo lectura
     '/flota/despachar/ruta/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despacho-auto/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/despacho-auto/correr/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 →/flota/ →/flota/'),
     '/flota/despachar/ubicar/999999/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 404 404'),
-    '/torre/': ('L 403 403 403 200 403 200', '405 405 405 405 405 405 405'),               # gerencia y administrador; la Torre muestra clientes de toda la cartera
-    '/torre/pulso/': ('L 403 403 403 200 403 200', '405 405 405 405 405 405 405'),
+    '/torre/': ('L 403 403 403 403 403 200', '405 405 405 405 405 405 405'),               # solo administrador: es del equipo de consultoría, con la rúbrica dentro
+    '/torre/pulso/': ('L 403 403 403 403 403 200', '405 405 405 405 405 405 405'),
     '/operacion/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),            # solo el administrador
     '/operacion/stock/': ('L 403 403 403 403 403 200', 'L 403 403 403 403 403 200'),
     '/operacion/stock/999999/sumar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
@@ -91,6 +92,8 @@ ESPERADO = {
     '/operacion/datos/no-existe/NO-EXISTE/borrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 404'),
     '/bi/': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),            # solo gerencia y admin; 502 porque en las pruebas no hay Grafana (ver test_bi)
     '/bi/x': ('L 403 403 403 502 403 502', 'L 403 403 403 502 403 502'),
+    '/flota/camion/NO-EXISTE/diagnostico/': ('L 403 403 403 404 404 404', '405 405 405 405 405 405 405'),     # los tres que ven Flota; el camión no existe
+    '/flota/camion/NO-EXISTE/revision/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 400 400'),       # envía a revisión el despachador o el administrador, con confirmación; gerencia no
     '/flota/escenarios/estado/': ('L 403 403 403 403 403 200', '405 405 405 405 405 405 405'),
     '/flota/escenarios/interpretar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 422'),
     '/flota/escenarios/activar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
@@ -99,6 +102,8 @@ ESPERADO = {
     '/demo/pulso/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
     '/demo/apagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
     '/demo/limpiar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
+    '/demo/preparar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),   # solo el administrador; sin confirmar responde 400
+    '/demo/pedido-cercano/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),    # solo el administrador; sin un rango válido responde 400
     '/demo/tiempo/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 400'),
     '/api/asistente/': ('404 404 404 404 404 404 404', '400 400 400 400 400 400 400'),
     '/api/productos/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),
@@ -114,13 +119,14 @@ ESPERADO = {
     '/carrito/confirmar/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/direccion/': ('405 405 405 405 405 405 405', 'L →/carrito/ →/carrito/ 403 403 403 403'),
     '/carrito/mp/pagar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 403'),  # B2C da 403 en pruebas porque Mercado Pago no tiene claves; B2B nunca paga con MP
+    '/carrito/mp/emulador/': ('405 405 405 405 405 405 405', 'L 400 400 403 403 403 403'),   # el emulador del pago: lo usan los clientes; sin cuerpo válido responde 400
     '/carrito/mp/webhook/': ('405 405 405 405 405 405 405', '204 204 204 204 204 204 204'),  # público: lo llama Mercado Pago sin sesión; sin claves responde 204 y no hace nada
     '/carrito/mp/vuelta/exito/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
     '/carrito/mp/vuelta/fallo/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
     '/carrito/mp/vuelta/pendiente/': ('L →/carrito/ →/carrito/ →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', '405 405 405 405 405 405 405'),
     '/api/avisos/': ('403 200 200 403 403 403 403', '403 200 200 403 403 403 403'),
-    '/avisos/': ('L 200 200 →/crm/ →/torre/ →/flota/ →/crm/', 'L 200 200 →/crm/ →/torre/ →/flota/ →/crm/'),
-    '/avisos/pedir/': ('405 405 405 405 405 405 405', 'L →/avisos/ →/avisos/ →/crm/ →/torre/ →/flota/ →/crm/'),
+    '/avisos/': ('L 200 200 →/crm/ →/crm/ →/flota/ →/crm/', 'L 200 200 →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/avisos/pedir/': ('405 405 405 405 405 405 405', 'L →/avisos/ →/avisos/ →/crm/ →/crm/ →/flota/ →/crm/'),
     '/avisos/999999/quitar/': ('405 405 405 405 405 405 405', '→/avisos/ →/avisos/ →/avisos/ →/avisos/ →/avisos/ →/avisos/ →/avisos/'),
     '/seguimiento/': ('L →/pedidos/… →/pedidos/… →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L →/pedidos/… →/pedidos/… 403 403 403 403'),
     '/pedidos/': ('L 200 200 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 200 200 403 403 403 403'),
@@ -130,9 +136,9 @@ ESPERADO = {
     '/pedidos/999999/oc/': ('405 405 405 405 405 405 405', 'L →/pedidos/… →/pedidos/… 403 403 403 403'),
     '/pedidos/999999/entrega/': ('L 404 404 →/catalogo/ →/catalogo/ →/catalogo/ →/catalogo/', 'L 404 404 403 403 403 403'),
     '/pedidos/999999/cancelar/': ('405 405 405 405 405 405 405', 'L 404 404 403 403 403 403'),
-    '/cuenta/entrar/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
-    '/cuenta/registro/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
-    '/cuenta/registro/empresa/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/torre/ →/flota/ →/crm/'),
+    '/cuenta/entrar/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/cuenta/registro/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
+    '/cuenta/registro/empresa/': ('200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/', '200 →/catalogo/ →/catalogo/ →/crm/ →/crm/ →/flota/ →/crm/'),
     '/cuenta/recuperar/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),          # con sesión también: no revela nada
     '/cuenta/recuperar/enviado/': ('200 200 200 200 200 200 200', '405 405 405 405 405 405 405'),
     '/cuenta/recuperar/NO-EXISTE/NO-EXISTE/': ('200 200 200 200 200 200 200', '200 200 200 200 200 200 200'),   # «el enlace ya no sirve»

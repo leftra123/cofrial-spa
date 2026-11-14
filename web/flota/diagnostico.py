@@ -21,7 +21,7 @@ from crm import ia
 
 from .models import Camion, RevisionCamion, Telemetria
 
-LECTURAS = 12              # ventana: 12 lecturas son un minuto de telemetría
+LECTURAS = 36              # ventana: 36 lecturas son tres minutos de telemetría; una falla corta se sigue viendo un rato después de terminar
 SALTO_SENSOR_C = 6.0       # un cambio mayor entre dos lecturas seguidas no lo hace el frío: lo hace un sensor
 PEGADO_LECTURAS = 8        # lecturas idénticas seguidas: un sensor vivo siempre oscila algo
 CACHE_SEG = 120            # la misma situación no vuelve a consultar a la IA durante 2 minutos
@@ -46,7 +46,8 @@ def _hechos(camion, camara=1):
     saltos = [abs(b - a) for a, b in zip(temps, temps[1:])]
     pegado = len(temps) >= PEGADO_LECTURAS and len(set(temps[-PEGADO_LECTURAS:])) == 1
     return {"rango": rango.nombre, "min": float(rango.temp_min_c), "max": float(rango.temp_max_c), "temps": temps,
-            "alerta": bool(lecturas and lecturas[-1].alerta_ruptura_frio), "salto_max": max(saltos) if saltos else 0.0, "pegado": pegado,
+            "alerta": any(t.alerta_ruptura_frio for t in lecturas), "ahora": bool(lecturas and lecturas[-1].alerta_ruptura_frio),
+            "pico": max(temps) if temps else None, "salto_max": max(saltos) if saltos else 0.0, "pegado": pegado,
             "desde_base": bool(lecturas and not lecturas[-1].forzada)}
 
 
@@ -59,11 +60,12 @@ def _clasificar(h):
 def _texto_base(estado, camion, h):
     c = camion.camion_id
     ult = _g(h["temps"][-1]) if h["temps"] else "—"
+    cuando = f"marca {ult} °C" if h["ahora"] or h["pico"] is None else f"tuvo una alerta reciente (llegó a {_g(h['pico'])} °C y ya marca {ult} °C)"
     if estado == RUPTURA:
-        return (f"{c} marca {ult} °C y sube de a poco: la carga se está entibiando y el rango es de {_g(h['min'])} a {_g(h['max'])} °C. "
+        return (f"{c} {cuando} y la temperatura subió de a poco: la carga se entibió y el rango es de {_g(h['min'])} a {_g(h['max'])} °C. "
                 f"Parece una falla del equipo de frío. Conviene enviarlo a revisión y avisar a los clientes con pedidos a bordo.")
     if estado == SENSOR_ALERTA:
-        return (f"{c} marca {ult} °C, pero la temperatura saltó {_g(h['salto_max'])} °C entre dos lecturas seguidas, algo que el frío no hace. "
+        return (f"{c} {cuando}, pero la temperatura saltó {_g(h['salto_max'])} °C entre dos lecturas seguidas, algo que el frío no hace. "
                 f"Parece una falla del sensor y la carga podría estar bien. Conviene enviarlo a revisión del sensor y confirmar la temperatura de la carga al llegar.")
     if estado == SENSOR_PEGADO:
         return (f"{c} marca {ult} °C en {PEGADO_LECTURAS} lecturas seguidas sin moverse nada. Un sensor sano siempre oscila un poco: "

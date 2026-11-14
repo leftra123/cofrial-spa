@@ -364,7 +364,19 @@ def alerta_avisar(request, orden_id):
 def demanda(request):
     """Productos que los clientes esperan (avisos de stock pendientes): oportunidad de venta y guía para reponer."""
     from catalogo import avisos
-    return render(request, "crm/demanda.html", _contexto(request, filas=avisos.demanda_en_espera()))
+    from catalogo.models import AvisoStock
+    filas = avisos.demanda_en_espera()
+    visibles = set(s.clientes_visibles(request.user).values_list("pk", flat=True))        # RN-09: el vendedor solo ve y abre los clientes de su cartera
+    esperan = {}
+    for a in AvisoStock.objects.filter(atendido_en__isnull=True, producto_id__in=[f["producto_id"] for f in filas]).select_related("cliente").order_by("cliente__nombre"):
+        grupo = esperan.setdefault(a.producto_id, {"contactos": [], "otros": 0})
+        if a.cliente_id in visibles:
+            grupo["contactos"].append({"cliente": a.cliente, "cantidad": a.cantidad_minima})
+        else:
+            grupo["otros"] += 1
+    for f in filas:
+        f["espera"] = esperan.get(f["producto_id"], {"contactos": [], "otros": 0})
+    return render(request, "crm/demanda.html", _contexto(request, filas=filas))
 
 
 @con_rol(*COMERCIAL)

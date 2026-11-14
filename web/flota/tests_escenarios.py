@@ -263,7 +263,7 @@ class LimpiarTests(Base):
 
 class SensoresTests(Base):
     def test_los_escenarios_de_sensor_completan_sus_valores_y_no_piden_paradas(self):
-        for tipo in ("sensor_falla", "sensor_pegado"):
+        for tipo in ("sensor_falla", "sensor_pegado", "sin_senal"):
             e = validar({"tipo": tipo, "despacho_id": self.viaje.pk})
             self.assertEqual(e["subida_c"], None)
             self.assertTrue(5 <= e["momento_pct"] <= 95 and 6 <= e["duracion_lecturas"] <= 36)
@@ -279,10 +279,10 @@ class SensoresTests(Base):
 
     def test_se_activan_con_su_boton_y_la_demo_los_ofrece_como_trampas(self):
         self.entrar()
-        for clave in ("sensor_falla", "sensor_pegado"):
+        for clave in ("sensor_falla", "sensor_pegado", "sin_senal"):
             r = self.activar(clave)
             self.assertEqual(r.status_code, 200, r.content)
-            self.assertIn("sensor", r.json()["resumen"].lower())
+            self.assertTrue(any(w in r.json()["resumen"].lower() for w in ("sensor", "señal")))
             self.client.post("/flota/escenarios/cancelar/", {"escenario": r.json()["id"]})
-        self.assertEqual({k for k, p in escenarios.PREDEFINIDOS.items() if p["grupo"] == "trampa"}, {"sensor_falla", "sensor_pegado"})
+        self.assertEqual({k for k, p in escenarios.PREDEFINIDOS.items() if p["grupo"] == "trampa"}, {"sensor_falla", "sensor_pegado", "sin_senal"})
         self.assertEqual({k for k, p in escenarios.PREDEFINIDOS.items() if p["grupo"] == "principal"}, {"entrega_perfecta", "falla_mitad", "cliente_no_recibe"})

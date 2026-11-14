@@ -14,6 +14,7 @@
 {% endblock %}
 {% block cabeza %}{% if seg.mapa_en_vivo %}<link rel="stylesheet" href="{% static 'vendor/maplibre/maplibre-gl.css' %}">{% endif %}{% endblock %}
 {% block contenido %}
+{% include "componentes/camino.html" with paso=4 %}
 {% if request.GET.nueva and orden.estado_orden.orden_flujo <= 2 %}
 <section class="confirmacion" aria-labelledby="conf-t">
   <span class="conf-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>

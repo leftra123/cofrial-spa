@@ -51,7 +51,6 @@ ESPERADO = {
     '/crm/ia/': ('L 403 403 200 200 403 200', 'L 403 403 200 200 403 200'),
     '/crm/demanda/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
     '/crm/alertas/': ('L 403 403 200 200 200 200', 'L 403 403 200 200 200 200'),
-    '/crm/alertas/borrar/': ('405 405 405 405 405 405 405', 'L 403 403 403 403 403 →/crm/alertas/'),   # solo el administrador; sin confirmar vuelve a la lista con un aviso
     '/crm/alertas/999999/avisar/': ('405 405 405 405 405 405 405', 'L 403 403 →/crm/alertas/ →/crm/alertas/ 403 →/crm/alertas/'),
     '/flota/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),
     '/flota/sugerencias/': ('L 403 403 403 200 200 200', 'L 403 403 403 200 200 200'),

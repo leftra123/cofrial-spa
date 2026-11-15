@@ -96,13 +96,14 @@ class CompraDeEnsayo(unittest.TestCase):
         self.assertEqual(v.comprar_ensayo(s, "B2B")[0], "vigente")
         self.assertEqual(s.posts, [])                                     # no agregó nada al carrito ni confirmó
 
-    def test_b2b_confirma_con_oc_de_ensayo_y_factura(self):
+    def test_b2b_confirma_con_oc_de_ensayo_y_sin_elegir_comprobante(self):
         s = SesionFalsa([orden(5, oc="OC-1")])                            # un pedido real que no es de ensayo no cuenta como vigente en B2B
         estado, _ = v.comprar_ensayo(s, "B2B")
         confirmar = dict(s.posts)["/carrito/confirmar/"]
         self.assertEqual(estado, "creada")
         self.assertTrue(confirmar["numero_oc"].startswith("ENSAYO-"))
-        self.assertEqual((confirmar["comprobante"], confirmar["direccion"]), ("factura", "42"))
+        self.assertNotIn("comprobante", confirmar)                        # la factura explícita exige el giro; sin elegir, la institución recibe factura
+        self.assertEqual(confirmar["direccion"], "42")
         self.assertEqual(dict(s.posts)["/carrito/agregar/"]["producto"], "7")
 
     def test_b2c_confirma_con_boleta_y_sin_oc(self):

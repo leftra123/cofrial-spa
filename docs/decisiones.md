@@ -694,3 +694,6 @@ De chatbot a agente. El asistente de la tienda ahora tiene identidad propia, **C
 - **Rupturas de frío solo en modo demostración (14-nov-2026).** `aws/provision.sh` escribía `PROB_RUPTURA=0.01` en la EC2 IoT (diez veces más que el 0.001 decidido antes): con 10 camiones y lecturas cada 5 s eran ~1,2 rupturas por minuto en la flota y el panel mostraba caídas todo el tiempo. Ahora AWS usa `PROB_RUPTURA=0` por defecto (variable `PROB_RUPTURA` en `secretos.env` para cambiarlo) y las rupturas se provocan desde `/demo/` con los escenarios.
 
 - **Historial de alertas de frío conservado (14-nov-2026).** Se probó un botón para borrar las alertas antiguas y se quitó: el conteo real era de 87.564 lecturas con alerta (todo el historial), que alimentan el dashboard de BI (ventas cruzadas con rupturas). Decisión de Eric: conservar el historial. Las rupturas nuevas ya no se generan solas (`PROB_RUPTURA=0`).
+
+## 15-nov-2026: `verificar.py` prueba la Torre con administración
+La Torre quedó solo para `admin` (commit 49afe7d: gerencia ya no la ve, ni la rúbrica que lleva dentro), pero `aws/verificar.py` seguía entrando como gerencia y fallaba con HTTP 403 en `/torre/` y `/torre/pulso/`, aunque la Torre estaba bien. La sección 8 ahora usa la sesión de administración y además comprueba que gerencia reciba 403.

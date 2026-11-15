@@ -99,7 +99,7 @@ Para Sergio: `verificar.py` solo necesita Python 3 (sin instalar nada), la direc
 
 > Estado: **no está desplegada en AWS.** Todo lo de esta sección se probó solo en local; el despliegue requiere el visto bueno de Eric y se hace en el orden de abajo. La pantalla es solo de lectura: no escribe en la base.
 
-**Quién entra.** `gerencia@cofrial.cl` (inicia directo en `/torre/`) y `admin@cofrial.cl`. Un vendedor, el despachador o un cliente reciben 403. `aws/verificar.py` lo comprueba (sección 8): `/torre/` responde 200 a gerencia, `/torre/pulso/` trae las 5 filas de la rúbrica y se imprime el estado de cada una, y una vendedora recibe 403. Un estado «sin evidencia» no es falla antes de la demo; **con `--defensa` sí lo es** (ver el Paso 0).
+**Quién entra.** Solo `admin@cofrial.cl` (el equipo de consultoría): gerencia, un vendedor, el despachador y un cliente reciben 403. `aws/verificar.py` lo comprueba (sección 8, desde el 15-nov-2026 con la cuenta de administración): `/torre/` responde 200 a admin y 403 a gerencia, `/torre/pulso/` trae las 5 filas de la rúbrica y se imprime el estado de cada una, y una vendedora recibe 403. Un estado «sin evidencia» no es falla antes de la demo; **con `--defensa` sí lo es** (ver el Paso 0).
 
 **Qué exige cada fila de la rúbrica para quedar en verde** (la Torre nunca marca verde sin evidencia):
 
@@ -135,7 +135,7 @@ docker compose -f aws/docker-compose.web.yml --env-file .env exec -T web python 
 
 **Punto de decisión: miércoles 11-nov a las 18:00.** A esa hora se corre `python3 aws/verificar.py --compra-ensayo --ia --defensa` **y se leen las cinco filas «Rúbrica» de su sección 8**: con `--defensa`, una fila que no esté «verificado» **hace fallar** el verificador (sin él, un estado «sin evidencia» es solo un aviso). Si no pasa completo en AWS, se revierte a la versión anterior (el código viejo sigue funcionando sobre la base migrada, porque la migración solo agrega una tabla y una columna anulable; `limpiar_muestra` quita los datos) y la defensa sigue el guion actual sin la Torre.
 
-**Prueba manual en el navegador (gerencia).** Abrir `/torre/`: banda «En vivo» con la Lectura, mapa con La Araucanía resaltada, clientes con el rótulo «Clientes ilustrativos…», Antes y ahora, embudo por niveles, Front-Office y Back-Office, y la rúbrica. Detener el simulador unos 2 minutos: D3 debe salir de verde y la Lectura decirlo. Con la sesión vencida, la pantalla debe mostrar «Tu sesión terminó» con el enlace, no el login adentro. Comprar como B2B y B2C y comprobar que D2 y D4 pasan a verificado. El pedido trazado no cambia con la compra: muestra el último pedido cuyo viaje ya salió, así que la compra aparece ahí cuando se despacha.
+**Prueba manual en el navegador (administración).** Abrir `/torre/`: banda «En vivo» con la Lectura, mapa con La Araucanía resaltada, clientes con el rótulo «Clientes ilustrativos…», Antes y ahora, embudo por niveles, Front-Office y Back-Office, y la rúbrica. Detener el simulador unos 2 minutos: D3 debe salir de verde y la Lectura decirlo. Con la sesión vencida, la pantalla debe mostrar «Tu sesión terminó» con el enlace, no el login adentro. Comprar como B2B y B2C y comprobar que D2 y D4 pasan a verificado. El pedido trazado no cambia con la compra: muestra el último pedido cuyo viaje ya salió, así que la compra aparece ahí cuando se despacha.
 
 ## Dominio `cofrialspa.webhop.me` y el balanceador: qué comprobar ANTES de `cerrar-acceso-directo`
 

@@ -306,8 +306,9 @@ def comprar_ensayo(sesion, canal, producto="VAC-LOM-5K"):
         return "error", "el carrito no ofrece dirección de entrega"
     oc = "ENSAYO-" + datetime.datetime.now().strftime("%Y%m%d-%H%M")
     datos = {"csrfmiddlewaretoken": sesion.token("/carrito/"), "direccion": d.group(1), "recibe": "", "recibe_nuevo": "",
-             "comprobante": "factura" if canal == "B2B" else "boleta"}
+             "comprobante": "boleta"}
     if canal == "B2B":
+        del datos["comprobante"]       # sin elegir, la institución recibe factura; elegirla exige el giro y el sitio rechaza la compra si la cuenta no lo tiene
         datos["numero_oc"] = oc
     st, _, url = sesion.pedir("/carrito/confirmar/", datos)
     if "/pedidos/" in url and "nueva=1" in url:
@@ -487,12 +488,12 @@ def main():
 
     if creo_datos:
         time.sleep(6)                     # la Torre calcula el pulso con una caché de 5 s: esperar para que vea lo que se acaba de crear
-    titulo("8. Torre de control (gerencia; solo lectura)" + (" · modo --defensa: las cinco filas deben estar verificadas" if DEFENSA else ""))
-    if sesiones["gerente"]:
-        st, html, _ = sesiones["gerente"].pedir("/torre/")
-        chk(st == 200 and "Torre de control" in html, "La Torre de control abre para gerencia (/torre/)", f"HTTP {st}")
+    titulo("8. Torre de control (administración; solo lectura)" + (" · modo --defensa: las cinco filas deben estar verificadas" if DEFENSA else ""))
+    if sesiones["admin"]:
+        st, html, _ = sesiones["admin"].pedir("/torre/")
+        chk(st == 200 and "Torre de control" in html, "La Torre de control abre para administración (/torre/)", f"HTTP {st}")
         t1 = time.perf_counter()
-        st, d = sesiones["gerente"].json("/torre/pulso/")
+        st, d = sesiones["admin"].json("/torre/pulso/")
         tiempos = [round((time.perf_counter() - t1) * 1000)]
         filas = d.get("rubrica") if d else None
         if chk(st == 200 and isinstance(filas, list) and len(filas) == 5, "El pulso trae las 5 filas de la rúbrica", f"HTTP {st}"):
@@ -514,10 +515,13 @@ def main():
         for _ in range(3 if DEFENSA else 0):          # varias lecturas espaciadas más que la caché de 5 s: miden el cálculo, no la caché
             time.sleep(6)
             t1 = time.perf_counter()
-            sesiones["gerente"].json("/torre/pulso/")
+            sesiones["admin"].json("/torre/pulso/")
             tiempos.append(round((time.perf_counter() - t1) * 1000))
         exigir(max(tiempos) < PULSO_MAX_MS, f"/torre/pulso/ responde en {max(tiempos)} ms" + (f" (peor de {len(tiempos)} lecturas sin caché)" if len(tiempos) > 1 else ""),
                f"más de {PULSO_MAX_MS} ms: la pantalla marca «Sin conexión» a los 8000 ms; revisar el tamaño de telemetria y el índice de fecha")
+    if sesiones["gerente"]:
+        st, _, _ = sesiones["gerente"].pedir("/torre/")
+        chk(st == 403, "La Torre responde 403 a gerencia (la ve solo el equipo de consultoría)", f"HTTP {st}")
     if sesiones["vendedora"]:
         st, _, _ = sesiones["vendedora"].pedir("/torre/")
         chk(st == 403, "La Torre responde 403 a una vendedora (verían clientes fuera de su cartera)", f"HTTP {st}")

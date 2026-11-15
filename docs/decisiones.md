@@ -697,3 +697,5 @@ De chatbot a agente. El asistente de la tienda ahora tiene identidad propia, **C
 
 ## 15-nov-2026: `verificar.py` prueba la Torre con administración
 La Torre quedó solo para `admin` (commit 49afe7d: gerencia ya no la ve, ni la rúbrica que lleva dentro), pero `aws/verificar.py` seguía entrando como gerencia y fallaba con HTTP 403 en `/torre/` y `/torre/pulso/`, aunque la Torre estaba bien. La sección 8 ahora usa la sesión de administración y además comprueba que gerencia reciba 403.
+
+La compra de ensayo B2B de `verificar.py` también fallaba (terminaba en `/carrito/`): mandaba `comprobante=factura` explícito y desde el recorrido de compra nuevo la factura exige el giro si la cuenta no lo tiene (`elegir_comprobante`). Ahora el B2B no elige comprobante y recibe factura por defecto, que es lo que ve una institución. Al comprar a mano como B2B hay que escribir el giro si la cuenta no lo tiene.

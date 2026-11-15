@@ -306,8 +306,9 @@ def comprar_ensayo(sesion, canal, producto="VAC-LOM-5K"):
         return "error", "el carrito no ofrece dirección de entrega"
     oc = "ENSAYO-" + datetime.datetime.now().strftime("%Y%m%d-%H%M")
     datos = {"csrfmiddlewaretoken": sesion.token("/carrito/"), "direccion": d.group(1), "recibe": "", "recibe_nuevo": "",
-             "comprobante": "factura" if canal == "B2B" else "boleta"}
+             "comprobante": "boleta"}
     if canal == "B2B":
+        del datos["comprobante"]       # sin elegir, la institución recibe factura; elegirla exige el giro y el sitio rechaza la compra si la cuenta no lo tiene
         datos["numero_oc"] = oc
     st, _, url = sesion.pedir("/carrito/confirmar/", datos)
     if "/pedidos/" in url and "nueva=1" in url:
